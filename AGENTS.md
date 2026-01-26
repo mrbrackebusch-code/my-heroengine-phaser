@@ -17,3 +17,8 @@ This repository hosts a Phaser + HeroEngine integration. Keep debug/logging cent
 
 ## Runs / Tests
 - Ask before running long or destructive commands.
+
+## Asset Rules (Ironclad)
+- All asset PNG filenames MUST include their frame size as `WxH` (e.g., `Book 32x40.png`). No exceptions.
+- Never trim or auto-fix PNG dimensions at runtime. If a sheet is not an exact multiple of its frame size, HARD FAIL.
+- If asked to fix an asset, edit the ORIGINAL and create a backup copy in the repo before changing it.

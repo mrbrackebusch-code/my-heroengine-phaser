@@ -69,6 +69,7 @@ import * as heroAnimGlue from "./heroAnimGlue";
 import * as weaponAnimGlue from "./weaponAnimGlue";
 import { queueSpritesheetOnce } from "./loaderCache";
 import { resolveWeaponLayerPair, weaponModeForHeroPhase } from "./weaponAtlas";
+import { ensureHookshotThrustSheetLoaded, resolveHookshotThrustFrame, HOOKSHOT_THRUST_SHEET } from "./hookshotWeaponAtlas";
 import * as effectAnimGlue from "./effectAnimGlue";
 import type { EffectAtlas } from "./effectAtlas";
 import { listWeaponModels, listWeaponVariants, ensureWeaponSheetsLoaded, resolveWeaponSheet } from "./weaponAtlas";
@@ -932,6 +933,36 @@ function _decor_decalIdToKey(id: number): string {
     if (v === 120) return "stairs_statue_top"
     if (v === 121) return "stairs_statue_mid"
     if (v === 122) return "stairs_statue_bot"
+
+    // Trial arena decals (magecity.png)
+    if (v === 3000) return "trial_floor_corner_nw"
+    if (v === 3001) return "trial_floor_edge_n"
+    if (v === 3002) return "trial_floor_corner_ne"
+    if (v === 3003) return "trial_floor_edge_w"
+    if (v === 3004) return "trial_floor_center"
+    if (v === 3005) return "trial_floor_edge_e"
+    if (v === 3006) return "trial_floor_corner_sw"
+    if (v === 3007) return "trial_floor_edge_s"
+    if (v === 3008) return "trial_floor_corner_se"
+
+    if (v === 3010) return "trial_floor_interior_a"
+    if (v === 3011) return "trial_floor_interior_b"
+    if (v === 3012) return "trial_floor_interior_c"
+    if (v === 3013) return "trial_floor_interior_d"
+
+    if (v === 3020) return "trial_patch_a"
+    if (v === 3021) return "trial_patch_b"
+    if (v === 3022) return "trial_patch_c"
+    if (v === 3023) return "trial_patch_d"
+
+    if (v === 3030) return "trial_patch_edge_n"
+    if (v === 3031) return "trial_patch_edge_s"
+    if (v === 3032) return "trial_patch_edge_e"
+    if (v === 3033) return "trial_patch_edge_w"
+    if (v === 3034) return "trial_patch_corner_sw"
+    if (v === 3035) return "trial_patch_corner_se"
+    if (v === 3036) return "trial_patch_corner_nw"
+    if (v === 3037) return "trial_patch_corner_ne"
 
     return ""
 }
@@ -5675,6 +5706,14 @@ namespace sprites {
         if (dataKeys.indexOf(EFFECT_SKIN_DATA_KEY) >= 0 || dataKeys.indexOf("effectSkinId") >= 0) {
             return "EFFECT";
         }
+        if (
+            dataKeys.indexOf("heroName") >= 0 ||
+            dataKeys.indexOf("heroFamily") >= 0 ||
+            dataKeys.indexOf("heroIndex") >= 0 ||
+            dataKeys.indexOf("__profileKey") >= 0
+        ) {
+            return "HERO";
+        }
         if (dataKeys.indexOf("npcLpc") >= 0) return "HERO";
         if (dataKeys.indexOf("maxHp") >= 0 && dataKeys.indexOf("hp") >= 0) {
             return "ACTOR";
@@ -5808,6 +5847,24 @@ const INTELLECT_FAMILY_ID: number = (() => {
 
 // Optional: allow engine to override model later via sprite data (string).
 const PROJ_PHASER_VISUAL_MODEL_KEY = "__phaserVisualModel"; // default "crystal"
+
+// Hookshot spear (weapon overlay) carrier keys (from HeroEngineInPhaser)
+const HOOK_WPN_ID_KEY = "__heHookWeaponId";
+const HOOK_WPN_PHASE_KEY = "__heHookWeaponPhase";
+const HOOK_WPN_DIR_KEY = "__heHookWeaponDir";
+const HOOK_WPN_FRAME_COL_KEY = "__heHookWeaponFrameCol";
+const HOOK_WPN_ANGLE_MDEG_KEY = "__heHookWeaponAngleMdeg";
+const HOOK_WPN_ROTATE_KEY = "__heHookWeaponRotate";
+const HOOK_WPN_HERO_INDEX_KEY = "__heHookWeaponHeroIndex";
+
+// Internal bookkeeping on the Arcade sprite object
+const HOOK_WPN_OVERLAY_OBJ_KEY = "__heHookWeaponOverlay";
+
+// Per-weapon alignment overrides (local offsets are in weapon-local space, pre-rotation).
+const HOOK_WPN_ALIGN_BY_ID: Record<string, { rotMdeg?: number; offX?: number; offY?: number }> = {
+    // Example:
+    // spear: { rotMdeg: 0, offX: 0, offY: 0 }
+};
 
 // Internal bookkeeping on the Arcade sprite object (NOT sprite data)
 const PROJ_PHASER_VISUAL_OBJ_KEY = "__phaserVisualObj";
@@ -5949,6 +6006,86 @@ function _attachEnsureIntellectProjectileVisual(ctx: AttachContext): void {
         try { n.setAlpha?.(0); } catch { n.alpha = 0; }
         try { n.setVisible?.(false); } catch { n.visible = false; }
     }
+}
+
+function _destroyHookshotWeaponOverlay(s: any): void {
+    const spr = s ? (s as any)[HOOK_WPN_OVERLAY_OBJ_KEY] : null;
+    if (!spr) return;
+    try { spr.destroy?.(); } catch { }
+    (s as any)[HOOK_WPN_OVERLAY_OBJ_KEY] = null;
+}
+
+function _attachEnsureHookshotWeaponVisual(ctx: AttachContext): void {
+    const s: any = ctx.s as any;
+    const sc: Phaser.Scene = ctx.sc as any;
+    if (!sc) return;
+
+    if (s.flags & (sprites.Flag as any).Destroyed) {
+        _destroyHookshotWeaponOverlay(s);
+        return;
+    }
+
+    const weaponId = (_readDataString0(ctx.s, HOOK_WPN_ID_KEY, "") || "").trim();
+    if (!weaponId) {
+        _destroyHookshotWeaponOverlay(s);
+        return;
+    }
+
+    const phase = (_readDataString0(ctx.s, HOOK_WPN_PHASE_KEY, "thrust") || "thrust").trim();
+    const angleMdeg = _readDataNumber0(ctx.s, HOOK_WPN_ANGLE_MDEG_KEY, 0) | 0;
+    const allowRotate = (_readDataNumber0(ctx.s, HOOK_WPN_ROTATE_KEY, 0) | 0) !== 0;
+    const heroIndex = _readDataNumber0(ctx.s, HOOK_WPN_HERO_INDEX_KEY, -1) | 0;
+    const variant = (heroIndex >= 0) ? _weaponVariantForHero(heroIndex, weaponId) : DEFAULT_WEAPON_VARIANT;
+
+    const frame =
+        resolveHookshotThrustFrame(weaponId, variant, phase) ||
+        resolveHookshotThrustFrame(weaponId, variant, "thrust") ||
+        resolveHookshotThrustFrame(weaponId, variant, "attack_thrust") ||
+        resolveHookshotThrustFrame(weaponId, DEFAULT_WEAPON_VARIANT, phase) ||
+        resolveHookshotThrustFrame(weaponId, DEFAULT_WEAPON_VARIANT, "thrust") ||
+        resolveHookshotThrustFrame(weaponId, DEFAULT_WEAPON_VARIANT, "attack_thrust");
+
+    if (!frame) {
+        _destroyHookshotWeaponOverlay(s);
+        return;
+    }
+
+    const align = HOOK_WPN_ALIGN_BY_ID[String(weaponId || "").toLowerCase()] || {};
+    const rotOffsetMdeg = 90000 + (align.rotMdeg || 0); // base frame points "up"
+    const rot = allowRotate ? (((rotOffsetMdeg - angleMdeg) * Math.PI) / 180000) : 0;
+
+    const load = ensureHookshotThrustSheetLoaded(sc);
+    if (!load.ready) {
+        const existing: any = s[HOOK_WPN_OVERLAY_OBJ_KEY];
+        try { existing?.setVisible?.(false); } catch { }
+        return;
+    }
+
+    let spr: any = s[HOOK_WPN_OVERLAY_OBJ_KEY];
+    if (!spr || !spr.active) {
+        spr = sc.add.sprite(0, 0, HOOKSHOT_THRUST_SHEET.key, frame.frameIndex);
+        s[HOOK_WPN_OVERLAY_OBJ_KEY] = spr;
+    } else {
+        if (spr.texture?.key !== HOOKSHOT_THRUST_SHEET.key) {
+            spr.setTexture(HOOKSHOT_THRUST_SHEET.key);
+        }
+        spr.setFrame(frame.frameIndex);
+    }
+
+    const buttX = Number(frame.buttX || 0) + Number(align.offX || 0);
+    const buttY = Number(frame.buttY || 0) + Number(align.offY || 0);
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+    const dx = buttX * cos - buttY * sin;
+    const dy = buttX * sin + buttY * cos;
+    spr.x = s.x - dx;
+    spr.y = s.y - dy;
+    try { spr.setOrigin?.(0.5, 0.5); } catch { }
+    try { spr.rotation = rot; } catch { }
+
+    const baseDepth = (s.native && typeof s.native.depth === "number") ? (s.native.depth | 0) : ((s.z as any) | 0);
+    try { spr.setDepth?.(baseDepth + 2); } catch { }
+    try { spr.setVisible?.(true); } catch { }
 }
 
 // End of intellect section within sprites namespace
@@ -6341,6 +6478,9 @@ function _attachNativeSprite(s: Sprite): void {
 
     // NEW: Intellect projectile visual override (crystal) + hide base bitmap
     _attachEnsureIntellectProjectileVisual(ctx);
+
+    // NEW: Hookshot spear overlay (weaponAnimGlue-driven)
+    _attachEnsureHookshotWeaponVisual(ctx);
 
     // DEBUG: post-create snapshot for projectile
     if (DEBUG_SPRITE_ATTACH && (ctx.s as any).kind === 51 && (ctx.s as any).native && !(ctx.s as any).__loggedAttachProjAfter) {
@@ -16499,9 +16639,10 @@ namespace netWorld {
         }
     }
 
-    // 🔥 Follower-only: destroy any local sprites that vanished from the snapshot.
-    // This is what fixes "stale aura / move" artifacts on followers.
-    if (!isHost && all && all.length) {
+    // 🔥 Destroy any local sprites that vanished from the snapshot.
+    // Followers always prune; host prunes only during save-load apply.
+    const allowHostPrune = isHost && !!g.__netWorldAllowHostPrune;
+    if ((!isHost || allowHostPrune) && all && all.length) {
         for (const local of all) {
             if (!local) continue;
             const id = (local.id | 0);

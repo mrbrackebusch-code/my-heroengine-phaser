@@ -2031,6 +2031,7 @@ setPropFrameAt(anchorR: number, anchorC: number, frameIndex: number): boolean {
   const textureKey = String(inst.textureKey || "");
   const info = this.atlas.getSheetInfo(textureKey);
   const cols = (info?.cols ?? inst.sheetCols ?? 0) | 0;
+  const rows = (info?.rows ?? 0) | 0;
   if (cols <= 0) return false;
 
   const tr = _tileRefFromFrameIndex(cols, frameIndex | 0);
@@ -2042,6 +2043,11 @@ setPropFrameAt(anchorR: number, anchorC: number, frameIndex: number): boolean {
   const byRc: any = inst.byRc || anyThis.__propTileInfoByRC || null;
   const texObj: any = this.scene?.textures?.get?.(textureKey) || null;
   const textureExists = !!this.scene?.textures?.exists?.(textureKey);
+  const baseFrame: any = (texObj && typeof texObj.get === "function") ? texObj.get("__BASE") : null;
+  const baseW = (baseFrame?.width ?? 0) | 0;
+  const baseH = (baseFrame?.height ?? 0) | 0;
+  const cropW = (cols > 0 && baseW > 0) ? (Math.floor(baseW / cols) | 0) : ((info?.tileSize ?? 0) | 0);
+  const cropH = (rows > 0 && baseH > 0) ? (Math.floor(baseH / rows) | 0) : ((info?.tileSize ?? 0) | 0);
   const frameNameSet = new Set<string>();
   let maxNumericFrame = -1;
   let minNumericFrame = -1;
@@ -2080,6 +2086,7 @@ setPropFrameAt(anchorR: number, anchorC: number, frameIndex: number): boolean {
       let safeFrame: any = fi;
       let safeFrameIndex = fi | 0;
       let canSetFrame = true;
+      let canCrop = false;
 
       if (!hasFrame(safeFrame)) {
         if (maxNumericFrame >= 0) {
@@ -2099,11 +2106,12 @@ setPropFrameAt(anchorR: number, anchorC: number, frameIndex: number): boolean {
 
       if (!hasFrame(safeFrame)) {
         canSetFrame = false;
+        canCrop = (cropW > 0 && cropH > 0 && cols > 0 && rows > 0);
       }
 
       if (DEBUG_TILEMAP_GLUE) {
         const used = canSetFrame ? String(safeFrame) : "NONE";
-        if (used !== String(fi)) {
+        if (!canSetFrame && !canCrop) {
           console.warn(`[tileMapGlue][frameMissing] tex=${textureKey} want=${fi} use=${used}`);
         }
       }
@@ -2113,10 +2121,16 @@ setPropFrameAt(anchorR: number, anchorC: number, frameIndex: number): boolean {
         try { obj.anims?.stop?.(); } catch { /* ignore */ }
         if (canSetFrame) {
           try { obj.setFrame?.(safeFrame); } catch { /* ignore */ }
+        } else if (canCrop) {
+          const cropX = (atlasCol * cropW) | 0;
+          const cropY = (atlasRow * cropH) | 0;
+          try { obj.setFrame?.("__BASE"); } catch { /* ignore */ }
+          try { obj.setCrop?.(cropX, cropY, cropW, cropH); } catch { /* ignore */ }
+          try { obj.setDisplaySize?.(cropW, cropH); } catch { /* ignore */ }
         }
       }
 
-      if (byRc && canSetFrame) {
+      if (byRc && (canSetFrame || canCrop)) {
         byRc[String(worldR) + "," + String(worldC)] = { textureKey, frameIndex: safeFrameIndex };
       }
     }

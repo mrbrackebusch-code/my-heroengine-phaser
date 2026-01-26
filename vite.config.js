@@ -4,7 +4,10 @@ import fs from "fs";
 import path from "path";
 import os from "os";
 
-const ASSET_CACHE_CONTROL = "public, max-age=31536000, immutable";
+const ASSET_CACHE_CONTROL =
+    process.env.NODE_ENV === "production"
+        ? "public, max-age=31536000, immutable"
+        : "no-store";
 const ASSET_EXT_RE = /\.(png|jpe?g|gif|webp|svg|mp3|ogg|wav|json|atlas|bin|ttf|otf|woff2?)$/i;
 
 function shouldCacheAssetUrl(url) {

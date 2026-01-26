@@ -1,0 +1,683 @@
+simple | thrust | vbase | t64
+  goodSingleComponent: 1, 8, 9, 10, 17, 24, 25, 26
+  goodNoHoles: 1, 8, 9, 10, 17, 24, 25, 26
+
+spear | thrust | vbase | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear | thrust | vbrass | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear | thrust | vbronze | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear | thrust | vceramic | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear | thrust | vcopper | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear | thrust | vdark | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear | thrust | vgold | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear | thrust | viron | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear | thrust | vlight | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear | thrust | vmedium | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear | thrust | vred | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear | thrust | vsilver | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear | thrust | vsteel | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | vbase | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | vbrass | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | vbronze | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | vceramic | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | vcopper | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | vdark | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | vgold | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | viron | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | vlight | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | vmedium | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | vred | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | vsilver | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+spear_off | thrust | vsteel | t64
+  goodSingleComponent: 1
+  goodNoHoles: 1
+
+crossbow | thrust | vbase | t64
+  goodSingleComponent: 11, 16, 17, 18, 19, 20, 21, 22, 27
+  goodNoHoles: none
+
+x | thrust | vhoe | t64
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+x | thrust | vshovel | t64
+  goodSingleComponent: 0
+  goodNoHoles: 0
+
+x | thrust | vwatering | t64
+  goodSingleComponent: 0, 1, 4, 5, 8, 9, 12, 13, 16, 17, 20, 21, 24, 25, 28, 29
+  goodNoHoles: 0, 1, 4, 5, 9, 12, 16, 17, 20, 21, 25, 28
+
+crystal | thrust | vbase | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+
+crystal | thrust | vblue | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+
+crystal | thrust | vgreen | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+
+crystal | thrust | vorange | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+
+crystal | thrust | vpurple | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+
+crystal | thrust | vred | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+
+crystal | thrust | vyellow | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+
+diamond | thrust | vbase | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond | thrust | vbrass | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond | thrust | vbronze | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond | thrust | vceramic | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond | thrust | vcopper | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond | thrust | vdark | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond | thrust | vgold | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond | thrust | viron | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond | thrust | vlight | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond | thrust | vmedium | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond | thrust | vred | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond | thrust | vsilver | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond | thrust | vsteel | t192
+  goodSingleComponent: 0, 1, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | vbase | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | vbrass | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | vbronze | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | vceramic | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | vcopper | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | vdark | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | vgold | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | viron | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | vlight | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | vmedium | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | vred | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | vsilver | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+diamond_off | thrust | vsteel | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: none
+
+gnarled | thrust | vbase | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled | thrust | vbrass | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled | thrust | vbronze | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled | thrust | vceramic | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled | thrust | vcopper | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled | thrust | vdark | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled | thrust | vgold | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled | thrust | viron | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled | thrust | vlight | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled | thrust | vmedium | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled | thrust | vred | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled | thrust | vsilver | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled | thrust | vsteel | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | vbase | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | vbrass | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | vbronze | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | vceramic | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | vcopper | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | vdark | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | vgold | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | viron | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | vlight | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | vmedium | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | vred | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | vsilver | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+gnarled_off | thrust | vsteel | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+loop | thrust | vbase | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop | thrust | vbrass | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop | thrust | vbronze | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop | thrust | vceramic | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop | thrust | vcopper | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop | thrust | vdark | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop | thrust | vgold | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop | thrust | viron | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop | thrust | vlight | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop | thrust | vmedium | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop | thrust | vred | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop | thrust | vsilver | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop | thrust | vsteel | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 12, 24
+  goodNoHoles: none
+
+loop_off | thrust | vbase | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+loop_off | thrust | vbrass | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+loop_off | thrust | vbronze | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+loop_off | thrust | vceramic | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+loop_off | thrust | vcopper | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+loop_off | thrust | vdark | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+loop_off | thrust | vgold | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+loop_off | thrust | viron | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+loop_off | thrust | vlight | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+loop_off | thrust | vmedium | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+loop_off | thrust | vred | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+loop_off | thrust | vsilver | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+loop_off | thrust | vsteel | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 12
+  goodNoHoles: none
+
+s | thrust | vbase | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+s | thrust | vbrass | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+s | thrust | vbronze | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+s | thrust | vceramic | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+s | thrust | vcopper | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+s | thrust | vdark | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+s | thrust | vgold | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+s | thrust | viron | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+s | thrust | vlight | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+s | thrust | vmedium | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+s | thrust | vred | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+s | thrust | vsilver | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+s | thrust | vsteel | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 31
+
+dragonspear | thrust | vbase | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+dragonspear | thrust | vbrass | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+dragonspear | thrust | vbronze | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+dragonspear | thrust | vceramic | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+dragonspear | thrust | vcopper | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+dragonspear | thrust | vdark | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+dragonspear | thrust | vgold | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+dragonspear | thrust | viron | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+dragonspear | thrust | vlight | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+dragonspear | thrust | vmedium | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+dragonspear | thrust | vred | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+dragonspear | thrust | vsilver | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+dragonspear | thrust | vsteel | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 21, 24
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 21, 24
+
+halberd | attack_thrust | vbase | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7
+
+longspear | thrust | vbase | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+longspear | thrust | vbrass | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+longspear | thrust | vbronze | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+longspear | thrust | vceramic | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+longspear | thrust | vcopper | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+longspear | thrust | vdark | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+longspear | thrust | vgold | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+longspear | thrust | viron | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+longspear | thrust | vlight | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+longspear | thrust | vmedium | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+longspear | thrust | vred | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+longspear | thrust | vsilver | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+longspear | thrust | vsteel | t192
+  goodSingleComponent: 1, 3, 4, 5, 6, 7, 8, 17
+  goodNoHoles: 1, 3, 4, 5, 6, 7, 8, 17
+
+trident | thrust | vbase | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+trident | thrust | vbrass | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+trident | thrust | vbronze | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+trident | thrust | vceramic | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+trident | thrust | vcopper | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+trident | thrust | vdark | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+trident | thrust | vgold | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+trident | thrust | viron | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+trident | thrust | vlight | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+trident | thrust | vmedium | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+trident | thrust | vred | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+trident | thrust | vsilver | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+trident | thrust | vsteel | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 6, 7, 8, 21, 24
+  goodNoHoles: 1, 2, 4, 8, 21, 24
+
+longsword | attack_thrust | vbase | t192
+  goodSingleComponent: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+  goodNoHoles: 0, 1, 2, 3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 27, 28, 29, 30, 31
+
+whip | thrust | vbase | t192
+  goodSingleComponent: 0, 1, 2, 3, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30
+  goodNoHoles: 0, 1, 2, 3, 8, 9, 10, 11, 12, 13, 14, 16, 17, 18, 19, 20, 21, 22, 24, 25, 26, 27, 28, 29, 30

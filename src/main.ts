@@ -19,6 +19,7 @@ import { preloadTileSheets, buildTileAtlas, type TileAtlas } from "./tileAtlas";
 import { WorldTileRenderer } from "./tileMapGlue";
 
 import { preloadEffectSheets, buildEffectAtlas } from "./effectAtlas";
+import { preloadHookshotThrustSheet } from "./hookshotWeaponAtlas";
 import { AURA_RADII } from "./auraConfig";
 
 
@@ -891,8 +892,11 @@ function applyUrlProfileToGlobals() {
 type HeroSavePayload = {
   type: "heroesSaveV1";
   savedAt: number;
+  saveKind?: "auto" | "manual";
+  label?: string;
   profiles: string[];
   floor: { index: number; kind: string; baseFamily: string; wallFamily: string };
+  floorState?: any;
   worldSnapshot: any;
   heroSprites: any[];
   npcSprites?: any[];
@@ -908,6 +912,38 @@ function _captureWorldSnapshot(): any {
   if (!nw || typeof nw.capture !== "function") return null;
 
   return nw.capture();
+}
+
+function _applyWorldSnapshotFiltered(snap: any): boolean {
+  if (!snap || !snap.sprites) return false;
+  const g: any = globalThis as any;
+  try {
+    const nw: any = g.netWorld;
+    if (!nw || typeof nw.apply !== "function") return false;
+    const filtered = {
+      ...snap,
+      sprites: (snap.sprites || []).filter((s: any) => !_isHeroSnapshotSprite(s) && !_isNpcSnapshotSprite(s) && !_isEnemySnapshotSprite(s))
+    };
+    g.__netWorldAllowHostPrune = true;
+    try {
+      nw.apply(filtered);
+    } finally {
+      g.__netWorldAllowHostPrune = false;
+    }
+    logSave("[save] applied world snapshot (non-hero sprites)", filtered.sprites ? filtered.sprites.length : 0);
+    return true;
+  } catch (e) {
+    console.warn("[save] apply world snapshot failed", e);
+    return false;
+  }
+}
+
+function _tryApplyPendingWorldSnapshotForSave(): void {
+  const g: any = globalThis as any;
+  const snap = g.__pendingWorldSnapshotForSave;
+  if (!snap) return;
+  const ok = _applyWorldSnapshotFiltered(snap);
+  if (ok) g.__pendingWorldSnapshotForSave = null;
 }
 
 function _isHeroSnapshotSprite(s: any): boolean {
@@ -952,7 +988,11 @@ function _npcSnapshotKey(s: any): string {
   return `${role}|${heroName}|${family}`;
 }
 
-function _buildHeroSavePayload(nextIndex: number, nextKind: string): HeroSavePayload | null {
+function _buildHeroSavePayload(
+  nextIndex: number,
+  nextKind: string,
+  meta?: { saveKind?: "auto" | "manual"; label?: string }
+): HeroSavePayload | null {
   const g: any = globalThis as any;
   const profiles: string[] = [];
   const connectedMap = (g.__netProfileConnected && typeof g.__netProfileConnected === "object")
@@ -995,12 +1035,20 @@ function _buildHeroSavePayload(nextIndex: number, nextKind: string): HeroSavePay
   const blocklyXmlByProfile = g.__heBlocklyXmlByProfile || {};
   const tilemap = g.__lastTilemapMsg || null;
   const decor = g.__lastDecorPayload || null;
+  const floorState = (internals && typeof internals.getFloorSaveFlags === "function")
+    ? internals.getFloorSaveFlags()
+    : null;
+  const saveKind = (meta && meta.saveKind === "manual") ? "manual" : "auto";
+  const labelRaw = (meta && typeof meta.label === "string") ? meta.label.trim() : "";
 
   const payload: HeroSavePayload = {
     type: "heroesSaveV1",
     savedAt: Date.now(),
+    saveKind,
+    label: labelRaw || undefined,
     profiles,
     floor: { index: floorIndex, kind: floorKind, baseFamily, wallFamily },
+    floorState: floorState || undefined,
     worldSnapshot,
     heroSprites,
     npcSprites: npcSprites.length ? npcSprites : undefined,
@@ -1018,7 +1066,7 @@ function _sendHeroSavePayload(nextIndex: number, nextKind: string): void {
   const net: any = g.__net;
   if (!net || typeof net.sendSaveGame !== "function") return;
 
-  const payload = _buildHeroSavePayload(nextIndex, nextKind);
+  const payload = _buildHeroSavePayload(nextIndex, nextKind, { saveKind: "auto" });
   if (!payload) return;
 
   try {
@@ -1031,6 +1079,35 @@ function _sendHeroSavePayload(nextIndex: number, nextKind: string): void {
 
 // Expose hook for engine teleport commit
 (globalThis as any).__hero_saveBeforeTeleport = _sendHeroSavePayload;
+
+function _sendHeroManualSave(label?: string): boolean {
+  const g: any = globalThis as any;
+  const net: any = g.__net;
+  if (!net || typeof net.sendSaveGame !== "function") return false;
+  if (typeof g.__isHost === "boolean" && !g.__isHost) return false;
+
+  const internals = g.__HeroEnginePhaserInternals || {};
+  const floorIndex = (typeof internals.getFloorIndex === "function") ? (internals.getFloorIndex() | 0) : 0;
+  const floorKind = (typeof internals.getFloorKind === "function") ? String(internals.getFloorKind()) : "";
+  const payload = _buildHeroSavePayload(floorIndex, floorKind, { saveKind: "manual", label });
+  if (!payload) return false;
+
+  try {
+    net.sendSaveGame(payload);
+    logSave("[save] sent manual save", {
+      label: payload.label || null,
+      floorIndex: payload.floor?.index ?? null,
+      floorKind: payload.floor?.kind ?? null,
+      profiles: payload.profiles || []
+    });
+    return true;
+  } catch (e) {
+    console.warn("[save] failed to send manual save", e);
+    return false;
+  }
+}
+
+(globalThis as any).__hero_saveManual = _sendHeroManualSave;
 
 // ------------------------------------------------------------
 // Load save (host) when available from landing page
@@ -1046,6 +1123,47 @@ function _applyHeroSavePayload(save: any, sourceLabel?: string): boolean {
   }
 
   logSave("[save] applying save", sourceLabel || "");
+
+  const saveKind = (save && typeof save.saveKind === "string") ? String(save.saveKind || "") : "";
+  const floorIndex =
+    (save.floor && typeof save.floor.index === "number") ? (save.floor.index | 0) : null;
+  const floorKind =
+    (save.floor && typeof save.floor.kind === "string") ? String(save.floor.kind || "") : "";
+  const nextIndex =
+    (save.next && typeof save.next.index === "number") ? (save.next.index | 0) : null;
+  const nextKind =
+    (save.next && typeof save.next.kind === "string") ? String(save.next.kind || "") : "";
+  const inferredAuto = (!saveKind && nextIndex != null && floorIndex != null && nextIndex !== floorIndex);
+  const useNext = (saveKind === "auto") || inferredAuto;
+  const targetIndex =
+    (useNext && nextIndex != null) ? (nextIndex | 0)
+      : (floorIndex != null) ? (floorIndex | 0)
+        : (nextIndex != null) ? (nextIndex | 0)
+          : 0;
+  const targetKind =
+    (useNext && nextKind) ? String(nextKind || "")
+      : (floorKind || (nextKind || ""));
+  let applyFloorArtifacts = !useNext && (floorIndex != null);
+  const targetKindLower = String(targetKind || "").toLowerCase();
+  const floorStateSafe = !!(save && save.floorState && (save.floorState as any).safe);
+  if (applyFloorArtifacts && targetKindLower === "combat" && !floorStateSafe) {
+    applyFloorArtifacts = false;
+    logSave("[save] skipping floor artifacts (unsafe combat save)", {
+      saveKind,
+      floorStateSafe: floorStateSafe ? 1 : 0,
+      targetIndex,
+      targetKind,
+    });
+  }
+
+  logSave("[save] load target", {
+    saveKind,
+    useNext: !!useNext,
+    floorIndex: floorIndex != null ? (floorIndex | 0) : null,
+    nextIndex: nextIndex != null ? (nextIndex | 0) : null,
+    targetIndex,
+    targetKind,
+  });
 
   // Clear any previous pending save state
   g.__pendingWorldSnapshotForSave = null;
@@ -1066,65 +1184,83 @@ function _applyHeroSavePayload(save: any, sourceLabel?: string): boolean {
     }
   }
 
+  // Reset dungeon floor to saved state (host-only)
+  try {
+    const internals = g.__HeroEnginePhaserInternals || {};
+    if (internals && typeof internals.resetFloorFromSave === "function") {
+      const baseFamily =
+        (applyFloorArtifacts && save.floor && typeof save.floor.baseFamily === "string")
+          ? save.floor.baseFamily
+          : "";
+      const wallFamily =
+        (applyFloorArtifacts && save.floor && typeof save.floor.wallFamily === "string")
+          ? save.floor.wallFamily
+          : "";
+      const ok = internals.resetFloorFromSave(targetIndex, targetKind, { baseFamily, wallFamily });
+      if (ok) logSave("[save] floor reset requested", { targetIndex, targetKind, baseFamily, wallFamily });
+    }
+  } catch (e) {
+    console.warn("[save] floor reset failed", e);
+  }
+
   const worldSnapRaw = save.worldSnapshot || save.heroSnapshot || null;
-  const decorFromSave = save.decor || null;
+  const decorFromSave = applyFloorArtifacts ? (save.decor || null) : null;
 
-  // Apply world (non-hero) snapshot if netWorld is ready; otherwise stash for later.
-  const applyWorldSnapshot = (snap: any) => {
-    if (!snap || !snap.sprites) return false;
-    try {
-      const nw: any = g.netWorld;
-      if (!nw || typeof nw.apply !== "function") return false;
-      const filtered = {
-        ...snap,
-        sprites: (snap.sprites || []).filter((s: any) => !_isHeroSnapshotSprite(s) && !_isNpcSnapshotSprite(s) && !_isEnemySnapshotSprite(s))
-      };
-      nw.apply(filtered);
-      logSave("[save] applied world snapshot (non-hero sprites)", filtered.sprites ? filtered.sprites.length : 0);
-      return true;
-    } catch (e) {
-      console.warn("[save] apply world snapshot failed", e);
-      return false;
-    }
-  };
-
-  const npcSpritesRaw: any[] = [];
-  const npcSeen: any = {};
-  const pushNpc = (s: any) => {
-    if (!s) return;
-    const id = (typeof s.id === "number") ? (s.id | 0) : 0;
-    if (id && npcSeen[id]) return;
-    if (id) npcSeen[id] = 1;
-    npcSpritesRaw.push(s);
-  };
-  if (Array.isArray(save.npcSprites)) {
-    for (const s of save.npcSprites) pushNpc(s);
-  }
-  if (worldSnapRaw && Array.isArray(worldSnapRaw.sprites)) {
-    for (const s of worldSnapRaw.sprites) {
-      if (_isNpcSnapshotSprite(s)) pushNpc(s);
+  // Apply saved tilemap/decor if available
+  const tilemapFromSave = applyFloorArtifacts ? (save.tilemap || null) : null;
+  if (tilemapFromSave && typeof tilemapFromSave === "object") {
+    const msg: any = { ...tilemapFromSave };
+    if (!msg.decor && decorFromSave) msg.decor = decorFromSave;
+    g.__lastTilemapMsg = msg;
+    if (typeof g.__onNetTilemap === "function") {
+      try { g.__onNetTilemap(msg); } catch (e) { console.warn("[save] apply tilemap failed", e); }
+    } else {
+      g.__pendingTilemapMsg = msg;
     }
   }
 
-  if (worldSnapRaw) {
-    const applied = applyWorldSnapshot(worldSnapRaw);
-    if (!applied) {
-      g.__pendingWorldSnapshotForSave = worldSnapRaw;
-      setTimeout(() => {
-        try { applyWorldSnapshot(worldSnapRaw); } catch {}
-      }, 500);
+  // Apply saved floor flags (safe/cleared state)
+  try {
+    const internals = g.__HeroEnginePhaserInternals || {};
+    if (applyFloorArtifacts && internals && typeof internals.applyFloorSaveFlags === "function" && save.floorState) {
+      internals.applyFloorSaveFlags(save.floorState);
+      logSave("[save] applied floor flags", save.floorState);
     }
+  } catch (e) {
+    console.warn("[save] apply floor flags failed", e);
   }
 
-  if (npcSpritesRaw.length) {
-    const npcMap: any = {};
-    for (const s of npcSpritesRaw) {
-      const key = _npcSnapshotKey(s);
-      if (!key) continue;
-      npcMap[key] = s;
+  // Teleport-load: do NOT apply world snapshot positions.
+  if (applyFloorArtifacts) {
+    const npcSpritesRaw: any[] = [];
+    const npcSeen: any = {};
+    const pushNpc = (s: any) => {
+      if (!s) return;
+      const id = (typeof s.id === "number") ? (s.id | 0) : 0;
+      if (id && npcSeen[id]) return;
+      if (id) npcSeen[id] = 1;
+      npcSpritesRaw.push(s);
+    };
+    if (Array.isArray(save.npcSprites)) {
+      for (const s of save.npcSprites) pushNpc(s);
     }
-    g.__npcSavedSnapshotByKey = npcMap;
-    logSave("[save] queued npc snapshots for spawn", Object.keys(npcMap).length);
+    if (worldSnapRaw && Array.isArray(worldSnapRaw.sprites)) {
+      for (const s of worldSnapRaw.sprites) {
+        if (_isNpcSnapshotSprite(s)) pushNpc(s);
+      }
+    }
+
+    if (npcSpritesRaw.length) {
+      const npcMap: any = {};
+      for (const s of npcSpritesRaw) {
+        const key = _npcSnapshotKey(s);
+        if (!key) continue;
+        if (s && typeof s === "object") (s as any).__loadDataOnly = true;
+        npcMap[key] = s;
+      }
+      g.__npcSavedSnapshotByKey = npcMap;
+      logSave("[save] queued npc snapshots for spawn", Object.keys(npcMap).length);
+    }
   }
 
   if (decorFromSave) {
@@ -1153,18 +1289,31 @@ function _applyHeroSavePayload(save: any, sourceLabel?: string): boolean {
       const owner = (typeof d.owner === "number") ? (d.owner | 0) : 0;
       if (owner > 0 && profs && profs[owner - 1]) prof = String(profs[owner - 1] || "");
     }
-    if (prof) map[prof] = s;
+    if (prof) {
+      if (s && typeof s === "object") (s as any).__loadDataOnly = true;
+      map[prof] = s;
+    }
   }
   g.__heroSavedSnapshotByProfile = map;
 
+  try {
+    const internals = g.__HeroEnginePhaserInternals || {};
+    if (internals && typeof internals.applySavedSnapshots === "function") {
+      const res = internals.applySavedSnapshots();
+      logSave("[save] applied saved snapshots", res || {});
+    }
+  } catch (e) {
+    console.warn("[save] apply saved snapshots failed", e);
+  }
+
   // Floor theme hints
-  if (save.floor) {
+  if (applyFloorArtifacts && save.floor) {
     if (typeof save.floor.baseFamily === "string") g.__floorBaseFamily = save.floor.baseFamily;
     if (typeof save.floor.wallFamily === "string") g.__floorWallFamily = save.floor.wallFamily;
   }
 
   // Tilemap cache (optional; host will resend on change)
-  if (save.tilemap) {
+  if (applyFloorArtifacts && save.tilemap) {
     g.__lastTilemapMsg = save.tilemap;
   }
 
@@ -1216,14 +1365,19 @@ function _requestLoadLatestSave(opts?: LoadLatestSaveOpts): Promise<any> {
     .then((res: any) => {
       const entries = res && Array.isArray(res.entries) ? res.entries : [];
       if (!entries.length) return { ok: false, reason: "no-saves" };
-      let best = entries[0];
+      const autoEntries = entries.filter((e: any) => {
+        const kind = (e && typeof e.saveKind === "string") ? String(e.saveKind || "") : "";
+        return kind !== "manual";
+      });
+      const pool = autoEntries.length ? autoEntries : entries;
+      let best = pool[0];
       if (mode === "floor0") {
-        const floor0 = entries.find((e: any) => {
+        const floor0 = pool.find((e: any) => {
           const idx = (typeof e?.floorIndex === "number") ? (e.floorIndex | 0) : -1;
           return idx <= 0;
         });
         if (floor0) best = floor0;
-        else best = entries[entries.length - 1] || entries[0];
+        else best = pool[pool.length - 1] || pool[0];
       }
       const file = best && typeof best.file === "string" ? best.file : "";
       if (!file) return { ok: false, reason: "no-file" };
@@ -1433,6 +1587,7 @@ class HeroScene extends Phaser.Scene {
         logMain(">>> [HeroScene.preload] loading weapon sheets");
         loadWeaponAtlases(this);
         preloadWeaponChainImages(this);
+        preloadHookshotThrustSheet(this);
 
         _uiLoadingSet(25, "Queueing assets: effects");
         logMain(">>> [HeroScene.preload] loading effect sheets");
@@ -2350,6 +2505,34 @@ private _updateBossIntroHoldCamera(nowMs: number, deltaMs: number): boolean {
     const nextY = curY + (focusY - curY) * lerp;
     cam.centerOn(nextX, nextY);
 
+    return true;
+}
+
+private _updateTrialCameraHold(nowMs: number, deltaMs: number): boolean {
+    const cam = this.cameras?.main as any;
+    if (!cam) return false;
+
+    const g: any = globalThis as any;
+    const internals = g.__HeroEnginePhaserInternals || {};
+    let holdInfo: any = null;
+    try { holdInfo = internals.getTrialCameraHoldInfo?.(); } catch { holdInfo = null; }
+
+    if (!holdInfo || !holdInfo.active || (holdInfo.holdUntilMs | 0) <= (nowMs | 0)) return false;
+
+    const centerX = (holdInfo.centerX ?? holdInfo.x);
+    const centerY = (holdInfo.centerY ?? holdInfo.y);
+    if (!Number.isFinite(centerX) || !Number.isFinite(centerY)) return false;
+
+    try { cam.stopFollow(); } catch { }
+    this._camFollowPid = 0;
+    this._camFollowNative = undefined;
+
+    const lerp = Math.min(0.2, Math.max(0.08, (deltaMs | 0) / 600));
+    const curX = cam.midPoint?.x ?? centerX;
+    const curY = cam.midPoint?.y ?? centerY;
+    const nextX = curX + (centerX - curX) * lerp;
+    const nextY = curY + (centerY - curY) * lerp;
+    cam.centerOn(nextX, nextY);
     return true;
 }
 
@@ -3899,9 +4082,10 @@ update(time: number, delta: number) {
 
     const bossIntroActive = this._updateBossIntro(time | 0);
     const bossHoldActive = bossIntroActive ? false : this._updateBossIntroHoldCamera(time | 0, delta | 0);
+    const trialHoldActive = (!bossIntroActive && !bossHoldActive) ? this._updateTrialCameraHold(time | 0, delta | 0) : false;
 
     // Keep camera following local player hero (works on host + clients)
-    if (!bossIntroActive && !bossHoldActive) {
+    if (!bossIntroActive && !bossHoldActive && !trialHoldActive) {
         this._updateCameraFollowLocalHero();
         this._checkCameraFollowSanity(time | 0);
     }
@@ -3910,6 +4094,7 @@ update(time: number, delta: number) {
     this._updateLegacyHostTick(g);
 
     this._updateCoinFx(g);
+    _tryApplyPendingWorldSnapshotForSave();
 
     // IMPORTANT: Tilemap sync must NOT depend on __game.
     if (!g.__isHost) return;

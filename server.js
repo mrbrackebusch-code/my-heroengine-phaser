@@ -740,7 +740,9 @@ function listAutosaveEntries(filterProfiles) {
 
   for (const f of files) {
     if (!f || typeof f !== "string") continue;
-    if (!f.startsWith("autosave_") || !f.endsWith(".json")) continue;
+    const isAuto = f.startsWith("autosave_");
+    const isManual = f.startsWith("manualsave_");
+    if ((!isAuto && !isManual) || !f.endsWith(".json")) continue;
     const full = path.join(SAVE_DIR, f);
     let raw = "";
     let stat = null;
@@ -764,7 +766,9 @@ function listAutosaveEntries(filterProfiles) {
     const floorIndex = (payload.floor && typeof payload.floor.index === "number") ? (payload.floor.index | 0) : -1;
     const floorKind = (payload.floor && typeof payload.floor.kind === "string") ? payload.floor.kind : "";
     const profiles = Array.isArray(payload.profiles) ? payload.profiles : [];
-    entries.push({ file: f, savedAt, floorIndex, floorKind, profiles });
+    const saveKind = (payload.saveKind === "manual" || isManual) ? "manual" : "auto";
+    const label = (typeof payload.label === "string") ? payload.label : "";
+    entries.push({ file: f, savedAt, floorIndex, floorKind, profiles, saveKind, label });
   }
 
   entries.sort((a, b) => {
@@ -997,12 +1001,16 @@ function writeSaveFile(payload) {
   const profilesKey = sanitizeProfilesKey(payload.profiles);
   const ts = new Date();
   const timestamp = ts.toISOString().replace(/[:.]/g, "").replace("T", "_").replace("Z", "");
-  const fname = `autosave_${profilesKey}_${timestamp}.json`;
+  const saveKind = (payload.saveKind === "manual") ? "manual" : "auto";
+  const prefix = (saveKind === "manual") ? "manualsave_" : "autosave_";
+  const fname = `${prefix}${profilesKey}_${timestamp}.json`;
   const full = path.join(SAVE_DIR, fname);
 
   const toWrite = JSON.stringify(payload, null, 2);
   fs.writeFileSync(full, toWrite, "utf8");
-  pruneOldSaves(`autosave_${profilesKey}_`);
+  if (saveKind !== "manual") {
+    pruneOldSaves(`autosave_${profilesKey}_`);
+  }
 
   console.log("[server.save] wrote", full, "bytes=", toWrite.length);
 }
@@ -1044,7 +1052,9 @@ function handleSaveLoadRequest(ws, info, msg) {
   const file = (msg && typeof msg.file === "string") ? msg.file : "";
   if (!requestId) return;
 
-  if (!file || !file.startsWith("autosave_") || !file.endsWith(".json") || file.includes("..") || file.includes("/") || file.includes("\\")) {
+  const isAuto = file.startsWith("autosave_");
+  const isManual = file.startsWith("manualsave_");
+  if (!file || (!isAuto && !isManual) || !file.endsWith(".json") || file.includes("..") || file.includes("/") || file.includes("\\")) {
     sendJson(ws, { type: "saveLoad", requestId, error: "invalid-file" });
     return;
   }

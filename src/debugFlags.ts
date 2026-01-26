@@ -39,6 +39,8 @@ export const DEBUG_STR_PROJECTILE_FRAMES_THROTTLE_MS = 0;
 
 // Agility/integrator debug
 export const DEBUG_AGILITY = false;
+// Agility animation timing slowmo (applies to move duration + lunge speed).
+export const DEBUG_AGI_ANIM_SLOWMO = false;
 export const DBG_INTERVAL_MS = 50;
 export const DEBUG_INTEGRATOR = false; // [WPN-FCO-CLEAR] and other integrator trace logs.
 export const DBG_INT_INTERVAL_MS = 50;
@@ -52,7 +54,7 @@ export const DEBUG_AGI_AIM_THROTTLE_MS = 250;
 export const DEBUG_AGI_HOOKSHOT_LOGS = false;
 export const DEBUG_AGI_HOOKSHOT_THROTTLE_MS = 50;
 export const DEBUG_AGI_HOOKSHOT_TICK_LOGS = false;
-export const DEBUG_AGI_HOOKSHOT_SLOW_MULT = 0.2;
+export const DEBUG_AGI_HOOKSHOT_SLOW_MULT = 1;
 export const DEBUG_AGI_COMET_LOGS = false;
 export const DEBUG_AGI_COMET_LOG_THROTTLE_MS = 120;
 export const DEBUG_AGI_COMET_LOG_VERBOSE = false;
@@ -284,7 +286,7 @@ export const DEBUG_PROP_SYNC = false; // [net.decor.apply]/[net.decor.capture] l
 export const DEBUG_TILE_ATLAS_GLOBAL = true; // was DEBUG_TILES_GLOBAL in tileAtlas.ts
 export const DEBUG_TILES = true;
 export const DEBUG_TILEMAP_GLUE = true; // [tileMapGlue] base render done, etc.
-export const DEBUG_TILEMAP_AUDIT = false; // [TILEMAP][AUDIT] consolidated decor/prop/tilemap checks.
+export const DEBUG_TILEMAP_AUDIT = true; // [TILEMAP][AUDIT] consolidated decor/prop/tilemap checks.
 export const WORLD_SYNC_HASH_WARN_THRESHOLD_MS = 8000; // warn if host/follower hashes mismatch longer than this (0 disables)
 
 // Prop focus aura (tileMapGlue.ts)

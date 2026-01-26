@@ -218,10 +218,11 @@ export const DECAL_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     trial_patch_edge_s: { textureKey: "tiles.magecity", ref: { row: 28, col: 3 } },
     trial_patch_edge_e: { textureKey: "tiles.magecity", ref: { row: 27, col: 3 } },
     trial_patch_edge_w: { textureKey: "tiles.magecity", ref: { row: 26, col: 3 } },
-    trial_patch_corner_sw: { textureKey: "tiles.magecity", ref: { row: 29, col: 4 } },
-    trial_patch_corner_se: { textureKey: "tiles.magecity", ref: { row: 29, col: 5 } },
-    trial_patch_corner_nw: { textureKey: "tiles.magecity", ref: { row: 29, col: 6 } },
-    trial_patch_corner_ne: { textureKey: "tiles.magecity", ref: { row: 29, col: 7 } },
+    // Outermost border corners: use the base tile (row 0, col 0)
+    trial_patch_corner_sw: { textureKey: "tiles.magecity", ref: { row: 0, col: 0 } },
+    trial_patch_corner_se: { textureKey: "tiles.magecity", ref: { row: 0, col: 0 } },
+    trial_patch_corner_nw: { textureKey: "tiles.magecity", ref: { row: 0, col: 0 } },
+    trial_patch_corner_ne: { textureKey: "tiles.magecity", ref: { row: 0, col: 0 } },
 };
 
 
@@ -303,27 +304,75 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
     // Trial arena props (build_atlas)
     trial_gate_6x6: {
         atlas: "build_atlas",
-        ref: { row: 19, col: 21 },
-        wTiles: 6,
-        hTiles: 6,
+        ref: { row: 18, col: 21 },
+        wTiles: 3,
+        hTiles: 3,
+    },
+    trial_gate_left_1x3: {
+        atlas: "build_atlas",
+        ref: { row: 18, col: 21 },
+        wTiles: 1,
+        hTiles: 3,
+    },
+    trial_gate_mid_1x3: {
+        atlas: "build_atlas",
+        ref: { row: 18, col: 22 },
+        wTiles: 1,
+        hTiles: 3,
+    },
+    trial_gate_right_1x3: {
+        atlas: "build_atlas",
+        ref: { row: 18, col: 23 },
+        wTiles: 1,
+        hTiles: 3,
     },
     trial_fence_mid_2x4: {
         atlas: "build_atlas",
-        ref: { row: 20, col: 18 },
-        wTiles: 2,
-        hTiles: 4,
+        ref: { row: 19, col: 18 },
+        wTiles: 1,
+        hTiles: 2,
     },
     trial_fence_corner_l_2x6: {
         atlas: "build_atlas",
-        ref: { row: 20, col: 17 },
-        wTiles: 2,
-        hTiles: 6,
+        ref: { row: 19, col: 17 },
+        wTiles: 1,
+        hTiles: 3,
     },
     trial_fence_corner_r_4x4: {
         atlas: "build_atlas",
-        ref: { row: 20, col: 19 },
-        wTiles: 4,
-        hTiles: 4,
+        ref: { row: 19, col: 19 },
+        wTiles: 2,
+        hTiles: 2,
+    },
+    trial_fence_vert_1x1: {
+        atlas: "build_atlas",
+        ref: { row: 17, col: 20 }, // vertical segments (left/right edges)
+        wTiles: 1,
+        hTiles: 1,
+    },
+    trial_fence_corner_tl_1x2: {
+        atlas: "build_atlas",
+        ref: { row: 17, col: 17 }, // top-left corner (2 tiles tall)
+        wTiles: 1,
+        hTiles: 2,
+    },
+    trial_fence_corner_bl_1x2: {
+        atlas: "build_atlas",
+        ref: { row: 19, col: 17 }, // bottom-left corner (2 tiles tall)
+        wTiles: 1,
+        hTiles: 2,
+    },
+    trial_fence_corner_tr_1x2: {
+        atlas: "build_atlas",
+        ref: { row: 17, col: 20 }, // top-right corner (2 tiles tall)
+        wTiles: 1,
+        hTiles: 2,
+    },
+    trial_fence_top_mid_1x2: {
+        atlas: "build_atlas",
+        ref: { row: 17, col: 18 }, // top edge middle (2 tiles tall)
+        wTiles: 1,
+        hTiles: 2,
     },
 
     // Bridges (visuals only; collision comes from world grid)
@@ -428,6 +477,36 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         depthBiasTiles: 1.5,
         depthBias: 2,
         focusAuraAllowInset: true,
+    },
+
+    trial_platform: {
+        atlas: "anims.trialplatform 256x128",
+        ref: { row: 0, col: 0 },
+        depthBias: -700000,
+    },
+
+    trial_platform_spin: {
+        atlas: "anims.trialplatform 256x128",
+        ref: { row: 0, col: 0 },
+        depthBias: -700000,
+        anim: {
+            key: "spin",
+            frames: [1, 2, 3, 4],
+            frameRate: 6,
+            repeat: -1
+        }
+    },
+
+    trial_platform_spin_fast: {
+        atlas: "anims.trialplatform 256x128",
+        ref: { row: 0, col: 0 },
+        depthBias: -700000,
+        anim: {
+            key: "spin_fast",
+            frames: [1, 2, 3, 4],
+            frameRate: 18,
+            repeat: -1
+        }
     },
 
 teleport_rune: {
@@ -824,6 +903,18 @@ function logTiles(...args: any[]) {
     console.log(...args);
 }
 
+const __DEV_ASSET_BUSTER =
+    (typeof import.meta !== "undefined" && (import.meta as any).env?.DEV)
+        ? String(Date.now())
+        : "";
+
+function _withDevAssetBuster(url: string): string {
+    if (!__DEV_ASSET_BUSTER) return url;
+    if (!url) return url;
+    const sep = url.includes("?") ? "&" : "?";
+    return `${url}${sep}v=${__DEV_ASSET_BUSTER}`;
+}
+
 
 interface TileSheetDef {
     textureKey: string;
@@ -1010,12 +1101,13 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
 
     for (const sheet of TILE_SHEETS) {
         // Base sheet
-        __SHEET_URL_BY_KEY.set(sheet.textureKey, sheet.url);
+        const sheetUrl = _withDevAssetBuster(sheet.url);
+        __SHEET_URL_BY_KEY.set(sheet.textureKey, sheetUrl);
 
         queueSpritesheetOnce(
             scene,
             sheet.textureKey,
-            sheet.url,
+            sheetUrl,
             sheet.frameW | 0,
             sheet.frameH | 0
         );
@@ -1035,11 +1127,12 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
 
             const auraTexKey = auraKey(texKey, radius);
 
-            __SHEET_URL_BY_KEY.set(auraTexKey, auraUrl);
+            const auraUrlBusted = _withDevAssetBuster(auraUrl);
+            __SHEET_URL_BY_KEY.set(auraTexKey, auraUrlBusted);
             queueSpritesheetOnce(
                 scene,
                 auraTexKey,
-                auraUrl,
+                auraUrlBusted,
                 sheet.frameW | 0,
                 sheet.frameH | 0
             );
@@ -1193,14 +1286,12 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
     
     _registerAuraSheetInfos(scene, sheetInfoByKey);
 
-    // Some tilesheets are not exact tile-size multiples (e.g., magecity).
-    // Phaser warns when adding such sheets as tilemap tilesets. To keep the
-    // warnings away without editing assets, we trim them at runtime to the
-    // nearest valid multiple and route atlas lookups to the trimmed texture.
+    // Tilesheets must be exact multiples of their frame size.
+    // Never trim at runtime — hard fail if a sheet is mis-sized.
     const effectiveByRaw = new Map<string, string>();
     for (const sh of TILE_SHEETS) effectiveByRaw.set(sh.textureKey, sh.textureKey);
 
-    const trimTileSheetIfNeeded = (sh: TileSheetDef): void => {
+    const validateTileSheet = (sh: TileSheetDef): void => {
         const rawKey = sh.textureKey;
         if (!rawKey.startsWith("tiles.")) return;
 
@@ -1217,48 +1308,23 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
         }
         const w = (img?.width ?? img?.naturalWidth ?? 0) | 0;
         const h = (img?.height ?? img?.naturalHeight ?? 0) | 0;
-        if (w <= 0 || h <= 0) return;
-
-        const cols = Math.floor(w / fw) | 0;
-        const rows = Math.floor(h / fh) | 0;
-        if (cols <= 0 || rows <= 0) return;
-
-        const trimW = (cols * fw) | 0;
-        const trimH = (rows * fh) | 0;
-        const needsTrim = (trimW !== (w | 0)) || (trimH !== (h | 0));
-
-        if (!needsTrim) {
-            const info: TileSheetInfo = { textureKey: rawKey, cols, rows, tileSize: fw };
-            sheetInfoByKey.set(rawKey, info);
-            effectiveByRaw.set(rawKey, rawKey);
-            return;
+        const src = String(img?.src || "");
+        if (w <= 0 || h <= 0) {
+            throw new Error(`[tileAtlas.build] tilesheet has no dimensions: ${rawKey}`);
+        }
+        if (((w | 0) % (fw | 0)) !== 0 || ((h | 0) % (fh | 0)) !== 0) {
+            throw new Error(
+                `[tileAtlas.build] tilesheet not divisible by frame size: ${rawKey} ` +
+                `size=${w}x${h} frame=${fw}x${fh}` +
+                (src ? ` src=${src}` : "")
+            );
         }
 
-        const trimKey = `${rawKey}__trim${fw}x${fh}`;
-        try {
-            const hasTrim = !!((scene as any)?.textures?.exists?.(trimKey));
-            if (!hasTrim) {
-                const canvasTex: any = (scene as any)?.textures?.createCanvas?.(trimKey, trimW, trimH);
-                const ctx: any = canvasTex?.context;
-                if (ctx && img) {
-                    ctx.clearRect(0, 0, trimW, trimH);
-                    ctx.drawImage(img, 0, 0, trimW, trimH, 0, 0, trimW, trimH);
-                    canvasTex.refresh();
-                }
-            }
-            const infoTrim: TileSheetInfo = { textureKey: trimKey, cols, rows, tileSize: fw };
-            sheetInfoByKey.set(trimKey, infoTrim);
-            sheetInfoByKey.set(rawKey, infoTrim);
-            effectiveByRaw.set(rawKey, trimKey);
-        } catch {
-            // Fall back to the raw sheet if trim fails for any reason.
-            const infoRaw: TileSheetInfo = { textureKey: rawKey, cols, rows, tileSize: fw };
-            sheetInfoByKey.set(rawKey, infoRaw);
-            effectiveByRaw.set(rawKey, rawKey);
-        }
+        const info = computeSheetInfo(rawKey, fw, fh, sh.cols | 0, sh.rows | 0);
+        if (info) sheetInfoByKey.set(rawKey, info);
     };
 
-    for (const sh of TILE_SHEETS) trimTileSheetIfNeeded(sh);
+    for (const sh of TILE_SHEETS) validateTileSheet(sh);
 
     const toEffectiveKey = (tk: string): string => effectiveByRaw.get(tk) ?? tk;
 
