@@ -1,3 +1,108 @@
+ [tileAtlas.preload] sheets to load: (26) ['tiles.ArkanosExample (1x1 fallback, frame=32x32, url="/assets/tiles/ArkanosExample.png")', 'tiles.ProjectUtumno_full (1x1 fallback, frame=32x32, url="/assets/tiles/ProjectUtumno_full.png")', 'tiles.ProjectUtumno_supplemental (1x1 fallback, fr…l="/assets/tiles/ProjectUtumno_supplemental.png")', 'tiles.base_out_atlas (1x1 fallback, frame=32x32, url="/assets/tiles/base_out_atlas.png")', 'tiles.build_atlas (1x1 fallback, frame=32x32, url="/assets/tiles/build_atlas.png")', 'tiles.items (1x1 fallback, frame=32x32, url="/assets/tiles/items.png")', 'tiles.magecity OriginalColor (1x1 fallback, frame=…url="/assets/tiles/magecity%20OriginalColor.png")', 'tiles.magecity (1x1 fallback, frame=32x32, url="/assets/tiles/magecity.png")', 'tiles.object_atlas (1x1 fallback, frame=32x32, url="/assets/tiles/object_atlas.png")', 'tiles.ore (1x1 fallback, frame=32x32, url="/assets/tiles/ore.png")', 'tiles.plant repack (1x1 fallback, frame=32x32, url="/assets/tiles/plant%20repack.png")', 'tiles.rocks (1x1 fallback, frame=32x32, url="/assets/tiles/rocks.png")', 'tiles.sand (1x1 fallback, frame=32x32, url="/assets/tiles/sand.png")', 'tiles.shopPlatform (1x1 fallback, frame=32x32, url="/assets/tiles/shopPlatform.png")', 'tiles.terrain (21x23 fallback, frame=32x32, url="/assets/tiles/terrain.png")', 'tiles.terrain_atlas (32x32 fallback, frame=32x32, url="/assets/tiles/terrain_atlas.png")', 'anims.Book 32x40 (1x1 fallback, frame=32x40, url="/assets/props/Book%2032x40.png")', 'anims.FairyFountain 64x56 (1x1 fallback, frame=64x56, url="/assets/props/FairyFountain%2064x56.png")', 'anims.FireTotem 96x96 (1x1 fallback, frame=96x96, url="/assets/props/FireTotem%2096x96.png")', 'anims.MageFountain Capped 64x64 (1x1 fallback, fra…/assets/props/MageFountain%20Capped%2064x64.png")', 'anims.MageFountain Open 64x64 (1x1 fallback, frame…="/assets/props/MageFountain%20Open%2064x64.png")', 'anims.Shrine 32x64 (1x1 fallback, frame=32x64, url="/assets/props/Shrine%2032x64.png")', 'anims.WaterFountain 64x96 (1x1 fallback, frame=64x96, url="/assets/props/WaterFountain%2064x96.png")', 'anims.coins 16x16 (1x1 fallback, frame=16x16, url="/assets/props/coins%2016x16.png")', 'anims.stone door 160x160 (1x1 fallback, frame=160x…, url="/assets/props/stone%20door%20160x160.png")', 'anims.teleportrune 64x64 (1x1 fallback, frame=64x64, url="/assets/props/teleportrune%2064x64.png")']
+ [tileAtlas.preload] aura loaded {texKey: 'tiles.ArkanosExample', auraTexKey: 'tiles.ArkanosExample_aura_r0', auraUrl: '/assets/tiles/auras/ArkanosExample_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ArkanosExample', auraTexKey: 'tiles.ArkanosExample_aura_r1', auraUrl: '/assets/tiles/auras/ArkanosExample_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ArkanosExample', auraTexKey: 'tiles.ArkanosExample_aura_r2', auraUrl: '/assets/tiles/auras/ArkanosExample_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ArkanosExample', auraTexKey: 'tiles.ArkanosExample_aura_r3', auraUrl: '/assets/tiles/auras/ArkanosExample_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ProjectUtumno_full', auraTexKey: 'tiles.ProjectUtumno_full_aura_r0', auraUrl: '/assets/tiles/auras/ProjectUtumno_full_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ProjectUtumno_full', auraTexKey: 'tiles.ProjectUtumno_full_aura_r1', auraUrl: '/assets/tiles/auras/ProjectUtumno_full_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ProjectUtumno_full', auraTexKey: 'tiles.ProjectUtumno_full_aura_r2', auraUrl: '/assets/tiles/auras/ProjectUtumno_full_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ProjectUtumno_full', auraTexKey: 'tiles.ProjectUtumno_full_aura_r3', auraUrl: '/assets/tiles/auras/ProjectUtumno_full_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ProjectUtumno_supplemental', auraTexKey: 'tiles.ProjectUtumno_supplemental_aura_r0', auraUrl: '/assets/tiles/auras/ProjectUtumno_supplemental_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ProjectUtumno_supplemental', auraTexKey: 'tiles.ProjectUtumno_supplemental_aura_r1', auraUrl: '/assets/tiles/auras/ProjectUtumno_supplemental_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ProjectUtumno_supplemental', auraTexKey: 'tiles.ProjectUtumno_supplemental_aura_r2', auraUrl: '/assets/tiles/auras/ProjectUtumno_supplemental_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ProjectUtumno_supplemental', auraTexKey: 'tiles.ProjectUtumno_supplemental_aura_r3', auraUrl: '/assets/tiles/auras/ProjectUtumno_supplemental_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.base_out_atlas', auraTexKey: 'tiles.base_out_atlas_aura_r0', auraUrl: '/assets/tiles/auras/base_out_atlas_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.base_out_atlas', auraTexKey: 'tiles.base_out_atlas_aura_r1', auraUrl: '/assets/tiles/auras/base_out_atlas_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.base_out_atlas', auraTexKey: 'tiles.base_out_atlas_aura_r2', auraUrl: '/assets/tiles/auras/base_out_atlas_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.base_out_atlas', auraTexKey: 'tiles.base_out_atlas_aura_r3', auraUrl: '/assets/tiles/auras/base_out_atlas_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.build_atlas', auraTexKey: 'tiles.build_atlas_aura_r0', auraUrl: '/assets/tiles/auras/build_atlas_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.build_atlas', auraTexKey: 'tiles.build_atlas_aura_r1', auraUrl: '/assets/tiles/auras/build_atlas_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.build_atlas', auraTexKey: 'tiles.build_atlas_aura_r2', auraUrl: '/assets/tiles/auras/build_atlas_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.build_atlas', auraTexKey: 'tiles.build_atlas_aura_r3', auraUrl: '/assets/tiles/auras/build_atlas_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.items', auraTexKey: 'tiles.items_aura_r0', auraUrl: '/assets/tiles/auras/items_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.items', auraTexKey: 'tiles.items_aura_r1', auraUrl: '/assets/tiles/auras/items_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.items', auraTexKey: 'tiles.items_aura_r2', auraUrl: '/assets/tiles/auras/items_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.items', auraTexKey: 'tiles.items_aura_r3', auraUrl: '/assets/tiles/auras/items_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.magecity OriginalColor', auraTexKey: 'tiles.magecity OriginalColor_aura_r0', auraUrl: '/assets/tiles/auras/magecity%20OriginalColor_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.magecity OriginalColor', auraTexKey: 'tiles.magecity OriginalColor_aura_r1', auraUrl: '/assets/tiles/auras/magecity%20OriginalColor_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.magecity OriginalColor', auraTexKey: 'tiles.magecity OriginalColor_aura_r2', auraUrl: '/assets/tiles/auras/magecity%20OriginalColor_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.magecity OriginalColor', auraTexKey: 'tiles.magecity OriginalColor_aura_r3', auraUrl: '/assets/tiles/auras/magecity%20OriginalColor_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.magecity', auraTexKey: 'tiles.magecity_aura_r0', auraUrl: '/assets/tiles/auras/magecity_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.magecity', auraTexKey: 'tiles.magecity_aura_r1', auraUrl: '/assets/tiles/auras/magecity_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.magecity', auraTexKey: 'tiles.magecity_aura_r2', auraUrl: '/assets/tiles/auras/magecity_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.magecity', auraTexKey: 'tiles.magecity_aura_r3', auraUrl: '/assets/tiles/auras/magecity_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.object_atlas', auraTexKey: 'tiles.object_atlas_aura_r0', auraUrl: '/assets/tiles/auras/object_atlas_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.object_atlas', auraTexKey: 'tiles.object_atlas_aura_r1', auraUrl: '/assets/tiles/auras/object_atlas_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.object_atlas', auraTexKey: 'tiles.object_atlas_aura_r2', auraUrl: '/assets/tiles/auras/object_atlas_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.object_atlas', auraTexKey: 'tiles.object_atlas_aura_r3', auraUrl: '/assets/tiles/auras/object_atlas_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ore', auraTexKey: 'tiles.ore_aura_r0', auraUrl: '/assets/tiles/auras/ore_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ore', auraTexKey: 'tiles.ore_aura_r1', auraUrl: '/assets/tiles/auras/ore_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ore', auraTexKey: 'tiles.ore_aura_r2', auraUrl: '/assets/tiles/auras/ore_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.ore', auraTexKey: 'tiles.ore_aura_r3', auraUrl: '/assets/tiles/auras/ore_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.plant repack', auraTexKey: 'tiles.plant repack_aura_r0', auraUrl: '/assets/tiles/auras/plant%20repack_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.plant repack', auraTexKey: 'tiles.plant repack_aura_r1', auraUrl: '/assets/tiles/auras/plant%20repack_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.plant repack', auraTexKey: 'tiles.plant repack_aura_r2', auraUrl: '/assets/tiles/auras/plant%20repack_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.plant repack', auraTexKey: 'tiles.plant repack_aura_r3', auraUrl: '/assets/tiles/auras/plant%20repack_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.rocks', auraTexKey: 'tiles.rocks_aura_r0', auraUrl: '/assets/tiles/auras/rocks_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.rocks', auraTexKey: 'tiles.rocks_aura_r1', auraUrl: '/assets/tiles/auras/rocks_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.rocks', auraTexKey: 'tiles.rocks_aura_r2', auraUrl: '/assets/tiles/auras/rocks_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.rocks', auraTexKey: 'tiles.rocks_aura_r3', auraUrl: '/assets/tiles/auras/rocks_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.sand', auraTexKey: 'tiles.sand_aura_r0', auraUrl: '/assets/tiles/auras/sand_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.sand', auraTexKey: 'tiles.sand_aura_r1', auraUrl: '/assets/tiles/auras/sand_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.sand', auraTexKey: 'tiles.sand_aura_r2', auraUrl: '/assets/tiles/auras/sand_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.sand', auraTexKey: 'tiles.sand_aura_r3', auraUrl: '/assets/tiles/auras/sand_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.shopPlatform', auraTexKey: 'tiles.shopPlatform_aura_r0', auraUrl: '/assets/tiles/auras/shopPlatform_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.shopPlatform', auraTexKey: 'tiles.shopPlatform_aura_r1', auraUrl: '/assets/tiles/auras/shopPlatform_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.shopPlatform', auraTexKey: 'tiles.shopPlatform_aura_r2', auraUrl: '/assets/tiles/auras/shopPlatform_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.shopPlatform', auraTexKey: 'tiles.shopPlatform_aura_r3', auraUrl: '/assets/tiles/auras/shopPlatform_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.terrain', auraTexKey: 'tiles.terrain_aura_r0', auraUrl: '/assets/tiles/auras/terrain_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.terrain', auraTexKey: 'tiles.terrain_aura_r1', auraUrl: '/assets/tiles/auras/terrain_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.terrain', auraTexKey: 'tiles.terrain_aura_r2', auraUrl: '/assets/tiles/auras/terrain_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.terrain', auraTexKey: 'tiles.terrain_aura_r3', auraUrl: '/assets/tiles/auras/terrain_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.terrain_atlas', auraTexKey: 'tiles.terrain_atlas_aura_r0', auraUrl: '/assets/tiles/auras/terrain_atlas_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.terrain_atlas', auraTexKey: 'tiles.terrain_atlas_aura_r1', auraUrl: '/assets/tiles/auras/terrain_atlas_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.terrain_atlas', auraTexKey: 'tiles.terrain_atlas_aura_r2', auraUrl: '/assets/tiles/auras/terrain_atlas_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'tiles.terrain_atlas', auraTexKey: 'tiles.terrain_atlas_aura_r3', auraUrl: '/assets/tiles/auras/terrain_atlas_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.Book 32x40', auraTexKey: 'anims.Book 32x40_aura_r0', auraUrl: '/assets/props/auras/Book%2032x40_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.Book 32x40', auraTexKey: 'anims.Book 32x40_aura_r1', auraUrl: '/assets/props/auras/Book%2032x40_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.Book 32x40', auraTexKey: 'anims.Book 32x40_aura_r2', auraUrl: '/assets/props/auras/Book%2032x40_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.Book 32x40', auraTexKey: 'anims.Book 32x40_aura_r3', auraUrl: '/assets/props/auras/Book%2032x40_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.FairyFountain 64x56', auraTexKey: 'anims.FairyFountain 64x56_aura_r0', auraUrl: '/assets/props/auras/FairyFountain%2064x56_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.FairyFountain 64x56', auraTexKey: 'anims.FairyFountain 64x56_aura_r1', auraUrl: '/assets/props/auras/FairyFountain%2064x56_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.FairyFountain 64x56', auraTexKey: 'anims.FairyFountain 64x56_aura_r2', auraUrl: '/assets/props/auras/FairyFountain%2064x56_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.FairyFountain 64x56', auraTexKey: 'anims.FairyFountain 64x56_aura_r3', auraUrl: '/assets/props/auras/FairyFountain%2064x56_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.FireTotem 96x96', auraTexKey: 'anims.FireTotem 96x96_aura_r0', auraUrl: '/assets/props/auras/FireTotem%2096x96_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.FireTotem 96x96', auraTexKey: 'anims.FireTotem 96x96_aura_r1', auraUrl: '/assets/props/auras/FireTotem%2096x96_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.FireTotem 96x96', auraTexKey: 'anims.FireTotem 96x96_aura_r2', auraUrl: '/assets/props/auras/FireTotem%2096x96_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.FireTotem 96x96', auraTexKey: 'anims.FireTotem 96x96_aura_r3', auraUrl: '/assets/props/auras/FireTotem%2096x96_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.MageFountain Capped 64x64', auraTexKey: 'anims.MageFountain Capped 64x64_aura_r0', auraUrl: '/assets/props/auras/MageFountain%20Capped%2064x64_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.MageFountain Capped 64x64', auraTexKey: 'anims.MageFountain Capped 64x64_aura_r1', auraUrl: '/assets/props/auras/MageFountain%20Capped%2064x64_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.MageFountain Capped 64x64', auraTexKey: 'anims.MageFountain Capped 64x64_aura_r2', auraUrl: '/assets/props/auras/MageFountain%20Capped%2064x64_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.MageFountain Capped 64x64', auraTexKey: 'anims.MageFountain Capped 64x64_aura_r3', auraUrl: '/assets/props/auras/MageFountain%20Capped%2064x64_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.MageFountain Open 64x64', auraTexKey: 'anims.MageFountain Open 64x64_aura_r0', auraUrl: '/assets/props/auras/MageFountain%20Open%2064x64_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.MageFountain Open 64x64', auraTexKey: 'anims.MageFountain Open 64x64_aura_r1', auraUrl: '/assets/props/auras/MageFountain%20Open%2064x64_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.MageFountain Open 64x64', auraTexKey: 'anims.MageFountain Open 64x64_aura_r2', auraUrl: '/assets/props/auras/MageFountain%20Open%2064x64_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.MageFountain Open 64x64', auraTexKey: 'anims.MageFountain Open 64x64_aura_r3', auraUrl: '/assets/props/auras/MageFountain%20Open%2064x64_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.Shrine 32x64', auraTexKey: 'anims.Shrine 32x64_aura_r0', auraUrl: '/assets/props/auras/Shrine%2032x64_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.Shrine 32x64', auraTexKey: 'anims.Shrine 32x64_aura_r1', auraUrl: '/assets/props/auras/Shrine%2032x64_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.Shrine 32x64', auraTexKey: 'anims.Shrine 32x64_aura_r2', auraUrl: '/assets/props/auras/Shrine%2032x64_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.Shrine 32x64', auraTexKey: 'anims.Shrine 32x64_aura_r3', auraUrl: '/assets/props/auras/Shrine%2032x64_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.WaterFountain 64x96', auraTexKey: 'anims.WaterFountain 64x96_aura_r0', auraUrl: '/assets/props/auras/WaterFountain%2064x96_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.WaterFountain 64x96', auraTexKey: 'anims.WaterFountain 64x96_aura_r1', auraUrl: '/assets/props/auras/WaterFountain%2064x96_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.WaterFountain 64x96', auraTexKey: 'anims.WaterFountain 64x96_aura_r2', auraUrl: '/assets/props/auras/WaterFountain%2064x96_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.WaterFountain 64x96', auraTexKey: 'anims.WaterFountain 64x96_aura_r3', auraUrl: '/assets/props/auras/WaterFountain%2064x96_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.coins 16x16', auraTexKey: 'anims.coins 16x16_aura_r0', auraUrl: '/assets/props/auras/coins%2016x16_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.coins 16x16', auraTexKey: 'anims.coins 16x16_aura_r1', auraUrl: '/assets/props/auras/coins%2016x16_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.coins 16x16', auraTexKey: 'anims.coins 16x16_aura_r2', auraUrl: '/assets/props/auras/coins%2016x16_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.coins 16x16', auraTexKey: 'anims.coins 16x16_aura_r3', auraUrl: '/assets/props/auras/coins%2016x16_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.stone door 160x160', auraTexKey: 'anims.stone door 160x160_aura_r0', auraUrl: '/assets/props/auras/stone%20door%20160x160_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.stone door 160x160', auraTexKey: 'anims.stone door 160x160_aura_r1', auraUrl: '/assets/props/auras/stone%20door%20160x160_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.stone door 160x160', auraTexKey: 'anims.stone door 160x160_aura_r2', auraUrl: '/assets/props/auras/stone%20door%20160x160_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.stone door 160x160', auraTexKey: 'anims.stone door 160x160_aura_r3', auraUrl: '/assets/props/auras/stone%20door%20160x160_aura_r3.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.teleportrune 64x64', auraTexKey: 'anims.teleportrune 64x64_aura_r0', auraUrl: '/assets/props/auras/teleportrune%2064x64_aura_r0.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.teleportrune 64x64', auraTexKey: 'anims.teleportrune 64x64_aura_r1', auraUrl: '/assets/props/auras/teleportrune%2064x64_aura_r1.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.teleportrune 64x64', auraTexKey: 'anims.teleportrune 64x64_aura_r2', auraUrl: '/assets/props/auras/teleportrune%2064x64_aura_r2.png'}
+tileAtlas.ts:824 [tileAtlas.preload] aura loaded {texKey: 'anims.teleportrune 64x64', auraTexKey: 'anims.teleportrune 64x64_aura_r3', auraUrl: '/assets/props/auras/teleportrune%2064x64_aura_r3.png'}
 effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=arrow variant=arrow 64x64 tex=effects.arrow_64x64 size=832x256 frame=64x64 cols=13 rows=4 frames=1 emptySkipped=18
 effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=OLD torrentacle texture_aura_r1 variant=OLD torrentacle texture 128x128_aura_r1 tex=effects.OLD_torrentacle_texture_128x128_aura_r1 size=2048x128 frame=128x128 cols=16 rows=1 frames=16 emptySkipped=0
 effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=OLD torrentacle texture_aura_r2 variant=OLD torrentacle texture 128x128_aura_r2 tex=effects.OLD_torrentacle_texture_128x128_aura_r2 size=2048x128 frame=128x128 cols=16 rows=1 frames=16 emptySkipped=0
@@ -6,9 +111,9 @@ effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=absorption_aura_r1 variant=absorpti
 effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=absorption_aura_r2 variant=absorption 128x128_aura_r2 tex=effects.absorption_128x128_aura_r2 size=1152x128 frame=128x128 cols=9 rows=1 frames=9 emptySkipped=0
 effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=absorption_aura_r3 variant=absorption 128x128_aura_r3 tex=effects.absorption_128x128_aura_r3 size=1152x128 frame=128x128 cols=9 rows=1 frames=9 emptySkipped=0
 effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=arcaneball1_aura_r1 variant=arcaneball1 32x32_aura_r1 tex=effects.arcaneball1_32x32_aura_r1 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
- [EFFECT][ATLAS][SHEET] id=arcaneball1_aura_r2 variant=arcaneball1 32x32_aura_r2 tex=effects.arcaneball1_32x32_aura_r2 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
- [EFFECT][ATLAS][SHEET] id=arcaneball1_aura_r3 variant=arcaneball1 32x32_aura_r3 tex=effects.arcaneball1_32x32_aura_r3 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
- [EFFECT][ATLAS][SHEET] id=arcaneball2_aura_r1 variant=arcaneball2 32x32_aura_r1 tex=effects.arcaneball2_32x32_aura_r1 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
+effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=arcaneball1_aura_r2 variant=arcaneball1 32x32_aura_r2 tex=effects.arcaneball1_32x32_aura_r2 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
+effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=arcaneball1_aura_r3 variant=arcaneball1 32x32_aura_r3 tex=effects.arcaneball1_32x32_aura_r3 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
+effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=arcaneball2_aura_r1 variant=arcaneball2 32x32_aura_r1 tex=effects.arcaneball2_32x32_aura_r1 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
  [EFFECT][ATLAS][SHEET] id=arcaneball2_aura_r2 variant=arcaneball2 32x32_aura_r2 tex=effects.arcaneball2_32x32_aura_r2 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
  [EFFECT][ATLAS][SHEET] id=arcaneball2_aura_r3 variant=arcaneball2 32x32_aura_r3 tex=effects.arcaneball2_32x32_aura_r3 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
  [EFFECT][ATLAS][SHEET] id=arcaneball3_aura_r1 variant=arcaneball3 32x32_aura_r1 tex=effects.arcaneball3_32x32_aura_r1 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
@@ -416,9 +521,9 @@ effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=arcaneball1_aura_r1 variant=arcaneb
  [EFFECT][ATLAS][SHEET] id=poisondagger variant=poisondagger 32x32 tex=effects.poisondagger_32x32 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
  [EFFECT][ATLAS][SHEET] id=skull variant=skull 32x32 tex=effects.skull_32x32 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
  [EFFECT][ATLAS][SHEET] id=slimeprojectile variant=slimeprojectile 16x16 tex=effects.slimeprojectile_16x16 size=64x16 frame=16x16 cols=4 rows=1 frames=4 emptySkipped=0
-effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=starbeam1 variant=starbeam1 32x32 tex=effects.starbeam1_32x32 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
-effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=starbeam2 variant=starbeam2 32x32 tex=effects.starbeam2_32x32 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
-effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=tentacles variant=tentacles 25x90 tex=effects.tentacles_25x90 size=500x90 frame=25x90 cols=20 rows=1 frames=20 emptySkipped=0
+ [EFFECT][ATLAS][SHEET] id=starbeam1 variant=starbeam1 32x32 tex=effects.starbeam1_32x32 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
+ [EFFECT][ATLAS][SHEET] id=starbeam2 variant=starbeam2 32x32 tex=effects.starbeam2_32x32 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
+ [EFFECT][ATLAS][SHEET] id=tentacles variant=tentacles 25x90 tex=effects.tentacles_25x90 size=500x90 frame=25x90 cols=20 rows=1 frames=20 emptySkipped=0
 effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=waterbeam variant=waterbeam 32x32 tex=effects.waterbeam_32x32 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
 effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=waterbubble1 variant=waterbubble1 32x32 tex=effects.waterbubble1_32x32 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
 effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=waterbubble2 variant=waterbubble2 32x32 tex=effects.waterbubble2_32x32 size=192x32 frame=32x32 cols=6 rows=1 frames=6 emptySkipped=0
@@ -518,283 +623,485 @@ effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=Sword Arcs_aura_r1 variant=Sword Ar
 effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=Sword Arcs_aura_r2 variant=Sword Arcs 125x150_aura_r2 tex=effects.Sword_Arcs_125x150_aura_r2 size=750x3450 frame=125x150 cols=6 rows=23 frames=120 emptySkipped=18
 effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=Sword Arcs_aura_r3 variant=Sword Arcs 125x150_aura_r3 tex=effects.Sword_Arcs_125x150_aura_r3 size=750x3450 frame=125x150 cols=6 rows=23 frames=120 emptySkipped=18
 effectAtlas.ts:844 [EFFECT][ATLAS][SHEET] id=Sword Arcs variant=Sword Arcs 125x150 tex=effects.Sword_Arcs_125x150 size=756x3450 frame=125x150 cols=6 rows=23 frames=120 emptySkipped=18
+tileAtlas.ts:824 [tileAtlas.build] base autotile sheet: tiles.terrain (21x23 tiles)
+tileAtlas.ts:824 [tileAtlas.build] atlas alias map: {base: 'tiles.terrain', decor: 'tiles.terrain_atlas', props: 'tiles.terrain_atlas', coins: 'tiles.terrain_atlas'}
+tileAtlas.ts:824 [tileAtlas.build] auto tiles (family|shape → count): {ground_light|center: 3, ground_light|edgeN: 1, ground_light|edgeS: 1, ground_light|edgeW: 1, ground_light|edgeE: 1, …}
+tileAtlas.ts:824 [tileAtlas.build] decor tiles (family → count): {ground_light: 2, ground_medium: 2, ground_red: 2, chasm_light: 2, grass_dense_light: 2, …}
+main.ts:2386 >>> [HeroScene.tilemap] syncing from grid {rows: 25, cols: 48, tileSize: 32, rawWalls: 448, rawFloors: 752, …}
+tileMapGlue.ts:934 [tileMapGlue] base render done {rows: 25, cols: 48, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+tileMapGlue.ts:5012 [PAD][PILLAR][RENDER] reason=rebuild count=1 offX=0..0 offY=0..0 anchors=11,24
+main.ts:2434 >>> [HeroScene.tilemap] bounds set (world), viewport sized (DOM) {worldWidth: 1536, worldHeight: 800, rows: 25, cols: 48, tileSize: 32}
+main.ts:3760 >>> [HeroScene.tilemap] host sent tilemap to server {rev: 2, worldRev: 2, floorIndex: 0, floorKind: 'entrance', rows: 25, …}
+main.ts:3206 >>> [HeroScene.tilemap] resent pending tilemap {rev: 2, triesLeft: 2}
+tileMapGlue.ts:5012 [PAD][PILLAR][RENDER] reason=no-rebuild count=1 offX=0..0 offY=0..0 anchors=11,24
+main.ts:2386 >>> [HeroScene.tilemap] syncing from grid {rows: 25, cols: 48, tileSize: 32, rawWalls: 448, rawFloors: 752, …}
+tileMapGlue.ts:934 [tileMapGlue] base render done {rows: 25, cols: 48, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+main.ts:2434 >>> [HeroScene.tilemap] bounds set (world), viewport sized (DOM) {worldWidth: 1536, worldHeight: 800, rows: 25, cols: 48, tileSize: 32}
+main.ts:3420 >>> [HeroScene.tilemap] host applied tilemap from engine {worldRev: 2, floorIndex: -1, rows: 25, cols: 48, tileSize: 32, …}
+main.ts:3491 >>> [HeroScene.tilemap] host sent tilemap to server {rev: 3, rows: 25, cols: 48, tileSize: 32, encoding: 'raw'}
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=waves dir=none anim=effect_waves tex=effects.waves_128x128 texExists=1 frames=7 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=7 windowStart=0 windowEnd=6 curAnim=effect_waves isPlaying=1 nativeTex=effects.waves_128x128 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=128 displayH=128 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=38 skin=waves dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=38 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=38 visible=1 alpha=0.031228986250346917 depth=2000000010 tex=effects.waves_128x128 frame=0 displayW=384 displayH=384 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=37 skin=waves dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=37 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=37 visible=1 alpha=0.03109493398185126 depth=2000000010 tex=effects.waves_128x128 frame=0 displayW=384 displayH=384 mode=paint maskType=circle maskAttached=1 forceTop=1
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=rays dir=none anim=effect_rays tex=effects.rays_128x128 texExists=1 frames=6 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=6 windowStart=0 windowEnd=5 curAnim=effect_rays isPlaying=1 nativeTex=effects.rays_128x128 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=128 displayH=128 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=37 skin=rays dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=37 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=37 visible=1 alpha=0.08 depth=2000000030 tex=effects.rays_128x128 frame=0 displayW=183.04 displayH=183.04 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=36 skin=rays dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=36 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=36 visible=1 alpha=0.08 depth=2000000030 tex=effects.rays_128x128 frame=0 displayW=168.96 displayH=168.96 mode=paint maskType=circle maskAttached=1 forceTop=1
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=smoke dir=none anim=effect_smoke tex=effects.smoke_128x128 texExists=1 frames=15 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=15 windowStart=0 windowEnd=14 curAnim=effect_smoke isPlaying=1 nativeTex=effects.smoke_128x128 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=128 displayH=128 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=36 skin=smoke dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=36 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=36 visible=1 alpha=0.1 depth=2000000020 tex=effects.smoke_128x128 frame=0 displayW=216.32 displayH=216.32 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=35 skin=smoke dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=35 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=35 visible=1 alpha=0.1 depth=2000000020 tex=effects.smoke_128x128 frame=0 displayW=194.56 displayH=194.56 mode=paint maskType=circle maskAttached=1 forceTop=1
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=35 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=35 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=35 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=7 tex=sprite_7
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=6 tex=sprite_6
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=5 tex=sprite_5
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=4 tex=sprite_4
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=3 tex=sprite_3
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=2 tex=sprite_2
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=1 tex=sprite_1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=34 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=34 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=34 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=4 tex=sprite_4
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=3 tex=sprite_3
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=2 tex=sprite_2
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=1 tex=sprite_1
+main.ts:3206 >>> [HeroScene.tilemap] resent pending tilemap {rev: 3, triesLeft: 2}
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=39 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=39 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=39 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=38 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=38 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=38 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+main.ts:2386 >>> [HeroScene.tilemap] syncing from grid {rows: 25, cols: 48, tileSize: 32, rawWalls: 448, rawFloors: 752, …}
+tileMapGlue.ts:934 [tileMapGlue] base render done {rows: 25, cols: 48, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+main.ts:2434 >>> [HeroScene.tilemap] bounds set (world), viewport sized (DOM) {worldWidth: 1536, worldHeight: 800, rows: 25, cols: 48, tileSize: 32}
+tileMapGlue.ts:5012 [PAD][PILLAR][RENDER] reason=rebuild count=0 offX=n/a offY=n/a anchors=n/a
+main.ts:2933 >>> [HeroScene.tilemap] applied tilemap from net {rev: 2, rows: 25, cols: 48, tileSize: 32, baseFamily: 'grass_sparse_light', …}
+main.ts:3206 >>> [HeroScene.tilemap] resent pending tilemap {rev: 3, triesLeft: 1}
+main.ts:2386 >>> [HeroScene.tilemap] syncing from grid {rows: 25, cols: 48, tileSize: 32, rawWalls: 448, rawFloors: 752, …}
+tileMapGlue.ts:934 [tileMapGlue] base render done {rows: 25, cols: 48, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'grass_sparse_light', …}
+tileMapGlue.ts:5012 [PAD][PILLAR][RENDER] reason=rebuild count=1 offX=0..0 offY=0..0 anchors=11,24
+main.ts:2434 >>> [HeroScene.tilemap] bounds set (world), viewport sized (DOM) {worldWidth: 1536, worldHeight: 800, rows: 25, cols: 48, tileSize: 32}
+main.ts:3420 >>> [HeroScene.tilemap] host applied tilemap from engine {worldRev: 2, floorIndex: -1, rows: 25, cols: 48, tileSize: 32, …}
+main.ts:3491 >>> [HeroScene.tilemap] host sent tilemap to server {rev: 4, rows: 25, cols: 48, tileSize: 32, encoding: 'raw'}
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=40 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=40 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=40 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=39 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=39 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=39 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+main.ts:3206 >>> [HeroScene.tilemap] resent pending tilemap {rev: 4, triesLeft: 2}
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=41 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=41 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=41 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=40 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=40 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=40 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+main.ts:3206 >>> [HeroScene.tilemap] resent pending tilemap {rev: 4, triesLeft: 1}
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=41 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=41 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=41 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+main.ts:3206 >>> [HeroScene.tilemap] resent pending tilemap {rev: 4, triesLeft: 0}
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=42 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=42 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=42 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=43 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=43 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=43 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firespark3 dir=none anim=effect_firespark3 tex=effects.firespark3_32x32 texExists=1 frames=6 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=6 windowStart=0 windowEnd=5 curAnim=effect_firespark3 isPlaying=1 nativeTex=effects.firespark3_32x32 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=32 displayH=32 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=42 skin=firespark3 dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=0
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=42 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=42 visible=1 alpha=0.7 depth=47399 tex=effects.firespark3_32x32 frame=0 displayW=12.8 displayH=12.8 mode=paint maskType=circle maskAttached=1 forceTop=0
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=44 skin=firespark3 dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=0
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=44 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=44 visible=1 alpha=0.7 depth=46099 tex=effects.firespark3_32x32 frame=0 displayW=12.8 displayH=12.8 mode=paint maskType=circle maskAttached=1 forceTop=0
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=43 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=43 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=43 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=45 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=45 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=45 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=44 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=44 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=44 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=46 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=46 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=46 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=45 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=45 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=45 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-__heUiCommand({ type: "teleportFloor", floorIndex: 5, kind: "combat" })
-
-HeroEngineInPhaser.ts:64300 [setupEnemySpawners] using WORLD size from _engineWorldTileMap: {rows: 25, cols: 48, tileSize: 32, W: 1536, H: 800}
-arcadeCompat.ts:5515 [DEBUG][ENEMY_POS_GUARD] {id: 57, axis: 'x', from: 0, to: 80, allowed: true, …}
-arcadeCompat.ts:5515 [DEBUG][ENEMY_POS_GUARD] {id: 57, axis: 'y', from: 0, to: 80, allowed: true, …}
-HeroEngineInPhaser.ts:14725 [BOSS][INTRO] pad sink scheduled {atMs: 3867, delayMs: 0, animMs: 3000, shakeMs: 1200, shakeIntensity: 0.006}
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=47 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=47 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=47 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=44 tex=sprite_44
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=48 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=48 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=48 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=49 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=49 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=49 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=50 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=50 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=50 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:45699 [STR][CHARGEPIX][HIDE] hero=0 part=preparetocharge col=0
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=53 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=53 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=53 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:45699 [STR][CHARGEPIX][HIDE] hero=0 part=preparetocharge col=0
+HeroEngineInPhaser.ts:45699 [STR][CHARGEPIX][HIDE] hero=0 part=preparetocharge col=0
+HeroEngineInPhaser.ts:45699 [STR][CHARGEPIX][HIDE] hero=0 part=preparetocharge col=0
+HeroEngineInPhaser.ts:45699 [STR][CHARGEPIX][HIDE] hero=0 part=preparetocharge col=1
+HeroEngineInPhaser.ts:45699 [STR][CHARGEPIX][HIDE] hero=0 part=preparetocharge col=1
+HeroEngineInPhaser.ts:45699 [STR][CHARGEPIX][HIDE] hero=0 part=preparetocharge col=1
+HeroEngineInPhaser.ts:45699 [STR][CHARGEPIX][HIDE] hero=0 part=preparetocharge col=1
+HeroEngineInPhaser.ts:45699 [STR][CHARGEPIX][HIDE] hero=0 part=preparetocharge col=1
+heroAnimGlue.ts:4039 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbase|13|r=1', texKey: 't128__sword__arming__attack_slash__fg__vbase', frame: '13', radius: 1, w: 128, …}
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=227 r1=166 edge=61
+heroAnimGlue.ts:4039 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbase|14|r=1', texKey: 't128__sword__arming__attack_slash__fg__vbase', frame: '14', radius: 1, w: 128, …}
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=55 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=55 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=55 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=56 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=56 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=56 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:45808 [STR][CHARGEPIX] hero=0 part=charging col=2 nz=292 r1=210 edge=82
+heroAnimGlue.ts:3984 [effectmask][maskStats] {key: 't128__sword__arming__attack_slash__fg__vbase|0|r=1', texKey: 't128__sword__arming__attack_slash__fg__vbase', frame: '0', radius: 1, w: 128, …}
+HeroEngineInPhaser.ts:45250 [STR][SEG] hi=0 seg=strengthSlash start=5487 dur=240 phaseStart=5487 phaseDur=3935
+HeroEngineInPhaser.ts:49706 [WPNTRACE][str.release] heroIndex=0 arcDeg=360 swingMs=3935 reachExtra=151
+HeroEngineInPhaser.ts:46453 [STR][RELEASE][METRICS] hero=0 actionSeq=3 arcDeg=360 arcMaxDeg=360 minArcDeg=10 reachExtraPx=151 swingMs=3935 chargeStartMs=0 chargeMaxMs=0 held=1 button=A element=4
+HeroEngineInPhaser.ts:2481 [STR][ARC][FX] hero=0 elem=4 dir=down showFill=1 atlas=1 mask=Sword Arcs fill=lightningclaw ellipses fillDir=down fillAlpha=0.99 fillTint=0 fillOk=1 edge= edgeDir=down edgeOk=0 edgeAura= edgeAuraOk=0 aura=none auraOk=0 outline= outlineOk=0
+HeroEngineInPhaser.ts:2481 [STR][ARC][FX] hero=0 elem=4 dir=down showFill=1 atlas=1 mask=Sword Arcs fill=lightningclaw ellipses fillDir=down fillAlpha=0.99 fillTint=0 fillOk=1 edge= edgeDir=down edgeOk=0 edgeAura= edgeAuraOk=0 aura=none auraOk=0 outline= outlineOk=0
+HeroEngineInPhaser.ts:47496 [STR][PROJ][FORCE_FRAME3] hero=0 segElapsed=0 segDur=240
+HeroEngineInPhaser.ts:49706 [WPNTRACE][str.slash.start] id=1 heroIndex=0 segElapsed=0 segDur=240 frameCol=3 f3s=0 f3e=80
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthSlash col=3 raw=21 frame=18 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:47496 [STR][PROJ][FORCE_FRAME3] hero=0 segElapsed=0 segDur=240
+HeroEngineInPhaser.ts:49706 [WPNTRACE][str.slash.start] id=2 heroIndex=0 segElapsed=0 segDur=240 frameCol=3 f3s=0 f3e=80
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthSlash col=3 raw=21 frame=18 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=lightningclaw ellipses dir=down anim=effect_lightningclaw_ellipses_fps92_r0_list36_37_38_39_40_41_40_39_38_37_36_w11_s0 tex=effects.lightningclaw_ellipses_128x128 texExists=1 frames=126 listFrames=11 yoyo=0 fps=92 repeat=0 played=1 err= windowMs=0 windowFrames=11 windowStart=0 windowEnd=10 curAnim=effect_lightningclaw_ellipses_fps92_r0_list36_37_38_39_40_41_40_39_38_37_36_w11_s0 isPlaying=1 nativeTex=effects.lightningclaw_ellipses_128x128 nativeFrame=36 visible=1 alpha=1 depth=0 displayW=128 displayH=128 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=62 skin=lightningclaw ellipses dir=down mode=projectile wantsPaint=1 wantsHeroMaskOnly=1 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=1 maskSpriteId=61 maskRadius=0 maskRadiusPx=0 forceTop=0
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=62 hero=-1 mode=projectile maskType=sprite maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=61 wantsHeroMaskOnly=1
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=62 visible=1 alpha=1 depth=58833 tex=effects.lightningclaw_ellipses_128x128 frame=36 displayW=76.8 displayH=76.8 mode=projectile maskType=sprite maskAttached=1 forceTop=0
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=61 skin=Sword Arcs dir= mode=full wantsPaint=0 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=0
+arcadeCompat.ts:13358 [EFFECT][MASK][SKIP] id=61 mode=full wantsPaint=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=61 visible=0 alpha=0 depth=58832 tex=effects.Sword_Arcs_125x150 frame=21 displayW=75 displayH=90 mode=full maskType= maskAttached=0 forceTop=0
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=lightningclaw ellipses dir=down anim=effect_lightningclaw_ellipses_fps92_r0_list36_37_38_39_40_41_40_39_38_37_36_w11_s0 tex=effects.lightningclaw_ellipses_128x128 texExists=1 frames=126 listFrames=11 yoyo=0 fps=92 repeat=0 played=1 err= windowMs=0 windowFrames=11 windowStart=0 windowEnd=10 curAnim=effect_lightningclaw_ellipses_fps92_r0_list36_37_38_39_40_41_40_39_38_37_36_w11_s0 isPlaying=1 nativeTex=effects.lightningclaw_ellipses_128x128 nativeFrame=36 visible=1 alpha=1 depth=0 displayW=128 displayH=128 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=59 skin=lightningclaw ellipses dir=down mode=projectile wantsPaint=1 wantsHeroMaskOnly=1 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=1 maskSpriteId=58 maskRadius=0 maskRadiusPx=0 forceTop=0
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=59 hero=-1 mode=projectile maskType=sprite maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=58 wantsHeroMaskOnly=1
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=59 visible=1 alpha=1 depth=58833 tex=effects.lightningclaw_ellipses_128x128 frame=36 displayW=76.8 displayH=76.8 mode=projectile maskType=sprite maskAttached=1 forceTop=0
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=58 skin=Sword Arcs dir= mode=full wantsPaint=0 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=0
+arcadeCompat.ts:13358 [EFFECT][MASK][SKIP] id=58 mode=full wantsPaint=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=58 visible=0 alpha=0 depth=58832 tex=effects.Sword_Arcs_125x150 frame=21 displayW=75 displayH=90 mode=full maskType= maskAttached=0 forceTop=0
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=54 tex=sprite_54
+HeroEngineInPhaser.ts:49706 [WPNTRACE][str.slash.force3] id=1 heroIndex=0 segElapsed=81 f3e=80
+HeroEngineInPhaser.ts:49706 [WPNTRACE][str.slash.force3] id=2 heroIndex=0 segElapsed=81 f3e=80
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthSlash col=4 raw=3 frame=15 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthSlash col=4 raw=3 frame=15 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=63 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=63 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=63 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:45250 [STR][SEG] hi=0 seg=strengthReset start=5727 dur=3695 phaseStart=5487 phaseDur=3935
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=1 raw=2 frame=10 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=1 raw=2 frame=10 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=64 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=64 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=64 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=7 frame=6 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=7 frame=6 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=65 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=65 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=65 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=13 frame=7 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=13 frame=7 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=66 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=66 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=66 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=19 frame=8 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=19 frame=8 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firespark3 dir=none anim=effect_firespark3 tex=effects.firespark3_32x32 texExists=1 frames=6 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=6 windowStart=0 windowEnd=5 curAnim=effect_firespark3 isPlaying=1 nativeTex=effects.firespark3_32x32 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=32 displayH=32 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=67 skin=firespark3 dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=0
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=67 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=67 visible=1 alpha=0.7 depth=46499 tex=effects.firespark3_32x32 frame=0 displayW=12.8 displayH=12.8 mode=paint maskType=circle maskAttached=1 forceTop=0
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=12 frame=2 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=12 frame=2 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=68 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=68 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=68 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=34 tex=sprite_34
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=6 frame=1 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=6 frame=1 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=69 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=69 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=69 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=0 frame=0 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=0 frame=0 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=38 tex=sprite_38
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=70 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=70 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=70 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=12 frame=2 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=12 frame=2 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=6 frame=1 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=6 frame=1 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=71 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=71 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=71 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=67 tex=sprite_67
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=18 frame=3 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=18 frame=3 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=12 frame=2 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=12 frame=2 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=72 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=72 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=72 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=6 frame=1 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=6 frame=1 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=73 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=73 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=73 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=18 frame=3 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=18 frame=3 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=6 frame=1 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=6 frame=1 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=0 frame=0 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=0 frame=0 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=12 frame=2 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=12 frame=2 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=0 frame=0 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=0 frame=0 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=39 tex=sprite_39
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=18 frame=3 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=18 frame=3 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=74 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=74 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=74 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firespark2 dir=none anim=effect_firespark2 tex=effects.firespark2_32x32 texExists=1 frames=6 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=6 windowStart=0 windowEnd=5 curAnim=effect_firespark2 isPlaying=1 nativeTex=effects.firespark2_32x32 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=32 displayH=32 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=75 skin=firespark2 dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=0
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=75 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=75 visible=1 alpha=0.7 depth=44499 tex=effects.firespark2_32x32 frame=0 displayW=12.8 displayH=12.8 mode=paint maskType=circle maskAttached=1 forceTop=0
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=6 frame=1 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=6 frame=1 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=0 frame=0 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=0 frame=0 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=18 frame=3 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=18 frame=3 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=6 frame=1 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=6 frame=1 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=18 frame=3 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=18 frame=3 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=40 tex=sprite_40
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=14 frame=12 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=14 frame=12 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=75 tex=sprite_75
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=76 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=76 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=76 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=3 frame=15 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=3 frame=15 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=41 tex=sprite_41
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=15 frame=17 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=2 raw=15 frame=17 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=77 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=77 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=77 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=0 raw=21 frame=18 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+HeroEngineInPhaser.ts:2653 [STR][ARC][SIZE] hero=0 seg=strengthReset col=0 raw=21 frame=18 scale=0.600 slashScale=0.600 frameW=125 frameH=150 scaledW=75 scaledH=90
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=42 tex=sprite_42
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=62 tex=sprite_62
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=61 tex=sprite_61
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=60 tex=sprite_60
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=59 tex=sprite_59
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=58 tex=sprite_58
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=57 tex=sprite_57
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=78 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=78 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=78 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=43 tex=sprite_43
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=79 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=79 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=79 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=45 tex=sprite_45
+effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=80 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=80 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=80 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=46 tex=sprite_46
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=47 tex=sprite_47
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=48 tex=sprite_48
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=49 tex=sprite_49
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=50 tex=sprite_50
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=53 tex=sprite_53
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=55 tex=sprite_55
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=56 tex=sprite_56
+__heUiCommand({ type: "teleportFloor", floorIndex: 5, kind: "safe" })
 {ok: true, reason: 'teleport', snapshot: {…}}
+tileMapGlue.ts:5012 [PAD][PILLAR][RENDER] reason=rebuild count=1 offX=0..0 offY=0..0 anchors=2,24
+main.ts:2386 >>> [HeroScene.tilemap] syncing from grid {rows: 25, cols: 48, tileSize: 32, rawWalls: 142, rawFloors: 1058, …}
+tileMapGlue.ts:934 [tileMapGlue] base render done {rows: 25, cols: 48, hasDecalLayer: true, hasPropLayer: true, fallbackFloorFamily: 'ground_black', …}
+tileMapGlue.ts:5012 [PAD][PILLAR][RENDER] reason=no-rebuild count=1 offX=0..0 offY=0..0 anchors=2,24
+main.ts:2434 >>> [HeroScene.tilemap] bounds set (world), viewport sized (DOM) {worldWidth: 1536, worldHeight: 800, rows: 25, cols: 48, tileSize: 32}
+main.ts:3420 >>> [HeroScene.tilemap] host applied tilemap from engine {worldRev: 3, floorIndex: 5, rows: 25, cols: 48, tileSize: 32, …}
+main.ts:3491 >>> [HeroScene.tilemap] host sent tilemap to server {rev: 5, rows: 25, cols: 48, tileSize: 32, encoding: 'raw'}
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=80 tex=sprite_80
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=79 tex=sprite_79
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=78 tex=sprite_78
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=77 tex=sprite_77
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=76 tex=sprite_76
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=74 tex=sprite_74
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=73 tex=sprite_73
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=72 tex=sprite_72
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=71 tex=sprite_71
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=70 tex=sprite_70
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=69 tex=sprite_69
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=68 tex=sprite_68
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=66 tex=sprite_66
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=65 tex=sprite_65
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=64 tex=sprite_64
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=63 tex=sprite_63
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=37 tex=sprite_37
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=36 tex=sprite_36
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=35 tex=sprite_35
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=31 tex=sprite_31
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=30 tex=sprite_30
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=29 tex=sprite_29
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=28 tex=sprite_28
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=27 tex=sprite_27
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=26 tex=sprite_26
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=25 tex=sprite_25
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=24 tex=sprite_24
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=23 tex=sprite_23
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=22 tex=sprite_22
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=21 tex=sprite_21
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=20 tex=sprite_20
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=19 tex=sprite_19
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=18 tex=sprite_18
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=17 tex=sprite_17
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=16 tex=sprite_16
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=15 tex=sprite_15
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=14 tex=sprite_14
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=13 tex=sprite_13
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=12 tex=sprite_12
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=11 tex=sprite_11
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=10 tex=sprite_10
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=9 tex=sprite_9
+arcadeCompat.ts:8317 [EFFECT][MASK][PROJ_TEX_REMOVE] id=8 tex=sprite_8
+main.ts:3206 >>> [HeroScene.tilemap] resent pending tilemap {rev: 5, triesLeft: 2}
+main.ts:3206 >>> [HeroScene.tilemap] resent pending tilemap {rev: 5, triesLeft: 1}
+main.ts:3206 >>> [HeroScene.tilemap] resent pending tilemap {rev: 5, triesLeft: 0}
+tileMapGlue.ts:5012 [PAD][PILLAR][RENDER] reason=rebuild count=1 offX=0..0 offY=0..0 anchors=2,24
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=waves dir=none anim=effect_waves tex=effects.waves_128x128 texExists=1 frames=7 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=7 windowStart=0 windowEnd=6 curAnim=effect_waves isPlaying=1 nativeTex=effects.waves_128x128 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=128 displayH=128 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=76 skin=waves dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=76 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=76 visible=1 alpha=0.04997305197135088 depth=2000000010 tex=effects.waves_128x128 frame=0 displayW=384 displayH=384 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=149 skin=waves dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=149 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=149 visible=1 alpha=0.055558458904839333 depth=2000000010 tex=effects.waves_128x128 frame=0 displayW=384 displayH=384 mode=paint maskType=circle maskAttached=1 forceTop=1
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=rays dir=none anim=effect_rays tex=effects.rays_128x128 texExists=1 frames=6 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=6 windowStart=0 windowEnd=5 curAnim=effect_rays isPlaying=1 nativeTex=effects.rays_128x128 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=128 displayH=128 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=75 skin=rays dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=75 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=75 visible=1 alpha=0.08 depth=2000000030 tex=effects.rays_128x128 frame=0 displayW=229.12 displayH=229.12 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=148 skin=rays dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=148 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=148 visible=1 alpha=0.08 depth=2000000030 tex=effects.rays_128x128 frame=0 displayW=202.24 displayH=202.24 mode=paint maskType=circle maskAttached=1 forceTop=1
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=smoke dir=none anim=effect_smoke tex=effects.smoke_128x128 texExists=1 frames=15 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=15 windowStart=0 windowEnd=14 curAnim=effect_smoke isPlaying=1 nativeTex=effects.smoke_128x128 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=128 displayH=128 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=74 skin=smoke dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=74 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=74 visible=1 alpha=0.1 depth=2000000020 tex=effects.smoke_128x128 frame=0 displayW=217.6 displayH=217.6 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=147 skin=smoke dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=147 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=147 visible=1 alpha=0.1 depth=2000000020 tex=effects.smoke_128x128 frame=0 displayW=181.76 displayH=181.76 mode=paint maskType=circle maskAttached=1 forceTop=1
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=73 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=73 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=73 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=45 tex=sprite_45
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=44 tex=sprite_44
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=43 tex=sprite_43
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=42 tex=sprite_42
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=41 tex=sprite_41
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=40 tex=sprite_40
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=39 tex=sprite_39
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=38 tex=sprite_38
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=37 tex=sprite_37
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=36 tex=sprite_36
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=35 tex=sprite_35
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=32 tex=sprite_32
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=31 tex=sprite_31
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=30 tex=sprite_30
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=29 tex=sprite_29
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=28 tex=sprite_28
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=27 tex=sprite_27
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=26 tex=sprite_26
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=25 tex=sprite_25
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=24 tex=sprite_24
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=23 tex=sprite_23
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=22 tex=sprite_22
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=21 tex=sprite_21
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=20 tex=sprite_20
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=19 tex=sprite_19
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=18 tex=sprite_18
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=17 tex=sprite_17
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=16 tex=sprite_16
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=15 tex=sprite_15
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=14 tex=sprite_14
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=13 tex=sprite_13
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=12 tex=sprite_12
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=11 tex=sprite_11
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=146 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=146 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=146 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+tileMapGlue.ts:5012 [PAD][PILLAR][RENDER] reason=no-rebuild count=1 offX=0..0 offY=0..0 anchors=2,24
+main.ts:3491 >>> [HeroScene.tilemap] host sent tilemap to server {rev: 6, rows: 25, cols: 48, tileSize: 32, encoding: 'raw'}
+main.ts:3206 >>> [HeroScene.tilemap] resent pending tilemap {rev: 6, triesLeft: 2}
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=77 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=77 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=77 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=150 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=150 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=150 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+main.ts:3206 >>> [HeroScene.tilemap] resent pending tilemap {rev: 6, triesLeft: 1}
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=78 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=78 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=78 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=151 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+arcadeCompat.ts:13337 [EFFECT][MASK][SYNC] id=151 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+arcadeCompat.ts:13748 [EFFECT][MASK][VIS] id=151 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
 effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=79 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=79 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=79 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=80 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=80 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=80 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-HeroEngineInPhaser.ts:12724 [PAD][PILLAR] reason=complete startMs=4371 endMs=4891 calls=32 misses=0 changed=31 samples=32 desiredX=-1..1 desiredY=1..32 appliedX=-1..1 appliedY=1..32 centerX=783..785 centerY=369..400 lastX=1 lastY=32
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=52 tex=sprite_52
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=81 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=81 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=81 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=82 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=82 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=82 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=83 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=83 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=83 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=84 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=84 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=84 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=85 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=85 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=85 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=86 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=86 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=86 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=87 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=87 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=87 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=88 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=88 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=88 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=89 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=89 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=89 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=73 tex=sprite_73
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=90 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=90 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=90 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=77 tex=sprite_77
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=91 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=91 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=91 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=78 tex=sprite_78
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=92 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=92 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=92 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=79 tex=sprite_79
-HeroEngineInPhaser.ts:67628 [BOSS][INTRO] jump start {enemyId: 57, fromX: 69, fromY: 65, toX: 784, toY: 400, …}
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=93 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=93 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=93 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=80 tex=sprite_80
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=94 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=94 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=94 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=81 tex=sprite_81
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=95 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=95 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=95 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=96 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=96 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=96 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=82 tex=sprite_82
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=97 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=97 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=97 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=83 tex=sprite_83
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=98 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=98 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=98 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=84 tex=sprite_84
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=99 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=99 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=99 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=85 tex=sprite_85
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=100 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=100 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=100 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=86 tex=sprite_86
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=101 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=101 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=101 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=87 tex=sprite_87
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=102 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=102 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=102 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=88 tex=sprite_88
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=103 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=103 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=103 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=89 tex=sprite_89
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=104 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=104 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=104 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=105 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=105 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=105 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=106 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=106 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=106 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=107 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=107 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=107 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=108 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=108 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=108 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=smoke dir=none anim=effect_smoke tex=effects.smoke_128x128 texExists=1 frames=15 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=15 windowStart=0 windowEnd=14 curAnim=effect_smoke isPlaying=1 nativeTex=effects.smoke_128x128 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=128 displayH=128 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=109 skin=smoke dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=109 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=109 visible=1 alpha=0.1 depth=2000000020 tex=effects.smoke_128x128 frame=0 displayW=225.28 displayH=225.28 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=110 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=110 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=110 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-HeroEngineInPhaser.ts:67684 [BOSS][INTRO] jump impact {enemyId: 57, nowMs: 14233, toX: 784, toY: 400}
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=111 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=111 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=111 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=112 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=112 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=112 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=113 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=113 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=113 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-effectAnimGlue.ts:516 [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
-arcadeCompat.ts:13217 [EFFECT][MASK][INIT] id=114 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
-arcadeCompat.ts:13330 [EFFECT][MASK][SYNC] id=114 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
-arcadeCompat.ts:13741 [EFFECT][MASK][VIS] id=114 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=90 tex=sprite_90
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=91 tex=sprite_91
-arcadeCompat.ts:8316 [EFFECT][MASK][PROJ_TEX_REMOVE] id=92 tex=sprite_92
+arcadeCompat.ts:13224 [EFFECT][MASK][INIT] id=152 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=152 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=152 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ >>> [HeroScene.tilemap] resent pending tilemap {rev: 6, triesLeft: 0}
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=153 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=153 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=153 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=154 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=154 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=154 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=155 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=155 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=155 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=156 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=156 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=156 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=157 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=157 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=157 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=158 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=158 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=158 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=159 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=159 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=159 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=160 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=160 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=160 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=161 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=161 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=161 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=162 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=162 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=162 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=163 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=163 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=163 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=164 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=164 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=164 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=165 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=165 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=165 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=166 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=166 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=166 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=167 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=167 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=167 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=168 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=168 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=168 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1
+ [EFFECT][ANIM] skin=firefly dir=none anim=effect_firefly tex=effects.firefly_7x7 texExists=1 frames=1 listFrames=0 yoyo=0 fps=12 repeat=0 played=1 err= windowMs=0 windowFrames=1 windowStart=0 windowEnd=0 curAnim=effect_firefly isPlaying=1 nativeTex=effects.firefly_7x7 nativeFrame=0 visible=1 alpha=1 depth=0 displayW=7 displayH=7 hasAnims=1
+ [EFFECT][MASK][INIT] id=169 skin=firefly dir= mode=paint wantsPaint=1 wantsHeroMaskOnly=0 hero=-1 hasHeroIndex=0 hasHeroRef=0 hasMaskSprite=0 maskSpriteId=0 maskRadius=0 maskRadiusPx=0 forceTop=1
+ [EFFECT][MASK][SYNC] id=169 hero=-1 mode=paint maskType=none maskAttached=1 maskRadius=0 maskRadiusPx=0 maskSpriteId=0 wantsHeroMaskOnly=0
+ [EFFECT][MASK][VIS] id=169 visible=1 alpha=0.18 depth=2000000040 tex=effects.firefly_7x7 frame=0 displayW=21 displayH=21 mode=paint maskType=circle maskAttached=1 forceTop=1

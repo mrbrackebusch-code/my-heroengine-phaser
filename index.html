@@ -5313,10 +5313,19 @@ function _readTeamCoins(pid, hero, spritesNS) {
         const textEl = document.getElementById("dialog-text");
         const hintEl = document.getElementById("dialog-hint");
         const choicesEl = document.getElementById("dialog-choices");
+        const PAGE_DEFAULTS = { maxChars: 220, maxLines: 3 };
+        const AUTO_ADVANCE_DEFAULTS = { baseMs: 600, perCharMs: 45, minMs: 1600, maxMs: 9000 };
         let dialogOwner = "";
         let choiceButtons = [];
         let choiceIndex = 0;
         let hasChoices = false;
+        let dialogPages = null;
+        let dialogPageIndex = 0;
+        let dialogHintBase = "";
+        let dialogTextRaw = "";
+        let autoAdvanceCfg = null;
+        let autoAdvanceTimer = 0;
+        let autoAdvanceToken = 0;
 
         function isOpen() {
           return !!layer && layer.classList.contains("he-show");
@@ -5328,12 +5337,129 @@ function _readTeamCoins(pid, hero, spritesNS) {
           if (el.textContent !== s) el.textContent = s;
         }
 
+        function _readNum(val, fallback) {
+          if (typeof val === "number" && Number.isFinite(val)) return val;
+          return fallback;
+        }
+
+        function _clearAutoAdvance() {
+          if (autoAdvanceTimer) {
+            clearTimeout(autoAdvanceTimer);
+            autoAdvanceTimer = 0;
+          }
+          autoAdvanceToken = (autoAdvanceToken + 1) | 0;
+        }
+
+        function _resolveAutoAdvanceMs(text) {
+          if (!autoAdvanceCfg || hasChoices) return 0;
+          if (typeof autoAdvanceCfg === "number") return Math.max(0, autoAdvanceCfg | 0);
+          const cfg = (autoAdvanceCfg === true) ? {} : (autoAdvanceCfg || {});
+          const baseMs = _readNum(cfg.baseMs, AUTO_ADVANCE_DEFAULTS.baseMs);
+          const perCharMs = _readNum(cfg.perCharMs, AUTO_ADVANCE_DEFAULTS.perCharMs);
+          const minMs = _readNum(cfg.minMs, AUTO_ADVANCE_DEFAULTS.minMs);
+          const maxMs = _readNum(cfg.maxMs, AUTO_ADVANCE_DEFAULTS.maxMs);
+          const len = Math.max(0, String(text || "").length);
+          const ms = Math.round(baseMs + (perCharMs * len));
+          return Math.max(minMs, Math.min(maxMs, ms));
+        }
+
+        function _scheduleAutoAdvance(text, msOverride) {
+          _clearAutoAdvance();
+          const ms = (typeof msOverride === "number") ? (msOverride | 0) : _resolveAutoAdvanceMs(text);
+          if (!ms || ms <= 0) return;
+          const token = (autoAdvanceToken + 1) | 0;
+          autoAdvanceToken = token;
+          autoAdvanceTimer = setTimeout(() => {
+            if (token !== (autoAdvanceToken | 0)) return;
+            if (!isOpen()) return;
+            if (hasChoices) return;
+            advance();
+          }, ms);
+        }
+
+        function _normalizeLineText(line) {
+          if (typeof line === "string") return line;
+          if (line && typeof line.text === "string") return line.text;
+          return "";
+        }
+
+        function _normalizeLines(lines) {
+          if (!Array.isArray(lines)) return [];
+          const out = [];
+          for (let i = 0; i < lines.length; i++) {
+            const text = _normalizeLineText(lines[i]);
+            if (text == null) continue;
+            const s = String(text);
+            if (!s) continue;
+            out.push(s);
+          }
+          return out;
+        }
+
+        function _normalizePages(pages) {
+          if (!Array.isArray(pages)) return [];
+          const out = [];
+          for (let i = 0; i < pages.length; i++) {
+            const p = pages[i];
+            if (typeof p === "string") {
+              if (p) out.push(p);
+              continue;
+            }
+            if (p && typeof p.text === "string" && p.text) {
+              out.push(p.text);
+            }
+          }
+          return out;
+        }
+
+        function _resolvePageConfig(o) {
+          let maxChars = _readNum(o && o.pageMaxChars, null);
+          if (maxChars == null && o && o.page && typeof o.page.maxChars === "number") {
+            maxChars = o.page.maxChars;
+          }
+          if (!(typeof maxChars === "number" && Number.isFinite(maxChars) && maxChars > 0)) {
+            maxChars = PAGE_DEFAULTS.maxChars;
+          }
+
+          let maxLines = _readNum(o && o.pageMaxLines, null);
+          if (maxLines == null && o && o.page && typeof o.page.maxLines === "number") {
+            maxLines = o.page.maxLines;
+          }
+          if (!(typeof maxLines === "number" && Number.isFinite(maxLines) && maxLines > 0)) {
+            maxLines = PAGE_DEFAULTS.maxLines;
+          }
+          return { maxChars: maxChars | 0, maxLines: maxLines | 0 };
+        }
+
+        function _buildPagesFromLines(lines, maxChars, maxLines) {
+          const out = [];
+          let buf = [];
+          let charCount = 0;
+          const maxC = maxChars | 0;
+          const maxL = maxLines | 0;
+          for (let i = 0; i < lines.length; i++) {
+            const text = String(lines[i] || "");
+            if (!text) continue;
+            const nextCount = charCount + text.length + (buf.length ? 1 : 0);
+            const wouldOverflowLines = (maxL > 0 && buf.length >= maxL);
+            const wouldOverflowChars = (maxC > 0 && buf.length > 0 && nextCount > maxC);
+            if (wouldOverflowLines || wouldOverflowChars) {
+              out.push(buf.join("\n"));
+              buf = [];
+              charCount = 0;
+            }
+            buf.push(text);
+            charCount = charCount + text.length + (buf.length > 1 ? 1 : 0);
+          }
+          if (buf.length) out.push(buf.join("\n"));
+          return out;
+        }
+
         function _clearChoices() {
           if (!choicesEl) return;
           choicesEl.innerHTML = "";
           choiceButtons = [];
           choiceIndex = 0;
-          hasChoices = false;
         }
 
         function _applyChoiceSelection() {
@@ -5353,6 +5479,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const i = Math.max(0, Math.min(choiceButtons.length - 1, idx | 0));
           const btn = choiceButtons[i];
           if (!btn) return;
+          _clearAutoAdvance();
           const id = btn.dataset && btn.dataset.choiceId ? btn.dataset.choiceId : String(btn.textContent || "");
           const label = String(btn.textContent || "");
           window.dispatchEvent(
@@ -5360,20 +5487,83 @@ function _readTeamCoins(pid, hero, spritesNS) {
           );
         }
 
+        function _buildHint(autoOn) {
+          let hint = dialogHintBase || "";
+          const pageCount = (dialogPages && dialogPages.length) ? (dialogPages.length | 0) : 0;
+          if (pageCount > 1) {
+            const pageLabel = `${((dialogPageIndex | 0) + 1)}/${pageCount}`;
+            hint = hint ? `${hint} | ${pageLabel}` : pageLabel;
+          }
+          if (autoOn) {
+            hint = hint ? `${hint} | Auto` : "Auto";
+          }
+          return hint;
+        }
+
+        function _renderDialogText(text) {
+          const autoMs = _resolveAutoAdvanceMs(text);
+          _setText(textEl, text);
+          _setText(hintEl, _buildHint(!!autoMs));
+          _scheduleAutoAdvance(text, autoMs);
+        }
+
+        function _showPage(index) {
+          if (!dialogPages || !dialogPages.length) {
+            dialogPageIndex = 0;
+            _renderDialogText(dialogTextRaw);
+            return;
+          }
+          const len = dialogPages.length | 0;
+          let idx = index | 0;
+          if (idx < 0) idx = 0;
+          if (idx >= len) idx = len - 1;
+          dialogPageIndex = idx;
+          _renderDialogText(dialogPages[idx] || "");
+        }
+
         function show(opts) {
           if (!layer || !textEl) return;
           const o = opts || {};
+          _clearAutoAdvance();
           dialogOwner = (typeof o.owner === "string") ? o.owner : "";
           if (window.__heDialog) window.__heDialog.__heOwner = dialogOwner;
 
-          _setText(speakerEl, o.speaker || "");
-          _setText(textEl, o.text || "");
-
           hasChoices = Array.isArray(o.choices) && o.choices.length > 0;
-          _setText(
-            hintEl,
-            o.hint ?? (hasChoices ? "Click a choice" : "Space/Enter: next â€¢ Esc: close")
-          );
+
+          const defaultHint = hasChoices ? "Click a choice" : "Space/Enter: next | Esc: close";
+          dialogHintBase = ("hint" in o) ? String(o.hint ?? "") : defaultHint;
+          dialogTextRaw = (typeof o.text === "string") ? o.text : "";
+
+          autoAdvanceCfg = null;
+          if (!hasChoices) {
+            if (typeof o.autoAdvanceMs === "number") {
+              autoAdvanceCfg = o.autoAdvanceMs | 0;
+            } else if (o.autoAdvance) {
+              autoAdvanceCfg = o.autoAdvance;
+            }
+          }
+
+          dialogPages = null;
+          dialogPageIndex = 0;
+          if (!hasChoices) {
+            const pages = _normalizePages(o.pages);
+            if (pages.length) {
+              dialogPages = pages;
+            } else {
+              const lines = _normalizeLines(o.lines);
+              if (lines.length) {
+                const cfg = _resolvePageConfig(o);
+                dialogPages = _buildPagesFromLines(lines, cfg.maxChars, cfg.maxLines);
+              } else if ((o && (o.page || typeof o.pageMaxChars === "number" || typeof o.pageMaxLines === "number")) && typeof o.text === "string") {
+                const cfg = _resolvePageConfig(o);
+                const splitLines = _normalizeLines(String(o.text || "").split("\n"));
+                const splitPages = _buildPagesFromLines(splitLines, cfg.maxChars, cfg.maxLines);
+                if (splitPages.length > 1) dialogPages = splitPages;
+              }
+            }
+          }
+
+          _setText(speakerEl, o.speaker || "");
 
           _clearChoices();
 
@@ -5389,6 +5579,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
               btn.textContent = label;
               btn.dataset.choiceId = id;
               btn.addEventListener("click", () => {
+                _clearAutoAdvance();
                 choiceIndex = i | 0;
                 _applyChoiceSelection();
                 window.dispatchEvent(
@@ -5402,28 +5593,50 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
           _applyChoiceSelection();
 
+          _showPage(0);
+
           layer.classList.add("he-show");
           layer.setAttribute("aria-hidden", "false");
 
           window.dispatchEvent(
             new CustomEvent("he:dialogShow", {
-              detail: { speaker: o.speaker || "", text: o.text || "" },
+              detail: { speaker: o.speaker || "", text: (dialogPages && dialogPages.length) ? dialogPages[0] : dialogTextRaw },
             })
           );
         }
 
         function hide() {
           if (!layer) return;
+          _clearAutoAdvance();
           layer.classList.remove("he-show");
           layer.setAttribute("aria-hidden", "true");
           _clearChoices();
+          hasChoices = false;
           dialogOwner = "";
           if (window.__heDialog) window.__heDialog.__heOwner = dialogOwner;
+          dialogPages = null;
+          dialogPageIndex = 0;
+          dialogHintBase = "";
+          dialogTextRaw = "";
+          autoAdvanceCfg = null;
           window.dispatchEvent(new CustomEvent("he:dialogHide"));
         }
 
         function advance() {
+          _clearAutoAdvance();
+          if (dialogPages && dialogPages.length && (dialogPageIndex | 0) < ((dialogPages.length - 1) | 0)) {
+            _showPage((dialogPageIndex | 0) + 1);
+            return;
+          }
           window.dispatchEvent(new CustomEvent("he:dialogAdvance"));
+        }
+
+        function choose() {
+          if (hasChoices && choiceButtons && choiceButtons.length) {
+            _emitChoice(choiceIndex | 0);
+            return;
+          }
+          advance();
         }
 
         // Capture keys only while dialog is open (so gameplay doesn't eat them)
@@ -5455,14 +5668,14 @@ function _readTeamCoins(pid, hero, spritesNS) {
                 _applyChoiceSelection();
                 return;
               }
-              if (e.key === " " || e.key === "Enter" || e.key === "z" || e.key === "Z" || e.key === "e" || e.key === "E") {
+              if (e.key === " " || e.key === "Enter" || e.key === "z" || e.key === "Z" || e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") {
                 e.preventDefault();
                 e.stopPropagation();
                 _emitChoice(choiceIndex | 0);
                 return;
               }
             } else {
-              if (e.key === " " || e.key === "Enter" || e.key === "z" || e.key === "Z") {
+              if (e.key === " " || e.key === "Enter" || e.key === "z" || e.key === "Z" || e.key === "e" || e.key === "E" || e.key === "f" || e.key === "F") {
                 e.preventDefault();
                 e.stopPropagation();
                 advance();
@@ -5474,7 +5687,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
         );
 
         // Global API Phaser can call
-        window.__heDialog = { show, hide, isOpen, advance, __heOwner: dialogOwner };
+        window.__heDialog = { show, hide, isOpen, advance, choose, __heOwner: dialogOwner };
       })();
     </script>
   </body>

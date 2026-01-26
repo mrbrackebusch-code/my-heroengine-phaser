@@ -151,6 +151,38 @@ function buildAuraSheetForGrid(srcPng, frameW, frameH, radius) {
   const outW = (cols * frameW) | 0;
   const outH = (rows * frameH) | 0;
   const cropped = (outW !== srcW || outH !== srcH);
+  let croppedHasOpaque = false;
+  if (cropped) {
+    const alphaIdx = 3;
+    const maxX = srcW | 0;
+    const maxY = srcH | 0;
+    const cutX = outW | 0;
+    const cutY = outH | 0;
+    // Bottom strip (rows cutY..maxY-1), full width.
+    if (cutY < maxY) {
+      for (let y = cutY; y < maxY && !croppedHasOpaque; y++) {
+        const row = (y * maxX) * 4;
+        for (let x = 0; x < maxX; x++) {
+          if ((srcData[row + x * 4 + alphaIdx] | 0) > 0) {
+            croppedHasOpaque = true;
+            break;
+          }
+        }
+      }
+    }
+    // Right strip (cols cutX..maxX-1), only within kept rows.
+    if (!croppedHasOpaque && cutX < maxX && cutY > 0) {
+      for (let y = 0; y < cutY && !croppedHasOpaque; y++) {
+        const row = (y * maxX) * 4;
+        for (let x = cutX; x < maxX; x++) {
+          if ((srcData[row + x * 4 + alphaIdx] | 0) > 0) {
+            croppedHasOpaque = true;
+            break;
+          }
+        }
+      }
+    }
+  }
   const out = new PNG({ width: outW, height: outH, colorType: 6 });
 
   for (let fr = 0; fr < rows; fr++) {
@@ -181,7 +213,7 @@ function buildAuraSheetForGrid(srcPng, frameW, frameH, radius) {
       }
     }
   }
-  return { ok: true, out, rows, cols, cropped, srcW, srcH, outW, outH };
+  return { ok: true, out, rows, cols, cropped, croppedHasOpaque, srcW, srcH, outW, outH };
 }
 
 function readPng(filePath) {
@@ -234,6 +266,8 @@ async function main() {
   let wrote = 0;
   let skipped = 0;
   let missing = 0;
+  const warnedTileCrop = new Set();
+  const warnedPropCrop = new Set();
 
   if (wantTiles) {
     const tiles = listPngs(TILES_DIR);
@@ -266,10 +300,15 @@ async function main() {
           console.warn(`[prop-auras][SKIP][tile] ${base}: ${r.reason}`);
           continue;
         }
-        if (r.cropped) {
-          console.warn(
-            `[prop-auras][WARN][tile] ${base}: source ${r.srcW}x${r.srcH} not divisible by 32x32; cropped to ${r.outW}x${r.outH}`
-          );
+        if (r.cropped && !warnedTileCrop.has(base)) {
+          warnedTileCrop.add(base);
+          const hasOpaque = !!r.croppedHasOpaque;
+          const tag = hasOpaque ? "WARN" : "INFO";
+          const extra = hasOpaque ? "croppedHasOpaque=1" : "croppedHasOpaque=0";
+          const msg =
+            `[prop-auras][${tag}][tile] ${base}: source ${r.srcW}x${r.srcH} not divisible by 32x32; ` +
+            `cropped to ${r.outW}x${r.outH}; ${extra}`;
+          console.log(msg);
         }
         writePng(r.out, outPath);
         wrote++;
@@ -326,10 +365,15 @@ async function main() {
           console.warn(`[prop-auras][SKIP][prop] ${base}: ${r.reason}`);
           continue;
         }
-        if (r.cropped) {
-          console.warn(
-            `[prop-auras][WARN][prop] ${base}: source ${r.srcW}x${r.srcH} not divisible by ${frame.frameW}x${frame.frameH}; cropped to ${r.outW}x${r.outH}`
-          );
+        if (r.cropped && !warnedPropCrop.has(base)) {
+          warnedPropCrop.add(base);
+          const hasOpaque = !!r.croppedHasOpaque;
+          const tag = hasOpaque ? "WARN" : "INFO";
+          const extra = hasOpaque ? "croppedHasOpaque=1" : "croppedHasOpaque=0";
+          const msg =
+            `[prop-auras][${tag}][prop] ${base}: source ${r.srcW}x${r.srcH} not divisible by ${frame.frameW}x${frame.frameH}; ` +
+            `cropped to ${r.outW}x${r.outH}; ${extra}`;
+          console.log(msg);
         }
         writePng(r.out, outPath);
         wrote++;

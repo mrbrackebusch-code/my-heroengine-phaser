@@ -34,6 +34,7 @@ import {
   DEBUG_PROP_FOCUS_AURA_VERBOSE,
   DEBUG_PROP_FOCUS_AURA_WORLD_MARKER,
   DEBUG_PAD_SINK_PROP_LOGS,
+  DEBUG_TILEMAP_AUDIT,
   DEBUG_TILEMAP_GLUE,
   LOG_PROP_FOCUS_AURA_PIXEL_PROBE_ONCE,
   LOG_PROP_FOCUS_AURA_RENDER_ONCE,
@@ -932,6 +933,11 @@ function _ensurePropAnim(
 function logTiles(localDebug: boolean, ...args: any[]) {
     if (!DEBUG_TILEMAP_GLUE || !localDebug) return;
     console.log(...args);
+}
+
+function _auditBoxDims(minR: number, maxR: number, minC: number, maxC: number): { w: number; h: number } {
+  if (maxR < minR || maxC < minC) return { w: 0, h: 0 };
+  return { w: ((maxC - minC + 1) | 0), h: ((maxR - minR + 1) | 0) };
 }
 
 
@@ -3447,6 +3453,7 @@ syncFromEngineGrid(grid: number[][]): void {
     }
 
     this._applyAutoDecorDecals(decalNameGrid, rows, cols);
+    this._debugTilemapAuditDecals("sync", decalNameGrid, rows | 0, cols | 0);
   }
 
   private _applyAutoDecorDecals(decalNameGrid: string[][], rows: number, cols: number): void {
@@ -3657,18 +3664,51 @@ private _propCreateDisplayObj(args: {
   isAnimAnchorCell: boolean;
 }): any {
   const { x, y, textureKey, frameIndex, depth, animKey, isAnimAnchorCell } = args;
+  const info = this.atlas.getSheetInfo(textureKey);
+  const cols = (info?.cols ?? 0) | 0;
+  const rows = (info?.rows ?? 0) | 0;
+  const tileSize = (info?.tileSize ?? 32) | 0;
+  const frameName = String(frameIndex | 0);
 
-  if (animKey && isAnimAnchorCell) {
-    const spr = this.scene.add.sprite(x, y, textureKey, frameIndex);
+  let canUseFrames = false;
+  try {
+    const texObj: any = (this.scene as any)?.textures?.get?.(textureKey);
+    if (texObj?.has && (texObj?.frameTotal ?? 0) > 1) {
+      canUseFrames = !!texObj.has(frameName);
+    }
+  } catch { /* ignore */ }
+
+  if (animKey && isAnimAnchorCell && canUseFrames) {
+    const spr = this.scene.add.sprite(x, y, textureKey, frameName);
     spr.setOrigin(0.5, 0.5);
     spr.setDepth(depth);
     try { spr.anims?.play?.(animKey); } catch { /* ignore */ }
     return spr;
   }
 
-  const img = this.scene.add.image(x, y, textureKey, frameIndex);
+  const img = this.scene.add.image(x, y, textureKey);
   img.setOrigin(0.5, 0.5);
   img.setDepth(depth);
+
+  if (canUseFrames) {
+    try { img.setFrame(frameName); } catch { /* ignore */ }
+    return img;
+  }
+
+  // Fallback for non-framed textures: crop from the base sheet.
+  try { img.setFrame("__BASE"); } catch { /* ignore */ }
+  if (cols > 0 && rows > 0) {
+    const maxFrames = ((cols * rows) | 0);
+    const fi = (frameIndex | 0);
+    if (fi >= 0 && (maxFrames === 0 || fi < maxFrames)) {
+      const atlasCol = ((fi % cols) | 0);
+      const atlasRow = ((Math.floor(fi / cols)) | 0);
+      const cropX = ((atlasCol * tileSize) | 0);
+      const cropY = ((atlasRow * tileSize) | 0);
+      img.setCrop(cropX, cropY, tileSize, tileSize);
+      img.setDisplaySize(tileSize, tileSize);
+    }
+  }
   return img;
 }
 
@@ -3793,6 +3833,7 @@ private _propCreateFocusAuraContainer(args: {
 
   const auraInfo = this.atlas.getSheetInfo(auraTk);
   const auraCols = (auraInfo?.cols ?? 0) | 0;
+  const auraRows = (auraInfo?.rows ?? 0) | 0;
   if (!auraInfo || auraCols <= 0) return null;
 
   if (override && DEBUG_PROP_FOCUS_AURA_LOGS) {
@@ -3876,19 +3917,14 @@ private _propCreateFocusAuraContainer(args: {
       let forcedCrop = false;
       let statsFrom: "frame" | "crop" = "frame";
       let frameName = String(auraFi);
-      let frameTotal: any = null;
       try {
         const texObj: any = (this.scene as any)?.textures?.get?.(auraTk);
-        frameTotal = (texObj?.frameTotal ?? null);
-        try {
+        const frameMax = (auraCols > 0 && auraRows > 0) ? (auraCols * auraRows) : 0;
+        const inBounds = (frameMax > 0) ? (auraFi >= 0 && auraFi < frameMax) : (auraFi >= 0);
+        const canUseFrames = inBounds && !!texObj?.has && ((texObj?.frameTotal ?? 0) > 1);
+        if (canUseFrames && texObj.has(frameName)) {
           img.setFrame(frameName);
           usedFrame = (img?.frame?.name === frameName);
-        } catch { /* ignore */ }
-        if (!usedFrame) {
-          try {
-            img.setFrame(auraFi as any);
-            usedFrame = (String(img?.frame?.name ?? "") === frameName);
-          } catch { /* ignore */ }
         }
       } catch { /* ignore */ }
       if (!usedFrame) {
@@ -4986,6 +5022,124 @@ private _debugPadPillarInstances(reason: string): void {
   );
 }
 
+private _debugTilemapAuditTilesets(reason: string): void {
+  if (!DEBUG_TILEMAP_AUDIT) return;
+  const anyThis: any = this as any;
+  const keys = this._gidRanges.map(r => r.textureKey);
+  const mageGid = this._firstGidByTextureKey["tiles.magecity"];
+  const buildGid = this._firstGidByTextureKey["tiles.build_atlas"];
+  const mageGidVal = (typeof mageGid === "number") ? (mageGid | 0) : -1;
+  const buildGidVal = (typeof buildGid === "number") ? (buildGid | 0) : -1;
+  const keyStr = keys.join("|");
+  const sig = `${reason}|${keyStr}|${mageGidVal}|${buildGidVal}`;
+  if (anyThis.__tileAuditTilesetSig === sig) return;
+  anyThis.__tileAuditTilesetSig = sig;
+  console.log(
+    `[TILEMAP][AUDIT][TILESETS] reason=${String(reason || "")}` +
+    ` count=${keys.length | 0}` +
+    ` magecityGid=${mageGidVal | 0}` +
+    ` buildGid=${buildGidVal | 0}` +
+    ` keys=${keyStr || "n/a"}`
+  );
+}
+
+private _debugTilemapAuditDecals(reason: string, decalNameGrid: string[][], rows: number, cols: number): void {
+  if (!DEBUG_TILEMAP_AUDIT) return;
+  const anyThis: any = this as any;
+  const texKeys: Record<string, 1> = Object.create(null);
+  let trialCells = 0;
+  let minR = 999999;
+  let maxR = -1;
+  let minC = 999999;
+  let maxC = -1;
+  for (let r = 0; r < rows; r++) {
+    const row = decalNameGrid[r];
+    if (!Array.isArray(row)) continue;
+    for (let c = 0; c < cols; c++) {
+      const name = row[c] ?? "";
+      if (!name) continue;
+      if (String(name).indexOf("trial_") !== 0) continue;
+      trialCells++;
+      if (r < minR) minR = r;
+      if (r > maxR) maxR = r;
+      if (c < minC) minC = c;
+      if (c > maxC) maxC = c;
+      const vis = DECAL_VISUALS_BY_NAME[String(name)] as any;
+      let tk = "";
+      if (vis?.textureKey) tk = String(vis.textureKey || "");
+      else if (vis?.atlas) tk = String(this.atlas.resolveAtlasTextureKey(String(vis.atlas || "")));
+      if (tk) texKeys[tk] = 1;
+    }
+  }
+  const dims = _auditBoxDims(minR, maxR, minC, maxC);
+  const tileSize = (this.atlas.tileSize | 0);
+  const mageGid = this._firstGidByTextureKey["tiles.magecity"];
+  const buildGid = this._firstGidByTextureKey["tiles.build_atlas"];
+  const mageGidVal = (typeof mageGid === "number") ? (mageGid | 0) : -1;
+  const buildGidVal = (typeof buildGid === "number") ? (buildGid | 0) : -1;
+  const texList = Object.keys(texKeys).sort().join("|") || "n/a";
+  const sig = `${reason}|${rows}|${cols}|${trialCells}|${minR}|${maxR}|${minC}|${maxC}|${texList}|${mageGidVal}|${buildGidVal}`;
+  if (anyThis.__tileAuditDecalSig === sig) return;
+  anyThis.__tileAuditDecalSig = sig;
+  console.log(
+    `[TILEMAP][AUDIT][DECALS] reason=${String(reason || "")}` +
+    ` rows=${rows | 0} cols=${cols | 0}` +
+    ` trialCells=${trialCells | 0}` +
+    ` box=${dims.w | 0}x${dims.h | 0}` +
+    ` boxPx=${(dims.w * tileSize) | 0}x${(dims.h * tileSize) | 0}` +
+    ` tex=${texList}` +
+    ` magecityGid=${mageGidVal | 0}` +
+    ` buildGid=${buildGidVal | 0}` +
+    ` tilesets=${(this._tilesetsAll?.length ?? 0) | 0}`
+  );
+}
+
+private _debugTilemapAuditProps(reason: string): void {
+  if (!DEBUG_TILEMAP_AUDIT) return;
+  const anyThis: any = this as any;
+  const instByAnchor: Record<string, any> = anyThis.__propInstancesByAnchor || Object.create(null);
+  let total = 0;
+  let gate = 0;
+  let mid = 0;
+  let cornerL = 0;
+  let cornerR = 0;
+  let minR = 999999;
+  let maxR = -1;
+  let minC = 999999;
+  let maxC = -1;
+  const keys = Object.keys(instByAnchor);
+  for (let i = 0; i < keys.length; i++) {
+    const k = keys[i];
+    const inst = instByAnchor[k];
+    if (!inst) continue;
+    const name = String(inst.baseName || "");
+    if (name.indexOf("trial_") !== 0) continue;
+    total++;
+    if (name === "trial_gate_6x6") gate++;
+    else if (name === "trial_fence_mid_2x4") mid++;
+    else if (name === "trial_fence_corner_l_2x6") cornerL++;
+    else if (name === "trial_fence_corner_r_4x4") cornerR++;
+    const r = (inst.anchorR | 0);
+    const c = (inst.anchorC | 0);
+    if (r < minR) minR = r;
+    if (r > maxR) maxR = r;
+    if (c < minC) minC = c;
+    if (c > maxC) maxC = c;
+  }
+  const dims = _auditBoxDims(minR, maxR, minC, maxC);
+  const tileSize = (this.atlas.tileSize | 0);
+  const sig = `${reason}|${total}|${gate}|${mid}|${cornerL}|${cornerR}|${minR}|${maxR}|${minC}|${maxC}`;
+  if (anyThis.__tileAuditPropSig === sig) return;
+  anyThis.__tileAuditPropSig = sig;
+  console.log(
+    `[TILEMAP][AUDIT][PROPS] reason=${String(reason || "")}` +
+    ` total=${total | 0} gate=${gate | 0} mid=${mid | 0}` +
+    ` cornerL=${cornerL | 0} cornerR=${cornerR | 0}` +
+    ` box=${dims.w | 0}x${dims.h | 0}` +
+    ` boxPx=${(dims.w * tileSize) | 0}x${(dims.h * tileSize) | 0}`
+  );
+}
+
 private _propUpdateOffsetForInstance(inst: any, nextOffX: number, nextOffY: number): void {
   if (!inst) return;
   const curOffX = (inst.offsetX ?? 0) | 0;
@@ -5072,6 +5226,7 @@ syncPropGridByName(propNameGrid: string[][]): void {
       this._propUpdateOffsetForInstance(inst, offX | 0, offY | 0);
     }
     this._debugPadPillarInstances("no-rebuild");
+    this._debugTilemapAuditProps("no-rebuild");
     return;
   }
 
@@ -5093,6 +5248,7 @@ syncPropGridByName(propNameGrid: string[][]): void {
     try { this._propReapplyFocusAuraCache(); } catch { /* ignore */ }
   }
   this._debugPadPillarInstances("rebuild");
+  this._debugTilemapAuditProps("rebuild");
 }
 
 replacePropAt(anchorR: number, anchorC: number, rawKey: string): boolean {
@@ -5375,6 +5531,8 @@ private _rebuildTilemap(rows: number, cols: number, tileSize: number): void {
     const gid = this._firstGidByTextureKey[eff];
     if (gid != null) this._firstGidByTextureKey[raw] = gid;
   }
+
+  this._debugTilemapAuditTilesets("rebuild");
 
   // Layers
   this.groundLayer = this.map.createBlankLayer("ground", this._tilesetsAll, 0, 0);

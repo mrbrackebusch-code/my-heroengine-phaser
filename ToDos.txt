@@ -1,0 +1,12 @@
+- Strength size audit for arcs
+- Strength transformation audit (did we reshape the arc for more fill?)
+- Agility comet removal
+- Agility spear movement/presence
+- Agility comet speed (it's insanely high, I want a GENTLE fade between larger and smaller so it subtly "glows" and doesn't "flash"
+- Trial "success" or "failure" dialogue at end--enforced cutscene. (screen fade and reappear in cutscene?)
+- Fills for agility comet aura
+- Actual usage of proper props and terrain from the mage city
+- Actual intended size of the arena
+- The shop! (weapon scaling is insane--we need it set WAY lower. It should be based on "total XP available up to this point" and be capped at 20%. So at the 5th floor, maximum level 5--that is a SMALL amount of addition. I'm getting 140 as my "Start", so either the debugging is set to begin instantly very high, or the weapon balancing is off.
+- The shop! The "press Q to buy" is BAD. We need "interact" like we do elsewhere.
+- Upon buying a weapon we need to OVERWITE AND REPLACE THE DISPLAY WITH THE CRAPPY BASE WEAPON THAT YOU CAN SWAP WITH FOR FREE. It's not doing anything to the DOM overlay, so we see the old weapon's information even for our "base" weapon we are sticking on there that should be +0 for everything.

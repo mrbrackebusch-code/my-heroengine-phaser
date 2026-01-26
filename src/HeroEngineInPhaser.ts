@@ -75,6 +75,7 @@ import {
     DEBUG_TOWER_TRIAL_LOGS,
     DEBUG_TOWER_TRIAL_SIM,
     DEBUG_TRAP_LOGS,
+    DEBUG_TILEMAP_AUDIT,
     DEBUG_FORCE_TEST_WORLD_KIND,
     DEBUG_FORCE_TEST_WORLD_LOG,
     DEBUG_HERO_LOGIC,
@@ -1976,6 +1977,7 @@ function _spawnHeroBodyPaintFxForMove(
     lifespanMs: number,
     moveType?: string
 ): Sprite | null {
+    if (AGI_DISABLE_LEGACY_AGI_TRAIL_FX && ((family | 0) === (FAMILY.AGILITY | 0))) return null;
     if (!ENABLE_HERO_BODY_FX) return null;
     if (!hero || (hero.flags & sprites.Flag.Destroyed)) return null;
     const dir = _enemyDirFromVector(nx, ny);
@@ -2140,6 +2142,7 @@ function _spawnProjectileMaskFxForMove(
     lifespanMs: number,
     moveType?: string
 ): Sprite | null {
+    if (AGI_DISABLE_LEGACY_AGI_TRAIL_FX && ((family | 0) === (FAMILY.AGILITY | 0))) return null;
     if (!proj || !hero) return null;
     if (proj.flags & sprites.Flag.Destroyed) return null;
     const dir = _enemyDirFromVector(nx, ny);
@@ -2374,8 +2377,8 @@ function _spawnStrengthArcFxForProj(
     const auraIdxR1 = (sprites.readDataNumber(proj, WPN_AURA_COL_R1_KEY) | 0) || 1;
     const auraIdxR2 = (sprites.readDataNumber(proj, WPN_AURA_COL_R2_KEY) | 0) || auraIdxR1;
     const auraIdxR3 = (sprites.readDataNumber(proj, WPN_AURA_COL_R3_KEY) | 0) || auraIdxR2;
-    let highlight = _strengthArcHighlightTints(element | 0, auraIdxR1, auraIdxR2, auraIdxR3);
-    let fillTint = STR_ARC_FILL_TINT_ENABLED ? (highlight.primary | 0) : 0;
+    const highlight = _strengthArcHighlightTints(element | 0, auraIdxR1, auraIdxR2, auraIdxR3);
+    const fillTint = 0;
     let fillSkinId = "";
     let fillDir = "";
     let edgeSkinId = "";
@@ -2398,19 +2401,9 @@ function _spawnStrengthArcFxForProj(
 
     if (showFill) {
         const ellipseFillPick = _strengthArcEllipseTexturePick(element | 0, dir || "down");
-        const fillPick = ellipseFillPick || _strengthArcTexturePick(element | 0, dir || "down");
-        if (fillPick && fillPick.skinId) {
-            fillSkinId = fillPick.skinId;
-            fillDir = fillPick.dir || dir || "";
-            const fillSkinTint = _effectTintForSkin(fillSkinId, fillDir || dir || "");
-            if (fillSkinTint) {
-                highlight = { primary: fillSkinTint | 0, secondary: fillSkinTint | 0 };
-            }
-            if (ellipseFillPick) {
-                fillTint = 0;
-            } else {
-                fillTint = STR_ARC_FILL_TINT_ENABLED ? (highlight.primary | 0) : 0;
-            }
+        if (ellipseFillPick && ellipseFillPick.skinId) {
+            fillSkinId = ellipseFillPick.skinId;
+            fillDir = ellipseFillPick.dir || dir || "";
             const fillFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
             fillFx.setFlag(SpriteFlag.Ghost, true);
             fillFx.x = hero.x;
@@ -2423,91 +2416,24 @@ function _spawnStrengthArcFxForProj(
                 repeat: -1,
                 frameIndex: 0,
                 maskSprite: maskFx,
-                alpha: STR_ARC_FILL_ALPHA,
-                tint: fillTint || undefined
+                alpha: 1
             };
-            opts.dir = fillPick.dir || dir;
-            applyEffectToSprite(fillFx, fillPick.skinId, opts);
+            opts.dir = ellipseFillPick.dir || dir;
+            applyEffectToSprite(fillFx, ellipseFillPick.skinId, opts);
+            sprites.setDataNumber(fillFx, STR_ARC_FILL_ROW_KEY, -1);
             sprites.setDataSprite(proj, STR_ARC_FILL_FX_KEY, fillFx);
         }
 
-        const edgePick = _strengthArcEllipseTexturePick(element | 0, dir || "down");
-        if (edgePick && edgePick.skinId) {
-            edgeSkinId = edgePick.skinId;
-            edgeDir = edgePick.dir || dir || "";
-            const edgeFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
-            edgeFx.setFlag(SpriteFlag.Ghost, true);
-            edgeFx.x = hero.x;
-            edgeFx.y = hero.y;
-            edgeFx.z = zBase + 2;
-            if ((lifespanMs | 0) > 0) edgeFx.lifespan = lifespanMs | 0;
-
-            const edgeOpts: EffectApplyOpts = {
-                mode: "projectile",
-                repeat: -1,
-                maskSprite: maskFx,
-                blend: STR_ARC_EDGE_BLEND,
-                alpha: 0.001
-            };
-            edgeOpts.dir = edgePick.dir || dir;
-            applyEffectToSprite(edgeFx, edgePick.skinId, edgeOpts);
-            sprites.setDataNumber(edgeFx, STR_ARC_EDGE_PHASE_KEY, -1);
-            sprites.setDataNumber(edgeFx, STR_ARC_EDGE_ROW_KEY, -1);
-            sprites.setDataSprite(proj, STR_ARC_EDGE_FX_KEY, edgeFx);
-
-            const edgeAuraSkin = _strengthArcAuraSkinForEffect(edgePick.skinId, 1);
-            if (edgeAuraSkin) {
-                edgeAuraSkinId = edgeAuraSkin;
-                const edgeAuraFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
-                edgeAuraFx.setFlag(SpriteFlag.Ghost, true);
-                edgeAuraFx.x = hero.x;
-                edgeAuraFx.y = hero.y;
-                edgeAuraFx.z = zBase + (STR_ARC_EDGE_AURA_Z_OFFSET | 0);
-                if ((lifespanMs | 0) > 0) edgeAuraFx.lifespan = lifespanMs | 0;
-                const edgeAuraOpts: EffectApplyOpts = {
-                    mode: "projectile",
-                    repeat: -1,
-                    maskSprite: maskFx,
-                    maskPadOutPx: STR_ARC_EDGE_AURA_PAD_OUT_PX | 0,
-                    blend: STR_ARC_EDGE_BLEND,
-                    tint: highlight.primary | 0,
-                    alpha: 0.001
-                };
-                applyEffectToSprite(edgeAuraFx, edgeAuraSkin, edgeAuraOpts);
-                sprites.setDataNumber(edgeAuraFx, STR_ARC_EDGE_PHASE_KEY, -1);
-                sprites.setDataNumber(edgeAuraFx, STR_ARC_EDGE_ROW_KEY, -1);
-                sprites.setDataSprite(proj, STR_ARC_EDGE_AURA_FX_KEY, edgeAuraFx);
-            }
+        if (!STR_ARC_EDGE_ENABLED) {
+            sprites.setDataSprite(proj, STR_ARC_EDGE_FX_KEY, null as any);
+            sprites.setDataSprite(proj, STR_ARC_EDGE_AURA_FX_KEY, null as any);
         }
 
-        const auraTints = [highlight.primary];
-        const auraKeys = [STR_ARC_AURA_R1_FX_KEY, STR_ARC_AURA_R2_FX_KEY, STR_ARC_AURA_R3_FX_KEY];
-        const auraCount = Math.min(STR_ARC_AURA_RADII.length, auraKeys.length, auraTints.length);
-        for (let i = 0; i < auraCount; i++) {
-            const radius = STR_ARC_AURA_RADII[i] | 0;
-            const skinId = _strengthArcAuraSkinId(radius);
-            if (!skinId) continue;
-            auraSkinIds.push(skinId);
-            const auraFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
-            auraFx.setFlag(SpriteFlag.Ghost, true);
-            auraFx.x = hero.x;
-            auraFx.y = hero.y;
-            auraFx.z = zBase + (STR_ARC_AURA_Z_OFFSET | 0) - i;
-            if ((lifespanMs | 0) > 0) auraFx.lifespan = lifespanMs | 0;
-            const padOut = STR_ARC_AURA_PAD_OUT_BY_RADIUS[i] | 0;
-            const auraOpts: EffectApplyOpts = {
-                mode: "projectile",
-                repeat: -1,
-                frameIndex: 0,
-                maskSprite: maskFx,
-                maskPadOutPx: padOut | 0,
-                blend: STR_ARC_AURA_BLEND,
-                tint: auraTints[i] | 0,
-                alpha: 0.001,
-                dir
-            };
-            applyEffectToSprite(auraFx, skinId, auraOpts);
-            sprites.setDataSprite(proj, auraKeys[i], auraFx);
+        if (!STR_ARC_AURA_ENABLED) {
+            const auraKeys = [STR_ARC_AURA_R1_FX_KEY, STR_ARC_AURA_R2_FX_KEY, STR_ARC_AURA_R3_FX_KEY];
+            for (const key of auraKeys) {
+                sprites.setDataSprite(proj, key, null as any);
+            }
         }
     } else {
         sprites.setDataSprite(proj, STR_ARC_FILL_FX_KEY, null as any);
@@ -2693,9 +2619,13 @@ function _updateStrengthArcFxForProj(
 
     const rot = _strengthArcNormalizeAngle(moveAngle - spineAngle + crossRot + spinRot);
 
+    const slashScale = _strengthArcSlashScaleCap();
+    const resetScale = (Math.abs(slashScale - 1) > 0.001)
+        ? slashScale
+        : (1 + ((STR_ARC_END_SCALE - 1) * sweepT));
     const scale = (segName === "strengthReset")
-        ? (1 + ((STR_ARC_END_SCALE - 1) * sweepT))
-        : STR_ARC_SLASH_SCALE;
+        ? resetScale
+        : slashScale;
 
     const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, rawFrame);
     sprites.setDataNumber(maskFx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0);
@@ -2705,6 +2635,34 @@ function _updateStrengthArcFxForProj(
     maskFx.x = posX;
     maskFx.y = posY;
     maskFx.z = (hero.z | 0) + 12;
+
+    if (DEBUG_STR_PROJECTILE_METRICS && _wpnTraceShouldLog(proj, nowMs | 0)) {
+        const atlas = _getEffectAtlasAny();
+        const resolved = atlas ? _resolveEffectEntry(atlas, STR_ARC_SKIN_ID, "") : null;
+        const frameW = resolved?.frameW ? (resolved.frameW | 0) : 0;
+        const frameH = resolved?.frameH ? (resolved.frameH | 0) : 0;
+        const scaledW = frameW > 0 ? Math.round(frameW * scale) : 0;
+        const scaledH = frameH > 0 ? Math.round(frameH * scale) : 0;
+        const stamp = `${frameIdx | 0}|${scale.toFixed(3)}|${frameW | 0}|${frameH | 0}`;
+        const lastStamp = sprites.readDataString(proj, STR_ARC_SIZE_LOG_KEY) || "";
+        if (stamp !== lastStamp) {
+            sprites.setDataString(proj, STR_ARC_SIZE_LOG_KEY, stamp);
+            console.log(
+                "[STR][ARC][SIZE]" +
+                " hero=" + (heroIndex | 0) +
+                " seg=" + segName +
+                " col=" + (frameCol | 0) +
+                " raw=" + (rawFrame | 0) +
+                " frame=" + (frameIdx | 0) +
+                " scale=" + scale.toFixed(3) +
+                " slashScale=" + slashScale.toFixed(3) +
+                " frameW=" + (frameW | 0) +
+                " frameH=" + (frameH | 0) +
+                " scaledW=" + (scaledW | 0) +
+                " scaledH=" + (scaledH | 0)
+            );
+        }
+    }
 
     const phase = isSlashSeg ? 0 : (sweepT >= STR_ARC_FILL_END_START ? 2 : 1);
     let phaseMs = Math.max(1, segDur | 0);
@@ -2727,20 +2685,17 @@ function _updateStrengthArcFxForProj(
         fillFx = null as any;
     }
     if (fillFx && !(fillFx.flags & sprites.Flag.Destroyed)) {
-        const lastPhase = sprites.readDataNumber(fillFx, STR_ARC_FILL_PHASE_KEY) | 0;
-        if (phase !== lastPhase) {
-            let list = STR_ARC_FILL_TRAVEL_LIST;
-            if (phase === 0) {
-                list = STR_ARC_FILL_INTRO_LIST;
-            } else if (phase === 2) {
-                list = STR_ARC_FILL_END_LIST;
-            } else {
-                list = STR_ARC_FILL_TRAVEL_LIST;
-            }
+        const fillRadius = _strengthArcFillRadiusPx(scale);
+        const fillRowInfo = _strengthArcEdgeRowForRadius(fillRadius | 0);
+        const fillRow = fillRowInfo.row | 0;
+        const lastRow = sprites.readDataNumber(fillFx, STR_ARC_FILL_ROW_KEY) | 0;
+        if (fillRow !== lastRow) {
+            const list = _strengthArcEdgeFrameListRaw(fillRow);
             const listCount = _strengthArcFillListCount(list);
             const baseFps = (phaseMs > 0 && listCount > 0) ? (listCount / (phaseMs / 1000)) : 30;
             const fps = Math.max(1, Math.round(baseFps * Math.max(1, STR_ARC_FILL_SPEED_MULT | 0)));
             sprites.setDataString(fillFx, EFFECT_FRAME_LIST_DATA_KEY, list);
+            sprites.setDataNumber(fillFx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, 1);
             sprites.setDataNumber(fillFx, EFFECT_FRAME_INDEX_DATA_KEY, -1);
             sprites.setDataNumber(fillFx, EFFECT_YOYO_DATA_KEY, 0);
             sprites.setDataNumber(fillFx, EFFECT_FRAME_WINDOW_MS_DATA_KEY, 0);
@@ -2749,7 +2704,7 @@ function _updateStrengthArcFxForProj(
             sprites.setDataNumber(fillFx, EFFECT_ANIM_DELAY_START_MS_DATA_KEY, 0);
             sprites.setDataNumber(fillFx, EFFECT_FPS_DATA_KEY, fps | 0);
             sprites.setDataNumber(fillFx, EFFECT_REPEAT_DATA_KEY, 0);
-            sprites.setDataNumber(fillFx, STR_ARC_FILL_PHASE_KEY, phase | 0);
+            sprites.setDataNumber(fillFx, STR_ARC_FILL_ROW_KEY, fillRow | 0);
         }
         sprites.setDataNumber(fillFx, EFFECT_ROT_DATA_KEY, rot);
         sprites.setDataNumber(fillFx, EFFECT_SCALE_DATA_KEY, scale);
@@ -2789,6 +2744,20 @@ function _updateStrengthArcFxForProj(
             sprites.setDataSprite(proj, key, null as any);
         }
     } else {
+        if (!STR_ARC_EDGE_ENABLED) {
+            if (edgeFx && !(edgeFx.flags & sprites.Flag.Destroyed)) edgeFx.destroy();
+            if (edgeAuraFx && !(edgeAuraFx.flags & sprites.Flag.Destroyed)) edgeAuraFx.destroy();
+            sprites.setDataSprite(proj, STR_ARC_EDGE_FX_KEY, null as any);
+            sprites.setDataSprite(proj, STR_ARC_EDGE_AURA_FX_KEY, null as any);
+        }
+        if (!STR_ARC_AURA_ENABLED) {
+            const auraKeys = [STR_ARC_AURA_R1_FX_KEY, STR_ARC_AURA_R2_FX_KEY, STR_ARC_AURA_R3_FX_KEY];
+            for (const key of auraKeys) {
+                const auraFx = sprites.readDataSprite(proj, key);
+                if (auraFx && !(auraFx.flags & sprites.Flag.Destroyed)) auraFx.destroy();
+                sprites.setDataSprite(proj, key, null as any);
+            }
+        }
         if (edgeFx && !(edgeFx.flags & sprites.Flag.Destroyed)) {
             const edgeRowInfo = _strengthArcEdgeRowForRadius(edgeRadius | 0);
             const edgeRow = edgeRowInfo.row | 0;
@@ -3037,6 +3006,10 @@ function _ensureAgilityCometAurasForFx(
     auraTints: number[],
     zBase: number
 ): void {
+    if (AGI_DISABLE_LEGACY_AGI_TRAIL_FX) {
+        _destroyAgilityCometAurasForFx(fx);
+        return;
+    }
     if (!fx) return;
     const auraKeys = [AGI_COMET_AURA_R1_FX_KEY, AGI_COMET_AURA_R2_FX_KEY, AGI_COMET_AURA_R3_FX_KEY];
     const auraCount = Math.min(STR_ARC_AURA_RADII.length, auraKeys.length, auraTints.length);
@@ -3453,6 +3426,7 @@ function _updateAgilityTrailFxSegments(
     maxLen: number,
     nowMs: number
 ): void {
+    if (AGI_DISABLE_LEGACY_AGI_TRAIL_FX) return;
     if (!proj || !hero) return;
     const count = sprites.readDataNumber(proj, AGI_FX_SEG_COUNT_KEY) | 0;
     if (count <= 0) return;
@@ -3750,7 +3724,12 @@ const STR_ARC_SHEET_ROWS = 20;
 const STR_ARC_CORE_COLS = 6;
 const STR_ARC_CORE_ROWS = 5;
 const STR_ARC_END_SCALE = 0.25;
-const STR_ARC_SLASH_SCALE = 0.75;
+const STR_ARC_SLASH_SCALE = 0.6;
+const STR_ARC_SLASH_SCALE_CAP_PCT = 0.2;
+const STR_ARC_FRAME_W_PX = 125;
+const STR_ARC_FRAME_H_PX = 150;
+const STR_ARC_FILL_ELLIPSE_MIN_R = 50;
+const STR_ARC_FILL_INNER_EXPAND_PCT_CAP = 0.2;
 const STR_ARC_BASE_TURNS_AT_360 = 20;
 const STR_ARC_CROSS_ROT_DEG = 35;
 // Raw sheet-frame sequences (these match the on-screen "#N" debug labels).
@@ -3780,6 +3759,8 @@ const STR_ARC_FILL_ALPHA = 0.99;
 const STR_ARC_FILL_TINT_ENABLED = true;
 const STR_ARC_OUTLINE_RADIUS = 2;
 const STR_ARC_OUTLINE_ENABLED = false;
+const STR_ARC_EDGE_ENABLED = false;
+const STR_ARC_AURA_ENABLED = false;
 const STR_ARC_OUTLINE_ALPHA = 0.85;
 const STR_ARC_OUTLINE_Z_OFFSET = -2;
 const STR_ARC_COLLIDER_SCALE_X1000 = 900;
@@ -3817,9 +3798,11 @@ const STR_ARC_EDGE_FX_KEY = "strArcEdgeFx";
 const STR_ARC_EDGE_AURA_FX_KEY = "strArcEdgeAuraFx";
 const STR_ARC_EDGE_PHASE_KEY = "strArcEdgePhase";
 const STR_ARC_EDGE_ROW_KEY = "strArcEdgeRow";
+const STR_ARC_FILL_ROW_KEY = "strArcFillRow";
 const STR_ARC_AURA_R1_FX_KEY = "strArcAuraR1Fx";
 const STR_ARC_AURA_R2_FX_KEY = "strArcAuraR2Fx";
 const STR_ARC_AURA_R3_FX_KEY = "strArcAuraR3Fx";
+const STR_ARC_SIZE_LOG_KEY = "strArcSizeLog";
 
 const WPN_AURA_COL_R1_KEY = "wpnAuraR1";
 const WPN_AURA_COL_R2_KEY = "wpnAuraR2";
@@ -3880,7 +3863,7 @@ const AGI_FX_SEG_Z_BIAS = 12;
 const AGI_FX_SEG_FIT_PCT_X1000 = 650;
 const AGI_FX_INTRO_MS = 140;
 const AGI_FX_INTRO_SCALE = 0.2;
-const ENABLE_AGI_FX_SEGMENTS = true;
+const ENABLE_AGI_FX_SEGMENTS = false;
 const AGI_FX_SEG_SPACING_PX = 24;
 const AGI_FX_SEG_MAX = 16;
 const AGI_COMET_FX_KEY = "agiCometFx";
@@ -4281,6 +4264,22 @@ function _strengthArcOutlineSkinId(): string | null {
     const atlas = _getEffectAtlasAny();
     if (atlas && !_resolveEffectEntry(atlas, id, "")) return null;
     return id;
+}
+
+function _strengthArcSlashScaleCap(): number {
+    const base = Math.max(0.01, Math.min(1, STR_ARC_SLASH_SCALE));
+    const cap = Math.max(0, Math.min(0.9, STR_ARC_SLASH_SCALE_CAP_PCT));
+    const capScale = Math.max(0.01, 1 - cap);
+    return Math.max(0.01, Math.min(base, capScale));
+}
+
+function _strengthArcFillRadiusPx(scale: number): number {
+    const base = Math.max(1, Math.round(Math.max(STR_ARC_FRAME_W_PX, STR_ARC_FRAME_H_PX) * 0.5));
+    const scaled = Math.max(1, Math.round(base * Math.max(0.01, scale)));
+    const cap = Math.max(0, Math.min(0.9, STR_ARC_FILL_INNER_EXPAND_PCT_CAP));
+    const widened = Math.max(1, Math.round(scaled * (1 - cap)));
+    const minR = Math.max(1, Math.round(STR_ARC_FILL_ELLIPSE_MIN_R * (1 - cap)));
+    return Math.max(minR, widened);
 }
 
 function _strengthArcAuraSkinId(radius: number): string | null {
@@ -9519,12 +9518,19 @@ const TOWER_TRIAL_ENEMY_ID = "slime"
 const TOWER_TRIAL_ENEMY_COUNT = 2
 const TOWER_TRIAL_DIALOG_HINT_CHOICES = "Arrows: choose | Interact/Enter: select | Esc: close"
 const TOWER_TRIAL_DIALOG_HINT_ADVANCE = "Interact/Enter: next | Esc: close"
+const TOWER_TRIAL_DIALOG_PAGE_MAX_CHARS = 9999
+const TOWER_TRIAL_DIALOG_PAGE_MAX_LINES = 3
+const TOWER_TRIAL_DIALOG_AUTO_ADVANCE = true
+const TOWER_TRIAL_DIALOG_BUSY_MS = 999999
+const TOWER_TRIAL_DIALOG_LOCK_KEY = "__towerTrialDialogLock"
+const TOWER_TRIAL_DIALOG_PREV_BUSY_KEY = "__towerTrialDialogPrevBusy"
+const TOWER_TRIAL_COMMENTARY_COOLDOWN_MS = 2800
 const TOWER_TRIAL_DIALOG_CHOICE_START = "trial_start"
 const TOWER_TRIAL_DIALOG_CHOICE_PROVING = "trial_proving"
 const TOWER_TRIAL_DIALOG_CHOICE_HINT = "trial_hint"
 const TOWER_TRIAL_DIALOG_CHOICE_CLOSE = "trial_close"
-const TOWER_TRIAL_ANNOUNCER_SHOW_BLINK_MS = 40
-const TOWER_TRIAL_ANNOUNCER_SHOW_POSE_MS = 120
+const TOWER_TRIAL_ANNOUNCER_SHOW_BLINK_MS = 180
+const TOWER_TRIAL_ANNOUNCER_SHOW_POSE_MS = 900
 const TOWER_TRIAL_ANNOUNCER_SHOW_LOOPS = 2
 
 const TOWER_TRIAL_INTRO_CHOICES: Array<{ id: string; label: string }> = [
@@ -9649,6 +9655,8 @@ type TowerTrialDebugState = {
 let _towerTrialAnnouncerNpc: Sprite = null
 let _towerTrialSession: TowerTrialSession | null = null
 let _towerTrialDialogState: TowerTrialDialogState = { mode: "idle", scriptIndex: 0, scriptLines: null }
+let _towerTrialDialogHeroIndex = -1
+let _towerTrialCommentaryAtMs = 0
 let _towerTrialAnnouncerShow: TowerTrialAnnouncerShow | null = null
 let _towerTrialDebugState: TowerTrialDebugState = {
     runId: 0,
@@ -14852,6 +14860,15 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
     const halfH = Math.max(1, Math.idiv(padH, 2)) | 0
     const edgePad = Math.max(4, Math.round(tile * 0.15)) | 0
     const total = BOSS_PAD_SINK_DUST_COUNT | 0
+    if (DEBUG_BOSS_INTRO) {
+        console.log("[BOSS][INTRO][DUST] spawn", {
+            baseX: baseX | 0,
+            baseY: baseY | 0,
+            count: total | 0,
+            durationMs: durationMs | 0,
+            skin: BOSS_PAD_SINK_DUST_SKIN_ID
+        })
+    }
     for (let i = 0; i < total; i++) {
         const edge = Math.randomRange(0, 3) | 0
         let ox = 0
@@ -14876,8 +14893,10 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
         fx.z = 1000
         if (!DEBUG_BOSS_PAD_DUST_PERSIST && durationMs > 0) fx.lifespan = durationMs | 0
         applyEffectToSprite(fx, BOSS_PAD_SINK_DUST_SKIN_ID, {
-            alpha: BOSS_PAD_SINK_DUST_ALPHA,
+            alpha: DEBUG_BOSS_PAD_DUST_PERSIST ? 1 : BOSS_PAD_SINK_DUST_ALPHA,
             fitRadiusPx: BOSS_PAD_SINK_DUST_RADIUS_PX,
+            blend: "normal",
+            forceTop: true,
             repeat: -1,
             yoyo: true,
             fps: 8,
@@ -22305,6 +22324,21 @@ let _shopTrialAreaH = 0
 let _shopTrialAreaW = 0
 let _shopTrialArenaStampedSig = ""
 let _shopTrialArenaProps: Sprite[] = []
+let _shopTrialArenaAuditSig = ""
+type ShopTrialArenaAuditSpec = {
+    gateRow: number
+    gateCol: number
+    leftCornerCol: number
+    rightCornerCol: number
+    leftMidCount: number
+    rightMidCount: number
+    midCount: number
+    expectedGate: number
+    expectedCornerL: number
+    expectedCornerR: number
+    expectedMid: number
+}
+let _shopTrialArenaLastSpec: ShopTrialArenaAuditSpec | null = null
 
 // Shop platform placement (visual + collision)
 const SHOP_PLATFORM_SIZE_TILES = 9
@@ -22687,7 +22721,7 @@ function _shopTileIsEmpty(r: number, c: number): boolean {
 
     if (r < 0 || c < 0 || r >= rows || c >= cols) return false
 
-    if ((_engineWorldTileMap[r][c] | 0) !== (TILE_EMPTY | 0)) return false
+    if (_tileIsSolidType(_engineWorldTileMap[r][c] | 0)) return false
     if (_shopTileHasDecorSolid(r | 0, c | 0)) return false
     return true
 
@@ -23322,7 +23356,12 @@ function _shopTrialArenaStampProps(r0: number, c0: number, h: number, w: number)
     const bottom = (r0 + h - 1) | 0
     const left = c0 | 0
     const gateRow = (bottom - SHOP_TRIAL_ARENA_GATE_INSET_ROWS) | 0
-    const gateCol = (left + Math.idiv((w - SHOP_TRIAL_ARENA_GATE_W_TILES) | 0, 2)) | 0
+    const leftCornerCol = (left + 1) | 0
+    const rightCornerCol = (left + w - SHOP_TRIAL_ARENA_FENCE_R_W_TILES - 1) | 0
+    const innerStart = (leftCornerCol + SHOP_TRIAL_ARENA_FENCE_L_W_TILES) | 0
+    const innerEnd = rightCornerCol | 0
+    const innerSpan = (innerEnd - innerStart) | 0
+    const gateCol = (innerStart + Math.max(0, Math.idiv((innerSpan - SHOP_TRIAL_ARENA_GATE_W_TILES) | 0, 2))) | 0
 
     _shopTrialArenaSpawnTrigger("trial_gate_6x6", gateRow | 0, gateCol | 0)
 
@@ -23331,9 +23370,6 @@ function _shopTrialArenaStampProps(r0: number, c0: number, h: number, w: number)
     _shopTrialArenaSpawnCollider(gateRow | 0, (gateCol + 1) | 0)
     _shopTrialArenaSpawnCollider(gateRow | 0, (gateCol + SHOP_TRIAL_ARENA_GATE_W_TILES - 2) | 0)
     _shopTrialArenaSpawnCollider(gateRow | 0, (gateCol + SHOP_TRIAL_ARENA_GATE_W_TILES - 1) | 0)
-
-    const leftCornerCol = (left + 1) | 0
-    const rightCornerCol = (left + w - SHOP_TRIAL_ARENA_FENCE_R_W_TILES - 1) | 0
 
     _shopTrialArenaSpawnTrigger("trial_fence_corner_l_2x6", gateRow | 0, leftCornerCol | 0)
     _shopTrialArenaSpawnTrigger("trial_fence_corner_r_4x4", gateRow | 0, rightCornerCol | 0)
@@ -23344,23 +23380,51 @@ function _shopTrialArenaStampProps(r0: number, c0: number, h: number, w: number)
     _shopTrialArenaSpawnCollider(gateRow | 0, rightCornerCol | 0)
     _shopTrialArenaSpawnCollider(gateRow | 0, (rightCornerCol + SHOP_TRIAL_ARENA_FENCE_R_W_TILES - 1) | 0)
 
-    const fillFenceRange = (startC: number, endCExclusive: number): void => {
+    const fillFenceRange = (startC: number, endCExclusive: number): number => {
         let c = startC | 0
+        let lastPlaced = 999999
+        let count = 0
         while ((c + SHOP_TRIAL_ARENA_FENCE_MID_W_TILES) <= (endCExclusive | 0)) {
             _shopTrialArenaSpawnTrigger("trial_fence_mid_2x4", gateRow | 0, c | 0)
             _shopTrialArenaSpawnCollider(gateRow | 0, c | 0)
             _shopTrialArenaSpawnCollider(gateRow | 0, (c + SHOP_TRIAL_ARENA_FENCE_MID_W_TILES - 1) | 0)
+            lastPlaced = c | 0
+            count++
             c = (c + SHOP_TRIAL_ARENA_FENCE_MID_W_TILES) | 0
         }
+        if ((c | 0) < (endCExclusive | 0)) {
+            const lastC = Math.max(startC | 0, (endCExclusive - SHOP_TRIAL_ARENA_FENCE_MID_W_TILES) | 0);
+            if ((lastPlaced | 0) !== (lastC | 0)) {
+                _shopTrialArenaSpawnTrigger("trial_fence_mid_2x4", gateRow | 0, lastC | 0)
+                _shopTrialArenaSpawnCollider(gateRow | 0, lastC | 0)
+                _shopTrialArenaSpawnCollider(gateRow | 0, (lastC + SHOP_TRIAL_ARENA_FENCE_MID_W_TILES - 1) | 0)
+                count++
+            }
+        }
+        return count | 0
     }
 
     const leftFenceStart = (leftCornerCol + SHOP_TRIAL_ARENA_FENCE_L_W_TILES) | 0
     const leftFenceEnd = gateCol | 0
-    fillFenceRange(leftFenceStart | 0, leftFenceEnd | 0)
+    const leftMidCount = fillFenceRange(leftFenceStart | 0, leftFenceEnd | 0)
 
     const rightFenceStart = (gateCol + SHOP_TRIAL_ARENA_GATE_W_TILES) | 0
     const rightFenceEnd = rightCornerCol | 0
-    fillFenceRange(rightFenceStart | 0, rightFenceEnd | 0)
+    const rightMidCount = fillFenceRange(rightFenceStart | 0, rightFenceEnd | 0)
+
+    _shopTrialArenaLastSpec = {
+        gateRow: gateRow | 0,
+        gateCol: gateCol | 0,
+        leftCornerCol: leftCornerCol | 0,
+        rightCornerCol: rightCornerCol | 0,
+        leftMidCount: leftMidCount | 0,
+        rightMidCount: rightMidCount | 0,
+        midCount: ((leftMidCount | 0) + (rightMidCount | 0)) | 0,
+        expectedGate: 1,
+        expectedCornerL: 1,
+        expectedCornerR: 1,
+        expectedMid: ((leftMidCount | 0) + (rightMidCount | 0)) | 0,
+    }
 }
 
 function _shopTrialArenaStampDecals(r0: number, c0: number, h: number, w: number): void {
@@ -23479,6 +23543,119 @@ function _shopTrialArenaStampDecals(r0: number, c0: number, h: number, w: number
     }
 }
 
+function _shopTrialArenaAudit(reason: string): void {
+    if (!DEBUG_TILEMAP_AUDIT) return
+
+    const r0 = _shopTrialAreaR | 0
+    const c0 = _shopTrialAreaC | 0
+    const h = _shopTrialAreaH | 0
+    const w = _shopTrialAreaW | 0
+    const tileSize = WORLD_TILE_SIZE | 0
+
+    const expectedCells = (r0 >= 0 && c0 >= 0 && h > 0 && w > 0) ? ((h | 0) * (w | 0)) | 0 : 0
+
+    let actualCells = 0
+    let floorCells = 0
+    let patchCells = 0
+    let minR = 999999
+    let maxR = -1
+    let minC = 999999
+    let maxC = -1
+
+    if (_engineDecalGrid && expectedCells > 0) {
+        const rows = _engineDecalGrid.length | 0
+        const cols = (_engineDecalGrid[0]?.length ?? 0) | 0
+        const rEnd = Math.min(rows - 1, (r0 + h - 1) | 0)
+        const cEnd = Math.min(cols - 1, (c0 + w - 1) | 0)
+        for (let r = r0; r <= rEnd; r++) {
+            const row = _engineDecalGrid[r]
+            if (!row) continue
+            for (let c = c0; c <= cEnd; c++) {
+                const id = (row[c] | 0)
+                if (id >= 3000 && id <= 3037) {
+                    actualCells++
+                    if (id <= 3013) floorCells++
+                    else patchCells++
+                    if (r < minR) minR = r
+                    if (r > maxR) maxR = r
+                    if (c < minC) minC = c
+                    if (c > maxC) maxC = c
+                }
+            }
+        }
+    }
+
+    const boxW = (actualCells > 0) ? ((maxC - minC + 1) | 0) : 0
+    const boxH = (actualCells > 0) ? ((maxR - minR + 1) | 0) : 0
+    const boxPxW = (boxW * tileSize) | 0
+    const boxPxH = (boxH * tileSize) | 0
+
+    let gateCount = 0
+    let midCount = 0
+    let cornerLCount = 0
+    let cornerRCount = 0
+    let propTotal = 0
+    let propMinR = 999999
+    let propMaxR = -1
+    let propMinC = 999999
+    let propMaxC = -1
+
+    for (let i = 0; i < _shopTrialArenaProps.length; i++) {
+        const s = _shopTrialArenaProps[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+        const name = (sprites.readDataString(s, DECOR_DATA.NAME) || "")
+        if (!name || name.indexOf("trial_") !== 0) continue
+        propTotal++
+        if (name === "trial_gate_6x6") gateCount++
+        else if (name === "trial_fence_mid_2x4") midCount++
+        else if (name === "trial_fence_corner_l_2x6") cornerLCount++
+        else if (name === "trial_fence_corner_r_4x4") cornerRCount++
+        const pr = (sprites.readDataNumber(s, "decorTileR") | 0)
+        const pc = (sprites.readDataNumber(s, "decorTileC") | 0)
+        if (pr < propMinR) propMinR = pr
+        if (pr > propMaxR) propMaxR = pr
+        if (pc < propMinC) propMinC = pc
+        if (pc > propMaxC) propMaxC = pc
+    }
+
+    const propBoxW = (propTotal > 0) ? ((propMaxC - propMinC + 1) | 0) : 0
+    const propBoxH = (propTotal > 0) ? ((propMaxR - propMinR + 1) | 0) : 0
+
+    const spec = _shopTrialArenaLastSpec
+    const expectedGate = spec ? (spec.expectedGate | 0) : 0
+    const expectedMid = spec ? (spec.expectedMid | 0) : 0
+    const expectedCornerL = spec ? (spec.expectedCornerL | 0) : 0
+    const expectedCornerR = spec ? (spec.expectedCornerR | 0) : 0
+
+    const sig =
+        String(reason || "") + "|" +
+        String(_dunFloorIndex | 0) + "|" +
+        String(_dunFloorKind || "") + "|" +
+        String(r0 | 0) + "|" + String(c0 | 0) + "|" + String(h | 0) + "|" + String(w | 0) + "|" +
+        String(expectedCells | 0) + "|" + String(actualCells | 0) + "|" +
+        String(boxW | 0) + "|" + String(boxH | 0) + "|" +
+        String(propTotal | 0) + "|" + String(propBoxW | 0) + "|" + String(propBoxH | 0) + "|" +
+        String(gateCount | 0) + "|" + String(midCount | 0) + "|" +
+        String(cornerLCount | 0) + "|" + String(cornerRCount | 0)
+
+    if (_shopTrialArenaAuditSig === sig) return
+    _shopTrialArenaAuditSig = sig
+
+    console.log(
+        `[TILEMAP][AUDIT][TRIAL] reason=${String(reason || "")}` +
+        ` floor=${_dunFloorIndex | 0} kind=${String(_dunFloorKind || "")}` +
+        ` area=${w | 0}x${h | 0} px=${(w * tileSize) | 0}x${(h * tileSize) | 0}` +
+        ` expectedCells=${expectedCells | 0} actualCells=${actualCells | 0}` +
+        ` floorCells=${floorCells | 0} patchCells=${patchCells | 0}` +
+        ` box=${boxW | 0}x${boxH | 0} boxPx=${boxPxW | 0}x${boxPxH | 0}` +
+        ` gate=${gateCount | 0}/${expectedGate | 0}` +
+        ` mid=${midCount | 0}/${expectedMid | 0}` +
+        ` cornerL=${cornerLCount | 0}/${expectedCornerL | 0}` +
+        ` cornerR=${cornerRCount | 0}/${expectedCornerR | 0}` +
+        ` propTotal=${propTotal | 0} propBox=${propBoxW | 0}x${propBoxH | 0}`
+    )
+}
+
 function _shopTrialArenaEnsureStamped(): void {
     if ((_dunFloorKind || "") !== DUNGEON_KIND_SHOP) {
         _shopTrialArenaStampedSig = ""
@@ -23505,6 +23682,7 @@ function _shopTrialArenaEnsureStamped(): void {
     _shopTrialArenaDestroyProps()
     _shopTrialArenaStampDecals(r0 | 0, c0 | 0, h | 0, w | 0)
     _shopTrialArenaStampProps(r0 | 0, c0 | 0, h | 0, w | 0)
+    _shopTrialArenaAudit("stamp")
 
     _shopTrialArenaStampedSig = sig
     _engineDecorRev = (_engineDecorRev + 1) | 0
@@ -23877,8 +24055,14 @@ function _towerTrialAnnouncerTickShow(nowMs: number): void {
 
     const step = steps[show.stepIndex | 0] || steps[0]
     const arena = _towerTrialArenaRect()
-    const baseX = arena ? (arena.centerX | 0) : (show.homeX | 0)
-    const baseY = arena ? (arena.centerY | 0) : (show.homeY | 0)
+    let baseX = arena ? (arena.centerX | 0) : (show.homeX | 0)
+    let baseY = arena ? (arena.centerY | 0) : (show.homeY | 0)
+    const heroIndex = _towerTrialResolveDialogHeroIndex()
+    const hero = (heroIndex >= 0 && heroIndex < heroes.length) ? heroes[heroIndex] : null
+    if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
+        baseX = hero.x | 0
+        baseY = hero.y | 0
+    }
     npc.setFlag(SpriteFlag.Invisible, false)
     npc.setPosition((baseX + (step.dx | 0)) | 0, (baseY + (step.dy | 0)) | 0)
     _storyNpcSetDir(npc, step.dir || "down")
@@ -23892,7 +24076,187 @@ function _towerTrialAnnouncerTickShow(nowMs: number): void {
     }
 }
 
-function _towerTrialDialog(nowMs: number, text: string, hint: string, force?: boolean, choices?: Array<string | { id: string; label: string }>): void {
+function _towerTrialResolveDialogHeroIndex(): number {
+    const hi0 = _towerTrialDialogHeroIndex | 0
+    if (hi0 >= 0 && hi0 < heroes.length) {
+        const h = heroes[hi0]
+        if (h && !(h.flags & sprites.Flag.Destroyed)) return hi0 | 0
+    }
+    const session = _towerTrialSession
+    if (session && session.participants && session.participants.length) {
+        for (let i = 0; i < session.participants.length; i++) {
+            const prof = session.participants[i]
+            const hi = _resolveHeroIndexForProfile(prof)
+            if (hi >= 0) return hi | 0
+        }
+    }
+    try {
+        const g: any = globalThis as any
+        const pid = (g && g.__net && typeof g.__net.playerId === "number") ? (g.__net.playerId | 0) : 0
+        if (pid > 0) {
+            const hi = _uiResolveHeroIndexForPid(pid | 0)
+            if (hi >= 0) return hi | 0
+        }
+    } catch { }
+    return -1
+}
+
+function _towerTrialDialogLockHero(heroIndex: number, nowMs: number, active: boolean): void {
+    const hero = heroes[heroIndex]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) return
+    if (active) {
+        const hadLock = sprites.readDataNumber(hero, TOWER_TRIAL_DIALOG_LOCK_KEY) | 0
+        if (!hadLock) {
+            sprites.setDataNumber(hero, TOWER_TRIAL_DIALOG_LOCK_KEY, 1)
+            sprites.setDataNumber(hero, TOWER_TRIAL_DIALOG_PREV_BUSY_KEY, getHeroBusyUntil(heroIndex) | 0)
+        }
+        setHeroBusyUntil(heroIndex, (nowMs + (TOWER_TRIAL_DIALOG_BUSY_MS | 0)) | 0)
+        if (!sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED)) lockHeroControls(heroIndex)
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+        sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+        hero.vx = 0
+        hero.vy = 0
+        return
+    }
+    const hadLock = sprites.readDataNumber(hero, TOWER_TRIAL_DIALOG_LOCK_KEY) | 0
+    if (!hadLock) return
+    sprites.setDataNumber(hero, TOWER_TRIAL_DIALOG_LOCK_KEY, 0)
+    const prevBusy = sprites.readDataNumber(hero, TOWER_TRIAL_DIALOG_PREV_BUSY_KEY) | 0
+    sprites.setDataNumber(hero, TOWER_TRIAL_DIALOG_PREV_BUSY_KEY, 0)
+    setHeroBusyUntil(heroIndex, prevBusy | 0)
+    if ((prevBusy | 0) <= (nowMs | 0)) {
+        unlockHeroControls(heroIndex)
+    }
+}
+
+function _towerTrialDialogLockHeroes(active: boolean, nowMs: number): void {
+    const targets: number[] = []
+    const seen: Record<number, boolean> = Object.create(null)
+    const add = (hi: number) => {
+        const id = hi | 0
+        if (id < 0) return
+        if (seen[id]) return
+        seen[id] = true
+        targets.push(id)
+    }
+    const session = _towerTrialSession
+    if (session && session.participants && session.participants.length) {
+        for (let i = 0; i < session.participants.length; i++) {
+            add(_resolveHeroIndexForProfile(session.participants[i]))
+        }
+    }
+    if (!targets.length) {
+        for (let i = 0; i < heroes.length; i++) add(i)
+    }
+    for (let i = 0; i < targets.length; i++) {
+        _towerTrialDialogLockHero(targets[i], nowMs | 0, !!active)
+    }
+}
+
+function _towerTrialDialogCommentary(nowMs: number, text: string): void {
+    const msg = String(text || "")
+    if (!msg) return
+    try {
+        const g: any = globalThis as any
+        const dlg = g ? g.__heDialog : null
+        if (dlg && typeof dlg.isOpen === "function" && dlg.isOpen()) return
+    } catch { }
+    _towerTrialDialog(nowMs | 0, msg, "", false, undefined, { autoAdvance: true, lock: false })
+}
+
+function _towerTrialMaybeCommentaryForTraits(
+    profileKey: string,
+    parsed: { family: number; t1: number; t2: number; t3: number; t4: number; element: number; animKey: string },
+    nowMs: number
+): void {
+    const session = _towerTrialSession
+    if (!session || !session.active || session.completed) return
+    if (!session.requirementSet || session.requirementSet.ids.indexOf("noHardcodedTraits") < 0) return
+    if ((nowMs | 0) < ((_towerTrialCommentaryAtMs | 0) + (TOWER_TRIAL_COMMENTARY_COOLDOWN_MS | 0))) return
+
+    const traitLabels = ["damage", "reach", "time", "status"]
+    const traitValues: Record<string, number> = {
+        damage: parsed.t1 | 0,
+        reach: parsed.t2 | 0,
+        time: parsed.t3 | 0,
+        status: parsed.t4 | 0,
+    }
+
+    const badTraits: string[] = []
+    const sim = session.simByProfile ? session.simByProfile[profileKey] : null
+    const issues = sim && Array.isArray(sim.issues) ? sim.issues : []
+    for (let i = 0; i < issues.length; i++) {
+        const issue = issues[i]
+        if (issue && issue.requirementId === "noHardcodedTraits" && typeof issue.trait === "string") {
+            const label = String(issue.trait || "").toLowerCase()
+            if (label && badTraits.indexOf(label) < 0) badTraits.push(label)
+        }
+    }
+
+    let label = ""
+    if (badTraits.length > 0) {
+        const idx = Math.randomRange(0, (badTraits.length - 1) | 0) | 0
+        label = badTraits[idx] || ""
+    }
+    if (!label) {
+        const idx = Math.randomRange(0, (traitLabels.length - 1) | 0) | 0
+        label = traitLabels[idx] || ""
+    }
+    if (!label || traitValues[label] == null) label = traitLabels[0]
+
+    const value = (traitValues[label] == null) ? 0 : (traitValues[label] | 0)
+    const failed = badTraits.indexOf(label) >= 0
+    const tail = failed
+        ? "That value fails the conditions! Better get editing!"
+        : "That is proper dynamic value usage! Great job!"
+    _towerTrialCommentaryAtMs = nowMs | 0
+    _towerTrialDialogCommentary(
+        nowMs | 0,
+        `Ah ha! You decided your ${label} would be ${value}. ${tail}`
+    )
+}
+
+function _towerTrialCondenseScriptLines(lines: Array<{ text: string; hint?: string }>): Array<{ text: string; hint?: string }> {
+    const maxChars = TOWER_TRIAL_DIALOG_PAGE_MAX_CHARS | 0
+    const maxLines = TOWER_TRIAL_DIALOG_PAGE_MAX_LINES | 0
+    if (!lines || !lines.length) return lines
+    const out: Array<{ text: string; hint?: string }> = []
+    let buf: string[] = []
+    let bufChars = 0
+    let bufHint: string | undefined = undefined
+    for (let i = 0; i < lines.length; i++) {
+        const line = lines[i]
+        const raw = (line && typeof line.text === "string") ? line.text : ""
+        const text = String(raw || "")
+        if (!text) continue
+        if (!buf.length && line && typeof line.hint === "string") {
+            bufHint = line.hint
+        }
+        const nextChars = bufChars + text.length + (buf.length ? 1 : 0)
+        const overLines = (maxLines > 0 && buf.length >= maxLines)
+        const overChars = (maxChars > 0 && buf.length > 0 && nextChars > maxChars)
+        if (overLines || overChars) {
+            out.push({ text: buf.join("\n"), hint: bufHint })
+            buf = []
+            bufChars = 0
+            bufHint = (line && typeof line.hint === "string") ? line.hint : undefined
+        }
+        buf.push(text)
+        bufChars = bufChars + text.length + (buf.length > 1 ? 1 : 0)
+    }
+    if (buf.length) out.push({ text: buf.join("\n"), hint: bufHint })
+    return out.length ? out : lines
+}
+
+function _towerTrialDialog(
+    nowMs: number,
+    text: string,
+    hint: string,
+    force?: boolean,
+    choices?: Array<string | { id: string; label: string }>,
+    opts?: { autoAdvance?: any; lock?: boolean }
+): void {
     const session = _towerTrialSession
     if (!force && session) {
         const since = (nowMs | 0) - (session.lastDialogAtMs | 0)
@@ -23912,7 +24276,11 @@ function _towerTrialDialog(nowMs: number, text: string, hint: string, force?: bo
             hint: hint || "",
             owner: TOWER_TRIAL_DIALOG_OWNER,
             choices: choices && choices.length ? choices : undefined,
+            autoAdvance: opts ? opts.autoAdvance : undefined,
         })
+        if (!opts || opts.lock !== false) {
+            _towerTrialDialogLockHeroes(true, nowMs | 0)
+        }
     } catch { }
 }
 
@@ -23938,12 +24306,19 @@ function _towerTrialDialogShowScriptLine(nowMs: number): void {
         return
     }
     _towerTrialDialogState.mode = "script"
-    _towerTrialDialog(nowMs | 0, line.text || "", line.hint || TOWER_TRIAL_DIALOG_HINT_ADVANCE, true)
+    _towerTrialDialog(
+        nowMs | 0,
+        line.text || "",
+        line.hint || TOWER_TRIAL_DIALOG_HINT_ADVANCE,
+        true,
+        undefined,
+        TOWER_TRIAL_DIALOG_AUTO_ADVANCE ? { autoAdvance: true } : undefined
+    )
 }
 
 function _towerTrialDialogStartScript(nowMs: number, lines: Array<{ text: string; hint?: string }>): void {
     _towerTrialDialogState.scriptIndex = 0
-    _towerTrialDialogState.scriptLines = lines
+    _towerTrialDialogState.scriptLines = _towerTrialCondenseScriptLines(lines)
     _towerTrialDialogShowScriptLine(nowMs | 0)
 }
 
@@ -23963,6 +24338,7 @@ function _towerTrialDialogHandleChoice(choiceId: string, nowMs: number): void {
     _towerTrialDebugLog("dialog_choice", { id }, nowMs | 0)
     if (id === TOWER_TRIAL_DIALOG_CHOICE_START) {
         try { (globalThis as any).__heDialog?.hide?.() } catch { }
+        _towerTrialDialogLockHeroes(false, nowMs | 0)
         _towerTrialDialogState.mode = "idle"
         _towerTrialDialogState.scriptLines = null
         _towerTrialStart(nowMs | 0)
@@ -23978,6 +24354,7 @@ function _towerTrialDialogHandleChoice(choiceId: string, nowMs: number): void {
     }
     if (id === TOWER_TRIAL_DIALOG_CHOICE_CLOSE) {
         try { (globalThis as any).__heDialog?.hide?.() } catch { }
+        _towerTrialDialogLockHeroes(false, nowMs | 0)
         _towerTrialDialogState.mode = "idle"
         _towerTrialDialogState.scriptLines = null
         return
@@ -24203,11 +24580,13 @@ function _towerTrialStart(nowMs: number): void {
     _towerTrialResetEvidence(_towerTrialSession)
     _towerTrialSpawnEnemies(nowMs | 0)
     _towerTrialAnnouncerStartShow(nowMs | 0)
+    _towerTrialDialogLockHeroes(false, nowMs | 0)
+    _towerTrialCommentaryAtMs = 0
 
     const intro = requirementSet.ids.length > 0
         ? "Tower Trial begins. The Announcer is watching."
         : "Trial ready."
-    _towerTrialDialog(nowMs, intro, "Press Q, W, E, R to test each move. Follow prompts.", true)
+    _towerTrialDialogCommentary(nowMs, `${intro} Press Q, W, E, R to test each move.`)
     _towerTrialDebugLog("start", {
         runId: runId | 0,
         floor: floor | 0,
@@ -24228,6 +24607,8 @@ function _towerTrialEnd(reason: string, nowMs: number): void {
     if (!session) return
     _towerTrialDebugLog("end", { reason: String(reason || "") }, nowMs | 0)
     _towerTrialDestroyEnemies()
+    _towerTrialDialogLockHeroes(false, nowMs | 0)
+    _towerTrialDialogHeroIndex = -1
     _towerTrialDebugBuildArtifact("end", session, reason || "")
     if (_towerTrialShouldAutosave(session)) {
         _towerTrialDebugSaveArtifact(String(reason || "end")).catch(() => { })
@@ -24245,7 +24626,7 @@ function _towerTrialAdvancePhase(nowMs: number): void {
     session.lastPhaseChangeMs = nowMs | 0
     _towerTrialDebugLog("phase_change", { phase: session.phaseIndex | 0 }, nowMs | 0)
     _towerTrialSpawnEnemies(nowMs | 0)
-    _towerTrialDialog(nowMs, "Phase 2 unlocked.", "Press any button and show a new family.")
+    _towerTrialDialogCommentary(nowMs, "Phase 2 unlocked. Press any button and show a new family.")
     _towerTrialLog("phase_change", { phase: session.phaseIndex | 0, now: nowMs | 0 })
 }
 
@@ -24296,7 +24677,7 @@ function _towerTrialCheckXmlChanges(nowMs: number): boolean {
     }
     _towerTrialResetEvidence(session)
     _towerTrialSpawnEnemies(nowMs | 0)
-    _towerTrialDialog(nowMs, "Blockly updated.", "Trial reset. Run it start to finish.", true)
+    _towerTrialDialogCommentary(nowMs, "Blockly updated. Trial reset. Run it start to finish.")
     _towerTrialDebugLog("xml_reset", {
         runId: runId | 0,
         changedProfiles: changedProfiles.slice(),
@@ -24513,7 +24894,7 @@ function _towerTrialEvaluateCompletion(nowMs: number, showDialogIfFail: boolean)
             if (_towerTrialShouldAutosave(session)) {
                 _towerTrialDebugSaveArtifact("complete").catch(() => { })
             }
-            _towerTrialDialog(nowMs, "Trial complete.", "The exit pad is now powered.", true)
+            _towerTrialDialogCommentary(nowMs, "Trial complete. The exit pad is now powered.")
             _towerTrialLog("complete", { now: nowMs | 0 })
         }
         _shopUnlockExitPadIfInShopFloor(nowMs | 0)
@@ -24536,7 +24917,7 @@ function _towerTrialEvaluateCompletion(nowMs: number, showDialogIfFail: boolean)
             }
         }
         _towerTrialDebugLog("status_fail", { issue, statusByProfile }, nowMs | 0)
-        if (issue) _towerTrialDialog(nowMs, issue.text, issue.hint)
+        if (issue) _towerTrialDialogCommentary(nowMs, `${issue.text || ""} ${issue.hint || ""}`.trim())
     }
 }
 
@@ -24595,7 +24976,7 @@ function _towerTrialRecordMove(
             if ((live.pressCount[button] | 0) === 1 && !warned[button]) {
                 warned[button] = true
                 _towerTrialDebugLog("repeat_warn", { profileKey, button, phase }, nowMs | 0)
-                _towerTrialDialog(nowMs, `${towerTrialButtonLabel(button)} may repeat.`, "Change the output before the next press.")
+                _towerTrialDialogCommentary(nowMs, `${towerTrialButtonLabel(button)} may repeat. Change the output before the next press.`)
             }
         }
     }
@@ -24610,7 +24991,7 @@ function _towerTrialRecordMove(
             if (same) {
                 live.repeatViolationByButton[button] = true
                 _towerTrialDebugLog("repeat_violation", { profileKey, button, phase, output: out.slice() }, nowMs | 0)
-                _towerTrialDialog(nowMs, `${towerTrialButtonLabel(button)} repeats the same move.`, "Change the output and try again.")
+                _towerTrialDialogCommentary(nowMs, `${towerTrialButtonLabel(button)} repeats the same move. Change the output and try again.`)
             }
         }
     }
@@ -24621,6 +25002,7 @@ function _towerTrialRecordMove(
     }
 
     live.lastOutputByButton[button] = out
+    _towerTrialMaybeCommentaryForTraits(profileKey, parsed, nowMs | 0)
 
     if (session.requirementSet.needsPhases && (session.phaseIndex | 0) === 0) {
         let ready = true
@@ -24653,6 +25035,18 @@ function _towerTrialTryHandleInteract(hero: Sprite, heroIndex: number, nowMs: nu
     if (_dunFloorKind !== DUNGEON_KIND_SHOP) return false
     if (!towerTrialShouldRequireTrial(_dunFloorIndex | 0)) return false
 
+    try {
+        const g: any = globalThis as any
+        const dlg = g ? g.__heDialog : null
+        const isOpen = (dlg && typeof dlg.isOpen === "function") ? !!dlg.isOpen() : false
+        const owner = (dlg && typeof dlg.__heOwner === "string") ? String(dlg.__heOwner || "") : ""
+        if (isOpen && owner === TOWER_TRIAL_DIALOG_OWNER) {
+            if (typeof dlg.choose === "function") dlg.choose()
+            else if (typeof dlg.advance === "function") dlg.advance()
+            return true
+        }
+    } catch { }
+
     _towerTrialEnsureAnnouncer()
     const npc = _towerTrialAnnouncerNpc
     if (!npc || (npc.flags & sprites.Flag.Destroyed)) return false
@@ -24660,6 +25054,7 @@ function _towerTrialTryHandleInteract(hero: Sprite, heroIndex: number, nowMs: nu
     if (!inRange) return false
 
     if (!_towerTrialSession || !_towerTrialSession.active) {
+        _towerTrialDialogHeroIndex = heroIndex | 0
         _towerTrialDialogStartScript(nowMs | 0, TOWER_TRIAL_SCRIPT_MAIN_LINES)
         _towerTrialAnnouncerStartShow(nowMs | 0)
         return true
@@ -26223,7 +26618,7 @@ function _shopUnlockExitPadIfInShopFloor(nowMs: number): void {
             if (_towerTrialSession) {
                 _towerTrialEvaluateCompletion(now | 0, true)
             } else {
-                _towerTrialDialog(now | 0, "Tower Trial required.", "Talk to the Announcer.")
+                _towerTrialDialogCommentary(now | 0, "Tower Trial required. Talk to the Announcer.")
             }
             return
         }
@@ -43076,6 +43471,13 @@ function updateHeroAgilityChargeFx(now: number): void {
 
         let fx = sprites.readDataSprite(hero, AGI_CHARGE_FX_KEY);
         let spear = sprites.readDataSprite(hero, AGI_CHARGE_SPEAR_KEY);
+        if (AGI_DISABLE_LEGACY_AGI_TRAIL_FX) {
+            if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.destroy();
+            sprites.setDataSprite(hero, AGI_CHARGE_FX_KEY, null as any);
+            if (spear && !(spear.flags & sprites.Flag.Destroyed)) spear.destroy();
+            sprites.setDataSprite(hero, AGI_CHARGE_SPEAR_KEY, null as any);
+            continue;
+        }
         if (!chargeActive) {
             if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.destroy();
             sprites.setDataSprite(hero, AGI_CHARGE_FX_KEY, null as any);
@@ -47755,18 +48157,22 @@ function updateStrengthProjectilesMotionFor(
                     }
                 }
             }
+            const geomScale = (segName === "strengthSlash") ? _strengthArcSlashScaleCap() : 1;
+            const arcBaseWScaled = Math.max(1, Math.round((arcBaseW | 0) * geomScale));
+            const arcBaseMinScaled = Math.max(1, Math.round((arcBaseMin | 0) * geomScale));
             const minReach = Math.max(0, ((frontStart | 0) - (attachPx | 0)) | 0);
             const extraReach = Math.max(0, ((reachFromFront | 0) - minReach) | 0);
-            const arcOuter = STR_USE_WPN_AURA_OUTLINE_ONLY
+            const arcOuterRaw = STR_USE_WPN_AURA_OUTLINE_ONLY
                 ? Math.max(1, (((frontStart | 0) + (extraReach | 0)) | 0))
                 : Math.max(1, Math.max((frontStart | 0), ((attachPx | 0) + (reachFromFront | 0)) | 0));
+            const arcOuter = Math.max(1, Math.round(arcOuterRaw * geomScale));
             const arcInner = STR_USE_WPN_AURA_OUTLINE_ONLY
-                ? Math.max(0, (arcOuter | 0) - (arcBaseW | 0))
+                ? Math.max(0, (arcOuter | 0) - (arcBaseWScaled | 0))
                 : (attachPx | 0);
             const arcSide = STR_USE_WPN_AURA_OUTLINE_ONLY ? (sprites.readDataNumber(proj, STR_ARC_SIDE_KEY) | 0) : 0;
             const waveTaper = STR_ARC_TRAVEL_WAVE ? Math.max(0.5, 1 - (arcT * 0.5)) : 1;
-            const arcWidthMax = Math.max(1, Math.round((arcBaseW | 0) * waveTaper));
-            const arcWidthMin = Math.max(1, Math.round((arcBaseMin | 0) * waveTaper));
+            const arcWidthMax = Math.max(1, Math.round((arcBaseWScaled | 0) * waveTaper));
+            const arcWidthMin = Math.max(1, Math.round((arcBaseMinScaled | 0) * waveTaper));
             const isSlashSeg = segName === "strengthSlash";
             const frame3Window = _strengthFrameWindowMs(
                 STR_SWING_FORWARD_FRAME_COLS,
@@ -47786,6 +48192,9 @@ function updateStrengthProjectilesMotionFor(
                 ? ((segElapsed | 0) >= (frame4Window.start | 0) && (segElapsed | 0) < (frame4Window.end | 0))
                 : ((segElapsed | 0) >= segThird && (segElapsed | 0) < Math.max(segThird + 1, Math.idiv((segDur | 0) * 2, 3))));
             let seedCenterR = frontStart | 0;
+            if (geomScale !== 1) {
+                seedCenterR = Math.max(1, Math.round(seedCenterR * geomScale));
+            }
             const storedSeed = sprites.readDataNumber(proj, "SS_SEED_CENTER_R") | 0;
             if (!isSlashSeg && storedSeed > 0) seedCenterR = storedSeed | 0;
             let seedInfo: WeaponFgInfo | null = null;
@@ -47882,8 +48291,8 @@ function updateStrengthProjectilesMotionFor(
                 nx,
                 ny,
                 seedCenterR | 0,
-                arcBaseW | 0,
-                arcBaseMin | 0,
+                arcBaseWScaled | 0,
+                arcBaseMinScaled | 0,
                 arcSide | 0,
                 frameCol | 0,
                 segName,
@@ -48310,19 +48719,26 @@ function updateStrengthProjectilesMotionFor(
                     }
             }
         }
+        const geomScale = (segName === "strengthSlash") ? _strengthArcSlashScaleCap() : 1;
+        const arcBaseWScaled = Math.max(1, Math.round((arcBaseW | 0) * geomScale));
+        const arcBaseMinScaled = Math.max(1, Math.round((arcBaseMin | 0) * geomScale));
         const minReach = Math.max(0, ((frontStart | 0) - (attachPx | 0)) | 0);
         const extraReach = Math.max(0, ((reachFromFront | 0) - minReach) | 0);
-        const arcOuter = STR_USE_WPN_AURA_OUTLINE_ONLY
+        const arcOuterRaw = STR_USE_WPN_AURA_OUTLINE_ONLY
             ? Math.max(1, (((frontStart | 0) + (extraReach | 0)) | 0))
             : Math.max(1, Math.max((frontStart | 0), ((attachPx | 0) + (reachFromFront | 0)) | 0));
+        const arcOuter = Math.max(1, Math.round(arcOuterRaw * geomScale));
         const arcInner = STR_USE_WPN_AURA_OUTLINE_ONLY
-            ? Math.max(0, (arcOuter | 0) - (arcBaseW | 0))
+            ? Math.max(0, (arcOuter | 0) - (arcBaseWScaled | 0))
             : (attachPx | 0);
         const arcSide = STR_USE_WPN_AURA_OUTLINE_ONLY ? (sprites.readDataNumber(proj, STR_ARC_SIDE_KEY) | 0) : 0;
         const waveTaper = STR_ARC_TRAVEL_WAVE ? Math.max(0.5, 1 - (arcT * 0.5)) : 1;
-        const arcWidthMax = Math.max(1, Math.round((arcBaseW | 0) * waveTaper));
-        const arcWidthMin = Math.max(1, Math.round((arcBaseMin | 0) * waveTaper));
+        const arcWidthMax = Math.max(1, Math.round((arcBaseWScaled | 0) * waveTaper));
+        const arcWidthMin = Math.max(1, Math.round((arcBaseMinScaled | 0) * waveTaper));
         let seedCenterR = frontStart | 0;
+        if (geomScale !== 1) {
+            seedCenterR = Math.max(1, Math.round(seedCenterR * geomScale));
+        }
         if (STR_USE_WPN_AURA_OUTLINE_ONLY && segName === "strengthSlash" && ((frameCol | 0) === 4 || (frameCol | 0) === 5)) {
             const info = auraPack ? auraPack.info : _getHeroWeaponFgInfo(hero);
             if (info) {
@@ -48343,8 +48759,8 @@ function updateStrengthProjectilesMotionFor(
             nx,
             ny,
             seedCenterR | 0,
-            arcBaseW | 0,
-            arcBaseMin | 0,
+            arcBaseWScaled | 0,
+            arcBaseMinScaled | 0,
             arcSide | 0,
             frameCol | 0,
             segName,
@@ -48362,8 +48778,8 @@ function updateStrengthProjectilesMotionFor(
                     heroIndex,
                     seg: segName,
                     frameCol: frameCol | 0,
-                    centerR: frontStart | 0,
-                    arcBaseW: arcBaseW | 0
+                    centerR: seedCenterR | 0,
+                    arcBaseW: arcBaseWScaled | 0
                 });
             }
         }
@@ -48378,8 +48794,8 @@ function updateStrengthProjectilesMotionFor(
                 arcOuter,
                 totalArcDeg | 0,
                 arcT,
-                arcBaseW | 0,
-                arcBaseMin | 0,
+                arcBaseWScaled | 0,
+                arcBaseMinScaled | 0,
                 auraR1 | 0,
                 auraEdge | 0,
                 arcSide | 0
@@ -50950,6 +51366,9 @@ const AGI_THRUST_FORWARD_MIN_MS = 200
 const AGI_THRUST_LANDING_MIN_MS = 200
 const AGI_THRUST_WINDUP_PULLBACK_PCT_X1000 = 200
 const AGI_WINDUP_PULLBACK_ENABLED = false
+
+// Legacy AGI trail/charge rendering is disabled (comet-only visuals).
+const AGI_DISABLE_LEGACY_AGI_TRAIL_FX = true
 
 // Hookshot tuning
 const AGI_HOOKSHOT_AIM_STEP_MDEG = 5000           // 5 deg per frame
@@ -54416,6 +54835,7 @@ function _agiHookPositionSpear(spr: Sprite, baseX: number, baseY: number): void 
     const maxY = sprites.readDataNumber(spr, AGI_HOOK_MAX_Y_KEY) | 0
     spr.x = baseX + (minX + maxX) / 2
     spr.y = baseY + (minY + maxY) / 2
+    spr.setFlag(SpriteFlag.Invisible, false)
 }
 
 function _agiHookWallsBlock(): boolean {
@@ -55176,7 +55596,11 @@ function updateAgilityHookshotAll(nowMs: number): void {
             continue
         }
 
-        sprites.setDataNumber(hero, HERO_DATA.WEAPON_OVERLAY_HIDE, 1)
+        if (state === AGI_HOOK_STATE.PENDING) {
+            sprites.setDataNumber(hero, HERO_DATA.WEAPON_OVERLAY_HIDE, 0)
+        } else {
+            sprites.setDataNumber(hero, HERO_DATA.WEAPON_OVERLAY_HIDE, 1)
+        }
 
         if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) {
             _agiHookFinish(hi, hero, st, now, true, "dead")
@@ -55859,104 +56283,106 @@ function spawnAgilityThrustProjectile(
     const anchorY = hero.y + (thrustOff.oy | 0)
     let tipLocalX = 0
     let tipLocalY = 0
-    if (auraPack && auraPack.shapes[3]) {
-        const tipShape = auraPack.shapes[0] || auraPack.shapes[3]
-        const baseX = hero.x + (auraPack.info.offX || 0)
-        const baseY = hero.y + (auraPack.info.offY || 0)
-        const tipWorldX = baseX + tipShape.tipDx
-        const tipWorldY = baseY + tipShape.tipDy
-        tipLocalX = tipWorldX - anchorX
-        tipLocalY = tipWorldY - anchorY
-        const clamp = _agiClampTipForDown(nx, ny, sx, sy, tipLocalX, tipLocalY, sideHalf);
-        tipLocalX = clamp.x;
-        tipLocalY = clamp.y;
-        const heroLocalX = hero.x - anchorX
-        const heroLocalY = hero.y - anchorY
-        let sideSign = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
-        if (!sideSign) sideSign = _weaponDefaultSideSign(nx, ny)
-        const clip = _weaponAuraClipForDown(nx, ny, heroLocalX, heroLocalY, sideSign)
-        _stampWeaponAuraAt(
-            maxImg,
-            maxBounds.minX,
-            maxBounds.minY,
-            tipLocalX,
-            tipLocalY,
-            tipShape,
-            AGI_TIP_TRACE_COLOR,
-            AGI_TIP_TRACE_EDGE_COLOR,
-            true,
-            clip
-        )
-        if (_wpnTraceEnabled()) {
-            const traceId = _wpnTraceAssignId(proj)
-            _wpnTraceLog("agi.spawn.auraTip", {
-                id: traceId,
-                heroIndex,
-                dir: _weaponDirKeyFromVector(nx, ny),
-                texKey: auraPack.info.texKey,
-                frame: auraPack.info.frameName,
-                offX: auraPack.info.offX | 0,
-                offY: auraPack.info.offY | 0,
-                tipDx: +tipShape.tipDx.toFixed(2),
-                tipDy: +tipShape.tipDy.toFixed(2),
-                tipLocalX: +tipLocalX.toFixed(2),
-                tipLocalY: +tipLocalY.toFixed(2),
-                bounds: { minX: maxBounds.minX | 0, maxX: maxBounds.maxX | 0, minY: maxBounds.minY | 0, maxY: maxBounds.maxY | 0 }
-            });
+    if (!AGI_DISABLE_LEGACY_AGI_TRAIL_FX) {
+        if (auraPack && auraPack.shapes[3]) {
+            const tipShape = auraPack.shapes[0] || auraPack.shapes[3]
+            const baseX = hero.x + (auraPack.info.offX || 0)
+            const baseY = hero.y + (auraPack.info.offY || 0)
+            const tipWorldX = baseX + tipShape.tipDx
+            const tipWorldY = baseY + tipShape.tipDy
+            tipLocalX = tipWorldX - anchorX
+            tipLocalY = tipWorldY - anchorY
+            const clamp = _agiClampTipForDown(nx, ny, sx, sy, tipLocalX, tipLocalY, sideHalf);
+            tipLocalX = clamp.x;
+            tipLocalY = clamp.y;
+            const heroLocalX = hero.x - anchorX
+            const heroLocalY = hero.y - anchorY
+            let sideSign = _tipSideSign(tipLocalX, tipLocalY, heroLocalX, heroLocalY, nx, ny)
+            if (!sideSign) sideSign = _weaponDefaultSideSign(nx, ny)
+            const clip = _weaponAuraClipForDown(nx, ny, heroLocalX, heroLocalY, sideSign)
+            _stampWeaponAuraAt(
+                maxImg,
+                maxBounds.minX,
+                maxBounds.minY,
+                tipLocalX,
+                tipLocalY,
+                tipShape,
+                AGI_TIP_TRACE_COLOR,
+                AGI_TIP_TRACE_EDGE_COLOR,
+                true,
+                clip
+            )
+            if (_wpnTraceEnabled()) {
+                const traceId = _wpnTraceAssignId(proj)
+                _wpnTraceLog("agi.spawn.auraTip", {
+                    id: traceId,
+                    heroIndex,
+                    dir: _weaponDirKeyFromVector(nx, ny),
+                    texKey: auraPack.info.texKey,
+                    frame: auraPack.info.frameName,
+                    offX: auraPack.info.offX | 0,
+                    offY: auraPack.info.offY | 0,
+                    tipDx: +tipShape.tipDx.toFixed(2),
+                    tipDy: +tipShape.tipDy.toFixed(2),
+                    tipLocalX: +tipLocalX.toFixed(2),
+                    tipLocalY: +tipLocalY.toFixed(2),
+                    bounds: { minX: maxBounds.minX | 0, maxX: maxBounds.maxX | 0, minY: maxBounds.minY | 0, maxY: maxBounds.maxY | 0 }
+                });
+            }
+        } else {
+            let tipInitX = wTipX0
+            let tipInitY = wTipY0
+            if (!tipInitX && !tipInitY) {
+                tipInitX = nx * attachPx
+                tipInitY = ny * attachPx
+            }
+            tipLocalX = (hero.x + tipInitX) - anchorX
+            tipLocalY = (hero.y + tipInitY) - anchorY
+            const clamp = _agiClampTipForDown(nx, ny, sx, sy, tipLocalX, tipLocalY, sideHalf);
+            tipLocalX = clamp.x;
+            tipLocalY = clamp.y;
+            _agiTraceStampAt(maxImg, maxBounds.minX, maxBounds.minY, tipLocalX, tipLocalY)
+            if (_wpnTraceEnabled()) {
+                const traceId = _wpnTraceAssignId(proj)
+                _wpnTraceLog("agi.spawn.fallbackTip", {
+                    id: traceId,
+                    heroIndex,
+                    dir: _weaponDirKeyFromVector(nx, ny),
+                    wTipX: +tipInitX.toFixed(2),
+                    wTipY: +tipInitY.toFixed(2),
+                    tipLocalX: +tipLocalX.toFixed(2),
+                    tipLocalY: +tipLocalY.toFixed(2),
+                    bounds: { minX: maxBounds.minX | 0, maxX: maxBounds.maxX | 0, minY: maxBounds.minY | 0, maxY: maxBounds.maxY | 0 }
+                });
+            }
         }
-    } else {
-        let tipInitX = wTipX0
-        let tipInitY = wTipY0
-        if (!tipInitX && !tipInitY) {
-            tipInitX = nx * attachPx
-            tipInitY = ny * attachPx
+        {
+            const clamp = _agiClampTipForDown(nx, ny, sx, sy, tipLocalX, tipLocalY, sideHalf);
+            tipLocalX = clamp.x;
+            tipLocalY = clamp.y;
+            const tipForward = Math.max(0, ((tipLocalX * nx) + (tipLocalY * ny)))
+            let tipSide = clamp.side;
+            const launchLen = Math.min(Math.max(1, L | 0), Math.max(0, (AGI_LAUNCH_MIN_PX | 0)))
+            const fadeLen = Math.min(launchLen, (AGI_BEAM_FADE_LEN_PX | 0))
+            _renderAgilityTrailBase(
+                maxImg,
+                maxBounds.minX,
+                maxBounds.minY,
+                tipForward,
+                tipForward + launchLen,
+                nx,
+                ny,
+                sx * tipSide,
+                sy * tipSide,
+                tipForward,
+                tipForward + fadeLen,
+                AGI_BEAM_FADE_STEPS | 0
+            )
+            sprites.setDataNumber(proj, AGI_TIP_SIDE_PX_KEY, tipSide);
         }
-        tipLocalX = (hero.x + tipInitX) - anchorX
-        tipLocalY = (hero.y + tipInitY) - anchorY
-        const clamp = _agiClampTipForDown(nx, ny, sx, sy, tipLocalX, tipLocalY, sideHalf);
-        tipLocalX = clamp.x;
-        tipLocalY = clamp.y;
-        _agiTraceStampAt(maxImg, maxBounds.minX, maxBounds.minY, tipLocalX, tipLocalY)
-        if (_wpnTraceEnabled()) {
-            const traceId = _wpnTraceAssignId(proj)
-            _wpnTraceLog("agi.spawn.fallbackTip", {
-                id: traceId,
-                heroIndex,
-                dir: _weaponDirKeyFromVector(nx, ny),
-                wTipX: +tipInitX.toFixed(2),
-                wTipY: +tipInitY.toFixed(2),
-                tipLocalX: +tipLocalX.toFixed(2),
-                tipLocalY: +tipLocalY.toFixed(2),
-                bounds: { minX: maxBounds.minX | 0, maxX: maxBounds.maxX | 0, minY: maxBounds.minY | 0, maxY: maxBounds.maxY | 0 }
-            });
-        }
+        _updateProjectileMaskSpriteForProj(proj, maxImg)
+        _clearAgilityProjectileFill(maxImg, element | 0)
     }
-    {
-        const clamp = _agiClampTipForDown(nx, ny, sx, sy, tipLocalX, tipLocalY, sideHalf);
-        tipLocalX = clamp.x;
-        tipLocalY = clamp.y;
-        const tipForward = Math.max(0, ((tipLocalX * nx) + (tipLocalY * ny)))
-        let tipSide = clamp.side;
-        const launchLen = Math.min(Math.max(1, L | 0), Math.max(0, (AGI_LAUNCH_MIN_PX | 0)))
-        const fadeLen = Math.min(launchLen, (AGI_BEAM_FADE_LEN_PX | 0))
-        _renderAgilityTrailBase(
-            maxImg,
-            maxBounds.minX,
-            maxBounds.minY,
-            tipForward,
-            tipForward + launchLen,
-            nx,
-            ny,
-            sx * tipSide,
-            sy * tipSide,
-            tipForward,
-            tipForward + fadeLen,
-            AGI_BEAM_FADE_STEPS | 0
-        )
-        sprites.setDataNumber(proj, AGI_TIP_SIDE_PX_KEY, tipSide);
-    }
-    _updateProjectileMaskSpriteForProj(proj, maxImg)
-    _clearAgilityProjectileFill(maxImg, element | 0)
 
     sprites.setDataNumber(proj, AGI_LAST_TIP_X_KEY, tipLocalX)
     sprites.setDataNumber(proj, AGI_LAST_TIP_Y_KEY, tipLocalY)
@@ -56019,7 +56445,7 @@ function spawnAgilityThrustProjectile(
 
     sprites.setDataNumber(proj, PROJ_DATA.KNOCKBACK_PCT, knockbackPct | 0)
 
-    sprites.setDataNumber(proj, PROJ_DATA.HIDE_BASE, PROJ_HIDE_BASE_FOR_MASK_FX ? 1 : 0)
+    // Keep base sprite hidden for AGI thrust (comet-only visuals).
 
     // Direction + timing fields used by the updater
 
@@ -56085,7 +56511,7 @@ function spawnAgilityThrustProjectile(
 
 
     // If not active yet: disable overlaps (visuals remain visible)
-    proj.setFlag(SpriteFlag.Invisible, false)
+    proj.setFlag(SpriteFlag.Invisible, AGI_DISABLE_LEGACY_AGI_TRAIL_FX ? true : false)
     proj.setFlag(SpriteFlag.Ghost, !activeNow)
 
 
@@ -56132,39 +56558,7 @@ function spawnAgilityThrustProjectile(
 
 
 
-    const bodyFx = _spawnHeroBodyPaintFxForMove(
-        heroIndex,
-        hero,
-        FAMILY.AGILITY,
-        element | 0,
-        nx,
-        ny,
-        ((dashMs | 0) + 200) | 0,
-        "agilityThrust"
-    )
-    if (bodyFx) sprites.setDataSprite(proj, HERO_BODY_FX_KEY, bodyFx)
-    _spawnProjectileMaskFxForMove(
-        proj,
-        heroIndex,
-        hero,
-        FAMILY.AGILITY | 0,
-        element | 0,
-        nx,
-        ny,
-        ((dashMs | 0) + 200) | 0,
-        "agilityTrail"
-    )
-
-    _spawnAgilityTrailFxSegments(
-        proj,
-        heroIndex,
-        hero,
-        element | 0,
-        nx,
-        ny,
-        ((dashMs | 0) + 200) | 0,
-        maxLen | 0
-    )
+    // Remove legacy trail/placeholder visuals; comet is the only AGI thrust FX now.
     _ensureAgilityCometFx(proj, heroIndex, hero, element | 0, dashMs | 0)
     // Keep trail FX visible even during windup so the beam fills immediately.
 
@@ -56194,6 +56588,11 @@ function _agiTrailStyle() {
     const mainCol = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_MAIN_COLOR : 5;
     const edgeCol = AGI_DEBUG_HUGE_TRAIL ? AGI_DEBUG_TRAIL_EDGE_COLOR : 15;
     return { baseHalf, sideHalf, pad, mainCol, edgeCol };
+}
+
+function _failLegacyAgilityTrailDraw(kind: string): boolean {
+    if (!AGI_DISABLE_LEGACY_AGI_TRAIL_FX) return false;
+    return true;
 }
 
 function _agiTraceHalfPx(): number {
@@ -56326,6 +56725,11 @@ function _buildAgilityTrailImage(
     pulse?: AgiPulseArc,
     fixedBounds?: AgiTrailBounds
 ): { img: Image; bounds: AgiTrailBounds } {
+    if (_failLegacyAgilityTrailDraw("_buildAgilityTrailImage")) {
+        const img = image.create(1, 1);
+        img.fill(0);
+        return { img, bounds: { minX: 0, maxX: 0, minY: 0, maxY: 0 } };
+    }
     const { baseHalf, sideHalf, pad, mainCol, edgeCol } = _agiTrailStyle();
     const bounds = fixedBounds
         ? fixedBounds
@@ -56424,6 +56828,7 @@ function _renderAgilityTrailBase(
     fadeEnd?: number,
     fadeSteps?: number
 ): void {
+    if (_failLegacyAgilityTrailDraw("_renderAgilityTrailBase")) return;
     if (!img) return;
     const { baseHalf, sideHalf, mainCol, edgeCol } = _agiTrailStyle();
     const w = img.width | 0;
@@ -56594,8 +56999,14 @@ function updateAgilityProjectilesMotionFor(
     const activateAt = (sprites.readDataNumber(proj, PROJ_DATA.ACTIVATE_AT_MS) | 0)
     const preActive = (!activeNow && activateAt > 0 && nowMs < activateAt)
 
-    _updateHeroBodyPaintFxForProj(proj, hero)
-    _updateProjectileMaskFxForProj(proj, hero)
+    if (!AGI_DISABLE_LEGACY_AGI_TRAIL_FX) {
+        _updateHeroBodyPaintFxForProj(proj, hero)
+        _updateProjectileMaskFxForProj(proj, hero)
+    } else {
+        _destroyHeroBodyPaintFxForProj(proj)
+        _destroyProjectileMaskFxForProj(proj)
+        _destroyProjectileMaskSpriteForProj(proj)
+    }
 
     if (!activeNow && !preActive) {
         // Activate now: enable overlaps but keep cast anchor.
@@ -56614,7 +57025,7 @@ function updateAgilityProjectilesMotionFor(
         // Safety: no stale overlap bookkeeping
         sprites.setDataNumber(proj, PROJ_DATA.HIT_MASK, 0)
 
-        if (!sprites.readDataSprite(proj, PROJ_MASK_FX_KEY)) {
+        if (!AGI_DISABLE_LEGACY_AGI_TRAIL_FX && !sprites.readDataSprite(proj, PROJ_MASK_FX_KEY)) {
             let fxNx = sprites.readDataNumber(proj, PROJ_DATA.DIR_X)
             let fxNy = sprites.readDataNumber(proj, PROJ_DATA.DIR_Y)
             let fxMag = Math.sqrt(fxNx * fxNx + fxNy * fxNy)
@@ -56641,7 +57052,7 @@ function updateAgilityProjectilesMotionFor(
         }
     }
 
-    proj.setFlag(SpriteFlag.Invisible, false)
+    proj.setFlag(SpriteFlag.Invisible, AGI_DISABLE_LEGACY_AGI_TRAIL_FX ? true : false)
     proj.setFlag(SpriteFlag.Ghost, !activeNow)
     if (!activeNow) _hideAgilityTrailFxSegments(proj)
 
@@ -56914,18 +57325,22 @@ function updateAgilityProjectilesMotionFor(
         dashMs | 0
     )
 
-    _updateAgilityTrailFxSegments(
-        proj,
-        hero,
-        anchorX,
-        anchorY,
-        nx,
-        ny,
-        sBackAtCast,
-        sFront,
-        maxLen,
-        nowMs
-    )
+    if (!AGI_DISABLE_LEGACY_AGI_TRAIL_FX) {
+        _updateAgilityTrailFxSegments(
+            proj,
+            hero,
+            anchorX,
+            anchorY,
+            nx,
+            ny,
+            sBackAtCast,
+            sFront,
+            maxLen,
+            nowMs
+        )
+    } else {
+        _destroyAgilityTrailFxSegments(proj)
+    }
 
 
 
@@ -56954,6 +57369,14 @@ function updateAgilityProjectilesMotionFor(
     proj.vy = 0
     proj.x = anchorX + (minX + maxX) / 2
     proj.y = anchorY + (minY + maxY) / 2
+    if (AGI_DISABLE_LEGACY_AGI_TRAIL_FX) {
+        proj.setFlag(SpriteFlag.Invisible, true)
+        _destroyHeroBodyPaintFxForProj(proj)
+        _destroyProjectileMaskFxForProj(proj)
+        _destroyProjectileMaskSpriteForProj(proj)
+        _destroyAgilityTrailFxSegments(proj)
+        return true
+    }
 
     const img = proj.image
     let tipLocalX: number | null = null
@@ -81310,9 +81733,12 @@ try {
                     ? String(g.__heDialog.__heOwner || "")
                     : ""
                 if (owner !== TOWER_TRIAL_DIALOG_OWNER) return
+                const nowMs = game.runtime() | 0
+                _towerTrialDialogLockHeroes(false, nowMs | 0)
                 _towerTrialDialogState.mode = "idle"
                 _towerTrialDialogState.scriptIndex = 0
                 _towerTrialDialogState.scriptLines = null
+                _towerTrialDialogHeroIndex = -1
             })
         }
     }

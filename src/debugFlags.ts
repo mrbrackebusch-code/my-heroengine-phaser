@@ -98,7 +98,7 @@ export const DEBUG_STATUE_PEDESTAL = false;
 export const DEBUG_DUNGEON_LOGS = false;
 export const DEBUG_BOSS_INTRO = true; // Boss intro/jump/pad sink lifecycle logs.
 export const DEBUG_PAD_SINK_PROP_LOGS = true; // [PAD][PILLAR] summarize prop offset ranges during pad sink.
-export const DEBUG_BOSS_PAD_DUST_PERSIST = false; // Keep boss pad dust alive (skip destroy) for visibility.
+export const DEBUG_BOSS_PAD_DUST_PERSIST = true; // Keep boss pad dust alive (skip destroy) for visibility.
 export const DEBUG_FORCE_HALL_OF_ENEMIES = false; // Force hall floor kind for enemy showcase/debug.
 export const DEBUG_FOCUS_LOGS = false;
 export const DEBUG_INTERACT_LOGS = false; // General interact pipeline (props/NPC).
@@ -201,7 +201,7 @@ export const DEBUG_STR_ARC_CAPTURE_AURA_RADIUS = 2;
 export const DEBUG_STR_ARC_CAPTURE_CORE_COLS = 6;
 export const DEBUG_STR_ARC_CAPTURE_CORE_ROWS = 5;
 export const DEBUG_STR_ARC_CAPTURE_FILENAME = "debug_strength_arc_capture.png";
-export const DEBUG_STR_ARC_NO_FILL = true; // Strength arcs: render only the source arc (no element fill).
+export const DEBUG_STR_ARC_NO_FILL = false; // Strength arcs: render only the source arc (no element fill).
 export const DEBUG_COLLIDER_WALL_COLOR = 0xff8800;
 export const DEBUG_COLLIDER_ENEMY_COLOR = 0x00ff55;
 export const DEBUG_COLLIDER_SPRITE_COLOR = 0x00b7ff;
@@ -278,12 +278,13 @@ export const DEBUG_TURN_SHOULD_PROVE_ON = false;
 // ------------------------------------------------------------
 // Tilemap / tiles (main.ts, tileAtlas.ts, tileMapGlue.ts)
 // ------------------------------------------------------------
-export const DEBUG_TILEMAP_MAIN = false;
+export const DEBUG_TILEMAP_MAIN = true;
 export const DEBUG_TILEMAP_APPLY_NET = false;
 export const DEBUG_PROP_SYNC = false; // [net.decor.apply]/[net.decor.capture] logs.
-export const DEBUG_TILE_ATLAS_GLOBAL = false; // was DEBUG_TILES_GLOBAL in tileAtlas.ts
-export const DEBUG_TILES = false;
-export const DEBUG_TILEMAP_GLUE = false; // [tileMapGlue] base render done, etc.
+export const DEBUG_TILE_ATLAS_GLOBAL = true; // was DEBUG_TILES_GLOBAL in tileAtlas.ts
+export const DEBUG_TILES = true;
+export const DEBUG_TILEMAP_GLUE = true; // [tileMapGlue] base render done, etc.
+export const DEBUG_TILEMAP_AUDIT = false; // [TILEMAP][AUDIT] consolidated decor/prop/tilemap checks.
 export const WORLD_SYNC_HASH_WARN_THRESHOLD_MS = 8000; // warn if host/follower hashes mismatch longer than this (0 disables)
 
 // Prop focus aura (tileMapGlue.ts)
@@ -338,7 +339,7 @@ export const DEBUG_WPN_DROP_SIM_FLOOR_START = 1;
 export const DEBUG_WPN_DROP_SIM_FLOOR_STEP_PER_ACTION = 1;
 export const DEBUG_WPN_DROP_SIM_TRAIT_PCT = 20; // Approx % of theoretical mana budget used for trait rolls.
 export const DEBUG_WPN_AURA_ALWAYS_SHOW = false; // Always render weapon aura masks on the hero (visual overlay).
-export const DEBUG_WPN_AURA_TRACE = false; // [WPNTRACE] weapon aura/debug traces
+export const DEBUG_WPN_AURA_TRACE = true; // [WPNTRACE] weapon aura/debug traces
 export const DEBUG_WPN_AURA_TRACE_VERBOSE = false;
 export const DEBUG_WPN_AURA_TRACE_INTERVAL_MS = 120;
 export const ENABLE_WEAPON_AUDIT_ON_START = false;
