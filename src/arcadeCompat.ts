@@ -2657,9 +2657,6 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
         return;
     }
 
-    // Otherwise (drive/flying): hide Arcade pixels and show the Phaser crystal overlay.
-    _intProj_applyFlyingState(anyNative);
-
     const heroIndex = (dataAny[PROJ_HERO_INDEX_KEY] as any | 0);
     const weaponId = "crystal";
     const weaponVariant = "base";
@@ -2696,9 +2693,14 @@ function _syncIntellectSpellProjectileCrystal(ctx: SyncContext, s: any, native: 
     const texKey = sheet?.key ?? "";
 
     if (picked < 0) {
+        // Overlay not ready yet; keep base projectile visible.
+        _intProj_applyDetonationOrLandingState(anyNative, shouldBeVisible);
         try { anyNative.__intProjCrystalHalo?.setVisible?.(false); } catch { }
         return;
     }
+
+    // Otherwise (drive/flying): hide Arcade pixels and show the Phaser crystal overlay.
+    _intProj_applyFlyingState(anyNative);
 
     // --------------------------------------------------
     // Apply pivot so rotation centers on the crystal pixels (NOT frame center)
@@ -5281,6 +5283,26 @@ namespace SpriteKind {
 
 }
 
+// Phaser compat: stabilize SpriteKind ids used across modules.
+(() => {
+    const SK: any = SpriteKind as any;
+    if (SK.Hero == null) SK.Hero = 50;
+    if (SK.HeroWeapon == null) SK.HeroWeapon = 51;
+    if (SK.HeroAura == null) SK.HeroAura = 52;
+    if (SK.EnemySpawner == null) SK.EnemySpawner = 53;
+    if (SK.SupportBeam == null) SK.SupportBeam = 54;
+    if (SK.SupportIcon == null) SK.SupportIcon = 55;
+    if (SK.Wall == null) SK.Wall = 56;
+    if (SK.ShopNpc == null) SK.ShopNpc = 57;
+    if (SK.ShopItem == null) SK.ShopItem = 58;
+    if (SK.ShopUI == null) SK.ShopUI = 59;
+    if (SK.NpcLpc == null) SK.NpcLpc = 60;
+    if (SK.RelicEffect == null) SK.RelicEffect = 65;
+    if (SK.MonsterEffect == null) SK.MonsterEffect = 66;
+    if (SK.HeroEffect == null) SK.HeroEffect = 67;
+    if (SK.HeroWeaponMask == null) SK.HeroWeaponMask = 68;
+})();
+
 
 
 // 1) Keep SpriteFlag as bitmasks:
@@ -5672,7 +5694,7 @@ namespace sprites {
         if (!_kindNameCache) {
             _kindNameCache = {};
             try {
-                const SK = (globalThis as any).SpriteKind;
+                const SK = (globalThis as any).SpriteKind || (SpriteKind as any);
                 if (SK && typeof SK === "object") {
                     for (const name in SK) {
                         const val = (SK as any)[name];

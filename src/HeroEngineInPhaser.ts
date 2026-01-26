@@ -9968,8 +9968,8 @@ const TOWER_TRIAL_ANNOUNCER_ROLE = "towerTrialAnnouncer"
 const TOWER_TRIAL_ANNOUNCER_NAME = "Announcer"
 const TOWER_TRIAL_DIALOG_OWNER = "tower-trial"
 const TOWER_TRIAL_PHASE_SWITCH_COOLDOWN_MS = 800
-const TOWER_TRIAL_ENEMY_ID = "slime"
-const TOWER_TRIAL_ENEMY_COUNT = 2
+const TOWER_TRIAL_ENEMY_ID = "bat"
+const TOWER_TRIAL_ENEMY_COUNT = 1
 const TOWER_TRIAL_DIALOG_HINT_CHOICES = "Arrows: choose | Interact/Enter: select | Esc: close"
 const TOWER_TRIAL_DIALOG_HINT_ADVANCE = "Interact/Enter: next | Esc: close"
 const TOWER_TRIAL_DIALOG_PAGE_MAX_CHARS = 9999
@@ -9979,6 +9979,7 @@ const TOWER_TRIAL_DIALOG_BUSY_MS = 999999
 const TOWER_TRIAL_DIALOG_LOCK_KEY = "__towerTrialDialogLock"
 const TOWER_TRIAL_DIALOG_PREV_BUSY_KEY = "__towerTrialDialogPrevBusy"
 const TOWER_TRIAL_COMMENTARY_COOLDOWN_MS = 2800
+const TOWER_TRIAL_FEEDBACK_COOLDOWN_MS = 1200
 const TOWER_TRIAL_DIALOG_CHOICE_START = "trial_start"
 const TOWER_TRIAL_DIALOG_CHOICE_PROVING = "trial_proving"
 const TOWER_TRIAL_DIALOG_CHOICE_HINT = "trial_hint"
@@ -10065,7 +10066,7 @@ type TowerTrialStatusSnapshot = {
 const TOWER_TRIAL_DEBUG_EVENT_LIMIT = 900
 
 type TowerTrialDialogState = {
-    mode: "idle" | "intro" | "script"
+    mode: "idle" | "intro" | "script" | "commentary"
     scriptIndex: number
     scriptLines: Array<{ text: string; hint?: string }> | null
 }
@@ -10111,6 +10112,7 @@ let _towerTrialSession: TowerTrialSession | null = null
 let _towerTrialDialogState: TowerTrialDialogState = { mode: "idle", scriptIndex: 0, scriptLines: null }
 let _towerTrialDialogHeroIndex = -1
 let _towerTrialCommentaryAtMs = 0
+let _towerTrialFeedbackAtMs = 0
 let _towerTrialAnnouncerShow: TowerTrialAnnouncerShow | null = null
 let _towerTrialPlatformDecor: Sprite = null
 let _towerTrialPlatformName = ""
@@ -18712,7 +18714,7 @@ function _dunObjectiveUiText(nowMs: number): ObjectiveUiInfo {
     }
     if (kind === DUNGEON_KIND_SHOP) {
         if (towerTrialShouldRequireTrial(_dunFloorIndex | 0) && (!_towerTrialSession || !_towerTrialSession.completed)) {
-            return { title: "Tower Trial", sub: "Talk to the Announcer", state: "objective" }
+            return { title: "Tower Trial", sub: "Step onto the Trial Platform", state: "objective" }
         }
         return { title: "Shopkeeper", sub: "Talk to unlock the pad", state: "objective" }
     }
@@ -24547,21 +24549,23 @@ function _towerTrialPlatformSetName(desired: string): void {
     _towerTrialPlatformName = next
 }
 
-function _towerTrialPlatformIsHeroOn(centerX: number, centerY: number): boolean {
+function _towerTrialPlatformAreAllHeroesOn(centerX: number, centerY: number): boolean {
     const halfW = Math.max(1, ((SHOP_TRIAL_PLATFORM_PX_W | 0) >> 1) - (SHOP_TRIAL_PLATFORM_HIT_INSET_PX | 0)) | 0
     const halfH = Math.max(1, ((SHOP_TRIAL_PLATFORM_PX_H | 0) >> 1) - (SHOP_TRIAL_PLATFORM_HIT_INSET_PX | 0)) | 0
+    let activeCount = 0
     for (let hi = 0; hi < heroes.length; hi++) {
         const hero = heroes[hi]
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
         if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) continue
         const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
-        if (owner <= 0) continue
+        if (owner <= 0 || !_dunIsPidActive(owner | 0)) continue
+        activeCount++
         const h = _heroCollisionCenterXY(hero)
         const dx = Math.abs((h.x | 0) - (centerX | 0)) | 0
         const dy = Math.abs((h.y | 0) - (centerY | 0)) | 0
-        if ((dx | 0) <= (halfW | 0) && (dy | 0) <= (halfH | 0)) return true
+        if ((dx | 0) > (halfW | 0) || (dy | 0) > (halfH | 0)) return false
     }
-    return false
+    return activeCount > 0
 }
 
 function _towerTrialPlatformTriggerBegin(nowMs: number, centerX: number, centerY: number): void {
@@ -24594,12 +24598,19 @@ function _towerTrialPlatformTick(nowMs: number): void {
     let desired = SHOP_TRIAL_PLATFORM_NAME_IDLE
     if (armed) desired = SHOP_TRIAL_PLATFORM_NAME_SPIN
 
-    const onPlatform = armed && _towerTrialPlatformIsHeroOn(center.x | 0, center.y | 0)
-    if (onPlatform && _towerTrialSession && _towerTrialSession.active) {
+    const onPlatform = armed && _towerTrialPlatformAreAllHeroesOn(center.x | 0, center.y | 0)
+    if (onPlatform) {
         if (!_towerTrialPlatformTriggered) {
-            _towerTrialPlatformTriggerBegin(nowMs | 0, center.x | 0, center.y | 0)
+            if (!_towerTrialSession || !_towerTrialSession.active) {
+                _towerTrialStart(nowMs | 0)
+            }
+            if (_towerTrialSession && _towerTrialSession.active) {
+                _towerTrialPlatformTriggerBegin(nowMs | 0, center.x | 0, center.y | 0)
+            }
         }
-        desired = SHOP_TRIAL_PLATFORM_NAME_SPIN_FAST
+        if (_towerTrialSession && _towerTrialSession.active) {
+            desired = SHOP_TRIAL_PLATFORM_NAME_SPIN_FAST
+        }
     }
 
     _towerTrialPlatformSetName(desired)
@@ -24843,6 +24854,9 @@ function _towerTrialDialogCommentary(nowMs: number, text: string): void {
         const dlg = g ? g.__heDialog : null
         if (dlg && typeof dlg.isOpen === "function" && dlg.isOpen()) return
     } catch { }
+    _towerTrialDialogState.mode = "commentary"
+    _towerTrialDialogState.scriptIndex = 0
+    _towerTrialDialogState.scriptLines = null
     _towerTrialDialog(nowMs | 0, msg, "", false, undefined, { autoAdvance: true, lock: false })
 }
 
@@ -25030,7 +25044,8 @@ function _towerTrialDialogHandleChoice(choiceId: string, nowMs: number): void {
         _towerTrialDialogLockHeroes(false, nowMs | 0)
         _towerTrialDialogState.mode = "idle"
         _towerTrialDialogState.scriptLines = null
-        _towerTrialStart(nowMs | 0)
+        _towerTrialPlatformArmed = true
+        _towerTrialDialogCommentary(nowMs | 0, "Then step on the circle, challenger.")
         return
     }
     if (id === TOWER_TRIAL_DIALOG_CHOICE_PROVING) {
@@ -25054,6 +25069,14 @@ function _towerTrialDialogHandleAdvance(nowMs: number): void {
     if (_towerTrialDialogState.mode === "script") {
         _towerTrialDebugLog("dialog_advance", { scriptIndex: _towerTrialDialogState.scriptIndex | 0 }, nowMs | 0)
         _towerTrialDialogAdvanceScript(nowMs | 0)
+        return
+    }
+    if (_towerTrialDialogState.mode === "commentary") {
+        try { (globalThis as any).__heDialog?.hide?.() } catch { }
+        _towerTrialDialogLockHeroes(false, nowMs | 0)
+        _towerTrialDialogState.mode = "idle"
+        _towerTrialDialogState.scriptLines = null
+        _towerTrialDialogHeroIndex = -1
     }
 }
 
@@ -25637,6 +25660,14 @@ function _towerTrialRecordMove(
             phase,
             invalidOutputCount: live.invalidOutputCount | 0,
         }, nowMs | 0)
+        if ((nowMs | 0) >= ((_towerTrialFeedbackAtMs | 0) + (TOWER_TRIAL_FEEDBACK_COOLDOWN_MS | 0))) {
+            _towerTrialFeedbackAtMs = nowMs | 0
+            const label = towerTrialButtonLabel(button)
+            _towerTrialDialogCommentary(
+                nowMs | 0,
+                `${label} move failed. Fix your Blockly output and try again.`
+            )
+        }
         _towerTrialEvaluateCompletion(nowMs | 0, false)
         return
     }
@@ -25659,6 +25690,28 @@ function _towerTrialRecordMove(
         pressCount: live.pressCount[button] | 0,
         output: out.slice(),
     }, nowMs | 0)
+
+    if ((live.pressCount[button] | 0) === 1) {
+        if ((nowMs | 0) >= ((_towerTrialFeedbackAtMs | 0) + (TOWER_TRIAL_FEEDBACK_COOLDOWN_MS | 0))) {
+            _towerTrialFeedbackAtMs = nowMs | 0
+            const label = towerTrialButtonLabel(button)
+            const sim = session.simByProfile ? session.simByProfile[profileKey] : null
+            const blocking = (sim && sim.issues)
+                ? sim.issues.find((it) => _towerTrialIsBlockingIssue(String(it.requirementId || "")))
+                : null
+            if (blocking && blocking.message) {
+                _towerTrialDialogCommentary(
+                    nowMs | 0,
+                    `${label} move does not pass the Trial rules yet. ${blocking.message}`
+                )
+            } else {
+                _towerTrialDialogCommentary(
+                    nowMs | 0,
+                    `${label} move accepted.`
+                )
+            }
+        }
+    }
 
     if (session.requirementSet.ids.indexOf("noRepeatPerButton") >= 0) {
         const sim = session.simByProfile[profileKey]
@@ -25779,6 +25832,7 @@ function _towerTrialTick(nowMs: number): void {
     }
     _towerTrialEnsureAnnouncer()
     _towerTrialAnnouncerTickShow(nowMs | 0)
+    if (!_towerTrialPlatformArmed) _towerTrialPlatformArmed = true
     _towerTrialPlatformTick(nowMs | 0)
     if (!_towerTrialSession || !_towerTrialSession.active) return
     _towerTrialCheckXmlChanges(nowMs | 0)
@@ -27321,7 +27375,7 @@ function _shopUnlockExitPadIfInShopFloor(nowMs: number): void {
             if (_towerTrialSession) {
                 _towerTrialEvaluateCompletion(now | 0, true)
             } else {
-                _towerTrialDialogCommentary(now | 0, "Tower Trial required. Talk to the Announcer.")
+                _towerTrialDialogCommentary(now | 0, "Tower Trial required. Step onto the Trial Platform.")
             }
             return
         }
@@ -43960,7 +44014,9 @@ function updateHeroAimIndicators(now: number) {
 
         setAgiAimIndicatorVisible(i, show && !disableIndicator)
 
-
+        if (hookState !== AGI_HOOK_STATE.NONE) {
+            continue
+        }
 
         _dbgAgiAimLog(i, now, "state=" + agiState + " dashUntil=" + dashUntil + " show=" + (show ? 1 : 0))
 
@@ -46279,6 +46335,10 @@ function updateStrengthChargingAllHeroes(nowMs: number): void {
         const minHoldUntil = (startMs | 0) + (prepMs | 0)
 
         if (!held) {
+            // If release happens before hold begins, treat as a tap: no charge.
+            if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD)) {
+                sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
+            }
             if (STR_CHARGE_ALLOW_TAP_RELEASE || (nowMs | 0) >= (minHoldUntil | 0)) {
                 releaseStrengthCharge(heroIndex, hero, nowMs)
             }
@@ -51885,6 +51945,8 @@ type AgiHookshotState = {
     lastAimSpriteId: number
     lastAimDist: number
     lastAimAngleMdeg: number
+    preAimFacingX: number
+    preAimFacingY: number
     spear: Sprite | null
     hookWeapon: Sprite | null
     chain: Sprite[] | null
@@ -51894,6 +51956,7 @@ type AgiHookshotState = {
     aimComet: Sprite | null
     comet: Sprite | null
     cometStartMs: number
+    aimIndicator: Sprite[] | null
 }
 
 const agiHookshotStateByHeroIndex: AgiHookshotState[] = []
@@ -52108,7 +52171,18 @@ const AGI_HOOKSHOT_CHAIN_Z_BIAS = (AGI_COMET_Z_BIAS | 0) - 2
 const AGI_HOOKSHOT_SPEAR_Z_BIAS = (AGI_COMET_Z_BIAS | 0) + 2
 // Placeholder spear line visual (legacy). Disabled so only comet/chain render.
 const AGI_HOOKSHOT_SHOW_SPEAR_VISUAL = false
-const AGI_HOOKSHOT_SHOW_MARKER_VISUAL = false
+const AGI_HOOKSHOT_SHOW_MARKER_VISUAL = true
+const AGI_HOOKSHOT_SHOW_AIM_INDICATOR = true
+const AGI_HOOKSHOT_AIM_TILT_UP_DEG = 30
+const AGI_HOOKSHOT_AIM_TILT_SIDE_DEG = 22.5
+const AGI_HOOKSHOT_AIM_DOT_COUNT = 4
+const AGI_HOOKSHOT_AIM_DOT_RADIUS_PX = 5
+const AGI_HOOKSHOT_AIM_DOT_SPACING_PX = 16
+const AGI_HOOKSHOT_AIM_DOT_START_PCT_X1000 = 250
+const AGI_HOOKSHOT_AIM_DOT_TIP_PAD_PX = 10
+const AGI_HOOKSHOT_AIM_DOT_ALPHA_MIN = 0.35
+const AGI_HOOKSHOT_AIM_DOT_ALPHA_MAX = 0.95
+const AGI_HOOKSHOT_AIM_DOT_PULSE_MS = 520
 const AGI_HOOKSHOT_BASE_LEN_MULT_X1000 = 1000     // base reach = 1.0 * weapon length
 const AGI_HOOKSHOT_BASE_LEN_ADD_PX = 0
 const AGI_HOOKSHOT_SPEED_PENALTY_PCT_PER_LEN = 5  // 5% less speed per weapon-length of travel
@@ -52136,7 +52210,7 @@ const USE_OUT_MODE_STRING = false
 // --------------------------------------------------------------
 // TEMP DEBUG: make agility thrust super visible
 // --------------------------------------------------------------
-const AGI_DEBUG_SLOWMO = DEBUG_AGI_ANIM_SLOWMO
+const AGI_DEBUG_SLOWMO = false
 const AGI_DEBUG_HUGE_TRAIL = true
 const AGI_DEBUG_TRAIL_HALF_PX = 2
 const AGI_DEBUG_TRAIL_MAIN_COLOR = 1
@@ -52153,9 +52227,9 @@ const AGI_THRUST_OFFS_Y_SIDE = 12
 const AGI_THRUST_OFFS_X_UP = 9
 const AGI_THRUST_OFFS_X_DOWN = -4
 
-const AGI_DEBUG_MOVE_DUR_MULT_X1000 = 7000   // 3.5× longer total move follow this knob to where agility speed timing is set the movmenet knob
+const AGI_DEBUG_MOVE_DUR_MULT_X1000 = 1000
 
-const AGI_DEBUG_LUNGE_SPEED_MULT_X1000 = 2500 // 2.5× faster lunge => farther
+const AGI_DEBUG_LUNGE_SPEED_MULT_X1000 = 1000
 
 
 
@@ -54943,6 +55017,8 @@ function _agiHookStateEnsure(heroIndex: number): AgiHookshotState {
         lastAimSpriteId: 0,
         lastAimDist: 0,
         lastAimAngleMdeg: 0,
+        preAimFacingX: 0,
+        preAimFacingY: 0,
         spear: null,
         hookWeapon: null,
         chain: null,
@@ -54952,6 +55028,7 @@ function _agiHookStateEnsure(heroIndex: number): AgiHookshotState {
         aimComet: null,
         comet: null,
         cometStartMs: 0,
+        aimIndicator: null,
     }
     agiHookshotStateByHeroIndex[heroIndex] = st
     return st
@@ -55025,6 +55102,118 @@ function _agiHookDestroySprite(s: Sprite | null): void {
     if (!(s.flags & sprites.Flag.Destroyed)) s.destroy()
 }
 
+const __agiHookAimDotCache: { [k: number]: Image } = Object.create(null);
+function _agiHookAimDotImage(colorIdx: number): Image {
+    const key = (colorIdx | 0) & 0xff;
+    const cached = __agiHookAimDotCache[key];
+    if (cached) return cached;
+    const r = Math.max(1, AGI_HOOKSHOT_AIM_DOT_RADIUS_PX | 0);
+    const size = (r * 2) + 1;
+    const img = image.create(size, size);
+    img.fill(0);
+    _img_fillCircleCompat(img, r, r, r, key);
+    if (r > 1) _img_fillCircleCompat(img, r, r, r - 1, 0);
+    __agiHookAimDotCache[key] = img;
+    return img;
+}
+
+function _agiHookEnsureAimDots(st: AgiHookshotState, hero: Sprite, colorIdx: number): Sprite[] {
+    let arr = st.aimIndicator || null;
+    const count = Math.max(1, AGI_HOOKSHOT_AIM_DOT_COUNT | 0);
+    const img = _agiHookAimDotImage(colorIdx | 0);
+    if (!arr || arr.length !== count) {
+        if (arr) {
+            for (const d of arr) _agiHookDestroySprite(d);
+        }
+        arr = [];
+        for (let i = 0; i < count; i++) {
+            const dot = sprites.create(img, SpriteKind.HeroEffect);
+            dot.setFlag(SpriteFlag.Ghost, true);
+            dot.setFlag(SpriteFlag.Invisible, true);
+            dot.z = hero.z + (AGI_COMET_Z_BIAS | 0) + 3 + i;
+            arr.push(dot);
+        }
+    } else {
+        for (const d of arr) {
+            if (d && !(d.flags & sprites.Flag.Destroyed)) d.setImage(img);
+        }
+    }
+    st.aimIndicator = arr;
+    return arr;
+}
+
+function _agiHookHideChain(st: AgiHookshotState): void {
+    if (!st.chain || !st.chain.length) return;
+    for (const c of st.chain) c.setFlag(SpriteFlag.Invisible, true);
+}
+
+function _agiHookUpdateAimDots(
+    st: AgiHookshotState,
+    hero: Sprite,
+    heroIndex: number,
+    nx: number,
+    ny: number,
+    baseX: number,
+    baseY: number,
+    tipX: number,
+    tipY: number,
+    weaponLen: number,
+    nowMs: number
+): void {
+    if (!AGI_HOOKSHOT_SHOW_AIM_INDICATOR) {
+        if (st.aimIndicator) {
+            for (const d of st.aimIndicator) _agiHookDestroySprite(d);
+            st.aimIndicator = null;
+        }
+        return;
+    }
+    const dirKey = _weaponDirKeyFromVector(nx, ny);
+    const palette = _weaponAuraPaletteForElement(st.element | 0, dirKey, "offense");
+    const colorIdx = (palette.r3 | 0) || (palette.r2 | 0) || (palette.r1 | 0) || 1;
+    const dots = _agiHookEnsureAimDots(st, hero, colorIdx | 0);
+    const dist = Math.hypot(tipX - baseX, tipY - baseY);
+    const baseLen = Math.max(1, weaponLen | 0);
+    const start = Math.max(2, Math.round((baseLen * (AGI_HOOKSHOT_AIM_DOT_START_PCT_X1000 | 0)) / 1000));
+    const maxDist = Math.max(0, dist - (AGI_HOOKSHOT_AIM_DOT_TIP_PAD_PX | 0));
+    const spacing = Math.max(2, AGI_HOOKSHOT_AIM_DOT_SPACING_PX | 0);
+    const period = Math.max(1, AGI_HOOKSHOT_AIM_DOT_PULSE_MS | 0);
+    const phaseBase = ((nowMs | 0) / period) * Math.PI * 2;
+
+    for (let i = 0; i < dots.length; i++) {
+        const dot = dots[i];
+        if (!dot || (dot.flags & sprites.Flag.Destroyed)) continue;
+        const d = start + (i * spacing);
+        if (!(dist > 0) || d > maxDist) {
+            dot.setFlag(SpriteFlag.Invisible, true);
+            continue;
+        }
+        const x = baseX + nx * d;
+        const y = baseY + ny * d;
+        const pulse = 0.5 + 0.5 * Math.sin(phaseBase + i * 0.9);
+        const alpha = AGI_HOOKSHOT_AIM_DOT_ALPHA_MIN + (AGI_HOOKSHOT_AIM_DOT_ALPHA_MAX - AGI_HOOKSHOT_AIM_DOT_ALPHA_MIN) * pulse;
+        dot.x = x;
+        dot.y = y;
+        dot.z = hero.z + (AGI_COMET_Z_BIAS | 0) + 3 + i;
+        dot.setFlag(SpriteFlag.Invisible, false);
+        dot.setFlag(SpriteFlag.Ghost, true);
+        sprites.setDataNumber(dot, EFFECT_ALPHA_DATA_KEY, alpha);
+    }
+}
+
+function _agiHookRetireWeaponCarrier(st: AgiHookshotState): void {
+    const spr = st.hookWeapon
+    if (!spr || (spr.flags & sprites.Flag.Destroyed)) {
+        st.hookWeapon = null
+        return
+    }
+    sprites.setDataString(spr, AGI_HOOK_WPN_ID_KEY, "")
+    sprites.setDataString(spr, AGI_HOOK_WPN_PHASE_KEY, "")
+    sprites.setDataNumber(spr, AGI_HOOK_WPN_ROTATE_KEY, 0)
+    spr.setFlag(SpriteFlag.Invisible, true)
+    if ((spr.lifespan | 0) <= 0) spr.lifespan = 60
+    st.hookWeapon = null
+}
+
 function _agiHookHideSpearVisuals(st: AgiHookshotState): void {
     if (st.spear) _agiHookDestroySprite(st.spear)
     st.spear = null
@@ -55037,7 +55226,7 @@ function _agiHookClearVisuals(st: AgiHookshotState): void {
     st.spear = null
     if (st.aimSpear) _agiHookDestroySprite(st.aimSpear)
     st.aimSpear = null
-    _agiHookClearWeaponCarrier(st)
+    _agiHookRetireWeaponCarrier(st)
     if (st.aimComet) {
         _destroyAgilityCometAurasForFx(st.aimComet);
         _agiHookDestroySprite(st.aimComet)
@@ -55050,6 +55239,10 @@ function _agiHookClearVisuals(st: AgiHookshotState): void {
     st.comet = null
     if (st.marker) _agiHookDestroySprite(st.marker)
     st.marker = null
+    if (st.aimIndicator) {
+        for (const d of st.aimIndicator) _agiHookDestroySprite(d)
+    }
+    st.aimIndicator = null
     if (st.chain && st.chain.length) {
         for (const c of st.chain) _agiHookDestroySprite(c)
     }
@@ -55172,7 +55365,7 @@ function _agiHookRotateToward(currentMdeg: number, targetMdeg: number): number {
 }
 
 function _agiHookSnapFacingFromAngle(heroIndex: number, angleMdeg: number): void {
-    const d = _agiHookSnapDirFromAngle(angleMdeg);
+    const d = _agiHookVisualDirFromAngle(angleMdeg);
     _setHeroFacingX(heroIndex, d.nx | 0)
     _setHeroFacingY(heroIndex, d.ny | 0)
 }
@@ -55186,6 +55379,58 @@ function _agiHookSnapDirFromAngle(angleMdeg: number): { nx: number; ny: number }
     ]
     const d = dirs[oct] || [1, 0]
     return { nx: d[0] | 0, ny: d[1] | 0 };
+}
+
+function _dirStringToVector(dirRaw: string): { nx: number; ny: number } {
+    const dir = String(dirRaw || "").toLowerCase();
+    switch (dir) {
+        case "up": return { nx: 0, ny: -1 };
+        case "down": return { nx: 0, ny: 1 };
+        case "left": return { nx: -1, ny: 0 };
+        case "right": return { nx: 1, ny: 0 };
+        case "up_left": case "left_up": case "nw": return { nx: -1, ny: -1 };
+        case "up_right": case "right_up": case "ne": return { nx: 1, ny: -1 };
+        case "down_left": case "left_down": case "sw": return { nx: -1, ny: 1 };
+        case "down_right": case "right_down": case "se": return { nx: 1, ny: 1 };
+        default: return { nx: 0, ny: 0 };
+    }
+}
+
+function _agiHookVisualDirFromAngle(angleMdeg: number): { nx: number; ny: number } {
+    const ang = _agiHookNormalizeAngleMdeg(angleMdeg)
+    const deg = ang / 1000
+    const delta = (baseDeg: number): number => {
+        let d = ((deg - baseDeg + 540) % 360) - 180
+        if (d < -180) d += 360
+        if (d > 180) d -= 360
+        return d
+    }
+    const dRight = Math.abs(delta(0))
+    const dUp = Math.abs(delta(90))
+    const dLeft = Math.abs(delta(180))
+    const dDown = Math.abs(delta(270))
+    const min = Math.min(dRight, dUp, dLeft, dDown)
+
+    if (min === dUp) {
+        const d = delta(90)
+        if (Math.abs(d) <= AGI_HOOKSHOT_AIM_TILT_UP_DEG) return { nx: 0, ny: -1 }
+        return (d > 0) ? { nx: 1, ny: -1 } : { nx: -1, ny: -1 }
+    }
+    if (min === dDown) {
+        const d = delta(270)
+        if (Math.abs(d) <= AGI_HOOKSHOT_AIM_TILT_UP_DEG) return { nx: 0, ny: 1 }
+        return (d > 0) ? { nx: 1, ny: 1 } : { nx: -1, ny: 1 }
+    }
+    if (min === dLeft) {
+        const d = delta(180)
+        if (Math.abs(d) <= AGI_HOOKSHOT_AIM_TILT_SIDE_DEG) return { nx: -1, ny: 0 }
+        return (d > 0) ? { nx: -1, ny: 1 } : { nx: -1, ny: -1 }
+    }
+    {
+        const d = delta(0)
+        if (Math.abs(d) <= AGI_HOOKSHOT_AIM_TILT_SIDE_DEG) return { nx: 1, ny: 0 }
+        return (d > 0) ? { nx: 1, ny: -1 } : { nx: 1, ny: 1 }
+    }
 }
 
 function _agiHookGetInputStateForOwner(ownerId: number): HeroInputState | null {
@@ -55382,8 +55627,7 @@ function _agiHookEnsureWeaponCarrier(st: AgiHookshotState, hero: Sprite): Sprite
 }
 
 function _agiHookClearWeaponCarrier(st: AgiHookshotState): void {
-    if (st.hookWeapon) _agiHookDestroySprite(st.hookWeapon)
-    st.hookWeapon = null
+    _agiHookRetireWeaponCarrier(st)
 }
 
 function _agiHookUpdateWeaponCarrier(
@@ -55454,6 +55698,8 @@ function _agiHookEnsureCometSprite(st: AgiHookshotState, hero: Sprite, heroIndex
     else st.comet = fx
     return fx
 }
+
+// (Old comet-frame aim indicator removed; now using pulsing dots along vector.)
 
 function _agiHookUpdateCometSprite(
     st: AgiHookshotState,
@@ -56382,6 +56628,13 @@ function _agiHookFinish(
     st.lastAimSpriteId = 0
     st.lastAimDist = 0
     st.lastAimAngleMdeg = 0
+    if (st.preAimFacingX || st.preAimFacingY) {
+        _setHeroFacingX(heroIndex, st.preAimFacingX | 0)
+        _setHeroFacingY(heroIndex, st.preAimFacingY | 0)
+        syncHeroDirData(heroIndex)
+    }
+    st.preAimFacingX = 0
+    st.preAimFacingY = 0
     st.lastLogMs = 0
     st.targetKind = AGI_HOOK_TARGET.NONE
     st.targetSpriteId = 0
@@ -56397,6 +56650,9 @@ function _agiHookFinish(
     st.lastAnimFrame = -1
     sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_STATE, AGI_HOOK_STATE.NONE)
     sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_X1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_Y1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AIM_ANGLE_MDEG, 0)
     clearHeroFrameColOverride(heroIndex)
     hero.vx = 0
     hero.vy = 0
@@ -56426,11 +56682,21 @@ function updateAgilityHookshotAll(nowMs: number): void {
 
         if (state === AGI_HOOK_STATE.NONE) {
             sprites.setDataNumber(hero, HERO_DATA.WEAPON_OVERLAY_HIDE, 0)
-            if (st.spear || st.marker || st.aimSpear || st.hookWeapon || st.comet || st.aimComet || (st.chain && st.chain.length)) {
+            if (st.spear || st.marker || st.aimSpear || st.hookWeapon || st.comet || st.aimComet || st.aimIndicator || (st.chain && st.chain.length)) {
                 _agiHookClearVisuals(st)
+            }
+            if (st.preAimFacingX || st.preAimFacingY) {
+                _setHeroFacingX(hi, st.preAimFacingX | 0)
+                _setHeroFacingY(hi, st.preAimFacingY | 0)
+                syncHeroDirData(hi)
+                st.preAimFacingX = 0
+                st.preAimFacingY = 0
             }
             sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_STATE, AGI_HOOK_STATE.NONE)
             sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_X1000, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_Y1000, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AIM_ANGLE_MDEG, 0)
             continue
         }
 
@@ -56465,6 +56731,19 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 _agiHookClearVisuals(st)
                 _agiHookClearLungeSchedule(hero)
                 _agiHookSetState(hi, hero, st, AGI_HOOK_STATE.AIMING)
+                {
+                    let fx0 = _getHeroFacingX(hi) | 0
+                    let fy0 = _getHeroFacingY(hi) | 0
+                    if (!fx0 && !fy0) {
+                        const dirName = sprites.readDataString(hero, HERO_DATA.DIR) || sprites.readDataString(hero, "dir") || ""
+                        const v = _dirStringToVector(dirName)
+                        fx0 = v.nx | 0
+                        fy0 = v.ny | 0
+                    }
+                    if (!fx0 && !fy0) { fx0 = 1; fy0 = 0 }
+                    st.preAimFacingX = fx0
+                    st.preAimFacingY = fy0
+                }
                 st.waitRelease = 1
                 st.hitReady = 0
                 st.returnOnly = 0
@@ -56519,24 +56798,27 @@ function updateAgilityHookshotAll(nowMs: number): void {
             }
             if (dx !== 0 || dy !== 0) {
                 const targetAng = _agiHookDirToAngleMdeg(dx, dy)
-                st.aimAngleMdeg = targetAng
+                st.aimAngleMdeg = _agiHookRotateToward(st.aimAngleMdeg, targetAng)
             }
-            const dir = _agiHookAngleToDir(st.aimAngleMdeg)
-            st.dirX = dir.nx
-            st.dirY = dir.ny
+            const aimDir = _agiHookAngleToDir(st.aimAngleMdeg)
+            const visDir = _agiHookVisualDirFromAngle(st.aimAngleMdeg)
+            st.dirX = aimDir.nx
+            st.dirY = aimDir.ny
             _agiHookSnapFacingFromAngle(hi, st.aimAngleMdeg)
             syncHeroDirData(hi)
 
-            const nx = st.dirX || 1
-            const ny = st.dirY || 0
-            const base = _agiHookHandBase(hero, nx, ny)
-            const weaponLen = _agiHookWeaponLength(hero, nx, ny)
-            const tipHalf = _agiHookTipHalf(hero, nx, ny, hi)
+            const nxAim = aimDir.nx || 1
+            const nyAim = aimDir.ny || 0
+            const nxVis = visDir.nx || 1
+            const nyVis = visDir.ny || 0
+            const base = _agiHookHandBase(hero, nxAim, nyAim)
+            const weaponLen = _agiHookWeaponLength(hero, nxAim, nyAim)
+            const tipHalf = _agiHookTipHalf(hero, nxAim, nyAim, hi)
             const reachExtra = Math.max(0, st.reachExtra | 0)
             const baseLen = Math.idiv((weaponLen * AGI_HOOKSHOT_BASE_LEN_MULT_X1000) | 0, 1000) + (AGI_HOOKSHOT_BASE_LEN_ADD_PX | 0)
             const maxDist = Math.max(weaponLen | 0, ((baseLen + reachExtra) | 0))
 
-            const ray = _agiHookRaycast(hi, hero, base.x, base.y, nx, ny, maxDist, tipHalf)
+            const ray = _agiHookRaycast(hi, hero, base.x, base.y, nxAim, nyAim, maxDist, tipHalf)
             st.targetKind = ray.kind | 0
             st.targetSpriteId = ray.spriteId | 0
             st.targetX = ray.x
@@ -56596,24 +56878,25 @@ function updateAgilityHookshotAll(nowMs: number): void {
             }
 
             if (AGI_HOOKSHOT_SHOW_SPEAR_VISUAL) {
-                const aimSpear = _agiHookEnsureSpearSprite(st, hero, hi, nx, ny, st.element | 0, true)
+                const aimSpear = _agiHookEnsureSpearSprite(st, hero, hi, nxAim, nyAim, st.element | 0, true)
                 _agiHookPositionSpear(aimSpear, base.x, base.y)
                 aimSpear.setFlag(SpriteFlag.Invisible, false)
             } else {
                 _agiHookHideSpearVisuals(st)
             }
-            _agiHookUpdateWeaponCarrier(st, hi, hero, nx, ny, base.x, base.y, st.weaponLen | 0, st.weaponLen | 0)
-            const aimEndX = base.x + nx * (st.weaponLen | 0)
-            const aimEndY = base.y + ny * (st.weaponLen | 0)
-            _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.weaponLen | 0, st.weaponLen | 0, now | 0, AGI_HOOK_STATE.AIMING, true, aimEndX, aimEndY)
-            _agiHookUpdateChain(st, hero, base.x, base.y, aimEndX, aimEndY)
+            const aimEndX = base.x + nxAim * (st.weaponLen | 0)
+            const aimEndY = base.y + nyAim * (st.weaponLen | 0)
+            _agiHookRetireWeaponCarrier(st)
+            _agiHookUpdateAimDots(st, hero, hi, nxAim, nyAim, base.x, base.y, ray.x, ray.y, st.weaponLen | 0, now | 0)
+            _agiHookUpdateCometSprite(st, hero, hi, nxAim, nyAim, base.x, base.y, st.weaponLen | 0, st.weaponLen | 0, now | 0, AGI_HOOK_STATE.AIMING, true, aimEndX, aimEndY)
+            _agiHookHideChain(st)
 
             hero.vx = 0
             hero.vy = 0
             sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
             sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
-            sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_X1000, Math.round(nx * 1000))
-            sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_Y1000, Math.round(ny * 1000))
+            sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_X1000, Math.round(nxAim * 1000))
+            sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_Y1000, Math.round(nyAim * 1000))
             sprites.setDataNumber(hero, HERO_DATA.AIM_ANGLE_MDEG, st.aimAngleMdeg | 0)
             sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 1)
 
@@ -56684,6 +56967,10 @@ function updateAgilityHookshotAll(nowMs: number): void {
         }
 
         if (state === AGI_HOOK_STATE.EXTEND) {
+            if (st.aimIndicator) {
+                for (const d of st.aimIndicator) _agiHookDestroySprite(d)
+                st.aimIndicator = null
+            }
             const nx = st.dirX || 1
             const ny = st.dirY || 0
             const base = _agiHookHandBase(hero, nx, ny)
@@ -56781,6 +57068,10 @@ function updateAgilityHookshotAll(nowMs: number): void {
         }
 
         if (state === AGI_HOOK_STATE.RETRACT) {
+            if (st.aimIndicator) {
+                for (const d of st.aimIndicator) _agiHookDestroySprite(d)
+                st.aimIndicator = null
+            }
             const nx = st.dirX || 1
             const ny = st.dirY || 0
             const wallsBlock = _agiHookWallsBlock()
@@ -77185,6 +77476,7 @@ function _resetHeroTransientStateForLoad(heroIndex: number, hero: Sprite): void 
     const nowMs = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : 0
 
     try { hero.setFlag(SpriteFlag.Invisible, false) } catch { }
+    try { hero.setFlag(SpriteFlag.Ghost, false) } catch { }
     try { sprites.setDataBoolean(hero, HERO_DATA.INPUT_LOCKED, false) } catch { }
     try { sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0) } catch { }
     try { sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0) } catch { }
@@ -77207,6 +77499,17 @@ function _resetHeroTransientStateForLoad(heroIndex: number, hero: Sprite): void 
     try { sprites.setDataNumber(hero, HERO_DATA.ActionVariantBtnId, 0) } catch { }
     try { sprites.setDataNumber(hero, HERO_DATA.ActionSeed, 0) } catch { }
     try { sprites.setDataNumber(hero, HERO_DATA.ActionTargetId, 0) } catch { }
+    try { sprites.setDataNumber(hero, HERO_DATA.DEATH_UNTIL, 0) } catch { }
+    try { sprites.setDataBoolean(hero, HERO_DATA.IS_DEAD, false) } catch { }
+    try { sprites.setDataBoolean(hero, HERO_DATA.DEAD_GHOST, false) } catch { }
+    try { sprites.setDataBoolean(hero, HERO_DATA.GHOST_ACTIVE, false) } catch { }
+    try { sprites.setDataBoolean(hero, HERO_DATA.DEAD_DIALOG, false) } catch { }
+    try { sprites.setDataBoolean(hero, HERO_DATA.DEAD_MARKER, false) } catch { }
+    try { sprites.setDataNumber(hero, HERO_DATA.DEAD_ANCHOR_X, 0) } catch { }
+    try { sprites.setDataNumber(hero, HERO_DATA.DEAD_ANCHOR_Y, 0) } catch { }
+    try { sprites.setDataNumber(hero, HERO_DATA.DEAD_LEASH_PX, 0) } catch { }
+    try { sprites.setDataNumber(hero, HERO_DATA.GHOST_ALPHA, 0) } catch { }
+    try { sprites.setDataNumber(hero, HERO_DATA.GHOST_TINT, 0) } catch { }
 
     try { sprites.setDataBoolean(hero, HERO_DATA.STR_CHARGING, false) } catch { }
     try { sprites.setDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL, 0) } catch { }

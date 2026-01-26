@@ -753,6 +753,38 @@
 
       }
 
+      .hud-action-row {
+        display: flex;
+        align-items: center;
+        gap: 6px;
+        margin-top: 6px;
+      }
+
+      .hud-action-btn {
+        padding: 4px 8px;
+        font-size: 0.7rem;
+        font-weight: 600;
+        letter-spacing: 0.02em;
+        border-radius: 6px;
+        border: 1px solid rgba(255, 255, 255, 0.25);
+        background: rgba(24, 24, 30, 0.95);
+        color: #f0f0f5;
+        cursor: pointer;
+      }
+
+      .hud-action-btn:hover {
+        background: rgba(36, 36, 46, 0.95);
+      }
+
+      .hud-action-btn:active {
+        transform: translateY(1px);
+      }
+
+      .hud-action-btn:disabled {
+        opacity: 0.5;
+        cursor: default;
+      }
+
       #hud {
         position: relative;
       }
@@ -1893,6 +1925,10 @@
                 <span class="hud-you-stat-label" id="hud-you-mana-label">...</span>
                 <span class="hud-you-stat-rate" id="hud-you-mana-rate"></span>
               </div>
+              <div class="hud-action-row">
+                <button type="button" class="hud-action-btn" id="hud-load-btn" title="Load latest autosave">Load</button>
+                <div class="hud-subtle" id="hud-load-note">Latest save</div>
+              </div>
           </div>
 
           <!-- Q -->
@@ -2469,6 +2505,8 @@
           youManaLabel: document.getElementById("hud-you-mana-label"),
           youManaRate: document.getElementById("hud-you-mana-rate"),
           youCoins: document.getElementById("hud-you-coins"),
+          loadBtn: document.getElementById("hud-load-btn"),
+          loadNote: document.getElementById("hud-load-note"),
 
           boxA: document.getElementById("hud-box-a"),
           aNote: document.getElementById("hud-a-note"),
@@ -2805,6 +2843,16 @@
             _lvlui_log("btn click -> openLevelUp");
             _lvlui_setShown(true, "btn openLevelUp");
             _lvlui_cmd(pid, { type: "openLevelUp" });
+          });
+        }
+
+        if (R.loadBtn) {
+          R.loadBtn.addEventListener("click", () => {
+            const pid = getPid();
+            if (!pid) return;
+            const hero = findLocalHeroSprite(pid);
+            const profile = readProfile(pid, hero);
+            _hud_cmd(pid, { type: "loadRecentSave", profile: profile || "" });
           });
         }
 
@@ -3227,6 +3275,29 @@ function _getUiSnapshotCached(pid, refreshMsOverride) {
 function _invalidateUiSnapshotCache() {
   _hud_lastSnap = null;
   _hud_lastSnapAt = 0;
+}
+
+async function _hud_cmd(pid, payload) {
+  const cmd = Object.assign({ playerId: pid | 0 }, payload || {});
+  let r = null;
+
+  const net = window.__net;
+  const isHost = _uiIsHost();
+  const fn = window.__heUiCommand;
+  if (isHost && typeof fn === "function") {
+    r = fn(cmd);
+  } else {
+    try {
+      if (net && typeof net.sendUiCommand === "function") {
+        r = await net.sendUiCommand(cmd);
+      } else if (typeof fn === "function") {
+        r = fn(cmd);
+      }
+    } catch (_e) {}
+  }
+
+  _invalidateUiSnapshotCache();
+  return r;
 }
 
 
