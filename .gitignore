@@ -13,6 +13,10 @@ dist-ssr
 *.local
 saves/
 
+# Generated aura masks (rebuilt on demand)
+assets/**/auras/_mask.*
+assets/**/auras/*_mask.*
+
 # Editor directories and files
 .vscode/*
 !.vscode/extensions.json
