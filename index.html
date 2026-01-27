@@ -1927,8 +1927,10 @@
               </div>
               <div class="hud-action-row">
                 <button type="button" class="hud-action-btn" id="hud-load-btn" title="Load latest autosave">Load</button>
+                <button type="button" class="hud-action-btn" id="hud-dump-btn" title="Write debug dump file (host)">Dump</button>
                 <div class="hud-subtle" id="hud-load-note">Latest save</div>
               </div>
+              <div class="hud-subtle" id="hud-dump-note"></div>
           </div>
 
           <!-- Q -->
@@ -2507,6 +2509,8 @@
           youCoins: document.getElementById("hud-you-coins"),
           loadBtn: document.getElementById("hud-load-btn"),
           loadNote: document.getElementById("hud-load-note"),
+          dumpBtn: document.getElementById("hud-dump-btn"),
+          dumpNote: document.getElementById("hud-dump-note"),
 
           boxA: document.getElementById("hud-box-a"),
           aNote: document.getElementById("hud-a-note"),
@@ -2853,6 +2857,22 @@
             const hero = findLocalHeroSprite(pid);
             const profile = readProfile(pid, hero);
             _hud_cmd(pid, { type: "loadRecentSave", profile: profile || "" });
+          });
+        }
+        if (R.dumpBtn) {
+          R.dumpBtn.addEventListener("click", async () => {
+            const pid = getPid();
+            if (!pid) return;
+            if (R.dumpNote) R.dumpNote.textContent = "Writing debug dump...";
+            const res = await _hud_cmd(pid, { type: "debugDump", reason: "hud" });
+            if (!R.dumpNote) return;
+            if (res && res.ok) {
+              const file = res.file ? String(res.file) : "";
+              R.dumpNote.textContent = file ? `Dumped: ${file}` : "Dumped.";
+            } else {
+              const reason = res && res.reason ? String(res.reason) : "failed";
+              R.dumpNote.textContent = `Dump failed: ${reason}`;
+            }
           });
         }
 

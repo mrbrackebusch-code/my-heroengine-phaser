@@ -3377,7 +3377,7 @@ private _paintChasmLike(
 }
 
 
-syncFromEngineGrid(grid: number[][]): void {
+syncFromEngineGrid(grid: number[][], opts?: { variantSeed?: number }): void {
   const localDebug = this.opts.debugLocal ?? true;
   const valueToFamily = this.opts.tileValueToFamily ?? defaultTileValueToFamily;
 
@@ -3404,7 +3404,11 @@ syncFromEngineGrid(grid: number[][]): void {
   this.chasmOverlayLayer.fill(-1);
 
   const stats = this._analyzeGridForRender(grid, rows, cols, valueToFamily);
-  const seedSalt = (stats.rawSig | 0);
+  const seedOverride =
+    (opts && typeof opts.variantSeed === "number" && Number.isFinite(opts.variantSeed))
+      ? (opts.variantSeed | 0)
+      : 0;
+  const seedSalt = (seedOverride !== 0) ? (seedOverride | 0) : (stats.rawSig | 0);
 
   this._paintFloorUnderlayEverywhere(grid, rows, cols, valueToFamily, stats.fallbackFloorFamily, seedSalt);
   this._paintChasmLike(grid, rows, cols, valueToFamily, seedSalt);
@@ -3419,7 +3423,8 @@ syncFromEngineGrid(grid: number[][]): void {
     anyThis.__lastGridRows = rows | 0;
     anyThis.__lastGridCols = cols | 0;
     anyThis.__lastGridWalls = stats.rawWalls | 0;
-    anyThis.__lastGridSig = stats.rawSig | 0;
+    anyThis.__lastGridSig = seedSalt | 0;
+    anyThis.__lastGridRawSig = stats.rawSig | 0;
   } catch { /* ignore */ }
 
   if (localDebug) {

@@ -64,6 +64,7 @@
 import * as monsterAnimGlue from "./monsterAnimGlue";
 // ✅ create a module object called `heroAnimGlue`
 import * as heroAnimGlue from "./heroAnimGlue";
+import { getAuraMaskBitsForKey, getAuraMaskFrameView } from "./auraMaskBits";
 
 // ✅ create a module object called `weaponAnimGlue`
 import * as weaponAnimGlue from "./weaponAnimGlue";
@@ -104,6 +105,7 @@ import {
     DEBUG_DRAW_ENEMY_WALL_COLLIDERS,
     DEBUG_DRAW_EFFECT_BOUNDS,
     DEBUG_DRAW_DECOR_COLLIDERS,
+    DEBUG_DRAW_DECOR_AURA_MASK,
     DEBUG_DRAW_HERO_COLLIDER_BOUNDS,
     DEBUG_DRAW_HERO_HITBOX,
     DEBUG_DRAW_HERO_NAV_FOOTPRINT,
@@ -138,6 +140,16 @@ import {
     DEBUG_STR_ARC_GALLERY_ANIM_SPEEDS,
     DEBUG_STR_ARC_GALLERY_ALPHA,
     DEBUG_STR_ARC_GALLERY_TRANSPOSE,
+    DEBUG_VFX_GALLERY,
+    DEBUG_VFX_GALLERY_IDS,
+    DEBUG_VFX_GALLERY_MAX,
+    DEBUG_VFX_GALLERY_COLS,
+    DEBUG_VFX_GALLERY_SCALE,
+    DEBUG_VFX_GALLERY_PADDING,
+    DEBUG_VFX_GALLERY_ALPHA,
+    DEBUG_VFX_GALLERY_ANIM_FPS,
+    DEBUG_VFX_GALLERY_HIDE_AURAS,
+    DEBUG_VFX_GALLERY_YOYO,
     DEBUG_STR_ARC_CAPTURE,
     DEBUG_STR_ARC_CAPTURE_SKIN,
     DEBUG_STR_ARC_CAPTURE_FILL_SKIN,
@@ -256,7 +268,7 @@ const DECOR_SOLID_BASE_FRAME_H_KEY = "decorSolidBaseFrameH";
 const DECOR_SOLID_AABB_MODE_BASE = 1;
 const DECOR_SOLID_AABB_MODE_FULL = 2;
 
-type OpaqueAabb = { ox: number; oy: number; w: number; h: number };
+type OpaqueAabb = { ox: number; oy: number; w: number; h: number; frameW?: number; frameH?: number };
 const _decorOpaqueAabbCache: Record<string, OpaqueAabb> = Object.create(null);
 type OpaqueBaseBounds = { minX: number; maxX: number; frameW: number; frameH: number; baseH: number };
 const _decorOpaqueBaseCache: Record<string, OpaqueBaseBounds> = Object.create(null);
@@ -424,7 +436,7 @@ function _decor_computeOpaqueAabbForFrame(scene: any, textureKey: string, frameI
     const hit = _decorOpaqueAabbCache[cacheKey];
     if (hit) return hit;
 
-    // safe fallback = full tile
+    // safe fallback = full tile (updated after frame lookup if possible)
     let out: OpaqueAabb = { ox: 0, oy: 0, w: tileSize | 0, h: tileSize | 0 };
 
     try {
@@ -445,26 +457,31 @@ function _decor_computeOpaqueAabbForFrame(scene: any, textureKey: string, frameI
         const sy = ((frame.cutY ?? frame.y) | 0);
         const sw = ((frame.cutWidth ?? frame.width ?? tileSize) | 0);
         const sh = ((frame.cutHeight ?? frame.height ?? tileSize) | 0);
+        if (sw > 0 && sh > 0) {
+            out = { ox: 0, oy: 0, w: sw | 0, h: sh | 0, frameW: sw | 0, frameH: sh | 0 };
+        }
 
         if (!_decorTmpCanvas) _decorTmpCanvas = document.createElement("canvas");
         if (!_decorTmpCtx) _decorTmpCtx = _decorTmpCanvas.getContext("2d", { willReadFrequently: true } as any);
 
         const cnv = _decorTmpCanvas!;
         const ctx = _decorTmpCtx!;
-        cnv.width = tileSize;
-        cnv.height = tileSize;
+        const drawW = Math.max(1, sw | 0) | 0;
+        const drawH = Math.max(1, sh | 0) | 0;
+        cnv.width = drawW | 0;
+        cnv.height = drawH | 0;
 
-        ctx.clearRect(0, 0, tileSize, tileSize);
-        ctx.drawImage(src, sx, sy, sw, sh, 0, 0, tileSize, tileSize);
+        ctx.clearRect(0, 0, drawW, drawH);
+        ctx.drawImage(src, sx, sy, sw, sh, 0, 0, drawW, drawH);
 
-        const img = ctx.getImageData(0, 0, tileSize, tileSize);
+        const img = ctx.getImageData(0, 0, drawW, drawH);
         const data = img.data;
 
         let minX = 9999, minY = 9999, maxX = -1, maxY = -1;
 
-        for (let y = 0; y < tileSize; y++) {
-            for (let x = 0; x < tileSize; x++) {
-                const a = data[(((y * tileSize + x) * 4) + 3) | 0] | 0;
+        for (let y = 0; y < drawH; y++) {
+            for (let x = 0; x < drawW; x++) {
+                const a = data[(((y * drawW + x) * 4) + 3) | 0] | 0;
                 if (a > (DECOR_SOLID_ALPHA_THRESHOLD | 0)) {
                     if (x < minX) minX = x;
                     if (y < minY) minY = y;
@@ -476,15 +493,15 @@ function _decor_computeOpaqueAabbForFrame(scene: any, textureKey: string, frameI
 
         if (maxX >= 0 && maxY >= 0) {
             const inset = (DECOR_SOLID_INSET_PX | 0);
-            minX = Math.min(tileSize - 1, Math.max(0, (minX + inset) | 0));
-            minY = Math.min(tileSize - 1, Math.max(0, (minY + inset) | 0));
-            maxX = Math.min(tileSize - 1, Math.max(0, (maxX - inset) | 0));
-            maxY = Math.min(tileSize - 1, Math.max(0, (maxY - inset) | 0));
+            minX = Math.min(drawW - 1, Math.max(0, (minX + inset) | 0));
+            minY = Math.min(drawH - 1, Math.max(0, (minY + inset) | 0));
+            maxX = Math.min(drawW - 1, Math.max(0, (maxX - inset) | 0));
+            maxY = Math.min(drawH - 1, Math.max(0, (maxY - inset) | 0));
 
             const w = Math.max(1, ((maxX - minX + 1) | 0)) | 0;
             const h = Math.max(1, ((maxY - minY + 1) | 0)) | 0;
 
-            out = { ox: minX | 0, oy: minY | 0, w, h };
+            out = { ox: minX | 0, oy: minY | 0, w, h, frameW: drawW | 0, frameH: drawH | 0 };
         }
     } catch {
         // keep fallback
@@ -714,6 +731,12 @@ function decor_applyTightOpaqueAabbToSolids(args: {
             useAura = !!(collision?.useAura ?? vis?.collisionUseAura ?? (((overrideBasePx | 0) > 0) ? overrideUseAura : undefined));
         }
 
+        const wantsAura = (collisionMode !== "none");
+        if (wantsAura) {
+            useAura = true;
+            forceAura = true;
+        }
+
         if ((baseHeightPx | 0) > 0) {
             let srcKey = info.textureKey;
             if (useAura) {
@@ -790,19 +813,34 @@ function decor_applyTightOpaqueAabbToSolids(args: {
 
         const bb = _decor_computeOpaqueAabbForFrame(scene, fullKey, info.frameIndex, tileSize);
 
+        const frameW = (bb.frameW ?? tileSize) | 0;
+        const frameH = (bb.frameH ?? tileSize) | 0;
+
         // Resize Arcade collider sprite to tight bounds
         const img = image.create((bb.w | 0), (bb.h | 0));
         if (typeof s.setImage === "function") s.setImage(img);
         else s.image = img;
 
-        // Reposition inside the tile
-        s.left = ((c * tileSize + (bb.ox | 0) + instOffX) | 0);
-        s.top  = ((r * tileSize + (bb.oy | 0) + instOffY) | 0);
+        const offX = (((vis?.offsetXPx ?? 0) | 0) + instOffX) | 0;
+        const offY = (((vis?.offsetYPx ?? 0) | 0) + instOffY) | 0;
+        const centerX = (((c * tileSize) + (tileSize >> 1) + offX) | 0);
+        const centerY = (((r * tileSize) + (tileSize >> 1) + offY) | 0);
+        const spriteLeft = ((centerX - (frameW >> 1)) | 0);
+        const spriteTop = ((centerY - (frameH >> 1)) | 0);
+
+        // Reposition inside the frame (not just the tile)
+        const left = ((spriteLeft + (bb.ox | 0)) | 0);
+        const top = ((spriteTop + (bb.oy | 0)) | 0);
+        s.left = (left | 0);
+        s.top  = (top | 0);
+
+        const localLeft = ((left - (c * tileSize)) | 0);
+        const localTop = ((top - (r * tileSize)) | 0);
 
         sprites.setDataNumber(s, DECOR_SOLID_AABB_MODE_KEY, DECOR_SOLID_AABB_MODE_FULL);
         sprites.setDataNumber(s, DECOR_SOLID_AABB_USE_AURA_KEY, usedAura ? 1 : 0);
-        sprites.setDataNumber(s, DECOR_SOLID_AABB_LOCAL_X_KEY, ((bb.ox | 0) + instOffX) | 0);
-        sprites.setDataNumber(s, DECOR_SOLID_AABB_LOCAL_Y_KEY, ((bb.oy | 0) + instOffY) | 0);
+        sprites.setDataNumber(s, DECOR_SOLID_AABB_LOCAL_X_KEY, localLeft | 0);
+        sprites.setDataNumber(s, DECOR_SOLID_AABB_LOCAL_Y_KEY, localTop | 0);
         sprites.setDataNumber(s, DECOR_SOLID_AABB_RAW_X_KEY, bb.ox | 0);
         sprites.setDataNumber(s, DECOR_SOLID_AABB_RAW_Y_KEY, bb.oy | 0);
         sprites.setDataNumber(s, DECOR_SOLID_AABB_W_KEY, bb.w | 0);
@@ -812,8 +850,8 @@ function decor_applyTightOpaqueAabbToSolids(args: {
         sprites.setDataNumber(s, DECOR_SOLID_BASE_MIN_X_KEY, 0);
         sprites.setDataNumber(s, DECOR_SOLID_BASE_MAX_X_KEY, 0);
         sprites.setDataNumber(s, DECOR_SOLID_BASE_H_KEY, 0);
-        sprites.setDataNumber(s, DECOR_SOLID_BASE_FRAME_W_KEY, 0);
-        sprites.setDataNumber(s, DECOR_SOLID_BASE_FRAME_H_KEY, 0);
+        sprites.setDataNumber(s, DECOR_SOLID_BASE_FRAME_W_KEY, frameW | 0);
+        sprites.setDataNumber(s, DECOR_SOLID_BASE_FRAME_H_KEY, frameH | 0);
 
         if (DECOR_DEBUG) {
             _decor_dbg("AABB", "tightened solid", { name, tileR: r, tileC: c, info, bb });
@@ -1067,6 +1105,15 @@ function decor_maybeSyncFromEngineInternals(): void {
                 let key = "";
                 try { key = (sprites.readDataString(s, DECOR_DATA_NAME) || ""); } catch { key = ""; }
                 if (!key) continue;
+                const isCollider = (sprites.readDataNumber(s, DECOR_DATA_IS_COLLIDER) | 0) !== 0;
+                if (isCollider) {
+                    const base = propBaseNameFromKey(key);
+                    if (base && (
+                        base.indexOf("boss_rock_") === 0 ||
+                        base === "book_stump" ||
+                        base.indexOf("stone_door") === 0
+                    )) continue;
+                }
 
                 const rc = _decor_getSolidTileRC(s, tileSize);
                 if (rc.r < 0 || rc.c < 0 || rc.r >= rows || rc.c >= cols) continue;
@@ -1089,6 +1136,14 @@ function decor_maybeSyncFromEngineInternals(): void {
                 let key = "";
                 try { key = (sprites.readDataString(s, DECOR_DATA_NAME) || ""); } catch { key = ""; }
                 if (!key) continue;
+                const isCollider = (sprites.readDataNumber(s, DECOR_DATA_IS_COLLIDER) | 0) !== 0;
+                if (isCollider) {
+                    const base = propBaseNameFromKey(key);
+                    if (base && (
+                        base.indexOf("boss_rock_") === 0 ||
+                        base.indexOf("stone_door") === 0
+                    )) continue;
+                }
 
                 const rc = _decor_getSolidTileRC(s, tileSize);
                 if (rc.r < 0 || rc.c < 0 || rc.r >= rows || rc.c >= cols) continue;
@@ -3228,6 +3283,8 @@ function __installAuraMaskBitsHook(g: any): void {
         const fn = (frameName !== undefined && frameName !== null) ? String(frameName) : "__BASE";
         const r = (radius | 0);
         const errKey = `${tk}|${fn}|r${r}`;
+        const prebaked = getAuraMaskBitsForKey(tk, fn, r, frameRef);
+        if (prebaked) return prebaked;
         if (frameRef && heroAnimGlue.getOrBuildHeroAuraMaskBitsForFrame) {
             try {
                 return heroAnimGlue.getOrBuildHeroAuraMaskBitsForFrame(scene, frameRef, r, tk || undefined);
@@ -13953,6 +14010,7 @@ function _syncEndFrame(ctx: SyncContext): void {
         _debugDrawEnemyWallColliders(ctx.sc);
         _debugDrawEffectBounds(ctx.sc);
         _debugUpdateStrengthArcGallery(ctx.sc);
+        _debugUpdateVfxGallery(ctx.sc);
         _debugCaptureStrengthArcSheets(ctx.sc);
     }
 
@@ -14183,6 +14241,8 @@ let _dbgEffectGfx: Phaser.GameObjects.Graphics | null = null;
 let _dbgStrArcGalleryContainer: Phaser.GameObjects.Container | null = null;
 let _dbgStrArcGalleryKey = "";
 let _dbgStrArcCaptureDone = false;
+let _dbgVfxGalleryContainer: Phaser.GameObjects.Container | null = null;
+let _dbgVfxGalleryKey = "";
 let _dbgLoggedEnemyColliderOnce = false;
 let _dbgLoggedHeroColliderOnce = false;
 
@@ -14244,6 +14304,11 @@ function _dbgParseNumList(raw: string): number[] {
         out.push(n);
     }
     return out.length ? out : [1];
+}
+
+function _dbgParseIdList(raw: string): string[] {
+    const tokens = String(raw || "").split(/[\s,]+/).map((t) => t.trim()).filter((t) => !!t);
+    return tokens;
 }
 
 function _dbgTextureDims(sc: Phaser.Scene, textureKey: string): { w: number; h: number } {
@@ -14671,6 +14736,126 @@ function _debugUpdateStrengthArcGallery(sc: Phaser.Scene): void {
     _dbgStrArcGalleryContainer = container;
 }
 
+function _debugUpdateVfxGallery(sc: Phaser.Scene): void {
+    if (!DEBUG_VFX_GALLERY) {
+        if (_dbgVfxGalleryContainer) {
+            try { _dbgVfxGalleryContainer.destroy(true); } catch { }
+            _dbgVfxGalleryContainer = null;
+            _dbgVfxGalleryKey = "";
+        }
+        return;
+    }
+    if (!sc) return;
+    if (_dbgVfxGalleryContainer && _dbgVfxGalleryContainer.scene !== sc) {
+        try { _dbgVfxGalleryContainer.destroy(true); } catch { }
+        _dbgVfxGalleryContainer = null;
+        _dbgVfxGalleryKey = "";
+    }
+
+    const atlas = _getEffectAtlasFromScene(sc);
+    if (!atlas) return;
+
+    const idsRaw = String(DEBUG_VFX_GALLERY_IDS || "");
+    let ids = _dbgParseIdList(idsRaw);
+    if (!ids.length) {
+        const seen = new Set<string>();
+        for (const [key, resolved] of Object.entries(atlas as any)) {
+            const id = String((resolved as any)?.id || key || "").trim();
+            if (!id) continue;
+            if (DEBUG_VFX_GALLERY_HIDE_AURAS && /_aura_r\d+$/i.test(id)) continue;
+            if (seen.has(id)) continue;
+            if ((atlas as any)[id]) {
+                seen.add(id);
+                ids.push(id);
+            }
+        }
+        ids.sort((a, b) => a.localeCompare(b));
+    }
+
+    const maxCount = Math.max(1, DEBUG_VFX_GALLERY_MAX | 0);
+    if (ids.length > maxCount) ids.length = maxCount;
+
+    const cols = Math.max(1, DEBUG_VFX_GALLERY_COLS | 0);
+    const scale = Math.max(0.1, Number.isFinite(DEBUG_VFX_GALLERY_SCALE) ? DEBUG_VFX_GALLERY_SCALE : 0.5);
+    const pad = Math.max(0, DEBUG_VFX_GALLERY_PADDING | 0);
+    const alpha = Math.max(0, Math.min(1, Number.isFinite(DEBUG_VFX_GALLERY_ALPHA) ? DEBUG_VFX_GALLERY_ALPHA : 1));
+    const animFps = Math.max(1, DEBUG_VFX_GALLERY_ANIM_FPS | 0);
+    const yoyo = !!DEBUG_VFX_GALLERY_YOYO;
+
+    let maxFrameW = 1;
+    let maxFrameH = 1;
+    for (const id of ids) {
+        const resolved = _resolveEffectAtlasEntry(atlas as any, id, "none");
+        if (!resolved) continue;
+        const fw = Math.max(1, resolved.frameW | 0);
+        const fh = Math.max(1, resolved.frameH | 0);
+        if (fw > maxFrameW) maxFrameW = fw;
+        if (fh > maxFrameH) maxFrameH = fh;
+    }
+    const cellW = Math.round(maxFrameW * scale) + pad;
+    const cellH = Math.round(maxFrameH * scale) + pad;
+
+    const key = [
+        sc.sys.settings.key || "",
+        idsRaw,
+        ids.length,
+        maxCount,
+        cols,
+        scale,
+        pad,
+        alpha,
+        animFps,
+        yoyo ? 1 : 0,
+        DEBUG_VFX_GALLERY_HIDE_AURAS ? 1 : 0
+    ].join("|");
+
+    if (_dbgVfxGalleryContainer && _dbgVfxGalleryKey === key) return;
+    if (_dbgVfxGalleryContainer) {
+        try { _dbgVfxGalleryContainer.destroy(true); } catch { }
+        _dbgVfxGalleryContainer = null;
+    }
+    _dbgVfxGalleryKey = key;
+
+    const container = sc.add.container(8, 8);
+    container.setDepth(999999);
+    container.setScrollFactor(0);
+
+    const labelStyle = { fontFamily: "monospace", fontSize: "10px", color: "#ffffff", stroke: "#000000", strokeThickness: 2 } as const;
+
+    for (let i = 0; i < ids.length; i++) {
+        const id = ids[i];
+        const resolved = _resolveEffectAtlasEntry(atlas as any, id, "none");
+        if (!resolved || !resolved.textureKey || !resolved.frameIndices?.length) continue;
+
+        const col = (i % cols) | 0;
+        const row = Math.floor(i / cols) | 0;
+        const x = (col * cellW) | 0;
+        const y = (row * cellH) | 0;
+
+        const frame = resolved.frameIndices[0] | 0;
+        const spr = sc.add.sprite(x, y, resolved.textureKey, frame).setOrigin(0, 0);
+        spr.setScale(scale);
+        spr.setAlpha(alpha);
+        spr.setScrollFactor(0);
+
+        try {
+            spr.setData("effectSkin", id);
+            spr.setData("effectFps", animFps | 0);
+            spr.setData("effectRepeat", -1);
+            if (yoyo) spr.setData("effectYoyo", 1);
+            effectAnimGlue.applyEffectAnimationForSprite(spr);
+        } catch { }
+
+        container.add(spr);
+
+        const tag = sc.add.text(x + 2, y + 2, id, labelStyle).setOrigin(0, 0);
+        tag.setScrollFactor(0);
+        container.add(tag);
+    }
+
+    _dbgVfxGalleryContainer = container;
+}
+
 function _debugDrawEffectBounds(sc: Phaser.Scene): void {
     if (!DEBUG_DRAW_EFFECT_BOUNDS) return;
     _debugEnsureEffectGfx(sc);
@@ -14799,6 +14984,47 @@ function _debugDrawEnemyWallColliders(sc: Phaser.Scene): void {
             const color = (role === 1) ? DEBUG_COLLIDER_HIT_COLOR : DEBUG_COLLIDER_DECOR_COLOR;
             gDecor.lineStyle(1, color, DEBUG_COLLIDER_ALPHA);
             gDecor.strokeRect(left, top, w, h);
+
+            if (DEBUG_DRAW_DECOR_AURA_MASK) {
+                const useAura = (sprites.readDataNumber(s, DECOR_SOLID_AABB_USE_AURA_KEY) | 0) !== 0;
+                if (!useAura) continue;
+                const aabbTex = sprites.readDataString(s, DECOR_SOLID_AABB_TEX_KEY) || "";
+                const aabbFrame = sprites.readDataNumber(s, DECOR_SOLID_AABB_FRAME_KEY) | 0;
+                const rawX = sprites.readDataNumber(s, DECOR_SOLID_AABB_RAW_X_KEY) | 0;
+                const rawY = sprites.readDataNumber(s, DECOR_SOLID_AABB_RAW_Y_KEY) | 0;
+                if (!aabbTex) continue;
+                const mask = getAuraMaskFrameView(aabbTex, aabbFrame);
+                if (!mask) continue;
+                const frameLeft = ((left | 0) - (rawX | 0)) | 0;
+                const frameTop = ((top | 0) - (rawY | 0)) | 0;
+                const mw = mask.w | 0;
+                const mh = mask.h | 0;
+                const bits = mask.bits;
+                const base = mask.wordOffset | 0;
+                gDecor.fillStyle(DEBUG_COLLIDER_AURA_COLOR, DEBUG_COLLIDER_ALPHA);
+                for (let y = 0; y < mh; y++) {
+                    const rowBit = (y * mw) | 0;
+                    for (let x = 0; x < mw; x++) {
+                        const bitIndex = (rowBit + x) | 0;
+                        const wordIndex = (bitIndex >>> 5) | 0;
+                        const bit = (bits[base + wordIndex] >>> (bitIndex & 31)) & 1;
+                        if (!bit) continue;
+                        let edge = false;
+                        if (x === 0 || x === (mw - 1) || y === 0 || y === (mh - 1)) edge = true;
+                        if (!edge) {
+                            const leftBit = ((bits[base + ((bitIndex - 1) >>> 5)] >>> ((bitIndex - 1) & 31)) & 1);
+                            const rightBit = ((bits[base + ((bitIndex + 1) >>> 5)] >>> ((bitIndex + 1) & 31)) & 1);
+                            const upIndex = (bitIndex - mw) | 0;
+                            const downIndex = (bitIndex + mw) | 0;
+                            const upBit = ((bits[base + (upIndex >>> 5)] >>> (upIndex & 31)) & 1);
+                            const downBit = ((bits[base + (downIndex >>> 5)] >>> (downIndex & 31)) & 1);
+                            if (!leftBit || !rightBit || !upBit || !downBit) edge = true;
+                        }
+                        if (!edge) continue;
+                        gDecor.fillRect((frameLeft + x) | 0, (frameTop + y) | 0, 1, 1);
+                    }
+                }
+            }
         }
     }
 

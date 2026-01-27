@@ -1,0 +1,496 @@
+{
+  "scope": "tower-trial",
+  "tag": "floor-clear",
+  "endReason": "",
+  "runId": 1,
+  "startedAtMs": 25121,
+  "capturedAtMs": 80765,
+  "runDurationMs": 55644,
+  "floorIndex": 5,
+  "floorKind": 0,
+  "currentFloorIndex": 5,
+  "currentFloorKind": 0,
+  "dungeonObjectiveDone": false,
+  "padPowered": false,
+  "trialRequired": true,
+  "requirementSet": {
+    "ids": [
+      "noHardcodedTraits"
+    ],
+    "minPressesPerButton": 1,
+    "needsPhases": false
+  },
+  "arenaTiles": {
+    "r": 3,
+    "c": 44,
+    "h": 18,
+    "w": 18
+  },
+  "arenaPx": {
+    "left": 1408,
+    "top": 96,
+    "right": 1984,
+    "bottom": 672,
+    "centerX": 1696,
+    "centerY": 384
+  },
+  "phasePlans": [
+    {
+      "phase": 0,
+      "hp": [
+        45,
+        20
+      ],
+      "positions": [
+        {
+          "x": 1664,
+          "y": 368,
+          "hp": 45
+        },
+        {
+          "x": 1792,
+          "y": 400,
+          "hp": 20
+        }
+      ]
+    },
+    {
+      "phase": 1,
+      "hp": [
+        20,
+        45
+      ],
+      "positions": [
+        {
+          "x": 1792,
+          "y": 400,
+          "hp": 20
+        },
+        {
+          "x": 1664,
+          "y": 368,
+          "hp": 45
+        }
+      ]
+    }
+  ],
+  "session": {
+    "active": true,
+    "completed": false,
+    "floorIndex": 5,
+    "participants": [
+      "LongBlond"
+    ],
+    "pids": [
+      1
+    ],
+    "phaseIndex": 0,
+    "lastPhaseChangeMs": 25121,
+    "requirementIds": [
+      "noHardcodedTraits"
+    ]
+  },
+  "statusSnapshot": {
+    "active": true,
+    "completed": false,
+    "floorIndex": 5,
+    "floorKind": 0,
+    "trialRequired": true,
+    "inShopFloor": false,
+    "phaseIndex": 0,
+    "requirementIds": [
+      "noHardcodedTraits"
+    ],
+    "profiles": {
+      "LongBlond": {
+        "profile": "LongBlond",
+        "displayName": "LongBlond",
+        "blockingIssue": "",
+        "simIssues": [],
+        "missingButtons": [
+          "A+B",
+          "R"
+        ],
+        "repeatButtons": [],
+        "dynamicOk": true,
+        "needsPhasePress": false,
+        "minPressesPerButton": 1,
+        "pressCount": {
+          "A": 4,
+          "B": 2,
+          "A+B": 0,
+          "R": 0
+        },
+        "phaseFamily": {
+          "A": {},
+          "B": {},
+          "A+B": {},
+          "R": {}
+        }
+      }
+    }
+  },
+  "profiles": {
+    "LongBlond": {
+      "displayName": "LongBlond",
+      "status": {
+        "ok": false,
+        "blockingIssue": "",
+        "missingButtons": [
+          "A+B",
+          "R"
+        ],
+        "repeatButtons": [],
+        "dynamicOk": true,
+        "needsPhasePress": false
+      },
+      "sim": {
+        "ok": true,
+        "issues": [],
+        "predictedRepeatButtons": [],
+        "dynamicFamilyButtons": [],
+        "buttonOutputs": {
+          "A": {
+            "scenario0": [
+              "strength",
+              1,
+              3,
+              0,
+              0,
+              "earth",
+              "A"
+            ],
+            "scenario1": [
+              "strength",
+              1,
+              3,
+              0,
+              0,
+              "earth",
+              "A"
+            ],
+            "scenario0Repeat": [
+              "strength",
+              1,
+              3,
+              0,
+              0,
+              "earth",
+              "A"
+            ]
+          },
+          "B": {
+            "scenario0": [
+              "agility",
+              0,
+              14,
+              0,
+              0,
+              "fire",
+              "B"
+            ],
+            "scenario1": [
+              "agility",
+              0,
+              14,
+              0,
+              0,
+              "fire",
+              "B"
+            ],
+            "scenario0Repeat": [
+              "agility",
+              0,
+              14,
+              0,
+              0,
+              "fire",
+              "B"
+            ]
+          },
+          "A+B": {
+            "scenario0": [
+              "intelligence",
+              10,
+              0,
+              0,
+              0,
+              "earth",
+              "A"
+            ],
+            "scenario1": [
+              "intelligence",
+              10,
+              0,
+              0,
+              0,
+              "earth",
+              "A"
+            ],
+            "scenario0Repeat": [
+              "intelligence",
+              10,
+              0,
+              0,
+              0,
+              "earth",
+              "A"
+            ]
+          },
+          "R": {
+            "scenario0": [
+              "wisdom",
+              10,
+              0,
+              0,
+              0,
+              "fire",
+              "A"
+            ],
+            "scenario1": [
+              "wisdom",
+              10,
+              0,
+              0,
+              0,
+              "fire",
+              "A"
+            ],
+            "scenario0Repeat": [
+              "wisdom",
+              10,
+              0,
+              0,
+              0,
+              "fire",
+              "A"
+            ]
+          }
+        }
+      },
+      "live": {
+        "invalidOutputCount": 0,
+        "pressCount": {
+          "A": 4,
+          "B": 2,
+          "A+B": 0,
+          "R": 0
+        },
+        "repeatViolationByButton": {
+          "A": false,
+          "B": false,
+          "A+B": false,
+          "R": false
+        },
+        "familyByPhase": {
+          "A": {},
+          "B": {},
+          "A+B": {},
+          "R": {}
+        },
+        "lastOutputByButton": {
+          "A": [
+            0,
+            1,
+            3,
+            0,
+            0,
+            5,
+            "A-Move"
+          ],
+          "B": [
+            1,
+            0,
+            14,
+            0,
+            0,
+            2,
+            "B-Move"
+          ],
+          "A+B": null,
+          "R": null
+        }
+      }
+    }
+  },
+  "events": [
+    {
+      "t": 25121,
+      "type": "spawn_enemies",
+      "data": {
+        "phase": 0,
+        "count": 1,
+        "spawned": [
+          {
+            "i": 0,
+            "x": 1664,
+            "y": 368,
+            "hp": 45
+          }
+        ]
+      }
+    },
+    {
+      "t": 25135,
+      "type": "announcer_show_start",
+      "data": {
+        "baseX": 1696,
+        "baseY": 384
+      }
+    },
+    {
+      "t": 25121,
+      "type": "start",
+      "data": {
+        "runId": 1,
+        "floor": 5,
+        "requirementIds": [
+          "noHardcodedTraits"
+        ],
+        "participants": [
+          "LongBlond"
+        ],
+        "pids": [
+          1
+        ],
+        "simSummary": {
+          "LongBlond": {
+            "ok": true,
+            "issueCount": 0,
+            "blockingIssues": [],
+            "predictedRepeatButtons": [],
+            "dynamicFamilyButtons": []
+          }
+        }
+      }
+    },
+    {
+      "t": 28412,
+      "type": "move",
+      "data": {
+        "profileKey": "LongBlond",
+        "button": "A",
+        "phase": 0,
+        "pressCount": 1,
+        "output": [
+          0,
+          1,
+          3,
+          0,
+          0,
+          5,
+          "A-Move"
+        ]
+      }
+    },
+    {
+      "t": 31840,
+      "type": "move",
+      "data": {
+        "profileKey": "LongBlond",
+        "button": "A",
+        "phase": 0,
+        "pressCount": 2,
+        "output": [
+          0,
+          1,
+          3,
+          0,
+          0,
+          5,
+          "A-Move"
+        ]
+      }
+    },
+    {
+      "t": 35020,
+      "type": "move",
+      "data": {
+        "profileKey": "LongBlond",
+        "button": "B",
+        "phase": 0,
+        "pressCount": 1,
+        "output": [
+          1,
+          0,
+          14,
+          0,
+          0,
+          2,
+          "B-Move"
+        ]
+      }
+    },
+    {
+      "t": 46607,
+      "type": "move",
+      "data": {
+        "profileKey": "LongBlond",
+        "button": "A",
+        "phase": 0,
+        "pressCount": 3,
+        "output": [
+          0,
+          1,
+          3,
+          0,
+          0,
+          5,
+          "A-Move"
+        ]
+      }
+    },
+    {
+      "t": 48205,
+      "type": "move",
+      "data": {
+        "profileKey": "LongBlond",
+        "button": "A",
+        "phase": 0,
+        "pressCount": 4,
+        "output": [
+          0,
+          1,
+          3,
+          0,
+          0,
+          5,
+          "A-Move"
+        ]
+      }
+    },
+    {
+      "t": 49925,
+      "type": "move",
+      "data": {
+        "profileKey": "LongBlond",
+        "button": "B",
+        "phase": 0,
+        "pressCount": 2,
+        "output": [
+          1,
+          0,
+          14,
+          0,
+          0,
+          2,
+          "B-Move"
+        ]
+      }
+    },
+    {
+      "t": 80764,
+      "type": "end",
+      "data": {
+        "reason": "floor-clear"
+      }
+    },
+    {
+      "t": 80764,
+      "type": "destroy_enemies",
+      "data": {
+        "count": 1
+      }
+    }
+  ]
+}

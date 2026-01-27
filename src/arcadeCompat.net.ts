@@ -270,6 +270,8 @@ type NetMessage =
     | { type: "saveList"; requestId: string; entries: Array<{ file: string; savedAt?: number; floorIndex?: number; floorKind?: string; profiles?: string[] }> }
     | { type: "saveLoadRequest"; requestId: string; file: string }
     | { type: "saveLoad"; requestId: string; payload?: any; error?: string }
+    | { type: "debugDump"; requestId: string; payload: any; reason?: string | null }
+    | { type: "debugDumpResult"; requestId: string; ok: boolean; reason?: string | null; file?: string | null; bytes?: number | null }
     | { type: "coinBurst"; playerId?: number; bursts: Array<{ x: number; y: number; count: number; pid?: number }>; serverSentAt?: number }
     | {
           type: "dialog";
@@ -331,6 +333,8 @@ type NetMessage =
           floorKind?: string;
           baseFamily?: string;
           wallFamily?: string;
+          palette?: string;
+          textureSeed?: number;
           decorOnly?: boolean;
           decor?: { rev: number; decals?: number[][]; props?: Array<{ r: number; c: number; name?: string; role?: number; id?: number; offX?: number; offY?: number }> };
           baseSig?: number;
@@ -350,6 +354,8 @@ type NetMessage =
           floorKind?: string;
           baseFamily?: string;
           wallFamily?: string;
+          palette?: string;
+          textureSeed?: number;
           decorOnly?: boolean;
           decor?: { rev: number; decals?: number[][]; props?: Array<{ r: number; c: number; name?: string; role?: number; id?: number; offX?: number; offY?: number }> };
           baseSig?: number;
@@ -380,6 +386,7 @@ class NetworkClient {
     // Save list/load resolvers (host -> server)
     private saveListResolvers: Map<string, (res: any) => void> = new Map();
     private saveLoadResolvers: Map<string, (res: any) => void> = new Map();
+    private debugDumpResolvers: Map<string, (res: any) => void> = new Map();
     private profileUploadResolvers: Map<string, (res: any) => void> = new Map();
 
     // Latest tilemap revision we've accepted (monotonic)
@@ -726,6 +733,53 @@ class NetworkClient {
         });
     }
 
+    // Host uses this to write a debug dump file on the server
+    sendDebugDump(payload: any, reason?: string): Promise<any> {
+        const requestId = "d" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+        if (!payload) return Promise.resolve({ ok: false, reason: "no-payload" });
+        if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+            return Promise.resolve({ ok: false, reason: "ws-closed" });
+        }
+        if (!this.isHostNow()) {
+            return Promise.resolve({ ok: false, reason: "not-host" });
+        }
+
+        const msg: NetMessage = {
+            type: "debugDump",
+            requestId,
+            payload,
+            reason: (typeof reason === "string") ? reason : null
+        };
+
+        return new Promise((resolve) => {
+            const timeout = setTimeout(() => {
+                if (this.debugDumpResolvers.has(requestId)) {
+                    this.debugDumpResolvers.delete(requestId);
+                    resolve({ ok: false, reason: "timeout" });
+                }
+            }, 5000);
+
+            this.debugDumpResolvers.set(requestId, (res: any) => {
+                clearTimeout(timeout);
+                resolve(res);
+            });
+
+            try {
+                if (this.ws && this.ws.readyState === WebSocket.OPEN) {
+                    this.ws.send(JSON.stringify(msg));
+                } else {
+                    this.debugDumpResolvers.delete(requestId);
+                    clearTimeout(timeout);
+                    resolve({ ok: false, reason: "ws-closed" });
+                }
+            } catch (e: any) {
+                this.debugDumpResolvers.delete(requestId);
+                clearTimeout(timeout);
+                resolve({ ok: false, reason: String(e?.message || "send-failed") });
+            }
+        });
+    }
+
     // Client uploads a new hero sheet for an unknown profile
     sendProfileUpload(opts: { profile: string; dataUrl?: string; base64?: string; fileName?: string; size?: number }): Promise<any> {
         const requestId = "p" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
@@ -889,6 +943,10 @@ private handleMessage(msg: NetMessage) {
 
         case "saveLoad":
             this.onSaveLoad(msg as any);
+            return;
+
+        case "debugDumpResult":
+            this.onDebugDumpResult(msg as any);
             return;
 
         case "uiCommandForward":
@@ -1458,6 +1516,14 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
         const resolver = this.saveLoadResolvers.get(msg.requestId);
         if (resolver) {
             this.saveLoadResolvers.delete(msg.requestId);
+            resolver(msg);
+        }
+    }
+
+    private onDebugDumpResult(msg: any) {
+        const resolver = this.debugDumpResolvers.get(msg.requestId);
+        if (resolver) {
+            this.debugDumpResolvers.delete(msg.requestId);
             resolver(msg);
         }
     }

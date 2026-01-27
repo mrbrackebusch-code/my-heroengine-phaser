@@ -2,6 +2,8 @@
 import type Phaser from "phaser";
 import { DEBUG_TILE_ATLAS_GLOBAL, DEBUG_TILES } from "./debugFlags";
 import { AURA_RADII, auraKey, auraSuffix } from "./auraConfig";
+import { preloadAuraMaskBins } from "./auraMaskBits";
+import { ROCK_PROP_VISUALS } from "./rockDefs";
 import { queueSpritesheetOnce } from "./loaderCache";
 
 // ---------------------------------------------------------------------------
@@ -591,6 +593,8 @@ stone_door_open: {
     }
 },
 
+    // Boss arena rocks (tiles.rocks)
+    ...ROCK_PROP_VISUALS,
 
 
 
@@ -1150,6 +1154,9 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
             "\nRun: npm run gen-prop-auras"
         );
     }
+
+    // Queue composite aura mask bins (binary) for fast collision masks.
+    preloadAuraMaskBins(scene);
 }
 
 

@@ -77,6 +77,9 @@ function _writeTowerTrialArtifact(payload) {
 }
 
 export default defineConfig({
+    esbuild: {
+        sourcemap: false
+    },
     server: {
         // Auto-pick a reachable LAN IP; override with DEV_HOST=192.168.x.x if needed.
         host: pickDefaultHost(),

@@ -95,3 +95,23 @@ export function queueAtlasOnce(
     scene.load.atlas(textureKey, url, atlasData);
     return true;
 }
+
+export function queueBinaryOnce(
+    scene: Phaser.Scene,
+    cacheKey: string,
+    url: string
+): boolean {
+    if (!scene || !scene.load || !scene.cache) return false;
+    const binCache: any = (scene as any).cache?.binary;
+    const exists = binCache && typeof binCache.get === "function"
+        ? !!binCache.get(cacheKey)
+        : false;
+    if (exists) return false;
+    if (!url) return false;
+    try {
+        (scene.load as any).binary(cacheKey, url);
+        return true;
+    } catch {
+        return false;
+    }
+}

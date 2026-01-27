@@ -3,7 +3,10 @@ import { queueSpritesheetOnce } from "./loaderCache";
 import { HOOKSHOT_THRUST_SHEET, HOOKSHOT_THRUST_FRAMES, type HookshotWeaponFrame } from "./generated/hookshotWeaponMeta";
 export { HOOKSHOT_THRUST_SHEET };
 
-const HOOKSHOT_THRUST_PNG = new URL("../assets/weapons/_hookshot/hookshot_thrust.png", import.meta.url).toString();
+const HOOKSHOT_THRUST_PNG = new URL(
+  `../assets/weapons/_hookshot/hookshot_thrust ${HOOKSHOT_THRUST_SHEET.frameW}x${HOOKSHOT_THRUST_SHEET.frameH}.png`,
+  import.meta.url
+).toString();
 
 const FRAME_BY_KEY = new Map<string, HookshotWeaponFrame>();
 for (const f of HOOKSHOT_THRUST_FRAMES) {

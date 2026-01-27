@@ -78,6 +78,8 @@ const HERO_STR_TRACE_LAST_FRAME_KEY = "__strTraceLastFrame";
 
 const HERO_AIM_TILT_MAX_DEG = 8;
 const HERO_AIM_TILT_MAX_RAD = (HERO_AIM_TILT_MAX_DEG * Math.PI) / 180;
+const HERO_AIM_TILT_UP_DEG = 30;
+const HERO_AIM_TILT_SIDE_DEG = 45;
 
 // Strength swing reset tuning (manual frame timeline)
 const STR_RESET_ENABLE = true;
@@ -1085,13 +1087,39 @@ function readHeroAnimRequest(sprite: Phaser.GameObjects.Sprite): {
     })();
 
     const useSideForAim = _heroShouldUseSideDirForAim(phase, actionKind);
-    const aimDiag = _heroAimIsDiagonal(aimDx1000, aimDy1000);
     let aimTiltRad = 0;
-    if (useSideForAim && aimDiag) {
-        dir = (aimDx1000 >= 0) ? "right" : "left";
-        let tiltSign = (aimDy1000 < 0 ? -1 : 1);
-        if (dir === "left") tiltSign = -tiltSign;
-        aimTiltRad = HERO_AIM_TILT_MAX_RAD * tiltSign;
+    if (useSideForAim && ((aimDx1000 | 0) !== 0 || (aimDy1000 | 0) !== 0 || (aimAngleMdeg | 0) !== 0)) {
+        let angDeg = 0;
+        if ((aimDx1000 | 0) !== 0 || (aimDy1000 | 0) !== 0) {
+            angDeg = (Math.atan2(aimDy1000, aimDx1000) * 180) / Math.PI;
+        } else {
+            // aimAngleMdeg uses math coords (0 right, 90 up); flip to screen coords (0 right, 90 down).
+            angDeg = -((aimAngleMdeg | 0) / 1000);
+        }
+        // Normalize to [0,360)
+        angDeg = ((angDeg % 360) + 360) % 360;
+        const delta = (baseDeg: number): number => {
+            let d = ((angDeg - baseDeg + 540) % 360) - 180;
+            if (d < -180) d += 360;
+            if (d > 180) d -= 360;
+            return d;
+        };
+        const dRight = delta(0);
+        const dDown = delta(90);
+        const dLeft = delta(180);
+        const dUp = delta(270);
+        let baseDir: HeroDir = "right";
+        let baseDelta = dRight;
+        let best = Math.abs(dRight);
+        if (Math.abs(dDown) < best) { best = Math.abs(dDown); baseDir = "down"; baseDelta = dDown; }
+        if (Math.abs(dLeft) < best) { best = Math.abs(dLeft); baseDir = "left"; baseDelta = dLeft; }
+        if (Math.abs(dUp) < best) { best = Math.abs(dUp); baseDir = "up"; baseDelta = dUp; }
+        dir = baseDir;
+        const maxTilt = (baseDir === "up" || baseDir === "down") ? HERO_AIM_TILT_UP_DEG : HERO_AIM_TILT_SIDE_DEG;
+        let tiltDeg = baseDelta;
+        if (tiltDeg > maxTilt) tiltDeg = maxTilt;
+        if (tiltDeg < -maxTilt) tiltDeg = -maxTilt;
+        aimTiltRad = (tiltDeg * Math.PI) / 180;
     }
 
     const actionSequence = (() => {

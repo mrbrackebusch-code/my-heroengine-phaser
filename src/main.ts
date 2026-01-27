@@ -53,6 +53,12 @@ const logMain = (...args: any[]) => {
 const logSave = (...args: any[]) => {
   if (DEBUG_SAVE_LOGS) console.log(...args);
 };
+const _debugTrace = (tag: string, data?: any) => {
+  const g: any = globalThis as any;
+  const fn = g && (g as any).__heDebugTrace;
+  if (typeof fn !== "function") return;
+  try { fn(tag, data); } catch { }
+};
 
 const _hashMix = (h: number, v: number) => (((h << 5) - h + (v | 0)) | 0);
 const _hashString = (s: string) => {
@@ -164,7 +170,6 @@ function _uiLoadingMaybeDone(): void {
 function _tryPruneUnconnectedHeroes(reason: string): void {
   try {
     const g: any = globalThis as any;
-    const forceFlash = !!msg.forceFlash;
     const internals: any = g.__HeroEnginePhaserInternals;
     if (internals && typeof internals.pruneUnconnectedHeroes === "function") {
       internals.pruneUnconnectedHeroes(reason || "scene");
@@ -896,7 +901,7 @@ type HeroSavePayload = {
   saveKind?: "auto" | "manual";
   label?: string;
   profiles: string[];
-  floor: { index: number; kind: string; baseFamily: string; wallFamily: string };
+  floor: { index: number; kind: string; baseFamily: string; wallFamily: string; palette?: string; textureSeed?: number };
   floorState?: any;
   worldSnapshot: any;
   heroSprites: any[];
@@ -906,6 +911,10 @@ type HeroSavePayload = {
   decor?: any;
   next: { index: number; kind: string };
 };
+
+type SaveRestorePolicy = "teleport" | "full";
+const SAVE_RESTORE_POLICY_AUTO: SaveRestorePolicy = "teleport";
+const SAVE_RESTORE_POLICY_MANUAL: SaveRestorePolicy = "teleport";
 
 function _captureWorldSnapshot(): any {
   const g: any = globalThis as any;
@@ -1020,6 +1029,12 @@ function _buildHeroSavePayload(
   const wallFamily = (typeof internals.getFloorWallFamily === "function")
     ? String(internals.getFloorWallFamily())
     : (g.__floorWallFamily || "chasm_light");
+  const palette = (typeof internals.getFloorThemePalette === "function")
+    ? String(internals.getFloorThemePalette())
+    : (typeof g.__floorThemePalette === "string" ? g.__floorThemePalette : "");
+  const textureSeed = (typeof internals.getFloorTextureSeed === "function")
+    ? (internals.getFloorTextureSeed() | 0)
+    : (typeof g.__floorTextureSeed === "number" ? (g.__floorTextureSeed | 0) : 0);
 
   const worldSnapshot = _captureWorldSnapshot();
   const heroSprites: any[] = [];
@@ -1048,7 +1063,14 @@ function _buildHeroSavePayload(
     saveKind,
     label: labelRaw || undefined,
     profiles,
-    floor: { index: floorIndex, kind: floorKind, baseFamily, wallFamily },
+    floor: {
+      index: floorIndex,
+      kind: floorKind,
+      baseFamily,
+      wallFamily,
+      palette: palette || undefined,
+      textureSeed: textureSeed ? (textureSeed | 0) : undefined,
+    },
     floorState: floorState || undefined,
     worldSnapshot,
     heroSprites,
@@ -1058,6 +1080,15 @@ function _buildHeroSavePayload(
     decor,
     next: { index: nextIndex, kind: nextKind }
   };
+
+  _debugTrace("SAVE_BUILD", {
+    saveKind: payload.saveKind || "auto",
+    floorIndex,
+    floorKind,
+    nextIndex,
+    nextKind,
+    profiles: payload.profiles,
+  });
 
   return payload;
 }
@@ -1073,6 +1104,14 @@ function _sendHeroSavePayload(nextIndex: number, nextKind: string): void {
   try {
     net.sendSaveGame(payload);
     logSave("[save] sent autosave", payload);
+    _debugTrace("SAVE_SEND", {
+      saveKind: "auto",
+      floorIndex: payload.floor?.index ?? null,
+      floorKind: payload.floor?.kind ?? null,
+      nextIndex: payload.next?.index ?? null,
+      nextKind: payload.next?.kind ?? null,
+      profiles: payload.profiles || [],
+    });
   } catch (e) {
     console.warn("[save] failed to send autosave", e);
   }
@@ -1092,6 +1131,20 @@ function _sendHeroManualSave(label?: string): boolean {
   const floorKind = (typeof internals.getFloorKind === "function") ? String(internals.getFloorKind()) : "";
   const payload = _buildHeroSavePayload(floorIndex, floorKind, { saveKind: "manual", label });
   if (!payload) return false;
+  if (!(payload.floorState && (payload.floorState as any).safe)) {
+    logSave("[save] manual save blocked (unsafe floor)", {
+      floorIndex: payload.floor?.index ?? null,
+      floorKind: payload.floor?.kind ?? null,
+      safe: payload.floorState ? ((payload.floorState as any).safe ? 1 : 0) : 0,
+    });
+    _debugTrace("SAVE_BLOCKED", {
+      saveKind: "manual",
+      floorIndex: payload.floor?.index ?? null,
+      floorKind: payload.floor?.kind ?? null,
+      safe: payload.floorState ? ((payload.floorState as any).safe ? 1 : 0) : 0,
+    });
+    return false;
+  }
 
   try {
     net.sendSaveGame(payload);
@@ -1100,6 +1153,15 @@ function _sendHeroManualSave(label?: string): boolean {
       floorIndex: payload.floor?.index ?? null,
       floorKind: payload.floor?.kind ?? null,
       profiles: payload.profiles || []
+    });
+    _debugTrace("SAVE_SEND", {
+      saveKind: "manual",
+      floorIndex: payload.floor?.index ?? null,
+      floorKind: payload.floor?.kind ?? null,
+      nextIndex: payload.next?.index ?? null,
+      nextKind: payload.next?.kind ?? null,
+      profiles: payload.profiles || [],
+      label: payload.label || null,
     });
     return true;
   } catch (e) {
@@ -1136,6 +1198,7 @@ function _applyHeroSavePayload(save: any, sourceLabel?: string): boolean {
     (save.next && typeof save.next.kind === "string") ? String(save.next.kind || "") : "";
   const inferredAuto = (!saveKind && nextIndex != null && floorIndex != null && nextIndex !== floorIndex);
   const useNext = (saveKind === "auto") || inferredAuto;
+  const restorePolicy = useNext ? SAVE_RESTORE_POLICY_AUTO : SAVE_RESTORE_POLICY_MANUAL;
   const targetIndex =
     (useNext && nextIndex != null) ? (nextIndex | 0)
       : (floorIndex != null) ? (floorIndex | 0)
@@ -1144,7 +1207,8 @@ function _applyHeroSavePayload(save: any, sourceLabel?: string): boolean {
   const targetKind =
     (useNext && nextKind) ? String(nextKind || "")
       : (floorKind || (nextKind || ""));
-  let applyFloorArtifacts = !useNext && (floorIndex != null);
+  let applyFloorArtifacts = !useNext && (restorePolicy === "full") && (floorIndex != null);
+  const applyFloorFlags = !useNext && !!save.floorState;
   const targetKindLower = String(targetKind || "").toLowerCase();
   const floorStateSafe = !!(save && save.floorState && (save.floorState as any).safe);
   if (applyFloorArtifacts && targetKindLower === "combat" && !floorStateSafe) {
@@ -1160,10 +1224,25 @@ function _applyHeroSavePayload(save: any, sourceLabel?: string): boolean {
   logSave("[save] load target", {
     saveKind,
     useNext: !!useNext,
+    restorePolicy,
     floorIndex: floorIndex != null ? (floorIndex | 0) : null,
     nextIndex: nextIndex != null ? (nextIndex | 0) : null,
     targetIndex,
     targetKind,
+  });
+  _debugTrace("SAVE_APPLY_BEGIN", {
+    sourceLabel: sourceLabel || "",
+    saveKind,
+    useNext: !!useNext,
+    restorePolicy,
+    floorIndex: floorIndex != null ? (floorIndex | 0) : null,
+    floorKind,
+    nextIndex: nextIndex != null ? (nextIndex | 0) : null,
+    nextKind,
+    targetIndex,
+    targetKind,
+    applyFloorArtifacts: !!applyFloorArtifacts,
+    applyFloorFlags: !!applyFloorFlags,
   });
 
   // Clear any previous pending save state
@@ -1197,7 +1276,15 @@ function _applyHeroSavePayload(save: any, sourceLabel?: string): boolean {
         (applyFloorArtifacts && save.floor && typeof save.floor.wallFamily === "string")
           ? save.floor.wallFamily
           : "";
-      const ok = internals.resetFloorFromSave(targetIndex, targetKind, { baseFamily, wallFamily });
+      const palette =
+        (applyFloorArtifacts && save.floor && typeof save.floor.palette === "string")
+          ? save.floor.palette
+          : "";
+      const textureSeed =
+        (applyFloorArtifacts && save.floor && typeof save.floor.textureSeed === "number")
+          ? (save.floor.textureSeed | 0)
+          : 0;
+      const ok = internals.resetFloorFromSave(targetIndex, targetKind, { baseFamily, wallFamily, palette, textureSeed });
       if (ok) logSave("[save] floor reset requested", { targetIndex, targetKind, baseFamily, wallFamily });
     }
   } catch (e) {
@@ -1223,10 +1310,10 @@ function _applyHeroSavePayload(save: any, sourceLabel?: string): boolean {
   // Apply saved floor flags (safe/cleared state)
   try {
     const internals = g.__HeroEnginePhaserInternals || {};
-    if (applyFloorArtifacts && internals && typeof internals.applyFloorSaveFlags === "function" && save.floorState) {
-      internals.applyFloorSaveFlags(save.floorState);
-      logSave("[save] applied floor flags", save.floorState);
-    }
+  if (applyFloorFlags && internals && typeof internals.applyFloorSaveFlags === "function" && save.floorState) {
+    internals.applyFloorSaveFlags(save.floorState);
+    logSave("[save] applied floor flags", save.floorState);
+  }
   } catch (e) {
     console.warn("[save] apply floor flags failed", e);
   }
@@ -1308,9 +1395,11 @@ function _applyHeroSavePayload(save: any, sourceLabel?: string): boolean {
   }
 
   // Floor theme hints
-  if (applyFloorArtifacts && save.floor) {
+  if (!useNext && save.floor) {
     if (typeof save.floor.baseFamily === "string") g.__floorBaseFamily = save.floor.baseFamily;
     if (typeof save.floor.wallFamily === "string") g.__floorWallFamily = save.floor.wallFamily;
+    if (typeof save.floor.palette === "string") g.__floorThemePalette = save.floor.palette;
+    if (typeof save.floor.textureSeed === "number") g.__floorTextureSeed = (save.floor.textureSeed | 0);
   }
 
   // Tilemap cache (optional; host will resend on change)
@@ -1318,6 +1407,13 @@ function _applyHeroSavePayload(save: any, sourceLabel?: string): boolean {
     g.__lastTilemapMsg = save.tilemap;
   }
 
+  _debugTrace("SAVE_APPLY_DONE", {
+    targetIndex,
+    targetKind,
+    applyFloorArtifacts: !!applyFloorArtifacts,
+    applyFloorFlags: !!applyFloorFlags,
+    profiles: g.__loadedSaveProfiles || [],
+  });
   logSave("[save] pending save installed; will apply on next hero spawn for matching profiles");
   return true;
 }
@@ -1359,6 +1455,8 @@ function _requestLoadLatestSave(opts?: LoadLatestSaveOpts): Promise<any> {
   const profile = opts && typeof opts.profile === "string" ? opts.profile : "";
   const mode = (opts && opts.mode === "floor0") ? "floor0" : "latest";
 
+  _debugTrace("LOAD_REQUEST", { reason: reason || null, profile: profile || null, mode });
+
   g.__heroLoadLatestInFlight = true;
 
   return net
@@ -1389,11 +1487,23 @@ function _requestLoadLatestSave(opts?: LoadLatestSaveOpts): Promise<any> {
         reason: reason || null,
         profile: profile || null,
       });
+      _debugTrace("LOAD_SELECT", {
+        file,
+        savedAt: best.savedAt ?? null,
+        floorIndex: best.floorIndex ?? null,
+        floorKind: best.floorKind ?? null,
+        saveKind: best.saveKind ?? null,
+        mode,
+        reason: reason || null,
+      });
       return net.sendSaveLoadRequest({ file }).then((load: any) => {
         if (!load || load.error || !load.payload) {
-          return { ok: false, reason: load?.error || "load-failed" };
+          const failReason = load?.error || "load-failed";
+          _debugTrace("LOAD_RESULT", { ok: false, reason: failReason, file });
+          return { ok: false, reason: failReason };
         }
         const ok = _applyHeroSavePayload(load.payload, "latest-autosave");
+        _debugTrace("LOAD_RESULT", { ok: !!ok, reason: ok ? "loaded" : "apply-failed", file });
         return { ok: !!ok, reason: ok ? "loaded" : "apply-failed" };
       });
     })
@@ -2578,7 +2688,9 @@ public applyTilemapToScene(grid: number[][], tileSize: number) {
     }
 
     // Base layer sync (NOTE: WorldTileRenderer clears decal+prop layers here)
-    renderer.syncFromEngineGrid(grid);
+    const g: any = globalThis as any;
+    const variantSeed = (typeof g.__floorTextureSeed === "number") ? (g.__floorTextureSeed | 0) : 0;
+    renderer.syncFromEngineGrid(grid, { variantSeed });
 
     // ✅ Critical: re-apply decor overlays AFTER base sync clears them
     try {
@@ -2799,6 +2911,7 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     const rev = (msg.rev | 0) || 0;
     const tileSize = (msg.tileSize | 0) || 0;
     const encoding = (typeof msg.encoding === "string") ? msg.encoding : "";
+    const forceFlash = !!msg.forceFlash;
 
     const grid: number[][] = (Array.isArray(msg.data) ? msg.data : msg.grid) as any;
     const rows = (msg.rows | 0) || ((grid && grid.length) ? (grid.length | 0) : 0);
@@ -2840,8 +2953,16 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     // Theme info (optional)
     const baseFamily = (msg.baseFamily || g.__floorBaseFamily || "ground_light");
     const wallFamily = (msg.wallFamily || g.__floorWallFamily || "chasm_light");
+    const palette = (typeof msg.palette === "string")
+      ? msg.palette
+      : (typeof g.__floorThemePalette === "string" ? g.__floorThemePalette : "");
+    const textureSeed = (typeof msg.textureSeed === "number")
+      ? (msg.textureSeed | 0)
+      : (typeof g.__floorTextureSeed === "number" ? (g.__floorTextureSeed | 0) : 0);
     g.__floorBaseFamily = baseFamily;
     g.__floorWallFamily = wallFamily;
+    if (palette) g.__floorThemePalette = palette;
+    if (textureSeed) g.__floorTextureSeed = textureSeed | 0;
 
     const worldRev = (msg.worldRev | 0) || 0;
     const floorIndex = (typeof msg.floorIndex === "number") ? (msg.floorIndex | 0) : -1;
@@ -2849,7 +2970,7 @@ private _tilemap_applyNetTilemapMsg(msg: any): void {
     const decor: DecorPayload | undefined = msg.decor;
     const decorRev = (decor && typeof (decor as any).rev === "number") ? ((decor as any).rev | 0) : -1;
     const decorOnly = !!msg.decorOnly;
-    const themeKey = `${baseFamily}|${wallFamily}`;
+    const themeKey = `${baseFamily}|${wallFamily}|${palette || ""}|${textureSeed | 0}`;
     const lastThemeKey = (g.__tilemapAppliedThemeKey as string) || "";
 
     // If we are the host, ignore echoed tilemaps we originally sent; we already applied locally.
@@ -3427,6 +3548,10 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         (internals.getFloorBaseFamily?.() || g.__floorBaseFamily || "ground_light");
     const wallFamily =
         (internals.getFloorWallFamily?.() || g.__floorWallFamily || "chasm_light");
+    const palette =
+        (typeof internals.getFloorThemePalette === "function" ? internals.getFloorThemePalette() : (g.__floorThemePalette || ""));
+    const textureSeed =
+        (typeof internals.getFloorTextureSeed === "function" ? (internals.getFloorTextureSeed() | 0) : (g.__floorTextureSeed | 0));
 
     // Best-effort detect new floor and trigger a one-time decor resync after engine init.
     const lastFloorSig = g.__lastDecorResyncFloorSig as string | undefined;
@@ -3546,8 +3671,10 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
 
     g.__floorBaseFamily = baseFamily;
     g.__floorWallFamily = wallFamily;
+    if (palette) g.__floorThemePalette = palette;
+    if (textureSeed) g.__floorTextureSeed = textureSeed | 0;
 
-    const themeKey = `${baseFamily}|${wallFamily}`;
+    const themeKey = `${baseFamily}|${wallFamily}|${palette || ""}|${textureSeed | 0}`;
     const lastThemeKey = (g.__tilemapAppliedThemeKey as string) || "";
 
     const decorNeedsApply =
@@ -3663,6 +3790,8 @@ private _tilemap_hostResendPendingIfNeeded(g: any): void {
         data: grid,
         baseFamily,
         wallFamily,
+        textureSeed: textureSeed || undefined,
+        palette: palette || undefined,
         worldRev,
         floorIndex,
         floorKind: (internals.getFloorKind?.() || g.__floorKind || ""),

@@ -93,7 +93,8 @@ export const PROP_SPECS_BY_NAME: Record<string, PropSpec> = {
   book_stump: {
     name: "book_stump",
     collision: {
-      mode: "none",
+      mode: "aura",
+      useAura: true,
     },
     interact: {
       interactable: false,
@@ -157,6 +158,32 @@ export const PROP_SPECS_BY_NAME: Record<string, PropSpec> = {
       floorKinds: ["entrance", "treasure"],
     },
   },
+  stairs_statue: {
+    name: "stairs_statue",
+    collision: {
+      mode: "base",
+      baseHeightPx: 32,
+      useAura: true,
+    },
+    interact: {
+      interactable: false,
+      focusable: false,
+      action: "",
+    },
+  },
+};
+
+const BOSS_ROCK_SPEC: PropSpec = {
+  name: "boss_rock",
+  collision: {
+    mode: "aura",
+    useAura: true,
+  },
+  interact: {
+    interactable: false,
+    focusable: false,
+    action: "",
+  },
 };
 
 export function propBaseNameFromKey(name: string): string {
@@ -177,6 +204,7 @@ export function propBaseNameFromKey(name: string): string {
 export function getPropSpec(name: string): PropSpec | null {
   const base = propBaseNameFromKey(name);
   if (!base) return null;
+  if (base.indexOf("boss_rock_") === 0) return BOSS_ROCK_SPEC;
   return PROP_SPECS_BY_NAME[base] || null;
 }
 

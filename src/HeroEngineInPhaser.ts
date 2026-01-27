@@ -2,7 +2,12 @@
 
 import { Grid as PFGrid, AStarFinder as PFAStarFinder, DiagonalMovement as PFDiagonalMovement, Heuristic as PFHeuristic } from "pathfinding";
 import { MONSTER_AURA_FEET } from "./generated/monsterAuraFeet";
+import { auraKey } from "./auraConfig";
+import { getAuraMaskFrameView } from "./auraMaskBits";
 import { tryRunBlocklyHeroLogic } from "./blocklyHeroLogicRuntime";
+import { createVfxRegistry } from "./vfxRegistry";
+import type { VfxHelpers, VfxRegistry } from "./vfxRegistry";
+import { ENEMY_EFFECT_PALETTES } from "./vfxPalettes";
 import {
     TOWER_TRIAL_BUTTONS,
     towerTrialButtonLabel,
@@ -58,6 +63,8 @@ import {
     DEBUG_FORCE_HALL_OF_ENEMIES,
     DEBUG_DRAW_ENEMY_WALL_COLLIDERS,
     DEBUG_DISABLE_ENEMY_WALL_COLLISIONS,
+    DEBUG_ENEMY_APPROACH_ONLY,
+    DEBUG_ENEMY_SPEED_MULT,
     DEBUG_ENEMY_AI_DECISIONS,
     DEBUG_ENEMY_AI_DECISIONS_ONLY_CHANGES,
     DEBUG_ENEMY_AI_DECISIONS_THROTTLE_MS,
@@ -101,6 +108,8 @@ import {
     DEBUG_SHRINE_OBSERVER,
     DEBUG_SHRINE_OVERLAY_LOGS,
     DEBUG_SHOP_LOGS,
+    DEBUG_DEBUG_DUMP,
+    DEBUG_SAVE_TRACE,
     DEBUG_SPECIAL_PHASE_LOG_ONCE,
     DEBUG_STATUE_PEDESTAL,
     DEBUG_STATUE_STAMP,
@@ -144,6 +153,7 @@ import {
     type PropDirection,
     type PropSpec,
 } from "./propSpecs";
+import { BOSS_ROCK_POOL } from "./rockDefs";
 import type { TrapInstance } from "./trapInstances";
 import { generateTrapInstanceById } from "./trapGenerator";
 import {
@@ -5274,6 +5284,11 @@ const HERO_DATA: Record<string, string> = {
 
     AGI_IS_EXEC_WINDOW: "aExW",   // number: 1 if in EXEC window (sheen), else 0
 
+    // NEW (C7): Hookshot timing mirror (pendulum for aim indicator)
+    AGI_HOOK_TIMING_POS_X1000: "aHTPos",   // 0..1000
+    AGI_HOOK_TIMING_PENDING_ADD: "aHTAdd", // pending add amount (A/B/C tier)
+    AGI_HOOK_TIMING_IS_EXEC: "aHTExec",    // 1 if in exec window
+
 
 
 
@@ -9876,8 +9891,8 @@ const DECOR_ROLE = {
 // Knob for world size tile size tiles dimensions world dimensions
 
 // Sized so 50% zoom fits a 1920x1080 game area with a small margin.
-const WORLD_TILES_W = 48;     // columns
-const WORLD_TILES_H = 25;     // rows
+const WORLD_TILES_W = 60;     // columns (1920px @ 32px tiles)
+const WORLD_TILES_H = 34;     // rows (≈1088px @ 32px tiles)
 
 // Shop/safe floor override (wider arena without affecting combat/story floors).
 const SHOP_WORLD_TILES_W = 64; // columns (widened)
@@ -11921,6 +11936,33 @@ function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts):
         sprites.setDataNumber(s, EFFECT_ANIM_DELAY_START_MS_DATA_KEY, 0)
     }
 }
+
+let __vfxRegistry: VfxRegistry | null = null
+let __vfxHelpers: VfxHelpers | null = null
+
+function _registerVfxPresets(registry: VfxRegistry, helpers: VfxHelpers): void {
+    void registry
+    void helpers
+    // Presets will live here (see VFX_SYSTEM.md). Keep empty until assets are chosen.
+}
+
+function _getVfxRegistry(): VfxRegistry {
+    if (__vfxRegistry) return __vfxRegistry
+    const created = createVfxRegistry({
+        applyEffect: applyEffectToSprite,
+        getEffectDummyImage: _getEffectDummyImage,
+        nowMs: () => (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
+    })
+    __vfxRegistry = created.registry
+    __vfxHelpers = created.helpers
+    _registerVfxPresets(__vfxRegistry, __vfxHelpers)
+    return __vfxRegistry
+}
+
+function _getVfxHelpers(): VfxHelpers {
+    if (!__vfxRegistry) _getVfxRegistry()
+    return __vfxHelpers as VfxHelpers
+}
 const TRAP_PROMPT_INPUT_DEBOUNCE_MS = 200
 
 function _dunReadInteractAction(it: Sprite): string {
@@ -12878,7 +12920,8 @@ let _dunBaseFamily = "ground_light"
 
 let _dunWallFamily = "chasm_light"
 let _dunThemePalette = "stone_light"
-let _dunThemeOverride: { base: string; wall: string; palette?: string } | null = null
+let _dunFloorTextureSeed = 0
+let _dunThemeOverride: { base: string; wall: string; palette?: string; textureSeed?: number } | null = null
 
 
 
@@ -12953,7 +12996,7 @@ const DUNGEON_DOOR_OPEN_FPS = 12
 const DUNGEON_DOOR_OPEN_MS = Math.max(1, Math.idiv((DUNGEON_DOOR_OPEN_FRAMES * 1000), DUNGEON_DOOR_OPEN_FPS))
 const DUNGEON_DOOR_READY_HOLD_MS = 200
 const DUNGEON_PAD_SINK_DELAY_MS = 500
-const DUNGEON_PAD_SINK_ANIM_MS = 520
+const DUNGEON_PAD_SINK_ANIM_MS = 1560
 const DUNGEON_PAD_SINK_OFFY_PX = 32
 const DUNGEON_PAD_SINK_SHAKE_MS = 420
 const DUNGEON_PAD_SINK_SHAKE_INTENSITY = 0.008
@@ -12963,11 +13006,23 @@ const BOSS_PAD_SINK_SHAKE_MS = 1200
 const BOSS_PAD_SINK_SHAKE_INTENSITY = 0.003
 const BOSS_PAD_SINK_DUST_MS = 2600
 const BOSS_PAD_SINK_DUST_RADIUS_PX = 120
+const BOSS_PAD_SINK_DUST_RADIUS_VAR_PX = 48
+const BOSS_PAD_SINK_DUST_MIN_RADIUS_PX = 64
 const BOSS_PAD_SINK_DUST_ALPHA = 0.7
+const BOSS_PAD_SINK_DUST_ALPHA_BOOST = 0.6
+const BOSS_PAD_SINK_DUST_MASK_ALPHA_SCALE = 0.6
+const BOSS_PAD_SINK_DUST_LAYER_ALPHA = 0.82
+const BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA = 0.35
 const BOSS_PAD_SINK_DUST_SKIN_ID = "smoke 128x128"
-const BOSS_PAD_SINK_DUST_COUNT = 10
+const BOSS_PAD_SINK_DUST_TEX_ID = "waves1 texture 256x256"
+const BOSS_PAD_SINK_DUST_TEX_FPS = 8
+const BOSS_PAD_SINK_DUST_TILE_PX = 96
+const BOSS_PAD_SINK_DUST_TILE_STEP_PCT = 0.6
+const BOSS_PAD_SINK_DUST_COUNT = 50
 const BOSS_PAD_SINK_DUST_RISE_PX = 32
-const BOSS_PAD_SINK_DUST_RISE_PORTION = 0.6
+const BOSS_PAD_SINK_DUST_RISE_PORTION = 1
+const BOSS_PAD_SINK_DUST_SPREAD_X_PX = 56
+const BOSS_PAD_SINK_DUST_SPREAD_Y_PX = 32
 
 
 
@@ -12986,6 +13041,8 @@ let _dunPadSinkShakeIntensity = DUNGEON_PAD_SINK_SHAKE_INTENSITY
 let _dunPadSinkDustSpawned = false
 let _dunPadSinkUseDust = false
 let _dunPadSinkDustFx: Sprite[] = []
+let _dunPadSinkDustFillFx: Sprite[] = []
+let _dunPadSinkDustMaskFx: Sprite | null = null
 
 
 
@@ -13168,13 +13225,41 @@ function _dunDecor_setName(s: Sprite, name: string): void {
 
 }
 
+function _dunDecor_applyOffsetShift(s: Sprite, nextOffX: number, nextOffY: number): boolean {
+
+    if (!s || (s.flags & sprites.Flag.Destroyed)) return false
+
+    const ox = nextOffX | 0
+    const oy = nextOffY | 0
+    const prevX = sprites.readDataNumber(s, "decorOffX") | 0
+    const prevY = sprites.readDataNumber(s, "decorOffY") | 0
+    if ((prevX | 0) === (ox | 0) && (prevY | 0) === (oy | 0)) return false
+
+    sprites.setDataNumber(s, "decorOffX", ox | 0)
+    sprites.setDataNumber(s, "decorOffY", oy | 0)
+
+    const dx = (ox - (prevX | 0)) | 0
+    const dy = (oy - (prevY | 0)) | 0
+    if ((dx | 0) !== 0 || (dy | 0) !== 0) {
+        if ((s as any).left != null || (s as any).top != null) {
+            if ((s as any).left != null) (s as any).left = (((s as any).left | 0) + dx) | 0
+            if ((s as any).top != null) (s as any).top = (((s as any).top | 0) + dy) | 0
+        } else {
+            s.x = ((s.x | 0) + dx) | 0
+            s.y = ((s.y | 0) + dy) | 0
+        }
+    }
+
+    return true
+
+}
+
 function _dunDecor_setOffset(s: Sprite, offX: number, offY: number): void {
 
     if (!s || (s.flags & sprites.Flag.Destroyed)) return
 
-    sprites.setDataNumber(s, "decorOffX", offX | 0)
-    sprites.setDataNumber(s, "decorOffY", offY | 0)
-    _engineDecorRev = (_engineDecorRev + 1) | 0
+    const changed = _dunDecor_applyOffsetShift(s, offX | 0, offY | 0)
+    if (changed) _engineDecorRev = (_engineDecorRev + 1) | 0
 
 }
 
@@ -13319,11 +13404,8 @@ function _dunDecor_applyOffsetToStairsStatue(offX: number, offY: number): void {
                 centerY = ((r * tileSize + (tileSize >> 1) + oy) | 0)
             }
         } catch { /* ignore */ }
-        const curX = sprites.readDataNumber(s, "decorOffX") | 0
-        const curY = sprites.readDataNumber(s, "decorOffY") | 0
-        if ((curX | 0) === (ox | 0) && (curY | 0) === (oy | 0)) return
-        sprites.setDataNumber(s, "decorOffX", ox | 0)
-        sprites.setDataNumber(s, "decorOffY", oy | 0)
+        const moved = _dunDecor_applyOffsetShift(s, ox | 0, oy | 0)
+        if (!moved) return
         changed = true
     }
 
@@ -13372,6 +13454,10 @@ function _dunDecor_spawnAtTile(args: {
     pxW: number
 
     pxH: number
+
+    offX?: number
+
+    offY?: number
 
 }): Sprite {
 
@@ -13423,7 +13509,11 @@ function _dunDecor_spawnAtTile(args: {
 
     else _engineDecorTriggers.push(s)
 
-
+    const offX = (args.offX ?? 0) | 0
+    const offY = (args.offY ?? 0) | 0
+    if ((offX | 0) !== 0 || (offY | 0) !== 0) {
+        _dunDecor_applyOffsetShift(s, offX | 0, offY | 0)
+    }
 
     _engineDecorRev = (_engineDecorRev + 1) | 0
 
@@ -13517,6 +13607,7 @@ function _dunAmbientPropFitsAt(anchorR: number, anchorC: number, wTiles: number,
 function _dunScatterAmbientProps(rows: number, cols: number): void {
     if (!AMBIENT_PROP_SCATTER_ENABLED) return
     if (_dunFloorKind === DUNGEON_KIND_HALL || _dunFloorKind === DUNGEON_KIND_SHOP) return
+    if (_dunFloorKind === DUNGEON_KIND_COMBAT && _dunIsBossFloor(_dunFloorIndex | 0)) return
     if (!_engineWorldTileMap || rows <= 0 || cols <= 0) return
 
     const margin = Math.max(0, (AMBIENT_PROP_SCATTER_EDGE_MARGIN | 0)) | 0
@@ -14401,8 +14492,6 @@ function _dunDecor_upsertStairsStatueSolid(baseR: number, baseC: number): void {
         sprites.setDataNumber(s, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
 
         sprites.setDataString(s, DECOR_DATA.NAME, "stairs_statue")
-        sprites.setDataNumber(s, "decorOffX", 0)
-        sprites.setDataNumber(s, "decorOffY", _dunPadSinkOffYLast | 0)
 
 
 
@@ -14433,8 +14522,6 @@ function _dunDecor_upsertStairsStatueSolid(baseR: number, baseC: number): void {
         sprites.setDataNumber(_dunStairsStatueSolid, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
 
         sprites.setDataString(_dunStairsStatueSolid, DECOR_DATA.NAME, "stairs_statue")
-        sprites.setDataNumber(_dunStairsStatueSolid, "decorOffX", 0)
-        sprites.setDataNumber(_dunStairsStatueSolid, "decorOffY", _dunPadSinkOffYLast | 0)
 
     }
 
@@ -14453,6 +14540,8 @@ function _dunDecor_upsertStairsStatueSolid(baseR: number, baseC: number): void {
     _dunStairsStatueSolid.left = (c * tileSize) | 0
 
     _dunStairsStatueSolid.top  = (r * tileSize) | 0
+
+    _dunDecor_setOffset(_dunStairsStatueSolid, 0, _dunPadSinkOffYLast | 0)
 
 }
 
@@ -14939,10 +15028,16 @@ function _dunPickThemeForFloor(floorIndex: number, kind: string): void {
         if (o && typeof o.base === "string" && o.base.trim()) _dunBaseFamily = o.base
         if (o && typeof o.wall === "string" && o.wall.trim()) _dunWallFamily = o.wall
         if (o && typeof o.palette === "string" && o.palette.trim()) _dunThemePalette = o.palette
+        if (o && typeof o.textureSeed === "number" && Number.isFinite(o.textureSeed)) {
+            _dunFloorTextureSeed = o.textureSeed | 0
+        } else {
+            _dunFloorTextureSeed = Math.randomRange(1, 0x7fffffff) | 0
+        }
         if (isPhaserRuntime()) {
             ;(globalThis as any).__floorBaseFamily = _dunBaseFamily
             ;(globalThis as any).__floorWallFamily = _dunWallFamily
             ;(globalThis as any).__floorThemePalette = _dunThemePalette
+            ;(globalThis as any).__floorTextureSeed = _dunFloorTextureSeed | 0
         }
         return
     }
@@ -14968,6 +15063,7 @@ function _dunPickThemeForFloor(floorIndex: number, kind: string): void {
     _dunBaseFamily = pick.base
     _dunWallFamily = pick.chasm
     _dunThemePalette = pick.palette
+    _dunFloorTextureSeed = Math.randomRange(1, 0x7fffffff) | 0
 
 
 
@@ -14980,6 +15076,8 @@ function _dunPickThemeForFloor(floorIndex: number, kind: string): void {
         ;(globalThis as any).__floorWallFamily = _dunWallFamily
 
         ;(globalThis as any).__floorThemePalette = _dunThemePalette
+
+        ;(globalThis as any).__floorTextureSeed = _dunFloorTextureSeed | 0
 
     }
 
@@ -15179,7 +15277,8 @@ function _dunSpawnExitPad(): void {
     _dunPadSinkDustSpawned = false
     _dunPadSinkUseDust = false
     _dunPadSinkDustFx = []
-    _dunPadSinkDustFx = []
+    _dunPadSinkDustFillFx = []
+    _dunPadSinkDustMaskFx = null
 
     _dunTeleportCommitAtMs = 0
 
@@ -15359,51 +15458,161 @@ function _dunSchedulePadSink(
 
 function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
     if (!BOSS_PAD_SINK_DUST_SKIN_ID) return
-    if ((_dunPadTileR | 0) < 0 || (_dunPadTileC | 0) < 0) return
-    const baseX = _dunColToX(_dunPadTileC | 0) | 0
-    const baseY = _dunRowToY(_dunPadTileR | 0) | 0
+    if (!BOSS_PAD_SINK_DUST_TEX_ID) return
+    let usingFallback = false
+    let baseX = 0
+    let baseY = 0
+    if ((_dunPadTileR | 0) < 0 || (_dunPadTileC | 0) < 0) {
+        if (DEBUG_BOSS_INTRO) {
+            console.log("[BOSS][INTRO][DUST] skip pad tile invalid", {
+                padR: _dunPadTileR | 0,
+                padC: _dunPadTileC | 0
+            })
+        }
+        if (!DEBUG_BOSS_PAD_DUST_PERSIST) return
+        usingFallback = true
+        let heroRef: Sprite | null = null
+        for (let i = 0; i < heroes.length; i++) {
+            const h = heroes[i]
+            if (h && !(h.flags & sprites.Flag.Destroyed)) {
+                heroRef = h
+                break
+            }
+        }
+        if (heroRef) {
+            baseX = heroRef.x | 0
+            baseY = heroRef.y | 0
+        } else {
+            baseX = (scene.screenWidth() >> 1) | 0
+            baseY = (scene.screenHeight() >> 1) | 0
+        }
+    } else {
+        baseX = _dunColToX(_dunPadTileC | 0) | 0
+        baseY = _dunRowToY(_dunPadTileR | 0) | 0
+    }
     const tile = WORLD_TILE_SIZE | 0
     const padW = (tile * 5) | 0
     const padH = (tile * 2) | 0
-    const halfW = Math.max(1, Math.idiv(padW, 2)) | 0
-    const halfH = Math.max(1, Math.idiv(padH, 2)) | 0
+    const spreadX = Math.max(0, BOSS_PAD_SINK_DUST_SPREAD_X_PX | 0) | 0
+    const spreadY = Math.max(0, BOSS_PAD_SINK_DUST_SPREAD_Y_PX | 0) | 0
+    const halfW = Math.max(1, (Math.idiv(padW, 2) + spreadX) | 0) | 0
+    const halfH = Math.max(1, (Math.idiv(padH, 2) + spreadY) | 0) | 0
     const edgePad = Math.max(4, Math.round(tile * 0.15)) | 0
+    const bandH = Math.max(6, Math.round(tile * 2.2)) | 0
     const total = BOSS_PAD_SINK_DUST_COUNT | 0
+    const earthPalette = ENEMY_EFFECT_PALETTES.earth || []
+    const earthTint = earthPalette.length
+        ? (earthPalette[Math.idiv(Math.max(0, earthPalette.length - 1), 2) | 0] | 0)
+        : 0
+    const regionMinX = (baseX - halfW) | 0
+    const regionMaxX = (baseX + halfW) | 0
+    const regionMinY = (baseY + halfH + edgePad) | 0
+    const regionMaxY = (regionMinY + bandH) | 0
+    const regionW = Math.max(1, (regionMaxX - regionMinX) | 0) | 0
+    const regionH = Math.max(1, (regionMaxY - regionMinY) | 0) | 0
+    const tilePx = Math.max(32, BOSS_PAD_SINK_DUST_TILE_PX | 0) | 0
+    const stepPx = Math.max(16, Math.round(tilePx * BOSS_PAD_SINK_DUST_TILE_STEP_PCT)) | 0
+    const tileRadius = Math.max(8, Math.idiv(tilePx, 2)) | 0
+    const fillScale = _effectPickScaleForRadius(BOSS_PAD_SINK_DUST_TEX_ID, "", tileRadius | 0)
+    const maskRadius = Math.max(halfW | 0, Math.idiv(regionH, 2) | 0) + Math.max(4, Math.round(tile * 0.4)) | 0
+    const layerMaskScale = _effectPickScaleForRadius(BOSS_PAD_SINK_DUST_SKIN_ID, "", maskRadius | 0)
     if (DEBUG_BOSS_INTRO) {
         console.log("[BOSS][INTRO][DUST] spawn", {
             baseX: baseX | 0,
             baseY: baseY | 0,
             count: total | 0,
             durationMs: durationMs | 0,
-            skin: BOSS_PAD_SINK_DUST_SKIN_ID
+            skin: BOSS_PAD_SINK_DUST_SKIN_ID,
+            tex: BOSS_PAD_SINK_DUST_TEX_ID,
+            fallback: usingFallback ? 1 : 0
         })
     }
-    for (let i = 0; i < total; i++) {
-        const edge = Math.randomRange(0, 3) | 0
-        let ox = 0
-        let oy = 0
-        if (edge === 0) { // top
-            ox = Math.randomRange(-halfW, halfW) | 0
-            oy = (-halfH - edgePad) | 0
-        } else if (edge === 1) { // bottom
-            ox = Math.randomRange(-halfW, halfW) | 0
-            oy = (halfH + edgePad) | 0
-        } else if (edge === 2) { // left
-            ox = (-halfW - edgePad) | 0
-            oy = Math.randomRange(-halfH, halfH) | 0
-        } else { // right
-            ox = (halfW + edgePad) | 0
-            oy = Math.randomRange(-halfH, halfH) | 0
+    if (_dunPadSinkDustFillFx && _dunPadSinkDustFillFx.length > 0) {
+        for (let i = 0; i < _dunPadSinkDustFillFx.length; i++) {
+            const fx = _dunPadSinkDustFillFx[i]
+            if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.destroy()
         }
-        const fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
-        fx.setFlag(SpriteFlag.Ghost, true)
-        fx.x = (baseX + ox) | 0
-        fx.y = (baseY + oy) | 0
-        fx.z = 1000
-        if (!DEBUG_BOSS_PAD_DUST_PERSIST && durationMs > 0) fx.lifespan = durationMs | 0
-        applyEffectToSprite(fx, BOSS_PAD_SINK_DUST_SKIN_ID, {
-            alpha: DEBUG_BOSS_PAD_DUST_PERSIST ? 1 : BOSS_PAD_SINK_DUST_ALPHA,
-            fitRadiusPx: BOSS_PAD_SINK_DUST_RADIUS_PX,
+        _dunPadSinkDustFillFx = []
+    }
+    if (_dunPadSinkDustMaskFx && !(_dunPadSinkDustMaskFx.flags & sprites.Flag.Destroyed)) {
+        _dunPadSinkDustMaskFx.destroy()
+    }
+    _dunPadSinkDustMaskFx = null
+
+    const maskFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+    maskFx.setFlag(SpriteFlag.Ghost, true)
+    maskFx.x = (regionMinX + Math.idiv(regionW, 2)) | 0
+    maskFx.y = (regionMinY + Math.idiv(regionH, 2)) | 0
+    maskFx.z = 999
+    if (!DEBUG_BOSS_PAD_DUST_PERSIST && durationMs > 0) maskFx.lifespan = durationMs | 0
+    applyEffectToSprite(maskFx, BOSS_PAD_SINK_DUST_SKIN_ID, {
+        alpha: DEBUG_BOSS_PAD_DUST_PERSIST ? Math.max(0.35, BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA) : BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA,
+        scale: layerMaskScale,
+        blend: "normal",
+        forceTop: true,
+        repeat: -1,
+        yoyo: true,
+        fps: 8,
+        mode: "full"
+    })
+    sprites.setDataNumber(maskFx, "__padDustBaseX", maskFx.x | 0)
+    sprites.setDataNumber(maskFx, "__padDustBaseY", maskFx.y | 0)
+    sprites.setDataNumber(maskFx, "__padDustRisePx", BOSS_PAD_SINK_DUST_RISE_PX | 0)
+    _dunPadSinkDustMaskFx = maskFx
+
+    for (let y = regionMinY; y <= regionMaxY; y += stepPx) {
+        for (let x = regionMinX; x <= regionMaxX; x += stepPx) {
+            const fillFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+            fillFx.setFlag(SpriteFlag.Ghost, true)
+            fillFx.x = x | 0
+            fillFx.y = y | 0
+            fillFx.z = 1000
+            if (!DEBUG_BOSS_PAD_DUST_PERSIST && durationMs > 0) fillFx.lifespan = durationMs | 0
+            applyEffectToSprite(fillFx, BOSS_PAD_SINK_DUST_TEX_ID, {
+                alpha: DEBUG_BOSS_PAD_DUST_PERSIST ? 1 : BOSS_PAD_SINK_DUST_LAYER_ALPHA,
+                scale: fillScale,
+                blend: "normal",
+                forceTop: true,
+                repeat: -1,
+                yoyo: true,
+                fps: BOSS_PAD_SINK_DUST_TEX_FPS,
+                mode: "projectile",
+                maskSprite: maskFx,
+                tint: earthTint
+            })
+            sprites.setDataNumber(fillFx, "__padDustBaseX", fillFx.x | 0)
+            sprites.setDataNumber(fillFx, "__padDustBaseY", fillFx.y | 0)
+            sprites.setDataNumber(fillFx, "__padDustRisePx", BOSS_PAD_SINK_DUST_RISE_PX | 0)
+            _dunPadSinkDustFillFx.push(fillFx)
+        }
+    }
+    for (let i = 0; i < total; i++) {
+        const ox = Math.randomRange(-halfW, halfW) | 0
+        const oy = (halfH + edgePad + (Math.randomRange(0, bandH) | 0)) | 0
+        const distX = Math.abs(ox) | 0
+        const distY = Math.abs(oy) | 0
+        const normX = distX / Math.max(1, halfW)
+        const normY = distY / Math.max(1, (halfH + edgePad + bandH))
+        const distNorm = Math.min(1, Math.sqrt((normX * normX) + (normY * normY)))
+        const centerBoost = Math.max(0, 1 - distNorm)
+        const alpha = Math.min(1, BOSS_PAD_SINK_DUST_ALPHA + (centerBoost * BOSS_PAD_SINK_DUST_ALPHA_BOOST))
+        const radius = Math.max(
+            BOSS_PAD_SINK_DUST_MIN_RADIUS_PX | 0,
+            (BOSS_PAD_SINK_DUST_RADIUS_PX | 0) + (Math.randomRange(-BOSS_PAD_SINK_DUST_RADIUS_VAR_PX, BOSS_PAD_SINK_DUST_RADIUS_VAR_PX) | 0)
+        ) | 0
+        const maskScale = _effectPickScaleForRadius(BOSS_PAD_SINK_DUST_SKIN_ID, "", radius | 0)
+        const maskAlpha = DEBUG_BOSS_PAD_DUST_PERSIST
+            ? alpha
+            : Math.max(0.18, Math.min(0.85, alpha * BOSS_PAD_SINK_DUST_MASK_ALPHA_SCALE))
+        const puffFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+        puffFx.setFlag(SpriteFlag.Ghost, true)
+        puffFx.x = (baseX + ox) | 0
+        puffFx.y = (baseY + oy) | 0
+        puffFx.z = 1001
+        if (!DEBUG_BOSS_PAD_DUST_PERSIST && durationMs > 0) puffFx.lifespan = durationMs | 0
+        applyEffectToSprite(puffFx, BOSS_PAD_SINK_DUST_SKIN_ID, {
+            alpha: maskAlpha,
+            scale: maskScale,
             blend: "normal",
             forceTop: true,
             repeat: -1,
@@ -15412,10 +15621,10 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
             mode: "full"
         })
         const rise = Math.max(8, (BOSS_PAD_SINK_DUST_RISE_PX | 0) + (Math.randomRange(-6, 6) | 0)) | 0
-        sprites.setDataNumber(fx, "__padDustBaseX", fx.x | 0)
-        sprites.setDataNumber(fx, "__padDustBaseY", fx.y | 0)
-        sprites.setDataNumber(fx, "__padDustRisePx", rise | 0)
-        _dunPadSinkDustFx.push(fx)
+        sprites.setDataNumber(puffFx, "__padDustBaseX", puffFx.x | 0)
+        sprites.setDataNumber(puffFx, "__padDustBaseY", puffFx.y | 0)
+        sprites.setDataNumber(puffFx, "__padDustRisePx", rise | 0)
+        _dunPadSinkDustFx.push(puffFx)
     }
 }
 
@@ -15460,6 +15669,37 @@ function _dunTickPadSink(nowMs: number): void {
                 _dunPadSinkDustFx[write++] = fx
             }
             if (write < _dunPadSinkDustFx.length) _dunPadSinkDustFx.length = write
+            if (_dunPadSinkDustMaskFx && !(_dunPadSinkDustMaskFx.flags & sprites.Flag.Destroyed)) {
+                const baseX = sprites.readDataNumber(_dunPadSinkDustMaskFx, "__padDustBaseX") | 0
+                const baseY = sprites.readDataNumber(_dunPadSinkDustMaskFx, "__padDustBaseY") | 0
+                const risePx = Math.max(1, sprites.readDataNumber(_dunPadSinkDustMaskFx, "__padDustRisePx") | 0) | 0
+                let y = baseY - Math.round(risePx * tRise)
+                if (!rising) {
+                    const down = Math.round((offY + risePx) * tFall)
+                    y = (baseY - risePx + down) | 0
+                }
+                _dunPadSinkDustMaskFx.x = baseX | 0
+                _dunPadSinkDustMaskFx.y = y | 0
+            }
+            if (_dunPadSinkDustFillFx && _dunPadSinkDustFillFx.length > 0) {
+                let fillWrite = 0
+                for (let i = 0; i < _dunPadSinkDustFillFx.length; i++) {
+                    const fx = _dunPadSinkDustFillFx[i]
+                    if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+                    const baseX = sprites.readDataNumber(fx, "__padDustBaseX") | 0
+                    const baseY = sprites.readDataNumber(fx, "__padDustBaseY") | 0
+                    const risePx = Math.max(1, sprites.readDataNumber(fx, "__padDustRisePx") | 0) | 0
+                    let y = baseY - Math.round(risePx * tRise)
+                    if (!rising) {
+                        const down = Math.round((offY + risePx) * tFall)
+                        y = (baseY - risePx + down) | 0
+                    }
+                    fx.x = baseX | 0
+                    fx.y = y | 0
+                    _dunPadSinkDustFillFx[fillWrite++] = fx
+                }
+                if (fillWrite < _dunPadSinkDustFillFx.length) _dunPadSinkDustFillFx.length = fillWrite
+            }
         }
         if ((now | 0) >= (end | 0)) {
             _dunPadSinkAnimStartMs = 0
@@ -15484,6 +15724,23 @@ function _dunTickPadSink(nowMs: number): void {
                 }
             }
             _dunPadSinkDustFx = []
+            if (_dunPadSinkDustFillFx && _dunPadSinkDustFillFx.length > 0) {
+                if (!DEBUG_BOSS_PAD_DUST_PERSIST) {
+                    for (let i = 0; i < _dunPadSinkDustFillFx.length; i++) {
+                        const fx = _dunPadSinkDustFillFx[i]
+                        if (fx && !(fx.flags & sprites.Flag.Destroyed)) {
+                            fx.destroy()
+                        }
+                    }
+                }
+            }
+            _dunPadSinkDustFillFx = []
+            if (_dunPadSinkDustMaskFx && !(_dunPadSinkDustMaskFx.flags & sprites.Flag.Destroyed)) {
+                if (!DEBUG_BOSS_PAD_DUST_PERSIST) {
+                    _dunPadSinkDustMaskFx.destroy()
+                }
+            }
+            _dunPadSinkDustMaskFx = null
         }
         return
     }
@@ -15500,9 +15757,6 @@ function _dunTickPadSink(nowMs: number): void {
         _dunPadSinkDustSpawned = true
         const dustMs = Math.max(600, Math.min(6000, (_dunPadSinkAnimMs | 0) + 600)) | 0
         _dunSpawnPadSinkDust(now | 0, dustMs | 0)
-    }
-    if ((_dunPadSinkShakeMs | 0) > 0 && (_dunPadSinkShakeIntensity || 0) > 0) {
-        _enemyScreenShake(_dunPadSinkShakeMs | 0, _dunPadSinkShakeIntensity)
     }
 }
 
@@ -15539,7 +15793,7 @@ function _dunSpawnDoorExit(nowMs: number): void {
     })
 
     _dunDoorSolid = _dunDecor_spawnAtTile({
-        name: "",
+        name: "stone_door",
         role: DECOR_ROLE.SOLID,
         tileR: r | 0,
         tileC: c | 0,
@@ -15547,7 +15801,8 @@ function _dunSpawnDoorExit(nowMs: number): void {
         pxH: DUNGEON_DOOR_PX | 0,
     })
     if (_dunDoorSolid && !(_dunDoorSolid.flags & sprites.Flag.Destroyed)) {
-        sprites.setDataString(_dunDoorSolid, DECOR_DATA.NAME, "")
+        sprites.setDataNumber(_dunDoorSolid, DECOR_DATA.IS_COLLIDER, 1)
+        sprites.setDataString(_dunDoorSolid, DECOR_DATA.NAME, "stone_door")
     }
 
     _dunDoorState = "closed"
@@ -16586,6 +16841,7 @@ function _dunEnterFloor_initState(nextIndex: number, kind: string, nowMs: number
     _bossIntroShadowX = 0
     _bossIntroShadowY = 0
     _bossIntroShadowUntilMs = 0
+    _bossRockReset()
 
     _dunFloorStartedMs = nowMs | 0
 
@@ -17327,14 +17583,17 @@ function _dunEnterFloor_spawnMemoryBook(nowMs: number): void {
             const rr = (anchorR - dr) | 0
             const cc = (anchorC + dc) | 0
             const s = _dunDecor_spawnAtTile({
-                name: "",
+                name: BOOK_STUMP_BASE,
                 role: DECOR_ROLE.SOLID,
                 tileR: rr | 0,
                 tileC: cc | 0,
                 pxW: tileSize,
                 pxH: tileSize,
             })
-            if (s) solids.push(s)
+            if (s) {
+                sprites.setDataNumber(s, DECOR_DATA.IS_COLLIDER, 1)
+                solids.push(s)
+            }
         }
     }
     _dunBookStumpSolids = solids
@@ -18495,6 +18754,10 @@ function _dunEnterFloor_setupCombatFloor(nowMs: number): void {
 
     DUNGEON_BLOCK_INTENTS = false
 
+    if (_dunIsBossFloor(_dunFloorIndex | 0)) {
+        _dunBossSpawnRocks()
+    }
+
     setupEnemySpawners()
 
     startEnemyWaves()
@@ -18503,7 +18766,7 @@ function _dunEnterFloor_setupCombatFloor(nowMs: number): void {
 
     if (_dunFloorUsesDoorExit()) {
         _dunSpawnDoorExit(nowMs | 0)
-        _dunSchedulePadSink(nowMs | 0)
+        _dunSchedulePadSink(nowMs | 0, undefined, undefined, undefined, undefined, true)
     }
 
 }
@@ -24048,10 +24311,10 @@ function _shopTrialArenaStampProps(r0: number, c0: number, h: number, w: number)
         tileC: centerC | 0,
         pxW: SHOP_TRIAL_PLATFORM_PX_W | 0,
         pxH: SHOP_TRIAL_PLATFORM_PX_H | 0,
+        offX: SHOP_TRIAL_PLATFORM_OFFSET_X_PX | 0,
+        offY: SHOP_TRIAL_PLATFORM_OFFSET_Y_PX | 0,
     })
     if (platform && !(platform.flags & sprites.Flag.Destroyed)) {
-        sprites.setDataNumber(platform, "decorOffX", SHOP_TRIAL_PLATFORM_OFFSET_X_PX | 0)
-        sprites.setDataNumber(platform, "decorOffY", SHOP_TRIAL_PLATFORM_OFFSET_Y_PX | 0)
         _towerTrialPlatformDecor = platform
         _towerTrialPlatformName = SHOP_TRIAL_PLATFORM_NAME_IDLE
         _shopTrialArenaProps.push(platform)
@@ -25176,7 +25439,9 @@ function _towerTrialDialogShowScriptLine(nowMs: number): void {
 }
 
 function _towerTrialDialogStartScript(nowMs: number, lines: Array<{ text: string; hint?: string }>): void {
-    _towerTrialPlatformArmed = false
+    if (lines === TOWER_TRIAL_SCRIPT_MAIN_LINES) {
+        _towerTrialPlatformArmed = false
+    }
     _towerTrialDialogState.scriptIndex = 0
     _towerTrialDialogState.scriptLines = _towerTrialCondenseScriptLines(lines)
     _towerTrialDialogShowScriptLine(nowMs | 0)
@@ -33926,6 +34191,12 @@ function _createTileMap2D(): number[][] {
         return _createShopFloorMap();
     }
 
+    // Boss floors: open procedural arena (no interior walls) to prevent boss pathing jams.
+    if ((_dunFloorKind || "") === DUNGEON_KIND_COMBAT && _dunIsBossFloor(_dunFloorIndex | 0)) {
+        _worldgenBridgePlacements = [];
+        return _createBossArenaMap();
+    }
+
     // MakeCode and Phaser both see the same 0/1 logic grid.
     return _createBasicCaveMap();
 
@@ -33951,6 +34222,233 @@ function _createShopFloorMap(): number[][] {
     }
 
     return map
+}
+
+function _createBossArenaMap(): number[][] {
+    // Large open arena with border walls + randomized edge obstacles.
+    let cols = Math.max(WORLD_TILES_W, MIN_WORLD_TILES_W) | 0
+    let rows = Math.max(WORLD_TILES_H, MIN_WORLD_TILES_H) | 0
+    if (cols < 16) cols = 16
+    if (rows < 12) rows = 12
+
+    const map: number[][] = []
+    for (let r = 0; r < rows; r++) {
+        const row: number[] = []
+        for (let c = 0; c < cols; c++) {
+            const isBorder = (r === 0 || c === 0 || r === (rows - 1) || c === (cols - 1))
+            row.push(isBorder ? TILE_WALL : TILE_EMPTY)
+        }
+        map.push(row)
+    }
+
+    const centerR = Math.idiv(rows, 2) | 0
+    const centerC = Math.idiv(cols, 2) | 0
+    const clearHalfR = Math.max(4, Math.idiv(rows, 4)) | 0
+    const clearHalfC = Math.max(4, Math.idiv(cols, 4)) | 0
+
+    const clearTop = (centerR - clearHalfR) | 0
+    const clearBottom = (centerR + clearHalfR) | 0
+    const clearLeft = (centerC - clearHalfC) | 0
+    const clearRight = (centerC + clearHalfC) | 0
+
+    const canPlace = (r0: number, c0: number, rh: number, cw: number): boolean => {
+        const r1 = (r0 + rh - 1) | 0
+        const c1 = (c0 + cw - 1) | 0
+        if (r0 <= 1 || c0 <= 1 || r1 >= (rows - 2) || c1 >= (cols - 2)) return false
+        // Keep the center arena fully open.
+        if (r1 >= clearTop && r0 <= clearBottom && c1 >= clearLeft && c0 <= clearRight) return false
+        for (let r = r0; r <= r1; r++) {
+            for (let c = c0; c <= c1; c++) {
+                if ((map[r][c] | 0) !== (TILE_EMPTY | 0)) return false
+            }
+        }
+        return true
+    }
+
+    const placeRect = (r0: number, c0: number, rh: number, cw: number) => {
+        const r1 = (r0 + rh - 1) | 0
+        const c1 = (c0 + cw - 1) | 0
+        for (let r = r0; r <= r1; r++) {
+            for (let c = c0; c <= c1; c++) map[r][c] = TILE_WALL
+        }
+    }
+
+    // Random edge obstacles for variety (kept far from center).
+    const blockCount = Math.randomRange(3, 6) | 0
+    for (let i = 0; i < blockCount; i++) {
+        const h = Math.randomRange(2, 4) | 0
+        const w = Math.randomRange(2, 4) | 0
+        let placed = false
+        for (let tries = 0; tries < 80 && !placed; tries++) {
+            const r0 = Math.randomRange(2, (rows - h - 2) | 0) | 0
+            const c0 = Math.randomRange(2, (cols - w - 2) | 0) | 0
+            if (!canPlace(r0, c0, h, w)) continue
+            placeRect(r0, c0, h, w)
+            placed = true
+        }
+    }
+
+    return map
+}
+
+type BossRockPlacement = {
+    name: string
+    anchorR: number
+    anchorC: number
+    wTiles: number
+    hTiles: number
+}
+
+const BOSS_ROCK_MIN_COUNT = 3
+const BOSS_ROCK_MAX_COUNT = 6
+const BOSS_ROCK_TRIES_PER = 120
+
+let _bossRockPlacements: BossRockPlacement[] = []
+
+function _bossRockReset(): void {
+    _bossRockPlacements = []
+}
+
+function _bossRockComputeClearRect(rows: number, cols: number): { top: number; bottom: number; left: number; right: number } {
+    const centerR = Math.idiv(rows | 0, 2) | 0
+    const centerC = Math.idiv(cols | 0, 2) | 0
+    const clearHalfR = Math.max(4, Math.idiv(rows | 0, 4)) | 0
+    const clearHalfC = Math.max(4, Math.idiv(cols | 0, 4)) | 0
+    return {
+        top: (centerR - clearHalfR) | 0,
+        bottom: (centerR + clearHalfR) | 0,
+        left: (centerC - clearHalfC) | 0,
+        right: (centerC + clearHalfC) | 0,
+    }
+}
+
+function _bossRockFitsAt(
+    anchorR: number,
+    anchorC: number,
+    wTiles: number,
+    hTiles: number,
+    rows: number,
+    cols: number,
+    clear: { top: number; bottom: number; left: number; right: number },
+    occ: boolean[][]
+): boolean {
+    const w = Math.max(1, wTiles | 0) | 0
+    const h = Math.max(1, hTiles | 0) | 0
+    const r0 = ((anchorR | 0) - ((h | 0) - 1)) | 0
+    const r1 = (anchorR | 0)
+    const c0 = (anchorC | 0)
+    const c1 = ((anchorC | 0) + (w | 0) - 1) | 0
+
+    if (r0 <= 1 || c0 <= 1) return false
+    if (r1 >= (rows - 2) || c1 >= (cols - 2)) return false
+
+    // Keep the center arena fully open.
+    if (r1 >= (clear.top | 0) && r0 <= (clear.bottom | 0) && c1 >= (clear.left | 0) && c0 <= (clear.right | 0)) return false
+
+    for (let r = r0 | 0; r <= (r1 | 0); r++) {
+        for (let c = c0 | 0; c <= (c1 | 0); c++) {
+            if ((_engineWorldTileMap[r][c] | 0) !== (TILE_EMPTY | 0)) return false
+            if (occ[r] && occ[r][c]) return false
+            if (_dunFindDecorAtTile(r | 0, c | 0, "")) return false
+        }
+    }
+    return true
+}
+
+function _bossRockStampAt(
+    name: string,
+    anchorR: number,
+    anchorC: number,
+    wTiles: number,
+    hTiles: number,
+    occ: boolean[][]
+): void {
+    // Visual anchor (single prop instance)
+    _dunDecor_spawnAtTile({
+        name: name || "",
+        role: DECOR_ROLE.TRIGGER,
+        tileR: anchorR | 0,
+        tileC: anchorC | 0,
+        pxW: WORLD_TILE_SIZE | 0,
+        pxH: WORLD_TILE_SIZE | 0,
+    })
+
+    // Solid colliders for each occupied tile (aura-tightened later).
+    const w = Math.max(1, wTiles | 0) | 0
+    const h = Math.max(1, hTiles | 0) | 0
+    for (let dy = 0; dy < (h | 0); dy++) {
+        for (let dx = 0; dx < (w | 0); dx++) {
+            const rr = ((anchorR | 0) - ((h | 0) - 1) + (dy | 0)) | 0
+            const cc = ((anchorC | 0) + (dx | 0)) | 0
+            const s = _dunDecor_spawnAtTile({
+                name: name || "",
+                role: DECOR_ROLE.SOLID,
+                tileR: rr | 0,
+                tileC: cc | 0,
+                pxW: WORLD_TILE_SIZE | 0,
+                pxH: WORLD_TILE_SIZE | 0,
+            })
+            if (s && !(s.flags & sprites.Flag.Destroyed)) {
+                sprites.setDataNumber(s, DECOR_DATA.IS_COLLIDER, 1)
+            }
+            if (occ[rr]) occ[rr][cc] = true
+        }
+    }
+}
+
+function _dunBossSpawnRocks(): void {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length <= 0) return
+    if (!BOSS_ROCK_POOL || BOSS_ROCK_POOL.length <= 0) return
+
+    const rows = _engineWorldTileMap.length | 0
+    const cols = _engineWorldTileMap[0] ? (_engineWorldTileMap[0].length | 0) : 0
+    if (rows <= 0 || cols <= 0) return
+
+    const clear = _bossRockComputeClearRect(rows | 0, cols | 0)
+    const occ: boolean[][] = new Array(rows | 0)
+    for (let r = 0; r < (rows | 0); r++) {
+        const row: boolean[] = new Array(cols | 0)
+        for (let c = 0; c < (cols | 0); c++) row[c] = false
+        occ[r] = row
+    }
+
+    const target = Math.randomRange(BOSS_ROCK_MIN_COUNT | 0, BOSS_ROCK_MAX_COUNT | 0) | 0
+    let placed = 0
+
+    for (let i = 0; i < (target | 0); i++) {
+        let done = false
+        for (let t = 0; t < (BOSS_ROCK_TRIES_PER | 0) && !done; t++) {
+            const pickIdx = Math.randomRange(0, (BOSS_ROCK_POOL.length - 1) | 0) | 0
+            const def = BOSS_ROCK_POOL[pickIdx]
+            if (!def) continue
+
+            const w = Math.max(1, def.wTiles | 0) | 0
+            const h = Math.max(1, def.hTiles | 0) | 0
+            const minAnchorR = ((h | 0) - 1 + 2) | 0
+            const maxAnchorR = (rows - 2) | 0
+            const minAnchorC = 2
+            const maxAnchorC = ((cols - 1) - (w | 0)) | 0
+            if ((minAnchorR | 0) > (maxAnchorR | 0)) continue
+            if ((minAnchorC | 0) > (maxAnchorC | 0)) continue
+
+            const anchorR = Math.randomRange(minAnchorR | 0, maxAnchorR | 0) | 0
+            const anchorC = Math.randomRange(minAnchorC | 0, maxAnchorC | 0) | 0
+
+            if (!_bossRockFitsAt(anchorR, anchorC, w | 0, h | 0, rows | 0, cols | 0, clear, occ)) continue
+
+            _bossRockPlacements.push({
+                name: def.name || "",
+                anchorR: anchorR | 0,
+                anchorC: anchorC | 0,
+                wTiles: w | 0,
+                hTiles: h | 0,
+            })
+            _bossRockStampAt(def.name || "", anchorR | 0, anchorC | 0, w | 0, h | 0, occ)
+            placed++
+            done = true
+        }
+    }
+    void placed
 }
 
 
@@ -36823,10 +37321,10 @@ function resolveHeroTilemapCollisions(): void {
 
 
 
-function resolveEnemyTilemapCollisions(): void {
+function resolveEnemyTilemapCollisions(forcedOnly = false): void {
 
     if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return
-    if (DEBUG_DISABLE_ENEMY_WALL_COLLISIONS) return
+    if (DEBUG_DISABLE_ENEMY_WALL_COLLISIONS && !forcedOnly) return
 
 
 
@@ -36834,11 +37332,13 @@ function resolveEnemyTilemapCollisions(): void {
     const rows = map.length
     const cols = map[0].length
     const tileSize = WORLD_TILE_SIZE
+    const nowMs = game.runtime() | 0
 
     // Resolve collision for a single enemy using feet collider
-    function resolveForEnemy(e: Sprite) {
+    function resolveForEnemy(e: Sprite, wallsBlock: boolean, propsBlock: boolean) {
         if (!e) return
         if ((sprites.readDataNumber(e, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0) !== 0) return
+        if ((sprites.readDataNumber(e, ENEMY_BOSS_CHARGE_GHOST) | 0) !== 0) return
 
         // Use feet-aligned collider bounds (bottom-anchored) with a fixed wall footprint.
         const dims = _enemyGetColliderDims(e)
@@ -36855,7 +37355,7 @@ function resolveEnemyTilemapCollisions(): void {
         const diagNudgeTicks = ENEMY_WALL_DIAG_NUDGE_TICKS | 0
         let didSlideAdjust = false
 
-        // Run a couple of passes in case we overlap more than one tile
+        // Run a couple of passes in case we overlap more than one blocker
         for (let iter = 0; iter < 3; iter++) {
             const feet = _enemyNavGetEnemyFeetPoint(e, cw, ch)
             const footX = feet.footX | 0
@@ -36893,184 +37393,258 @@ function resolveEnemyTilemapCollisions(): void {
                 minApproach: number
             } | null = null
 
-            // First pass: find a diagonal-cheat candidate (if any).
-            for (let r = minRow; r <= maxRow; r++) {
-                if (r < 0 || r >= rows) continue
-                const rowArr = map[r]
-                for (let c = minCol; c <= maxCol; c++) {
-                    const type = rowArr[c] | 0
-                    const def = TILE_COLLISION_DEFS[type] || TILE_COLLISION_DEFS[0]
-                    if (!def.solid) continue
-
-                    const shapeLeft = c * tileSize + def.offsetX
-                    const shapeRight = shapeLeft + def.width
-                    const shapeTop = r * tileSize + def.offsetY
-                    const shapeBottom = shapeTop + def.height
-
-                    const overlapLeft = right - shapeLeft
-                    const overlapRight = shapeRight - left
-                    const overlapTop = bottom - shapeTop
-                    const overlapBottom = shapeBottom - top
-                    if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) continue
-
-                    const penX = overlapLeft < overlapRight ? overlapLeft : overlapRight
-                    const penY = overlapTop < overlapBottom ? overlapTop : overlapBottom
-                    const approachX = (vx0 >= 0) ? overlapLeft : overlapRight
-                    const approachY = (vy0 >= 0) ? overlapTop : overlapBottom
-                    const fullTile =
-                        def.offsetX === 0 &&
-                        def.offsetY === 0 &&
-                        def.width === tileSize &&
-                        def.height === tileSize
-                    const minApproach = Math.min(approachX, approachY)
-                    if (!movingDiag || !fullTile || (diagCheatPx <= 0) || (minApproach > diagCheatPx)) continue
-
-                    if (!bestCheat || minApproach < bestCheat.minApproach) {
-                        bestCheat = {
-                            r,
-                            c,
-                            type,
-                            shapeLeft,
-                            shapeTop,
-                            shapeW: def.width,
-                            shapeH: def.height,
-                            penX,
-                            penY,
-                            approachX,
-                            approachY,
-                            minApproach
-                        }
-                    }
-                }
-            }
-
-            if (bestCheat) {
-                if (DEBUG_DRAW_ENEMY_WALL_COLLIDERS) {
-                    const logged = sprites.readDataNumber(e, "__dbgWallCheatLogged") | 0
-                    if (!logged) {
-                        sprites.setDataNumber(e, "__dbgWallCheatLogged", 1)
-                        const eid = getEnemyIndex(e)
-                        const mid = sprites.readDataString(e, ENEMY_DATA.MONSTER_ID) || ""
-                        console.log("[DEBUG][ENEMY_WALL_CHEAT]", {
-                            eid,
-                            id: mid,
-                            pos: { x: e.x | 0, y: e.y | 0 },
-                            vel: { vx: vx0, vy: vy0 },
-                            pen: { x: bestCheat.penX | 0, y: bestCheat.penY | 0 },
-                            approach: { x: bestCheat.approachX | 0, y: bestCheat.approachY | 0 },
-                            tile: { r: bestCheat.r, c: bestCheat.c, type: bestCheat.type }
-                        })
-                    }
-                }
-
-                let nudged = false
-                if (diagNudgePx > 0 && diagNudgeTicks > 0) {
-                    let gate = sprites.readDataNumber(e, "__wallDiagNudgeGate") | 0
-                    gate = (gate + 1) | 0
-                    if ((gate % diagNudgeTicks) === 0) {
-                        if (bestCheat.approachX < bestCheat.approachY) {
-                            const shapeCenterX = bestCheat.shapeLeft + bestCheat.shapeW / 2
-                            if (cx < shapeCenterX) e.x -= diagNudgePx
-                            else e.x += diagNudgePx
-                        } else {
-                            const shapeCenterY = bestCheat.shapeTop + bestCheat.shapeH / 2
-                            if (cy < shapeCenterY) e.y -= diagNudgePx
-                            else e.y += diagNudgePx
-                        }
-                        nudged = true
-                    }
-                    sprites.setDataNumber(e, "__wallDiagNudgeGate", gate)
-                }
-
-                if (!didSlideAdjust) {
-                    const speed = Math.sqrt(vx0 * vx0 + vy0 * vy0)
-                    if (speed > 0.001) {
-                        if (bestCheat.approachX < bestCheat.approachY) {
-                            e.vx = 0
-                            e.vy = (vy0 >= 0 ? speed : -speed)
-                        } else {
-                            e.vy = 0
-                            e.vx = (vx0 >= 0 ? speed : -speed)
-                        }
-                        didSlideAdjust = true
-                    }
-                }
-
-                if (nudged) moved = true
-            } else {
+            if (wallsBlock) {
+                // First pass: find a diagonal-cheat candidate (if any).
                 for (let r = minRow; r <= maxRow; r++) {
                     if (r < 0 || r >= rows) continue
                     const rowArr = map[r]
                     for (let c = minCol; c <= maxCol; c++) {
-                        const type = rowArr[c] | 0 // force 0 if undefined
+                        const type = rowArr[c] | 0
                         const def = TILE_COLLISION_DEFS[type] || TILE_COLLISION_DEFS[0]
                         if (!def.solid) continue
 
-                        // Build the tile's collision rect in WORLD space, using per-type offsets and size.
                         const shapeLeft = c * tileSize + def.offsetX
                         const shapeRight = shapeLeft + def.width
                         const shapeTop = r * tileSize + def.offsetY
                         const shapeBottom = shapeTop + def.height
 
-                        // Compute overlaps on each side (sprite vs collision shape)
                         const overlapLeft = right - shapeLeft
                         const overlapRight = shapeRight - left
                         const overlapTop = bottom - shapeTop
                         const overlapBottom = shapeBottom - top
+                        if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) continue
 
-                        // If any are <= 0, AABBs don't overlap on that axis
-                        if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) {
-                            continue
-                        }
-
-                        // Minimal penetration on each axis
                         const penX = overlapLeft < overlapRight ? overlapLeft : overlapRight
                         const penY = overlapTop < overlapBottom ? overlapTop : overlapBottom
                         const approachX = (vx0 >= 0) ? overlapLeft : overlapRight
                         const approachY = (vy0 >= 0) ? overlapTop : overlapBottom
+                        const fullTile =
+                            def.offsetX === 0 &&
+                            def.offsetY === 0 &&
+                            def.width === tileSize &&
+                            def.height === tileSize
+                        const minApproach = Math.min(approachX, approachY)
+                        if (!movingDiag || !fullTile || (diagCheatPx <= 0) || (minApproach > diagCheatPx)) continue
 
-                        if (DEBUG_DRAW_ENEMY_WALL_COLLIDERS) {
-                            const logged = sprites.readDataNumber(e, "__dbgWallHoldLogged") | 0
-                            if (!logged) {
-                                sprites.setDataNumber(e, "__dbgWallHoldLogged", 1)
-                                const eid = getEnemyIndex(e)
-                                const mid = sprites.readDataString(e, ENEMY_DATA.MONSTER_ID) || ""
-                                console.log("[DEBUG][ENEMY_WALL_HOLD]", {
-                                    eid,
-                                    id: mid,
-                                    pos: { x: e.x | 0, y: e.y | 0 },
-                                    vel: { vx: vx0, vy: vy0 },
-                                    pen: { x: penX | 0, y: penY | 0 },
-                                    approach: { x: approachX | 0, y: approachY | 0 },
-                                    tile: { r, c, type }
-                                })
+                        if (!bestCheat || minApproach < bestCheat.minApproach) {
+                            bestCheat = {
+                                r,
+                                c,
+                                type,
+                                shapeLeft,
+                                shapeTop,
+                                shapeW: def.width,
+                                shapeH: def.height,
+                                penX,
+                                penY,
+                                approachX,
+                                approachY,
+                                minApproach
                             }
                         }
-
-                        if (penX < penY) {
-                            // Push in X
-                            const shapeCenterX = shapeLeft + def.width / 2
-                            if (cx < shapeCenterX) {
-                                e.x -= penX
-                            } else {
-                                e.x += penX
-                            }
-                            // Soft slide: kill only X velocity
-                            e.vx = 0
-                        } else {
-                            // Push in Y
-                            const shapeCenterY = shapeTop + def.height / 2
-                            if (cy < shapeCenterY) {
-                                e.y -= penY
-                            } else {
-                                e.y += penY
-                            }
-                            // Soft slide: kill only Y velocity
-                            e.vy = 0
-                        }
-
-                        moved = true
                     }
+                }
+
+                if (bestCheat) {
+                    if (DEBUG_DRAW_ENEMY_WALL_COLLIDERS) {
+                        const logged = sprites.readDataNumber(e, "__dbgWallCheatLogged") | 0
+                        if (!logged) {
+                            sprites.setDataNumber(e, "__dbgWallCheatLogged", 1)
+                            const eid = getEnemyIndex(e)
+                            const mid = sprites.readDataString(e, ENEMY_DATA.MONSTER_ID) || ""
+                            console.log("[DEBUG][ENEMY_WALL_CHEAT]", {
+                                eid,
+                                id: mid,
+                                pos: { x: e.x | 0, y: e.y | 0 },
+                                vel: { vx: vx0, vy: vy0 },
+                                pen: { x: bestCheat.penX | 0, y: bestCheat.penY | 0 },
+                                approach: { x: bestCheat.approachX | 0, y: bestCheat.approachY | 0 },
+                                tile: { r: bestCheat.r, c: bestCheat.c, type: bestCheat.type }
+                            })
+                        }
+                    }
+
+                    let nudged = false
+                    if (diagNudgePx > 0 && diagNudgeTicks > 0) {
+                        let gate = sprites.readDataNumber(e, "__wallDiagNudgeGate") | 0
+                        gate = (gate + 1) | 0
+                        if ((gate % diagNudgeTicks) === 0) {
+                            if (bestCheat.approachX < bestCheat.approachY) {
+                                const shapeCenterX = bestCheat.shapeLeft + bestCheat.shapeW / 2
+                                if (cx < shapeCenterX) e.x -= diagNudgePx
+                                else e.x += diagNudgePx
+                            } else {
+                                const shapeCenterY = bestCheat.shapeTop + bestCheat.shapeH / 2
+                                if (cy < shapeCenterY) e.y -= diagNudgePx
+                                else e.y += diagNudgePx
+                            }
+                            nudged = true
+                        }
+                        sprites.setDataNumber(e, "__wallDiagNudgeGate", gate)
+                    }
+
+                    if (!didSlideAdjust) {
+                        const speed = Math.sqrt(vx0 * vx0 + vy0 * vy0)
+                        if (speed > 0.001) {
+                            if (bestCheat.approachX < bestCheat.approachY) {
+                                e.vx = 0
+                                e.vy = (vy0 >= 0 ? speed : -speed)
+                            } else {
+                                e.vy = 0
+                                e.vx = (vx0 >= 0 ? speed : -speed)
+                            }
+                            didSlideAdjust = true
+                        }
+                    }
+
+                    if (nudged) moved = true
+                } else {
+                    for (let r = minRow; r <= maxRow; r++) {
+                        if (r < 0 || r >= rows) continue
+                        const rowArr = map[r]
+                        for (let c = minCol; c <= maxCol; c++) {
+                            const type = rowArr[c] | 0 // force 0 if undefined
+                            const def = TILE_COLLISION_DEFS[type] || TILE_COLLISION_DEFS[0]
+                            if (!def.solid) continue
+
+                            // Build the tile's collision rect in WORLD space, using per-type offsets and size.
+                            const shapeLeft = c * tileSize + def.offsetX
+                            const shapeRight = shapeLeft + def.width
+                            const shapeTop = r * tileSize + def.offsetY
+                            const shapeBottom = shapeTop + def.height
+
+                            // Compute overlaps on each side (sprite vs collision shape)
+                            const overlapLeft = right - shapeLeft
+                            const overlapRight = shapeRight - left
+                            const overlapTop = bottom - shapeTop
+                            const overlapBottom = shapeBottom - top
+
+                            // If any are <= 0, AABBs don't overlap on that axis
+                            if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) {
+                                continue
+                            }
+
+                            // Minimal penetration on each axis
+                            const penX = overlapLeft < overlapRight ? overlapLeft : overlapRight
+                            const penY = overlapTop < overlapBottom ? overlapTop : overlapBottom
+                            const approachX = (vx0 >= 0) ? overlapLeft : overlapRight
+                            const approachY = (vy0 >= 0) ? overlapTop : overlapBottom
+
+                            if (DEBUG_DRAW_ENEMY_WALL_COLLIDERS) {
+                                const logged = sprites.readDataNumber(e, "__dbgWallHoldLogged") | 0
+                                if (!logged) {
+                                    sprites.setDataNumber(e, "__dbgWallHoldLogged", 1)
+                                    const eid = getEnemyIndex(e)
+                                    const mid = sprites.readDataString(e, ENEMY_DATA.MONSTER_ID) || ""
+                                    console.log("[DEBUG][ENEMY_WALL_HOLD]", {
+                                        eid,
+                                        id: mid,
+                                        pos: { x: e.x | 0, y: e.y | 0 },
+                                        vel: { vx: vx0, vy: vy0 },
+                                        pen: { x: penX | 0, y: penY | 0 },
+                                        approach: { x: approachX | 0, y: approachY | 0 },
+                                        tile: { r, c, type }
+                                    })
+                                }
+                            }
+
+                            if (penX < penY) {
+                                // Push in X
+                                const shapeCenterX = shapeLeft + def.width / 2
+                                if (cx < shapeCenterX) {
+                                    e.x -= penX
+                                } else {
+                                    e.x += penX
+                                }
+                                // Soft slide: kill only X velocity
+                                e.vx = 0
+                            } else {
+                                // Push in Y
+                                const shapeCenterY = shapeTop + def.height / 2
+                                if (cy < shapeCenterY) {
+                                    e.y -= penY
+                                } else {
+                                    e.y += penY
+                                }
+                                // Soft slide: kill only Y velocity
+                                e.vy = 0
+                            }
+
+                            moved = true
+                        }
+                    }
+                }
+            }
+
+            if (propsBlock && _engineDecorSolids && _engineDecorSolids.length > 0) {
+                for (let di = 0; di < _engineDecorSolids.length; di++) {
+                    const s = _engineDecorSolids[di]
+                    if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+
+                    const img: any = (s as any).image
+                    let w = ((img && img.width) ? (img.width | 0) : ((s as any).width | 0)) | 0
+                    let h = ((img && img.height) ? (img.height | 0) : ((s as any).height | 0)) | 0
+                    if (w <= 0) w = WORLD_TILE_SIZE | 0
+                    if (h <= 0) h = WORLD_TILE_SIZE | 0
+
+                    let l = ((s as any).left != null) ? (((s as any).left | 0)) : ((s.x | 0) - (w >> 1))
+                    let t = ((s as any).top != null) ? (((s as any).top | 0)) : ((s.y | 0) - (h >> 1))
+                    let r = ((s as any).right != null) ? ((((s as any).right | 0) - 1) | 0) : ((l + w - 1) | 0)
+                    let b = ((s as any).bottom != null) ? ((((s as any).bottom | 0) - 1) | 0) : ((t + h - 1) | 0)
+
+                    if (!(left < r && right > l && top < b && bottom > t)) continue
+
+                    const aabbUseAura = (sprites.readDataNumber(s, DECOR_SOLID_AABB_USE_AURA_KEY) | 0) !== 0
+                    if (aabbUseAura) {
+                        const aabbTex = sprites.readDataString(s, DECOR_SOLID_AABB_TEX_KEY) || ""
+                        const aabbFrame = sprites.readDataNumber(s, DECOR_SOLID_AABB_FRAME_KEY) | 0
+                        const rawX = sprites.readDataNumber(s, DECOR_SOLID_AABB_RAW_X_KEY) | 0
+                        const rawY = sprites.readDataNumber(s, DECOR_SOLID_AABB_RAW_Y_KEY) | 0
+                        const mode = sprites.readDataNumber(s, DECOR_SOLID_AABB_MODE_KEY) | 0
+                        const baseMinX = sprites.readDataNumber(s, DECOR_SOLID_BASE_MIN_X_KEY) | 0
+                        const baseMaxX = sprites.readDataNumber(s, DECOR_SOLID_BASE_MAX_X_KEY) | 0
+                        const baseH = sprites.readDataNumber(s, DECOR_SOLID_BASE_H_KEY) | 0
+
+                        const mask = getAuraMaskFrameView(aabbTex, aabbFrame)
+                        if (!mask) continue
+                        const frameLeft = ((l | 0) - (rawX | 0)) | 0
+                        const frameTop = ((t | 0) - (rawY | 0)) | 0
+                        const hit = _auraMaskOverlapsBox(
+                            mask,
+                            frameLeft,
+                            frameTop,
+                            left | 0,
+                            right | 0,
+                            top | 0,
+                            bottom | 0,
+                            (mode | 0) === DECOR_SOLID_AABB_MODE_BASE,
+                            baseMinX | 0,
+                            baseMaxX | 0,
+                            baseH | 0
+                        )
+                        if (!hit) continue
+                    }
+
+                    const overlapLeft = right - l
+                    const overlapRight = r - left
+                    const overlapTop = bottom - t
+                    const overlapBottom = b - top
+                    if (overlapLeft <= 0 || overlapRight <= 0 || overlapTop <= 0 || overlapBottom <= 0) continue
+
+                    const penX = overlapLeft < overlapRight ? overlapLeft : overlapRight
+                    const penY = overlapTop < overlapBottom ? overlapTop : overlapBottom
+                    if (penX < penY) {
+                        const shapeCenterX = l + w / 2
+                        if (cx < shapeCenterX) e.x -= penX
+                        else e.x += penX
+                        e.vx = 0
+                    } else {
+                        const shapeCenterY = t + h / 2
+                        if (cy < shapeCenterY) e.y -= penY
+                        else e.y += penY
+                        e.vy = 0
+                    }
+                    moved = true
                 }
             }
 
@@ -37083,8 +37657,16 @@ function resolveEnemyTilemapCollisions(): void {
     for (let ei = 0; ei < enemies.length; ei++) {
         const e = enemies[ei]
         if (!e) continue
-        if ((sprites.readDataNumber(e, ENEMY_DATA.HOOKSHOT_PULLING) | 0) !== 0) continue
-        resolveForEnemy(e)
+        if (forcedOnly) {
+            const hookPulling = (sprites.readDataNumber(e, ENEMY_DATA.HOOKSHOT_PULLING) | 0) !== 0
+            const kbUntil = sprites.readDataNumber(e, ENEMY_DATA.KNOCKBACK_UNTIL) | 0
+            const kbActive = kbUntil > 0 && nowMs < kbUntil
+            if (!hookPulling && !kbActive) continue
+            resolveForEnemy(e, !hookPulling, true)
+        } else {
+            if ((sprites.readDataNumber(e, ENEMY_DATA.HOOKSHOT_PULLING) | 0) !== 0) continue
+            resolveForEnemy(e, true, true)
+        }
     }
 }
 
@@ -37097,7 +37679,7 @@ function resolveTilemapCollisions(): void {
     _tileCollFrame++
 
     resolveHeroTilemapCollisions()
-    resolveEnemyTilemapCollisions()
+    resolveEnemyTilemapCollisions(true)
 
     //_resolveTilemapCollisionsForGroup(heroes, "Hero")
 
@@ -38112,6 +38694,85 @@ function _heroSpawnBoundsAt(x: number, y: number, colliderW: number, colliderH: 
 
 }
 
+function _maskRowHasAny(bits: Uint32Array, wordOffset: number, startBit: number, endBit: number): boolean {
+    if (endBit < startBit) return false
+    const startWord = (startBit >>> 5) | 0
+    const endWord = (endBit >>> 5) | 0
+    const base = wordOffset | 0
+    const startShift = (startBit & 31) | 0
+    const endShift = (endBit & 31) | 0
+
+    if (startWord === endWord) {
+        const startMask = startShift === 0 ? 0xffffffff : ((0xffffffff << startShift) >>> 0)
+        const endMask = endShift === 31 ? 0xffffffff : ((1 << (endShift + 1)) - 1)
+        const mask = (startMask & endMask) >>> 0
+        return ((bits[base + startWord] | 0) & mask) !== 0
+    }
+
+    const firstMask = startShift === 0 ? 0xffffffff : ((0xffffffff << startShift) >>> 0)
+    if (((bits[base + startWord] | 0) & firstMask) !== 0) return true
+
+    for (let w = (startWord + 1) | 0; w < endWord; w++) {
+        if ((bits[base + w] | 0) !== 0) return true
+    }
+
+    const lastMask = endShift === 31 ? 0xffffffff : ((1 << (endShift + 1)) - 1)
+    return ((bits[base + endWord] | 0) & lastMask) !== 0
+}
+
+function _auraMaskOverlapsBox(
+    mask: { w: number; h: number; bits: Uint32Array; wordOffset: number; wordsPerFrame: number },
+    frameLeft: number,
+    frameTop: number,
+    left: number,
+    right: number,
+    top: number,
+    bottom: number,
+    baseMode: boolean,
+    baseMinX: number,
+    baseMaxX: number,
+    baseH: number
+): boolean {
+    const w = mask.w | 0
+    const h = mask.h | 0
+    const frameRight = (frameLeft + w - 1) | 0
+    const frameBottom = (frameTop + h - 1) | 0
+
+    let ox0 = Math.max(left | 0, frameLeft | 0) | 0
+    let oy0 = Math.max(top | 0, frameTop | 0) | 0
+    let ox1 = Math.min(right | 0, frameRight | 0) | 0
+    let oy1 = Math.min(bottom | 0, frameBottom | 0) | 0
+    if (ox0 > ox1 || oy0 > oy1) return false
+
+    let lx0 = (ox0 - frameLeft) | 0
+    let ly0 = (oy0 - frameTop) | 0
+    let lx1 = (ox1 - frameLeft) | 0
+    let ly1 = (oy1 - frameTop) | 0
+
+    if (baseMode) {
+        const baseTop = Math.max(0, (h - (baseH | 0)) | 0) | 0
+        const clampMinX = Math.max(0, baseMinX | 0) | 0
+        const clampMaxX = Math.min(w - 1, baseMaxX | 0) | 0
+        const clampMaxY = Math.max(0, h - 1) | 0
+        lx0 = Math.max(lx0, clampMinX) | 0
+        lx1 = Math.min(lx1, clampMaxX) | 0
+        ly0 = Math.max(ly0, baseTop) | 0
+        ly1 = Math.min(ly1, clampMaxY) | 0
+        if (lx0 > lx1 || ly0 > ly1) return false
+    }
+
+    const bits = mask.bits
+    const wordOffset = mask.wordOffset | 0
+
+    for (let y = ly0; y <= ly1; y++) {
+        const rowStartBit = ((y * w) + lx0) | 0
+        const rowEndBit = ((y * w) + lx1) | 0
+        if (_maskRowHasAny(bits, wordOffset, rowStartBit, rowEndBit)) return true
+    }
+
+    return false
+}
+
 
 
 function _boxOverlapsDecorSolidsBounds(left: number, right: number, top: number, bottom: number): boolean {
@@ -38136,8 +38797,106 @@ function _boxOverlapsDecorSolidsBounds(left: number, right: number, top: number,
         let r = ((s as any).right != null) ? ((((s as any).right | 0) - 1) | 0) : ((l + w - 1) | 0)
         let b = ((s as any).bottom != null) ? ((((s as any).bottom | 0) - 1) | 0) : ((t + h - 1) | 0)
 
-        if (left < r && right > l && top < b && bottom > t) return true
+        if (!(left < r && right > l && top < b && bottom > t)) continue
 
+        const aabbUseAura = (sprites.readDataNumber(s, DECOR_SOLID_AABB_USE_AURA_KEY) | 0) !== 0
+        if (!aabbUseAura) return true
+
+        const aabbTex = sprites.readDataString(s, DECOR_SOLID_AABB_TEX_KEY) || ""
+        const aabbFrame = sprites.readDataNumber(s, DECOR_SOLID_AABB_FRAME_KEY) | 0
+        const rawX = sprites.readDataNumber(s, DECOR_SOLID_AABB_RAW_X_KEY) | 0
+        const rawY = sprites.readDataNumber(s, DECOR_SOLID_AABB_RAW_Y_KEY) | 0
+        const mode = sprites.readDataNumber(s, DECOR_SOLID_AABB_MODE_KEY) | 0
+        const baseMinX = sprites.readDataNumber(s, DECOR_SOLID_BASE_MIN_X_KEY) | 0
+        const baseMaxX = sprites.readDataNumber(s, DECOR_SOLID_BASE_MAX_X_KEY) | 0
+        const baseH = sprites.readDataNumber(s, DECOR_SOLID_BASE_H_KEY) | 0
+
+        const mask = getAuraMaskFrameView(aabbTex, aabbFrame)
+        if (!mask) {
+            const name = sprites.readDataString(s, DECOR_DATA.NAME) || ""
+            throw new Error(`[AURA-MASK-MISSING] tex=${aabbTex} frame=${aabbFrame} prop=${name || "unknown"}`)
+        }
+
+        const frameLeft = ((l | 0) - (rawX | 0)) | 0
+        const frameTop = ((t | 0) - (rawY | 0)) | 0
+
+        const hit = _auraMaskOverlapsBox(
+            mask,
+            frameLeft,
+            frameTop,
+            left | 0,
+            right | 0,
+            top | 0,
+            bottom | 0,
+            (mode | 0) === DECOR_SOLID_AABB_MODE_BASE,
+            baseMinX | 0,
+            baseMaxX | 0,
+            baseH | 0
+        )
+        if (hit) return true
+
+    }
+
+    return false
+
+}
+
+function _boxOverlapsDecorSolidsBoundsForHookshot(left: number, right: number, top: number, bottom: number): boolean {
+
+    if (!_engineDecorSolids || _engineDecorSolids.length === 0) return false
+
+    for (let i = 0; i < _engineDecorSolids.length; i++) {
+
+        const s = _engineDecorSolids[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+
+        const img: any = (s as any).image
+
+        let w = ((img && img.width) ? (img.width | 0) : ((s as any).width | 0)) | 0
+        let h = ((img && img.height) ? (img.height | 0) : ((s as any).height | 0)) | 0
+
+        if (w <= 0) w = WORLD_TILE_SIZE | 0
+        if (h <= 0) h = WORLD_TILE_SIZE | 0
+
+        let l = ((s as any).left != null) ? (((s as any).left | 0)) : ((s.x | 0) - (w >> 1))
+        let t = ((s as any).top != null) ? (((s as any).top | 0)) : ((s.y | 0) - (h >> 1))
+        let r = ((s as any).right != null) ? ((((s as any).right | 0) - 1) | 0) : ((l + w - 1) | 0)
+        let b = ((s as any).bottom != null) ? ((((s as any).bottom | 0) - 1) | 0) : ((t + h - 1) | 0)
+
+        if (!(left < r && right > l && top < b && bottom > t)) continue
+
+        const aabbTex = sprites.readDataString(s, DECOR_SOLID_AABB_TEX_KEY) || ""
+        const aabbFrame = sprites.readDataNumber(s, DECOR_SOLID_AABB_FRAME_KEY) | 0
+        const rawX = sprites.readDataNumber(s, DECOR_SOLID_AABB_RAW_X_KEY) | 0
+        const rawY = sprites.readDataNumber(s, DECOR_SOLID_AABB_RAW_Y_KEY) | 0
+
+        let mask = getAuraMaskFrameView(aabbTex, aabbFrame)
+        if (!mask && aabbTex) {
+            const alt = auraKey(aabbTex, 0)
+            if (alt && alt !== aabbTex) mask = getAuraMaskFrameView(alt, aabbFrame)
+        }
+
+        if (mask) {
+            const frameLeft = ((l | 0) - (rawX | 0)) | 0
+            const frameTop = ((t | 0) - (rawY | 0)) | 0
+            const hit = _auraMaskOverlapsBox(
+                mask,
+                frameLeft,
+                frameTop,
+                left | 0,
+                right | 0,
+                top | 0,
+                bottom | 0,
+                false,
+                0,
+                0,
+                0
+            )
+            if (hit) return true
+            continue
+        }
+
+        return true
     }
 
     return false
@@ -39374,7 +40133,14 @@ function getHeroDirectionName(heroIndex: number) {
 
     const dx = _getHeroFacingX(heroIndex) || 0, dy = _getHeroFacingY(heroIndex) || 0
 
-    if (dy < 0) return "up"; if (dy > 0) return "down"; if (dx < 0) return "left"; return "right"
+    if (dx < 0 && dy < 0) return "up_left";
+    if (dx > 0 && dy < 0) return "up_right";
+    if (dx < 0 && dy > 0) return "down_left";
+    if (dx > 0 && dy > 0) return "down_right";
+    if (dy < 0) return "up";
+    if (dy > 0) return "down";
+    if (dx < 0) return "left";
+    return "right"
 
 }
 
@@ -42696,14 +43462,19 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
 
         if (!comboMode0) {
 
-            const dashUntilNew = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0
+            if (AGI_ENABLE_EXECUTE_ENTRY_FROM_HOLD) {
+                const dashUntilNew = sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0
 
-            if (dashUntilNew > 0) {
+                if (dashUntilNew > 0) {
 
-                sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_BTN, btnId)
+                    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_BTN, btnId)
 
-                sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_DASH_UNTIL, dashUntilNew)
+                    sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_DASH_UNTIL, dashUntilNew)
 
+                }
+            } else {
+                sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_BTN, 0)
+                sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_DASH_UNTIL, 0)
             }
 
         }
@@ -43826,6 +44597,62 @@ function agiResolveWindowAndPendingAdd(hero: Sprite, nowMs: number): { pendingAd
 
     }
 
+    return { pendingAdd: (tC > 0 ? tC : 0), isExec: 0 }
+
+}
+
+function agiResolveWindowForPosX1000(hero: Sprite, halfPosX1000: number): { pendingAdd: number, isExec: number } {
+
+    // Window lengths are expressed as "full-cycle X1000 fractions" whose half-cycle sum is 500.
+    // Convert to half-cycle X1000 by doubling (sum becomes 1000).
+
+    let exF = sprites.readDataNumber(hero, HERO_DATA.AGI_EXEC_FRAC_X1000) | 0
+    let aF  = sprites.readDataNumber(hero, HERO_DATA.AGI_A_FRAC_X1000) | 0
+    let bF  = sprites.readDataNumber(hero, HERO_DATA.AGI_B_FRAC_X1000) | 0
+    let cF  = sprites.readDataNumber(hero, HERO_DATA.AGI_C_FRAC_X1000) | 0
+
+    const sum = (exF + aF + bF + cF) | 0
+    if (exF <= 0 || aF <= 0 || bF <= 0 || cF <= 0 || sum !== 500) {
+        // fall back to defaults (Step 2 already seeds, this is just belt+suspenders)
+        exF = AGI_CHARGE_DEFAULT_EXEC_FRAC_X1000
+        aF  = AGI_CHARGE_DEFAULT_A_FRAC_X1000
+        bF  = AGI_CHARGE_DEFAULT_B_FRAC_X1000
+        cF  = AGI_CHARGE_DEFAULT_C_FRAC_X1000
+    }
+
+    const exLen = (exF << 1) | 0
+    const aLen  = (aF << 1) | 0
+    const bLen  = (bF << 1) | 0
+
+    // Boundaries cover [0..1000]; C is the remainder window.
+    let b0 = exLen
+    let b1 = (b0 + aLen) | 0
+    let b2 = (b1 + bLen) | 0
+
+    // Clamp boundaries defensively
+    if (b0 < 0) b0 = 0
+    if (b1 < b0) b1 = b0
+    if (b2 < b1) b2 = b1
+    if (b2 > 1000) b2 = 1000
+    if (b1 > 1000) b1 = 1000
+    if (b0 > 1000) b0 = 1000
+
+    // Tier values
+    const tA = sprites.readDataNumber(hero, HERO_DATA.AGI_TIER_A_ADD) | 0
+    const tB = sprites.readDataNumber(hero, HERO_DATA.AGI_TIER_B_ADD) | 0
+    const tC = sprites.readDataNumber(hero, HERO_DATA.AGI_TIER_C_ADD) | 0
+
+    // Resolve window for this half-cycle position
+    const halfPos = halfPosX1000 | 0
+    if (halfPos < b0) {
+        return { pendingAdd: 0, isExec: 1 }
+    }
+    if (halfPos < b1) {
+        return { pendingAdd: (tA > 0 ? tA : 0), isExec: 0 }
+    }
+    if (halfPos < b2) {
+        return { pendingAdd: (tB > 0 ? tB : 0), isExec: 0 }
+    }
     return { pendingAdd: (tC > 0 ? tC : 0), isExec: 0 }
 
 }
@@ -45288,8 +46115,15 @@ sprites.onOverlap(SpriteKind.HeroWeapon, SpriteKind.Player, function (weapon, he
 
 
 // MonsterEffect -> Hero (enemy slashes/projectiles). Single hit then destroy.
-function _spawnPoisonGroundHazard(x: number, y: number): void {
-    const size = Math.max(4, POISON_GROUND_SIZE_PX | 0) | 0
+function _spawnPoisonGroundHazard(
+    x: number,
+    y: number,
+    lifeMs?: number,
+    sizePx?: number,
+    dmg?: number,
+    tickMs?: number
+): void {
+    const size = Math.max(4, (sizePx != null ? (sizePx | 0) : (POISON_GROUND_SIZE_PX | 0))) | 0
     const img = image.create(size, size)
     img.fill(0)
     const fill = 7
@@ -45305,10 +46139,10 @@ function _spawnPoisonGroundHazard(x: number, y: number): void {
     hz.x = x | 0
     hz.y = y | 0
     sprites.setDataNumber(hz, "__hazard", 1)
-    sprites.setDataNumber(hz, "__hazardDmg", POISON_GROUND_DMG | 0)
-    sprites.setDataNumber(hz, "__hazardTickMs", POISON_GROUND_TICK_MS | 0)
+    sprites.setDataNumber(hz, "__hazardDmg", (dmg != null ? (dmg | 0) : (POISON_GROUND_DMG | 0)) | 0)
+    sprites.setDataNumber(hz, "__hazardTickMs", (tickMs != null ? (tickMs | 0) : (POISON_GROUND_TICK_MS | 0)) | 0)
     sprites.setDataNumber(hz, "__hazardNextHitMs", 0)
-    hz.lifespan = POISON_GROUND_LIFE_MS | 0
+    hz.lifespan = (lifeMs != null ? (lifeMs | 0) : (POISON_GROUND_LIFE_MS | 0)) | 0
 }
 
 sprites.onOverlap(SpriteKind.MonsterEffect, SpriteKind.Player, function (fx, hero) {
@@ -52148,6 +52982,10 @@ type AgiHookshotState = {
     comet: Sprite | null
     cometStartMs: number
     aimIndicator: Sprite[] | null
+    timingStartMs: number
+    timingPosX1000: number
+    timingPendingAdd: number
+    timingIsExec: number
 }
 
 const agiHookshotStateByHeroIndex: AgiHookshotState[] = []
@@ -52328,6 +53166,9 @@ const AGI_CHARGE_MIN_B_FRAC_X1000 = 20
 
 const AGI_CHARGE_DEFAULT_PERIOD_MS = AGI_METER_PERIOD_MS
 
+// Disable legacy "hold on landing to enter execute" path (keep code for future reuse).
+const AGI_ENABLE_EXECUTE_ENTRY_FROM_HOLD = false
+
 
 
 
@@ -52369,7 +53210,10 @@ const AGI_HOOKSHOT_AIM_TILT_SIDE_DEG = 22.5
 const AGI_HOOKSHOT_AIM_DOT_COUNT = 4
 const AGI_HOOKSHOT_AIM_DOT_RADIUS_PX = 8
 const AGI_HOOKSHOT_AIM_DOT_OUTLINE_PX = 2
+const AGI_HOOKSHOT_AIM_DOT_EDGE_LIGHT_IDX = 1
+const AGI_HOOKSHOT_AIM_DOT_EDGE_DARK_IDX = 12
 const AGI_HOOKSHOT_AIM_DOT_SPACING_PX = 18
+const AGI_HOOKSHOT_AIM_DOT_SPREAD_MIN_X1000 = 200
 const AGI_HOOKSHOT_AIM_DOT_START_PCT_X1000 = 250
 const AGI_HOOKSHOT_AIM_DOT_TIP_PAD_PX = 10
 const AGI_HOOKSHOT_AIM_DOT_ALPHA_MIN = 0.9
@@ -52381,6 +53225,7 @@ const AGI_HOOKSHOT_SPEED_PENALTY_PCT_PER_LEN = 5  // 5% less speed per weapon-le
 const AGI_HOOKSHOT_MIN_SPEED_PX_S = 20
 const AGI_HOOKSHOT_TIP_FORGIVENESS_PX = 10        // min tip box width/height
 const AGI_HOOKSHOT_PROP_TIP_HALF_PX = 4           // tighter prop collision than monsters
+const AGI_HOOKSHOT_PROP_EMBED_PX = 2              // embed spear slightly into props
 const AGI_HOOKSHOT_WALL_EMBED_PX = (WORLD_TILE_SIZE >> 1)
 const AGI_HOOKSHOT_MARKER_SIZE_PX = 10
 const AGI_HOOKSHOT_TRACE_STEP_PX = 2
@@ -54477,6 +55322,13 @@ function updateAgilityComboLandingTransitions(nowMs: number): void {
         // ------------------------------------------------------------
 
         const entryDu = sprites.readDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_DASH_UNTIL) | 0
+        if (!AGI_ENABLE_EXECUTE_ENTRY_FROM_HOLD) {
+            if (entryDu > 0 && entryDu === dashUntil) {
+                sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_BTN, 0)
+                sprites.setDataNumber(hero, HERO_DATA.AGI_COMBO_ENTRY_DASH_UNTIL, 0)
+            }
+            continue
+        }
 
         if (entryDu > 0 && entryDu === dashUntil && family0 === FAMILY.AGILITY) {
 
@@ -55249,6 +56101,10 @@ function _agiHookStateEnsure(heroIndex: number): AgiHookshotState {
         comet: null,
         cometStartMs: 0,
         aimIndicator: null,
+        timingStartMs: 0,
+        timingPosX1000: 0,
+        timingPendingAdd: 0,
+        timingIsExec: 0,
     }
     agiHookshotStateByHeroIndex[heroIndex] = st
     return st
@@ -55258,6 +56114,12 @@ function _agiHookSetState(heroIndex: number, hero: Sprite, st: AgiHookshotState,
     st.state = next | 0
     sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_STATE, next | 0)
     st.cometStartMs = game.runtime() | 0
+    if ((next | 0) === AGI_HOOK_STATE.AIMING) {
+        st.timingStartMs = st.cometStartMs | 0
+        st.timingPosX1000 = 0
+        st.timingPendingAdd = 0
+        st.timingIsExec = 0
+    }
 }
 
 let _agiHookChainImg: Image | null = null
@@ -55341,6 +56203,31 @@ function _agiHookAimDotImage(fillIdx: number, edgeIdx: number): Image {
     return img;
 }
 
+function _agiHookAimDotEdgeForTerrain(fallback: number): number {
+    const palette = _strengthArcTerrainPaletteKey();
+    if (!palette) return (fallback | 0) || (AGI_HOOKSHOT_AIM_DOT_EDGE_LIGHT_IDX | 0);
+    const isDark = _strengthArcTerrainIsDark(palette);
+    return isDark ? (AGI_HOOKSHOT_AIM_DOT_EDGE_LIGHT_IDX | 0) : (AGI_HOOKSHOT_AIM_DOT_EDGE_DARK_IDX | 0);
+}
+
+function _agiHookTimingPosX1000(st: AgiHookshotState, hero: Sprite, nowMs: number): { pos: number, pendingAdd: number, isExec: number } {
+    let start = st.timingStartMs | 0
+    if (start <= 0) {
+        start = nowMs | 0
+        st.timingStartMs = start | 0
+    }
+    const period = agiPendulumPeriodMsForHero(hero)
+    const pos = agiResolveHalfCyclePosX1000(nowMs | 0, start | 0, period | 0)
+    const res = agiResolveWindowForPosX1000(hero, pos | 0)
+    st.timingPosX1000 = pos | 0
+    st.timingPendingAdd = res.pendingAdd | 0
+    st.timingIsExec = res.isExec | 0
+    sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_TIMING_POS_X1000, pos | 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_TIMING_PENDING_ADD, res.pendingAdd | 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_TIMING_IS_EXEC, res.isExec | 0)
+    return { pos: pos | 0, pendingAdd: res.pendingAdd | 0, isExec: res.isExec | 0 }
+}
+
 function _agiHookEnsureAimDots(st: AgiHookshotState, hero: Sprite, fillIdx: number, edgeIdx: number): Sprite[] {
     let arr = st.aimIndicator || null;
     const count = Math.max(1, AGI_HOOKSHOT_AIM_DOT_COUNT | 0);
@@ -55394,20 +56281,28 @@ function _agiHookUpdateAimDots(
     const dirKey = _weaponDirKeyFromVector(nx, ny);
     const palette = _weaponAuraPaletteForElement(st.element | 0, dirKey, "offense");
     const fillIdx = (palette.r3 | 0) || (palette.r2 | 0) || (palette.r1 | 0) || 1;
-    const edgeIdx = (palette.edge | 0) || 15;
+    const baseEdge = (palette.edge | 0) || 15;
+    const edgeIdx = _agiHookAimDotEdgeForTerrain(baseEdge | 0);
+    const timing = _agiHookTimingPosX1000(st, hero, nowMs | 0);
     const dots = _agiHookEnsureAimDots(st, hero, fillIdx | 0, edgeIdx | 0);
     const dist = Math.hypot(tipX - baseX, tipY - baseY);
     const baseLen = Math.max(1, weaponLen | 0);
     const start = Math.max(2, Math.round((baseLen * (AGI_HOOKSHOT_AIM_DOT_START_PCT_X1000 | 0)) / 1000));
     const maxDist = Math.max(0, dist - (AGI_HOOKSHOT_AIM_DOT_TIP_PAD_PX | 0));
     const spacing = Math.max(2, AGI_HOOKSHOT_AIM_DOT_SPACING_PX | 0);
+    const spreadX1000 = Math.max(
+        (AGI_HOOKSHOT_AIM_DOT_SPREAD_MIN_X1000 | 0),
+        Math.min(1000, timing.pos | 0)
+    );
+    const startScaled = Math.max(2, Math.round((start * spreadX1000) / 1000));
+    const spacingScaled = Math.max(1, Math.round((spacing * spreadX1000) / 1000));
     const period = Math.max(1, AGI_HOOKSHOT_AIM_DOT_PULSE_MS | 0);
     const phaseBase = ((nowMs | 0) / period) * Math.PI * 2;
 
     for (let i = 0; i < dots.length; i++) {
         const dot = dots[i];
         if (!dot || (dot.flags & sprites.Flag.Destroyed)) continue;
-        const d = start + (i * spacing);
+        const d = startScaled + (i * spacingScaled);
         if (!(dist > 0) || d > maxDist) {
             dot.setFlag(SpriteFlag.Invisible, true);
             continue;
@@ -55639,7 +56534,7 @@ function _agiHookVisualDirFromAngle(angleMdeg: number): { nx: number; ny: number
     if (min === dUp) {
         const d = delta(90)
         if (Math.abs(d) <= AGI_HOOKSHOT_AIM_TILT_UP_DEG) return { nx: 0, ny: -1 }
-        return (d > 0) ? { nx: 1, ny: -1 } : { nx: -1, ny: -1 }
+        return (d > 0) ? { nx: -1, ny: -1 } : { nx: 1, ny: -1 }
     }
     if (min === dDown) {
         const d = delta(270)
@@ -56373,11 +57268,20 @@ function _agiHookRaycast(
         }
 
         // Decor/props
-        if (_boxOverlapsDecorSolidsBounds(left, right, top, bottom)) {
+        const propHalf = Math.max(1, Math.min(half, AGI_HOOKSHOT_PROP_TIP_HALF_PX | 0))
+        const pLeft = Math.round(tx - propHalf)
+        const pRight = Math.round(tx + propHalf)
+        const pTop = Math.round(ty - propHalf)
+        const pBottom = Math.round(ty + propHalf)
+        if (_boxOverlapsDecorSolidsBoundsForHookshot(pLeft, pRight, pTop, pBottom)) {
             hitKind = AGI_HOOK_TARGET.PROP
             hitSpriteId = 0
-            hitDist = d
-            return { kind: hitKind, spriteId: hitSpriteId, x: tx, y: ty, dist: hitDist, lastGroundDist }
+            const embed = Math.max(0, AGI_HOOKSHOT_PROP_EMBED_PX | 0)
+            const finalDist = Math.min(maxD, (d + embed) | 0)
+            const fx = baseX + nx * finalDist
+            const fy = baseY + ny * finalDist
+            hitDist = finalDist
+            return { kind: hitKind, spriteId: hitSpriteId, x: fx, y: fy, dist: hitDist, lastGroundDist }
         }
 
         // Walls
@@ -56626,7 +57530,7 @@ function _agiHookCheckTipHit(
     const pRight = Math.round(tx + propHalf)
     const pTop = Math.round(ty - propHalf)
     const pBottom = Math.round(ty + propHalf)
-    if (_boxOverlapsDecorSolidsBounds(pLeft, pRight, pTop, pBottom)) {
+    if (_boxOverlapsDecorSolidsBoundsForHookshot(pLeft, pRight, pTop, pBottom)) {
         _agiHookLogPropAura(heroIndex, hero, "HIT_PROP", tx, ty, pLeft, pRight, pTop, pBottom)
         return { kind: AGI_HOOK_TARGET.PROP, spriteId: 0 }
     }
@@ -56688,6 +57592,14 @@ function _agiHookScanSegment(
             return { kind: hit.kind, spriteId: hit.spriteId, x: fx, y: fy, dist: finalDist, lastGroundDist: lastGround }
         }
 
+        if (hit.kind === AGI_HOOK_TARGET.PROP) {
+            const embed = Math.max(0, AGI_HOOKSHOT_PROP_EMBED_PX | 0)
+            const finalDist = Math.min(maxDist, (d + embed) | 0)
+            const fx = baseX + nx * finalDist
+            const fy = baseY + ny * finalDist
+            return { kind: hit.kind, spriteId: hit.spriteId, x: fx, y: fy, dist: finalDist, lastGroundDist: lastGround }
+        }
+
         return { kind: hit.kind, spriteId: hit.spriteId, x: tx, y: ty, dist: d, lastGroundDist: lastGround }
     }
 
@@ -56700,6 +57612,13 @@ function _agiHookScanSegment(
             if (hit.kind === AGI_HOOK_TARGET.WALL) {
                 const embed = Math.max(0, AGI_HOOKSHOT_WALL_EMBED_PX | 0)
                 const finalDist = Math.min(maxDist, (lastGround + embed) | 0)
+                const fx = baseX + nx * finalDist
+                const fy = baseY + ny * finalDist
+                return { kind: hit.kind, spriteId: hit.spriteId, x: fx, y: fy, dist: finalDist, lastGroundDist: lastGround }
+            }
+            if (hit.kind === AGI_HOOK_TARGET.PROP) {
+                const embed = Math.max(0, AGI_HOOKSHOT_PROP_EMBED_PX | 0)
+                const finalDist = Math.min(maxDist, (end + embed) | 0)
                 const fx = baseX + nx * finalDist
                 const fy = baseY + ny * finalDist
                 return { kind: hit.kind, spriteId: hit.spriteId, x: fx, y: fy, dist: finalDist, lastGroundDist: lastGround }
@@ -56874,11 +57793,18 @@ function _agiHookFinish(
     st.lastGroundDist = 0
     st.recoverHoldPending = 0
     st.lastAnimFrame = -1
+    st.timingStartMs = 0
+    st.timingPosX1000 = 0
+    st.timingPendingAdd = 0
+    st.timingIsExec = 0
     sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_STATE, AGI_HOOK_STATE.NONE)
     sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
     sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_X1000, 0)
     sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_Y1000, 0)
     sprites.setDataNumber(hero, HERO_DATA.AIM_ANGLE_MDEG, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_TIMING_POS_X1000, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_TIMING_PENDING_ADD, 0)
+    sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_TIMING_IS_EXEC, 0)
     clearHeroFrameColOverride(heroIndex)
     hero.vx = 0
     hero.vy = 0
@@ -56923,6 +57849,9 @@ function updateAgilityHookshotAll(nowMs: number): void {
             sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_X1000, 0)
             sprites.setDataNumber(hero, HERO_DATA.AIM_DIR_Y1000, 0)
             sprites.setDataNumber(hero, HERO_DATA.AIM_ANGLE_MDEG, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_TIMING_POS_X1000, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_TIMING_PENDING_ADD, 0)
+            sprites.setDataNumber(hero, HERO_DATA.AGI_HOOK_TIMING_IS_EXEC, 0)
             continue
         }
 
@@ -57381,7 +58310,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 const newX = base.x + nx * newDist
                 const newY = base.y + ny * newDist
 
-                if (_agiHookEnemyBlockedAt(enemy, newX, newY, wallsBlock)) {
+                if (_agiHookEnemyBlockedAt(enemy, newX, newY, false)) {
                     sprites.setDataNumber(enemy, ENEMY_DATA.HOOKSHOT_PULLING, 0)
                     _agiHookLog(hi, hero, st, "RETURN_ONLY", "reason=enemy_blocked", true)
                     st.returnOnly = 1
@@ -66210,7 +67139,7 @@ function _dunQueueBossIntroForEnemy(enemy: Sprite, monsterId: string): void {
         BOSS_PAD_SINK_ANIM_MS | 0,
         BOSS_PAD_SINK_SHAKE_MS | 0,
         BOSS_PAD_SINK_SHAKE_INTENSITY,
-        true
+        false
     )
 
     _dunBossIntroFloor = _dunFloorIndex | 0
@@ -66848,7 +67777,8 @@ const ENEMY_STUCK_DEDUP_MS = 1200
 const ENEMY_NAV_DEAD_END_MAX_CELLS = 64  // KNOB: cap pocket size we treat as "dead end" to avoid blocking real paths
 const ENEMY_ASTAR_MAX_NODES = 5000
 const ENEMY_STUCK_NUDGE_PX = 1
-const ENEMY_NAV_FOOTPRINT_MAX_PX = 30  // clamp nav/wall footprint so large sprites don't brick paths
+const ENEMY_NAV_FOOTPRINT_MAX_PX = 32  // clamp NAV footprint only (pathfinding size), not collision
+const ENEMY_NAV_FOOTPRINT_BOSS_PX = 64 // boss nav footprint (must be tile-multiple: 2x32)
 const ENEMY_STUCK_SLIDE_ENABLED = false  // toggle anti-stuck nudge if it interferes with A*
 
 let _enginePaused = false
@@ -67129,12 +68059,19 @@ const _NAV8_DC: number[] = [0, 0, -1, 1, -1, 1, -1, 1]
 
 
 
-function _enemyNavCanOccupyCellForDims(colliderW: number, colliderH: number, r: number, c: number): boolean {
+function _enemyNavCanOccupyCellForDims(
+    colliderW: number,
+    colliderH: number,
+    r: number,
+    c: number,
+    maxFootprintPx?: number
+): boolean {
 
     const tile = WORLD_TILE_SIZE | 0
 
-    const navW = Math.min(colliderW | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
-    const navH = Math.min(colliderH | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
+    const maxPx = (maxFootprintPx != null ? (maxFootprintPx | 0) : (ENEMY_NAV_FOOTPRINT_MAX_PX | 0)) | 0
+    const navW = Math.min(colliderW | 0, maxPx) | 0
+    const navH = Math.min(colliderH | 0, maxPx) | 0
 
     // Interpret (r,c) as the tile containing the enemy's FOOTPRINT CENTER.
     const centerX = (c * tile + (tile >> 1)) | 0
@@ -67487,14 +68424,50 @@ function _enemyNavRebuildDecorBlocks(rows: number, cols: number): void {
 
 
 
-        for (let rr = r0; rr <= r1; rr++) {
-
-            for (let cc = c0; cc <= c1; cc++) {
-
-                _enemyNavDecorBlock[_enemyNavIdx(rr, cc)] = 1
-
+        const aabbUseAura = (sprites.readDataNumber(s, DECOR_SOLID_AABB_USE_AURA_KEY) | 0) !== 0
+        if (aabbUseAura) {
+            const aabbTex = sprites.readDataString(s, DECOR_SOLID_AABB_TEX_KEY) || ""
+            const aabbFrame = sprites.readDataNumber(s, DECOR_SOLID_AABB_FRAME_KEY) | 0
+            const rawX = sprites.readDataNumber(s, DECOR_SOLID_AABB_RAW_X_KEY) | 0
+            const rawY = sprites.readDataNumber(s, DECOR_SOLID_AABB_RAW_Y_KEY) | 0
+            const mode = sprites.readDataNumber(s, DECOR_SOLID_AABB_MODE_KEY) | 0
+            const baseMinX = sprites.readDataNumber(s, DECOR_SOLID_BASE_MIN_X_KEY) | 0
+            const baseMaxX = sprites.readDataNumber(s, DECOR_SOLID_BASE_MAX_X_KEY) | 0
+            const baseH = sprites.readDataNumber(s, DECOR_SOLID_BASE_H_KEY) | 0
+            const mask = getAuraMaskFrameView(aabbTex, aabbFrame)
+            if (mask) {
+                const frameLeft = ((left | 0) - (rawX | 0)) | 0
+                const frameTop = ((top | 0) - (rawY | 0)) | 0
+                for (let rr = r0; rr <= r1; rr++) {
+                    for (let cc = c0; cc <= c1; cc++) {
+                        const tileLeft = ((cc * tileSize) | 0)
+                        const tileTop = ((rr * tileSize) | 0)
+                        const tileRight = ((tileLeft + tileSize - 1) | 0)
+                        const tileBottom = ((tileTop + tileSize - 1) | 0)
+                        const hit = _auraMaskOverlapsBox(
+                            mask,
+                            frameLeft,
+                            frameTop,
+                            tileLeft,
+                            tileRight,
+                            tileTop,
+                            tileBottom,
+                            (mode | 0) === DECOR_SOLID_AABB_MODE_BASE,
+                            baseMinX | 0,
+                            baseMaxX | 0,
+                            baseH | 0
+                        )
+                        if (hit) _enemyNavDecorBlock[_enemyNavIdx(rr, cc)] = 1
+                    }
+                }
+                continue
             }
+        }
 
+        for (let rr = r0; rr <= r1; rr++) {
+            for (let cc = c0; cc <= c1; cc++) {
+                _enemyNavDecorBlock[_enemyNavIdx(rr, cc)] = 1
+            }
         }
 
     }
@@ -68171,8 +69144,9 @@ function _enemyNavDump(enemy: Sprite, reason: string): void {
 }
 
 function _enemyNavGetEnemyFeetPoint(enemy: Sprite, cw: number, ch: number) {
-    const footW = Math.min(cw | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
-    const footH = Math.min(ch | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
+    const maxPx = _enemyNavMaxFootprintPx(enemy) | 0
+    const footW = Math.min(cw | 0, maxPx) | 0
+    const footH = Math.min(ch | 0, maxPx) | 0
 
     const auraFrameH = sprites.readDataNumber(enemy, "__monsterAuraFrameH") | 0
     if (auraFrameH > 0) {
@@ -68210,6 +69184,11 @@ function _enemyNavClampTileRC(r: number, c: number) {
     return { r: rr, c: cc }
 }
 
+function _enemyNavMaxFootprintPx(enemy: Sprite | null): number {
+    if (enemy && _enemyIsBoss(enemy)) return ENEMY_NAV_FOOTPRINT_BOSS_PX | 0
+    return ENEMY_NAV_FOOTPRINT_MAX_PX | 0
+}
+
 function _enemyNavClearNavTargetData(enemy: Sprite): void {
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_R, -1)
     sprites.setDataNumber(enemy, ENEMY_AI_NAV_TARGET_C, -1)
@@ -68234,11 +69213,19 @@ function _enemyNavComputeAlign(dr: number, dc: number, vx: number, vy: number) {
     return (((dr | 0) * vx) + ((dc | 0) * vy)) / vMag
 }
 
-function _enemyNavIsDiagBlockedForFootprint(r: number, c: number, nr: number, nc: number, cw: number, ch: number) {
+function _enemyNavIsDiagBlockedForFootprint(
+    r: number,
+    c: number,
+    nr: number,
+    nc: number,
+    cw: number,
+    ch: number,
+    maxFootprintPx?: number
+) {
     // diag corner-cut guard (+ footprint guard on adjacent cardinals)
     if (_enemyNavIsBlocked(r | 0, nc | 0) || _enemyNavIsBlocked(nr | 0, c | 0)) return true
-    if (!_enemyNavCanOccupyCellForDims(cw | 0, ch | 0, r | 0, nc | 0)) return true
-    if (!_enemyNavCanOccupyCellForDims(cw | 0, ch | 0, nr | 0, c | 0)) return true
+    if (!_enemyNavCanOccupyCellForDims(cw | 0, ch | 0, r | 0, nc | 0, maxFootprintPx)) return true
+    if (!_enemyNavCanOccupyCellForDims(cw | 0, ch | 0, nr | 0, c | 0, maxFootprintPx)) return true
     return false
 }
 
@@ -68277,6 +69264,7 @@ function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number,
     const dims = _enemyGetColliderDims(enemy)
     const cw = dims.w | 0
     const ch = dims.h | 0
+    const navMaxPx = _enemyNavMaxFootprintPx(enemy) | 0
     const feet = _enemyNavGetEnemyFeetPoint(enemy, cw, ch)
     const footX = feet.footX | 0
     const footY = feet.footY | 0
@@ -68352,7 +69340,7 @@ function _enemySteerTowardAStar(enemy: Sprite, targetX: number, targetY: number,
     }
 
     // Footprint guard for the chosen next tile; fall back if too tight.
-    if (!_enemyNavCanOccupyCellForDims(cw, ch, nextR, nextC)) {
+    if (!_enemyNavCanOccupyCellForDims(cw, ch, nextR, nextC, navMaxPx)) {
         _enemyNavClearNavTargetData(enemy)
         return false
     }
@@ -68508,7 +69496,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
         const dc = _NAV8_DC[k] | 0
 
         if (dr !== 0 && dc !== 0) {
-            if (_enemyNavIsDiagBlockedForFootprint(r, c, nr, nc, cw, ch)) {
+            if (_enemyNavIsDiagBlockedForFootprint(r, c, nr, nc, cw, ch, navMaxPx)) {
                 if (cand) {
                     cand.blocked = 1
                     cand.blockReason = "diag"
@@ -68520,7 +69508,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
             }
         }
 
-        if (!_enemyNavCanOccupyCellForDims(cw, ch, nr, nc)) {
+        if (!_enemyNavCanOccupyCellForDims(cw, ch, nr, nc, navMaxPx)) {
             if (cand) {
                 cand.blocked = 1
                 cand.blockReason = "fit"
@@ -68553,7 +69541,7 @@ function _enemySteerTowardNavField(enemy: Sprite, speed: number): boolean {
             cand.align = align
             cand.diag = (dr !== 0 && dc !== 0) ? 1 : 0
 
-            const probe = _enemyNavCandidateCollisionProbe(nr, nc, cw, ch)
+            const probe = _enemyNavCandidateCollisionProbe(nr, nc, cw, ch, navMaxPx)
             if (probe) {
                 const h = probe.hits
                 cand.coll = `H(any=${h.anyBlockedHits|0},base=${h.baseHits|0},dead=${h.deadEndHits|0},cap=${h.capped|0})`
@@ -69064,6 +70052,7 @@ const ENEMY_ROAM_RADIUS_PX = ENEMY_ROAM_RADIUS_TILES * WORLD_TILE_SIZE
 const ENEMY_ROAM_MIN_MS = 500
 const ENEMY_ROAM_MAX_MS = 1400
 const ENEMY_ROAM_SPEED_PCT = 35
+const ENEMY_BOSS_STUCK_ENABLED = false
 const ENEMY_BOSS_STUCK_MIN_MS = 700
 const ENEMY_BOSS_STUCK_MIN_MOVE_PX = 2
 const ENEMY_BOSS_RANGED_HOLD_MS = 2400
@@ -69195,6 +70184,7 @@ const BOSS_JUMP_APEX_HOLD_MS = 1600
 const BOSS_JUMP_DESCEND_MS = 1200
 const BOSS_JUMP_LAND_MS = 400
 const BOSS_INTRO_CONTROL_LEAD_MS = 4000
+const BOSS_INTRO_PAUSE_CLAMP_MS = 250
 const BOSS_JUMP_COMPRESS_SCALE_X1000 = 820
 const BOSS_JUMP_LAUNCH_SCALE_X1000 = 1120
 const BOSS_JUMP_LAND_SCALE_X1000 = 920
@@ -69207,12 +70197,37 @@ const ENEMY_BOSS_JUMP_START_MS = "__bossJumpStartMs"
 const ENEMY_BOSS_JUMP_END_MS = "__bossJumpEndMs"
 const ENEMY_BOSS_JUMP_LAND_AT_MS = "__bossJumpLandAtMs"
 const ENEMY_BOSS_JUMP_LANDED_KEY = "__bossJumpLanded"
+const ENEMY_BOSS_JUMP_LAST_MS = "__bossJumpLastMs"
 const ENEMY_BOSS_JUMP_FROM_X = "__bossJumpFromX"
 const ENEMY_BOSS_JUMP_FROM_Y = "__bossJumpFromY"
 const ENEMY_BOSS_JUMP_MID_X = "__bossJumpMidX"
 const ENEMY_BOSS_JUMP_MID_Y = "__bossJumpMidY"
 const ENEMY_BOSS_JUMP_TO_X = "__bossJumpToX"
 const ENEMY_BOSS_JUMP_TO_Y = "__bossJumpToY"
+
+const ENEMY_BOSS_MOVE_ID = "__bossMoveId"
+const ENEMY_BOSS_MOVE_PHASE = "__bossMovePhase"
+const ENEMY_BOSS_MOVE_UNTIL = "__bossMoveUntil"
+const ENEMY_BOSS_MOVE_LAST_ID = "__bossMoveLastId"
+const ENEMY_BOSS_MOVE_START_MS = "__bossMoveStartMs"
+const ENEMY_BOSS_MOVE_TELE_START_MS = "__bossMoveTeleStartMs"
+const ENEMY_BOSS_MOVE_EXEC_START_MS = "__bossMoveExecStartMs"
+const ENEMY_BOSS_MOVE_RECOVER_START_MS = "__bossMoveRecoverStartMs"
+const ENEMY_BOSS_CHARGE_DIR_X1000 = "__bossChargeDirX1000"
+const ENEMY_BOSS_CHARGE_DIR_Y1000 = "__bossChargeDirY1000"
+const ENEMY_BOSS_CHARGE_GHOST = "__bossChargeGhost"
+const ENEMY_BOSS_BARRAGE_NEXT_VOLLEY_MS = "__bossBarrageVolleyMs"
+const ENEMY_BOSS_POISON_CENTER_R = "__bossPoisonCenterR"
+const ENEMY_BOSS_POISON_CENTER_C = "__bossPoisonCenterC"
+const ENEMY_BOSS_POISON_RADIUS_TILES = "__bossPoisonRadiusTiles"
+const ENEMY_BOSS_POISON_NEXT_RING_MS = "__bossPoisonNextRingMs"
+
+const HERO_BOSS_CHARGE_HIT_UNTIL = "__bossChargeHitUntil"
+
+const BOSS_MOVE_PHASE_IDLE = 0
+const BOSS_MOVE_PHASE_TELEGRAPH = 1
+const BOSS_MOVE_PHASE_EXEC = 2
+const BOSS_MOVE_PHASE_RECOVER = 3
 
 const HERO_BOSS_INTRO_LOCK_KEY = "__bossIntroLock"
 const HERO_BOSS_KNOCK_ACTIVE_KEY = "__bossKnockActive"
@@ -69237,6 +70252,36 @@ const BOSS_KNOCK_ARC_PX = 18
 const BOSS_KNOCK_BOUNCE_ARC_PX = 8
 const BOSS_KNOCK_BOUNCE_EXTRA_PCT = 0.18
 
+const SLIME_BOSS_BARRAGE_TELE_MS = 800
+const SLIME_BOSS_BARRAGE_EXEC_MS = 2600
+const SLIME_BOSS_BARRAGE_RECOVER_MS = 1200
+const SLIME_BOSS_BARRAGE_COOLDOWN_MS = 3000
+const SLIME_BOSS_BARRAGE_VOLLEY_GAP_MS = 420
+const SLIME_BOSS_BARRAGE_FAR_PX = 260
+const SLIME_BOSS_BARRAGE_NEAR_PX = 100
+
+const SLIME_BOSS_CHARGE_TELE_MS = 900
+const SLIME_BOSS_CHARGE_EXEC_MS = 900
+const SLIME_BOSS_CHARGE_RECOVER_MS = 1200
+const SLIME_BOSS_CHARGE_COOLDOWN_MS = 4200
+const SLIME_BOSS_CHARGE_SPEED_PX = 150
+const SLIME_BOSS_CHARGE_MIN_RANGE_PX = 90
+const SLIME_BOSS_CHARGE_FAR_PX = 240
+const SLIME_BOSS_CHARGE_HIT_COOLDOWN_MS = 350
+const SLIME_BOSS_CHARGE_DAMAGE_PCT = 150
+const SLIME_BOSS_CHARGE_HIT_PAD_PX = 6
+
+const SLIME_BOSS_POISON_TELE_MS = 900
+const SLIME_BOSS_POISON_EXEC_MS = 5200
+const SLIME_BOSS_POISON_RECOVER_MS = 1400
+const SLIME_BOSS_POISON_COOLDOWN_MS = 8500
+const SLIME_BOSS_POISON_STEP_MS = 750
+const SLIME_BOSS_POISON_RING_STEP_TILES = 1
+const SLIME_BOSS_POISON_MIN_RADIUS_TILES = 3
+const SLIME_BOSS_POISON_HAZARD_LIFE_MS = 4500
+const SLIME_BOSS_POISON_HAZARD_SIZE_PX = 24
+const SLIME_BOSS_POISON_HAZARD_DMG = 2
+
 function _bossIntroComputeJumpArcPx(): number {
     const tile = WORLD_TILE_SIZE | 0
     if (_engineWorldTileMap && _engineWorldTileMap.length > 0 && tile > 0) {
@@ -69257,6 +70302,54 @@ function _enemyIsBoss(enemy: Sprite): boolean {
     if (!id) return false
     if (id.indexOf("boss") >= 0) return true
     return ENEMY_BOSS_IDS.has(id)
+}
+
+type BossMoveId = "barrage" | "charge" | "poison"
+type BossMoveDef = {
+    id: BossMoveId
+    telegraphMs: number
+    execMs: number
+    recoverMs: number
+    cooldownMs: number
+    weight: number
+    minRangePx?: number
+    maxRangePx?: number
+}
+
+const SLIME_BOSS_MOVESET: BossMoveDef[] = [
+    {
+        id: "barrage",
+        telegraphMs: SLIME_BOSS_BARRAGE_TELE_MS | 0,
+        execMs: SLIME_BOSS_BARRAGE_EXEC_MS | 0,
+        recoverMs: SLIME_BOSS_BARRAGE_RECOVER_MS | 0,
+        cooldownMs: SLIME_BOSS_BARRAGE_COOLDOWN_MS | 0,
+        weight: 3,
+        minRangePx: 0
+    },
+    {
+        id: "charge",
+        telegraphMs: SLIME_BOSS_CHARGE_TELE_MS | 0,
+        execMs: SLIME_BOSS_CHARGE_EXEC_MS | 0,
+        recoverMs: SLIME_BOSS_CHARGE_RECOVER_MS | 0,
+        cooldownMs: SLIME_BOSS_CHARGE_COOLDOWN_MS | 0,
+        weight: 3,
+        minRangePx: SLIME_BOSS_CHARGE_MIN_RANGE_PX | 0
+    },
+    {
+        id: "poison",
+        telegraphMs: SLIME_BOSS_POISON_TELE_MS | 0,
+        execMs: SLIME_BOSS_POISON_EXEC_MS | 0,
+        recoverMs: SLIME_BOSS_POISON_RECOVER_MS | 0,
+        cooldownMs: SLIME_BOSS_POISON_COOLDOWN_MS | 0,
+        weight: 2,
+        minRangePx: 0
+    }
+]
+
+function _enemyBossMoveset(enemy: Sprite): BossMoveDef[] | null {
+    if (!enemy) return null
+    if (_enemyIsSlimeBoss(enemy)) return SLIME_BOSS_MOVESET
+    return null
 }
 
 function _enemyBossLongRangePx(): number {
@@ -69316,6 +70409,358 @@ function _enemyBossApplyRangedFallback(enemy: Sprite, nowMs: number): boolean {
     sprites.setDataNumber(enemy, "__projSpeed", base.baseProjSpeed | 0)
     sprites.setDataNumber(enemy, ENEMY_DATA.ATTACK_INTERVAL_MS, base.baseAtkInterval | 0)
     return false
+}
+
+function _enemyBossMoveCooldownKey(id: string): string {
+    return `__bossMoveCd_${String(id || "")}`
+}
+
+function _enemyBossMoveCooldownReady(enemy: Sprite, id: string, nowMs: number): boolean {
+    if (!enemy || !id) return false
+    const until = sprites.readDataNumber(enemy, _enemyBossMoveCooldownKey(id)) | 0
+    return until <= 0 || nowMs >= until
+}
+
+function _enemyBossMoveSetCooldown(enemy: Sprite, id: string, nowMs: number, cooldownMs: number): void {
+    if (!enemy || !id) return
+    const cd = Math.max(0, cooldownMs | 0) | 0
+    if (cd <= 0) return
+    sprites.setDataNumber(enemy, _enemyBossMoveCooldownKey(id), (nowMs + cd) | 0)
+}
+
+function _enemyBossPickMove(
+    enemy: Sprite,
+    pick: EnemyEdgePick,
+    nowMs: number
+): BossMoveDef | null {
+    const moveset = _enemyBossMoveset(enemy)
+    if (!moveset || moveset.length <= 0) return null
+
+    const lastId = sprites.readDataString(enemy, ENEMY_BOSS_MOVE_LAST_ID) || ""
+    const dist = Math.sqrt(Math.max(0, pick.d2 | 0))
+    const candidates: { def: BossMoveDef, weight: number }[] = []
+
+    for (let i = 0; i < moveset.length; i++) {
+        const def = moveset[i]
+        if (!def) continue
+        if (!_enemyBossMoveCooldownReady(enemy, def.id, nowMs)) continue
+        if (moveset.length > 1 && def.id === lastId) continue
+
+        const minR = def.minRangePx != null ? (def.minRangePx | 0) : 0
+        const maxR = def.maxRangePx != null ? (def.maxRangePx | 0) : 0
+        if (minR > 0 && dist < minR) continue
+        if (maxR > 0 && dist > maxR) continue
+
+        let w = Math.max(1, def.weight | 0)
+        if (def.id === "barrage") {
+            if (dist >= (SLIME_BOSS_BARRAGE_FAR_PX | 0)) w = Math.round(w * 1.6)
+            else if (dist <= (SLIME_BOSS_BARRAGE_NEAR_PX | 0)) w = Math.max(1, Math.round(w * 0.6))
+        } else if (def.id === "charge") {
+            if (dist >= (SLIME_BOSS_CHARGE_FAR_PX | 0)) w = Math.round(w * 1.5)
+        }
+        candidates.push({ def, weight: w | 0 })
+    }
+
+    if (candidates.length <= 0) return null
+    if (candidates.length === 1) return candidates[0].def
+
+    let total = 0
+    for (let i = 0; i < candidates.length; i++) total += Math.max(1, candidates[i].weight | 0)
+    if (total <= 0) return candidates[0].def
+    let roll = Math.randomRange(1, total) | 0
+    for (let i = 0; i < candidates.length; i++) {
+        roll -= Math.max(1, candidates[i].weight | 0)
+        if (roll <= 0) return candidates[i].def
+    }
+    return candidates[candidates.length - 1].def
+}
+
+function _enemyBossSetMovePhase(enemy: Sprite, phase: number, untilMs: number, nowMs: number): void {
+    sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_PHASE, phase | 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_UNTIL, untilMs | 0)
+    if (phase === BOSS_MOVE_PHASE_TELEGRAPH) sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_TELE_START_MS, nowMs | 0)
+    else if (phase === BOSS_MOVE_PHASE_EXEC) sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_EXEC_START_MS, nowMs | 0)
+    else if (phase === BOSS_MOVE_PHASE_RECOVER) sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_RECOVER_START_MS, nowMs | 0)
+}
+
+function _enemyBossClearMove(enemy: Sprite): void {
+    sprites.setDataString(enemy, ENEMY_BOSS_MOVE_ID, "")
+    sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_PHASE, BOSS_MOVE_PHASE_IDLE)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_UNTIL, 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_TELE_START_MS, 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_EXEC_START_MS, 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_RECOVER_START_MS, 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_CHARGE_GHOST, 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_CHARGE_DIR_X1000, 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_CHARGE_DIR_Y1000, 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_BARRAGE_NEXT_VOLLEY_MS, 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_POISON_NEXT_RING_MS, 0)
+    sprites.setDataNumber(enemy, "__atkVisOffX", 0)
+    sprites.setDataNumber(enemy, "__atkVisOffY", 0)
+    sprites.setDataNumber(enemy, "__atkVisScaleX1000", 0)
+}
+
+function _enemyBossApplyTelegraphVisual(enemy: Sprite, moveId: string, nowMs: number, teleMs: number): void {
+    if (!enemy) return
+    const startMs = sprites.readDataNumber(enemy, ENEMY_BOSS_MOVE_TELE_START_MS) | 0
+    const dur = Math.max(1, teleMs | 0) | 0
+    const t = Math.max(0, Math.min(1, ((nowMs - startMs) / dur)))
+    const pulse = Math.sin(t * Math.PI)
+    let targetScale = 1000
+    let offY = 0
+    if (moveId === "charge") {
+        targetScale = 860
+        offY = Math.round(-4 * pulse)
+    } else if (moveId === "barrage") {
+        targetScale = 1100
+        offY = Math.round(-2 * pulse)
+    } else if (moveId === "poison") {
+        targetScale = 940
+        offY = Math.round(-3 * pulse)
+    }
+    const scale = Math.round(1000 + (targetScale - 1000) * pulse)
+    sprites.setDataNumber(enemy, "__atkVisOffX", 0)
+    sprites.setDataNumber(enemy, "__atkVisOffY", offY | 0)
+    sprites.setDataNumber(enemy, "__atkVisScaleX1000", scale | 0)
+}
+
+function _enemyBossStartMoveTelegraph(enemy: Sprite, move: BossMoveDef, pick: EnemyEdgePick, nowMs: number): void {
+    sprites.setDataString(enemy, ENEMY_BOSS_MOVE_ID, move.id)
+    sprites.setDataString(enemy, ENEMY_BOSS_MOVE_LAST_ID, move.id)
+    _enemyBossMoveSetCooldown(enemy, move.id, nowMs, move.cooldownMs | 0)
+    _enemyBossSetMovePhase(enemy, BOSS_MOVE_PHASE_TELEGRAPH, (nowMs + (move.telegraphMs | 0)) | 0, nowMs | 0)
+
+    const dir = _enemyDirFromVector(pick.dx, pick.dy)
+    sprites.setDataString(enemy, "dir", dir)
+    _enemyApplyAuraForDir(enemy, dir)
+
+    if (move.id === "charge") {
+        let dx = pick.dx
+        let dy = pick.dy
+        if (dx === 0 && dy === 0) dy = 1
+        let mag = Math.sqrt(dx * dx + dy * dy)
+        if (!Number.isFinite(mag) || mag <= 0) mag = 1
+        sprites.setDataNumber(enemy, ENEMY_BOSS_CHARGE_DIR_X1000, Math.round((dx / mag) * 1000))
+        sprites.setDataNumber(enemy, ENEMY_BOSS_CHARGE_DIR_Y1000, Math.round((dy / mag) * 1000))
+    }
+}
+
+function _enemyBossStartMoveExec(enemy: Sprite, move: BossMoveDef, nowMs: number): void {
+    _enemyBossSetMovePhase(enemy, BOSS_MOVE_PHASE_EXEC, (nowMs + (move.execMs | 0)) | 0, nowMs | 0)
+    if (move.id === "barrage") {
+        sprites.setDataNumber(enemy, ENEMY_AI_BOSS_RANGED_UNTIL, (nowMs + (move.execMs | 0)) | 0)
+    } else if (move.id === "charge") {
+        sprites.setDataNumber(enemy, ENEMY_BOSS_CHARGE_GHOST, 1)
+    } else if (move.id === "poison") {
+        sprites.setDataNumber(enemy, ENEMY_BOSS_POISON_NEXT_RING_MS, 0)
+        sprites.setDataNumber(enemy, ENEMY_BOSS_POISON_RADIUS_TILES, 0)
+    }
+}
+
+function _enemyBossStartMoveRecover(enemy: Sprite, move: BossMoveDef, nowMs: number): void {
+    _enemyBossSetMovePhase(enemy, BOSS_MOVE_PHASE_RECOVER, (nowMs + (move.recoverMs | 0)) | 0, nowMs | 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_CHARGE_GHOST, 0)
+    sprites.setDataNumber(enemy, "__atkVisOffX", 0)
+    sprites.setDataNumber(enemy, "__atkVisOffY", 0)
+    sprites.setDataNumber(enemy, "__atkVisScaleX1000", 0)
+}
+
+function _enemyBossChargeHitRadius(enemy: Sprite, hero: Sprite): number {
+    const ed = _enemyGetColliderDims(enemy)
+    const hd = _readSpriteColliderDims(hero)
+    const er = Math.idiv(Math.max(ed.w | 0, ed.h | 0), 2) | 0
+    const hr = Math.idiv(Math.max(hd.w | 0, hd.h | 0), 2) | 0
+    return Math.max(8, (er + hr + (SLIME_BOSS_CHARGE_HIT_PAD_PX | 0)) | 0) | 0
+}
+
+function _enemyBossChargeCheckHits(enemy: Sprite, heroTargets: Sprite[], nowMs: number): void {
+    if (!enemy || !heroTargets || heroTargets.length <= 0) return
+    const dims = _enemyGetColliderDims(enemy)
+    const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
+    const ex = feet.centerX | 0
+    const ey = feet.centerY | 0
+    for (let i = 0; i < heroTargets.length; i++) {
+        const hero = heroTargets[i]
+        if (!_enemyIsValidAggroTarget(hero)) continue
+        const until = sprites.readDataNumber(hero, HERO_BOSS_CHARGE_HIT_UNTIL) | 0
+        if (until > nowMs) continue
+        const foot = _heroFeetPointForEnemyTarget(hero)
+        const dx = (foot.x | 0) - ex
+        const dy = (foot.y | 0) - ey
+        const hitR = _enemyBossChargeHitRadius(enemy, hero) | 0
+        if ((dx * dx + dy * dy) <= (hitR * hitR)) {
+            const hi = heroes.indexOf(hero)
+            if (hi >= 0) {
+                const baseDmg = sprites.readDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE) | 0
+                const dmg = Math.max(1, Math.idiv((baseDmg | 0) * (SLIME_BOSS_CHARGE_DAMAGE_PCT | 0), 100)) | 0
+                applyDamageToHeroIndex(hi, dmg, { kind: "bossCharge", enemyIndex: getEnemyIndex(enemy), x: enemy.x, y: enemy.y })
+                _bossIntroStartHeroKnockdown(hi, hero, enemy.x, enemy.y, nowMs | 0)
+                sprites.setDataNumber(hero, HERO_BOSS_CHARGE_HIT_UNTIL, (nowMs + (SLIME_BOSS_CHARGE_HIT_COOLDOWN_MS | 0)) | 0)
+            }
+        }
+    }
+}
+
+function _enemyBossPoisonInit(enemy: Sprite): void {
+    const tile = WORLD_TILE_SIZE | 0
+    const rows = (_engineWorldTileMap && _engineWorldTileMap.length) ? (_engineWorldTileMap.length | 0) : 0
+    const cols = (rows > 0 && _engineWorldTileMap[0] && _engineWorldTileMap[0].length) ? (_engineWorldTileMap[0].length | 0) : 0
+    let centerR = _dunPadTileR | 0
+    let centerC = _dunPadTileC | 0
+    if (rows <= 0 || cols <= 0 || centerR < 0 || centerC < 0) {
+        centerR = (tile > 0) ? (Math.idiv(enemy.y | 0, tile) | 0) : 0
+        centerC = (tile > 0) ? (Math.idiv(enemy.x | 0, tile) | 0) : 0
+    }
+    if (rows > 0) centerR = _clamp(centerR | 0, 0, rows - 1) | 0
+    if (cols > 0) centerC = _clamp(centerC | 0, 0, cols - 1) | 0
+    const maxR = rows > 0 ? Math.min(centerR, rows - 1 - centerR) : 6
+    const maxC = cols > 0 ? Math.min(centerC, cols - 1 - centerC) : 6
+    const startRadius = Math.max(SLIME_BOSS_POISON_MIN_RADIUS_TILES | 0, Math.min(maxR, maxC) - 1) | 0
+    sprites.setDataNumber(enemy, ENEMY_BOSS_POISON_CENTER_R, centerR | 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_POISON_CENTER_C, centerC | 0)
+    sprites.setDataNumber(enemy, ENEMY_BOSS_POISON_RADIUS_TILES, startRadius | 0)
+}
+
+function _enemyBossPoisonSpawnRing(centerR: number, centerC: number, radius: number): void {
+    if (radius <= 0) return
+    const rows = (_engineWorldTileMap && _engineWorldTileMap.length) ? (_engineWorldTileMap.length | 0) : 0
+    const cols = (rows > 0 && _engineWorldTileMap[0] && _engineWorldTileMap[0].length) ? (_engineWorldTileMap[0].length | 0) : 0
+    const step = Math.max(1, SLIME_BOSS_POISON_RING_STEP_TILES | 0) | 0
+    const rTop = centerR - radius
+    const rBot = centerR + radius
+    const cLeft = centerC - radius
+    const cRight = centerC + radius
+
+    const spawnAt = (r: number, c: number) => {
+        if (rows > 0 && (r < 0 || r >= rows)) return
+        if (cols > 0 && (c < 0 || c >= cols)) return
+        const x = _dunColToX(c | 0) | 0
+        const y = _dunRowToY(r | 0) | 0
+        _spawnPoisonGroundHazard(
+            x | 0,
+            y | 0,
+            SLIME_BOSS_POISON_HAZARD_LIFE_MS | 0,
+            SLIME_BOSS_POISON_HAZARD_SIZE_PX | 0,
+            SLIME_BOSS_POISON_HAZARD_DMG | 0
+        )
+    }
+
+    for (let c = cLeft; c <= cRight; c += step) {
+        spawnAt(rTop, c)
+        spawnAt(rBot, c)
+    }
+    for (let r = rTop + step; r <= rBot - step; r += step) {
+        spawnAt(r, cLeft)
+        spawnAt(r, cRight)
+    }
+}
+
+function _enemyBossPoisonTick(enemy: Sprite, nowMs: number): void {
+    let nextRing = sprites.readDataNumber(enemy, ENEMY_BOSS_POISON_NEXT_RING_MS) | 0
+    if (nextRing <= 0) {
+        _enemyBossPoisonInit(enemy)
+        nextRing = nowMs | 0
+        sprites.setDataNumber(enemy, ENEMY_BOSS_POISON_NEXT_RING_MS, nextRing | 0)
+    }
+    if (nowMs < nextRing) return
+
+    const centerR = sprites.readDataNumber(enemy, ENEMY_BOSS_POISON_CENTER_R) | 0
+    const centerC = sprites.readDataNumber(enemy, ENEMY_BOSS_POISON_CENTER_C) | 0
+    let radius = sprites.readDataNumber(enemy, ENEMY_BOSS_POISON_RADIUS_TILES) | 0
+    if (radius <= 0) return
+
+    _enemyBossPoisonSpawnRing(centerR | 0, centerC | 0, radius | 0)
+
+    if (radius > (SLIME_BOSS_POISON_MIN_RADIUS_TILES | 0)) {
+        radius = (radius - 1) | 0
+        sprites.setDataNumber(enemy, ENEMY_BOSS_POISON_RADIUS_TILES, radius | 0)
+    }
+    sprites.setDataNumber(enemy, ENEMY_BOSS_POISON_NEXT_RING_MS, (nowMs + (SLIME_BOSS_POISON_STEP_MS | 0)) | 0)
+}
+
+function _enemyBossUpdateMoves(
+    enemy: Sprite,
+    pick: EnemyEdgePick,
+    heroTargets: Sprite[],
+    nowMs: number,
+    inAggroRange: boolean,
+    trace: string[] | null
+): string | null {
+    if (!enemy || !_enemyIsBoss(enemy)) return null
+    const moveset = _enemyBossMoveset(enemy)
+    if (!moveset || moveset.length <= 0) return null
+
+    const moveId = sprites.readDataString(enemy, ENEMY_BOSS_MOVE_ID) || ""
+    const phase = sprites.readDataNumber(enemy, ENEMY_BOSS_MOVE_PHASE) | 0
+    const until = sprites.readDataNumber(enemy, ENEMY_BOSS_MOVE_UNTIL) | 0
+
+    if ((phase | 0) !== BOSS_MOVE_PHASE_IDLE && (until | 0) > 0 && nowMs >= (until | 0)) {
+        const def = moveset.find((m) => m.id === moveId) || null
+        if (phase === BOSS_MOVE_PHASE_TELEGRAPH && def) {
+            _enemyBossStartMoveExec(enemy, def, nowMs | 0)
+        } else if (phase === BOSS_MOVE_PHASE_EXEC && def) {
+            _enemyBossStartMoveRecover(enemy, def, nowMs | 0)
+        } else if (phase === BOSS_MOVE_PHASE_RECOVER) {
+            _enemyBossClearMove(enemy)
+        }
+    }
+
+    const curPhase = sprites.readDataNumber(enemy, ENEMY_BOSS_MOVE_PHASE) | 0
+    const curMoveId = sprites.readDataString(enemy, ENEMY_BOSS_MOVE_ID) || ""
+    if (curPhase === BOSS_MOVE_PHASE_TELEGRAPH) {
+        const def = moveset.find((m) => m.id === curMoveId) || null
+        if (def) _enemyBossApplyTelegraphVisual(enemy, curMoveId, nowMs | 0, def.telegraphMs | 0)
+        enemy.vx = 0
+        enemy.vy = 0
+        _enemySetIntent(enemy, "bossTelegraph")
+        _enemyAiTraceAdd(trace, "boss.tele", true)
+        return "bossTelegraph"
+    }
+    if (curPhase === BOSS_MOVE_PHASE_EXEC) {
+        _enemyAiTraceAdd(trace, "boss.exec", true)
+        if (curMoveId === "barrage") {
+            enemy.vx = 0
+            enemy.vy = 0
+            const nextVolley = sprites.readDataNumber(enemy, ENEMY_BOSS_BARRAGE_NEXT_VOLLEY_MS) | 0
+            if (nextVolley <= 0 || nowMs >= nextVolley) {
+                _enemyBossSpawnBarrage(enemy, 0)
+                sprites.setDataNumber(enemy, ENEMY_BOSS_BARRAGE_NEXT_VOLLEY_MS, (nowMs + (SLIME_BOSS_BARRAGE_VOLLEY_GAP_MS | 0)) | 0)
+            }
+            _enemySetIntent(enemy, "bossBarrage")
+            return "bossBarrage"
+        }
+        if (curMoveId === "charge") {
+            const dirX = (sprites.readDataNumber(enemy, ENEMY_BOSS_CHARGE_DIR_X1000) | 0) / 1000
+            const dirY = (sprites.readDataNumber(enemy, ENEMY_BOSS_CHARGE_DIR_Y1000) | 0) / 1000
+            enemy.vx = Math.round(dirX * (SLIME_BOSS_CHARGE_SPEED_PX | 0)) | 0
+            enemy.vy = Math.round(dirY * (SLIME_BOSS_CHARGE_SPEED_PX | 0)) | 0
+            sprites.setDataNumber(enemy, ENEMY_AI_BOSS_INTENDED_MOVE, 1)
+            _enemyBossChargeCheckHits(enemy, heroTargets, nowMs | 0)
+            _enemySetIntent(enemy, "bossCharge")
+            return "bossCharge"
+        }
+        if (curMoveId === "poison") {
+            enemy.vx = 0
+            enemy.vy = 0
+            _enemyBossPoisonTick(enemy, nowMs | 0)
+            _enemySetIntent(enemy, "bossPoison")
+            return "bossPoison"
+        }
+    }
+    if (curPhase === BOSS_MOVE_PHASE_RECOVER) {
+        enemy.vx = 0
+        enemy.vy = 0
+        _enemySetIntent(enemy, "bossRecover")
+        _enemyAiTraceAdd(trace, "boss.recover", true)
+        return "bossRecover"
+    }
+
+    if (!inAggroRange) return null
+    const picked = _enemyBossPickMove(enemy, pick, nowMs | 0)
+    if (!picked) return null
+    _enemyBossStartMoveTelegraph(enemy, picked, pick, nowMs | 0)
+    _enemySetIntent(enemy, "bossTelegraph")
+    return "bossTelegraphStart"
 }
 
 function _enemyIsBat(enemy: Sprite): boolean {
@@ -69487,7 +70932,8 @@ function _enemyBossPickIntroJumpTarget(enemy: Sprite): { centerX: number, center
     const padC = _dunPadTileC | 0
     if (padR >= 0 && padC >= 0) {
         const dims = _enemyGetColliderDims(enemy)
-        if (_enemyNavCanOccupyCellForDims(dims.w | 0, dims.h | 0, padR | 0, padC | 0)) {
+        const navMaxPx = _enemyNavMaxFootprintPx(enemy) | 0
+        if (_enemyNavCanOccupyCellForDims(dims.w | 0, dims.h | 0, padR | 0, padC | 0, navMaxPx)) {
             return { centerX: _dunColToX(padC | 0), centerY: _dunRowToY(padR | 0) }
         }
     }
@@ -69612,15 +71058,39 @@ function _enemyBossUpdateIntroJump(enemy: Sprite, nowMs: number): boolean {
     if (!enemy || !_enemyIsBoss(enemy)) return false
     if ((sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0) === 0) return false
 
-    const startMs = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_START_MS) | 0
-    const endMs = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_END_MS) | 0
-    const landAtMs = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_LAND_AT_MS) | 0
+    let startMs = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_START_MS) | 0
+    let endMs = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_END_MS) | 0
+    let landAtMs = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_LAND_AT_MS) | 0
     const fromX = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_FROM_X) | 0
     const fromY = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_FROM_Y) | 0
     const midX = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_MID_X) | 0
     const midY = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_MID_Y) | 0
     const toX = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_TO_X) | 0
     const toY = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_TO_Y) | 0
+
+    const lastMs = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_LAST_MS) | 0
+    if (lastMs > 0) {
+        const delta = (nowMs | 0) - (lastMs | 0)
+        if (delta > (BOSS_INTRO_PAUSE_CLAMP_MS | 0)) {
+            const shift = delta | 0
+            startMs = (startMs + shift) | 0
+            endMs = (endMs + shift) | 0
+            if ((landAtMs | 0) > 0) landAtMs = (landAtMs + shift) | 0
+            sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_START_MS, startMs | 0)
+            sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_END_MS, endMs | 0)
+            if ((landAtMs | 0) > 0) sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_LAND_AT_MS, landAtMs | 0)
+            if (DEBUG_BOSS_INTRO) {
+                console.log("[BOSS][INTRO] pause clamp", {
+                    enemyId: enemy.id | 0,
+                    delta: delta | 0,
+                    startMs: startMs | 0,
+                    endMs: endMs | 0,
+                    landAtMs: landAtMs | 0
+                })
+            }
+        }
+    }
+    sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_LAST_MS, nowMs | 0)
 
     if (startMs <= 0 || endMs <= 0 || nowMs >= endMs) {
         _enemyBossMoveFeetCenterTo(enemy, toX | 0, toY | 0)
@@ -70113,6 +71583,7 @@ function _enemyBossPickTeleportNearPad(enemy: Sprite): { centerX: number, center
     const dims = _enemyGetColliderDims(enemy)
     const cw = dims.w | 0
     const ch = dims.h | 0
+    const navMaxPx = _enemyNavMaxFootprintPx(enemy) | 0
 
     const minDist = ENEMY_BOSS_STUCK_TELEPORT_MIN_PAD_DIST | 0
     const maxDist = ENEMY_BOSS_STUCK_TELEPORT_MAX_PAD_DIST | 0
@@ -70131,7 +71602,7 @@ function _enemyBossPickTeleportNearPad(enemy: Sprite): { centerX: number, center
             const dist = (Math.abs((rr | 0) - padR) + Math.abs((cc | 0) - padC)) | 0
             if (dist < (minDist | 0) || dist > (maxDist | 0)) continue
             if (isPadTile(rr | 0, cc | 0)) continue
-            if (!_enemyNavCanOccupyCellForDims(cw | 0, ch | 0, rr | 0, cc | 0)) continue
+            if (!_enemyNavCanOccupyCellForDims(cw | 0, ch | 0, rr | 0, cc | 0, navMaxPx)) continue
             if (_dunFindDecorAtTile(rr | 0, cc | 0, "")) continue
             candidates.push({ r: rr | 0, c: cc | 0 })
         }
@@ -70140,7 +71611,7 @@ function _enemyBossPickTeleportNearPad(enemy: Sprite): { centerX: number, center
     if (!candidates.length) {
         for (let rr = 1; rr < (rows - 1); rr++) {
             for (let cc = 1; cc < (cols - 1); cc++) {
-                if (!_enemyNavCanOccupyCellForDims(cw | 0, ch | 0, rr | 0, cc | 0)) continue
+                if (!_enemyNavCanOccupyCellForDims(cw | 0, ch | 0, rr | 0, cc | 0, navMaxPx)) continue
                 if (_dunFindDecorAtTile(rr | 0, cc | 0, "")) continue
                 return { centerX: _dunColToX(cc | 0), centerY: _dunRowToY(rr | 0) }
             }
@@ -70153,16 +71624,18 @@ function _enemyBossPickTeleportNearPad(enemy: Sprite): { centerX: number, center
 }
 
 function _enemyBossUpdateStuck(enemy: Sprite, nowMs: number): boolean {
+    if (!ENEMY_BOSS_STUCK_ENABLED) return false
     if (!_enemyIsBoss(enemy)) return false
     if ((sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_ACTIVE_KEY) | 0) !== 0) return false
     const dims = _enemyGetColliderDims(enemy)
     const feet = _enemyNavGetEnemyFeetPoint(enemy, dims.w | 0, dims.h | 0)
     const tile = WORLD_TILE_SIZE | 0
+    const navMaxPx = _enemyNavMaxFootprintPx(enemy) | 0
     let forceTeleport = false
     if (tile > 0) {
         const r = Math.idiv((feet.centerY | 0), tile) | 0
         const c = Math.idiv((feet.centerX | 0), tile) | 0
-        if (!_enemyNavCanOccupyCellForDims(dims.w | 0, dims.h | 0, r | 0, c | 0)) {
+        if (!_enemyNavCanOccupyCellForDims(dims.w | 0, dims.h | 0, r | 0, c | 0, navMaxPx)) {
             forceTeleport = true
         }
     }
@@ -70226,9 +71699,10 @@ function _heroFeetPointForEnemyTarget(hero: Sprite): { x: number, y: number } {
 }
 
 
-function _enemyNavAabbFromFoot(footX: number, footY: number, cw: number, ch: number) {
-    const fw = Math.min(cw | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
-    const fh = Math.min(ch | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
+function _enemyNavAabbFromFoot(footX: number, footY: number, cw: number, ch: number, maxFootprintPx?: number) {
+    const maxPx = (maxFootprintPx != null ? (maxFootprintPx | 0) : (ENEMY_NAV_FOOTPRINT_MAX_PX | 0)) | 0
+    const fw = Math.min(cw | 0, maxPx) | 0
+    const fh = Math.min(ch | 0, maxPx) | 0
     const halfW = Math.idiv(fw, 2) | 0
     const bottom = footY | 0
     const top = (bottom - fh + 1) | 0
@@ -70237,9 +71711,10 @@ function _enemyNavAabbFromFoot(footX: number, footY: number, cw: number, ch: num
     return { left, right, top, bottom }
 }
 
-function _enemyNavAabbFromCenter(centerX: number, centerY: number, cw: number, ch: number) {
-    const fw = Math.min(cw | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
-    const fh = Math.min(ch | 0, ENEMY_NAV_FOOTPRINT_MAX_PX | 0) | 0
+function _enemyNavAabbFromCenter(centerX: number, centerY: number, cw: number, ch: number, maxFootprintPx?: number) {
+    const maxPx = (maxFootprintPx != null ? (maxFootprintPx | 0) : (ENEMY_NAV_FOOTPRINT_MAX_PX | 0)) | 0
+    const fw = Math.min(cw | 0, maxPx) | 0
+    const fh = Math.min(ch | 0, maxPx) | 0
     const halfW = Math.idiv(fw, 2) | 0
     const halfH = Math.idiv(fh, 2) | 0
     const left = ((centerX | 0) - halfW) | 0
@@ -70300,7 +71775,8 @@ function _enemyNavMakeCollisionDebug(enemy: Sprite, footX: number, footY: number
     const decorBlocked = (_enemyNavDecorBlock && _enemyNavDecorBlock.length > idx && (_enemyNavDecorBlock[idx] | 0) !== 0) ? 1 : 0
     const deadEndBlocked = (_enemyNavDeadEnd && _enemyNavDeadEnd.length > idx && (_enemyNavDeadEnd[idx] | 0) !== 0) ? 1 : 0
 
-    const aabb = _enemyNavAabbFromFoot(footX | 0, footY | 0, cw | 0, ch | 0)
+    const maxPx = _enemyNavMaxFootprintPx(enemy) | 0
+    const aabb = _enemyNavAabbFromFoot(footX | 0, footY | 0, cw | 0, ch | 0, maxPx | 0)
 
     // wall-only overlap (engine wall grid)
     const overlapsWall = _boxOverlapsWallBounds(aabb.left, aabb.right, aabb.top, aabb.bottom) ? 1 : 0
@@ -70318,12 +71794,12 @@ function _enemyNavMakeCollisionDebug(enemy: Sprite, footX: number, footY: number
     }
 }
 
-function _enemyNavCandidateCollisionProbe(nr: number, nc: number, cw: number, ch: number) {
+function _enemyNavCandidateCollisionProbe(nr: number, nc: number, cw: number, ch: number, maxFootprintPx?: number) {
     if (!DEBUG_ENEMY_NAV_COLLISION) return null
     const tileSize = WORLD_TILE_SIZE | 0
     const tfx = (nc * tileSize + (tileSize >> 1)) | 0
     const tfy = (nr * tileSize + (tileSize >> 1)) | 0
-    const aabb = _enemyNavAabbFromCenter(tfx, tfy, cw | 0, ch | 0)
+    const aabb = _enemyNavAabbFromCenter(tfx, tfy, cw | 0, ch | 0, maxFootprintPx)
     const hits = _enemyNavScanBlockedTilesOverAabb(aabb.left, aabb.right, aabb.top, aabb.bottom)
     return { aabb, hits }
 }
@@ -70706,6 +72182,11 @@ function _enemyComputeMoveSpeed(enemy: Sprite, applyPace = true, nowMs?: number)
 
     }
 
+    const mult = Number(DEBUG_ENEMY_SPEED_MULT || 1)
+    if (mult !== 1 && speed > 0) {
+        speed = Math.max(1, Math.round(speed * mult))
+    }
+
     if (!applyPace) return speed | 0
 
     const pacePct = _enemyMovePacePct(enemy, (nowMs != null ? nowMs : (game.runtime() | 0)) | 0) | 0
@@ -70974,7 +72455,8 @@ function _enemyApplyJumpForward(enemy: Sprite): void {
         const ny = (footY + Math.round(dirY * d)) | 0
         const r = Math.idiv(ny | 0, tile) | 0
         const c = Math.idiv(nx | 0, tile) | 0
-        if (!_enemyNavCanOccupyCellForDims(dims.w | 0, dims.h | 0, r | 0, c | 0)) continue
+        const navMaxPx = _enemyNavMaxFootprintPx(enemy) | 0
+        if (!_enemyNavCanOccupyCellForDims(dims.w | 0, dims.h | 0, r | 0, c | 0, navMaxPx)) continue
         enemy.x = ((enemy.x | 0) + (nx - footX)) | 0
         enemy.y = ((enemy.y | 0) + (ny - footY)) | 0
         sprites.setDataNumber(enemy, ENEMY_DATA.HOME_X, enemy.x)
@@ -73189,6 +74671,45 @@ function updateEnemyHoming(nowMs: number) {
 
 
 
+        const baseSpeed = _enemyComputeMoveSpeed(enemy, false, nowMs)
+        let speed = _enemyComputeMoveSpeed(enemy, true, nowMs)
+
+        const pick = _enemyPickAggroTarget(enemy, heroTargets, nowMs)
+        _enemyAiTraceAdd(trace, "aggroSwitch", !!pick.aggroSwitched)
+        _enemyAiTraceAdd(trace, "casterTarget", !!pick.targetIsCaster)
+        _enemyAiTraceAdd(trace, "onlyCasters", !!pick.onlyCasters)
+
+        if (DEBUG_ENEMY_APPROACH_ONLY) {
+            _enemyAiTraceAdd(trace, "approachOnly", true)
+            let holdRangePx = _enemyComputeHoldRangePx(enemy, pick) | 0
+            if (_enemyIsBoss(enemy)) {
+                const meleeReach = _enemyComputeMeleeReachPx(enemy, pick ? pick.target : null) | 0
+                holdRangePx = Math.max(ENEMY_MIN_HOLD_RANGE_PX | 0, meleeReach | 0) | 0
+            }
+            const holdRange2 = holdRangePx * holdRangePx
+            if ((pick.d2 | 0) <= holdRange2) {
+                enemy.vx = 0
+                enemy.vy = 0
+                sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
+                sprites.setDataString(enemy, "dir", _enemyDirFromVector(pick.dx, pick.dy))
+                _enemySetIntent(enemy, "hold")
+                _enemyAiUpdateLastPos(enemy)
+                _enemyAiLogDecision(enemy, nowMs, trace, "hold")
+                continue
+            }
+
+            _enemySetNavHeroTargetFromPick(enemy, pick)
+            const allowNavField = (pick.useNavField !== false)
+            _enemySteerTowardEdgePoint(enemy, pick.target, pick.edgeX, pick.edgeY, baseSpeed | 0, allowNavField)
+            _enemySetIntent(enemy, "advance")
+            _enemySetDirFromVelocityOrFacing(enemy, pick)
+            sprites.setDataNumber(enemy, ENEMY_AI_BOSS_INTENDED_MOVE, 1)
+            sprites.setDataNumber(enemy, ENEMY_DATA.RETURNING_HOME, 0)
+            _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, "advance")
+            continue
+        }
+
         // Attack hold/finish
 
         const attackHold = _enemyTickAttackHoldOrFinish(enemy, nowMs, ei)
@@ -73202,15 +74723,6 @@ function updateEnemyHoming(nowMs: number) {
 
         }
 
-
-
-        const baseSpeed = _enemyComputeMoveSpeed(enemy, false, nowMs)
-        let speed = _enemyComputeMoveSpeed(enemy, true, nowMs)
-
-        const pick = _enemyPickAggroTarget(enemy, heroTargets, nowMs)
-        _enemyAiTraceAdd(trace, "aggroSwitch", !!pick.aggroSwitched)
-        _enemyAiTraceAdd(trace, "casterTarget", !!pick.targetIsCaster)
-        _enemyAiTraceAdd(trace, "onlyCasters", !!pick.onlyCasters)
         const hasAttacked = (sprites.readDataNumber(enemy, ENEMY_AI_HAS_ATTACKED) | 0) !== 0
         if (!hasAttacked && (speed | 0) < (baseSpeed | 0)) speed = baseSpeed | 0
         const aggroRangePx = _enemyAggroRangePx(enemy) | 0
@@ -73255,6 +74767,13 @@ function updateEnemyHoming(nowMs: number) {
         _enemyAiTraceAdd(trace, "aggroCommit", commitActive)
         const bossRange = _enemyBossApplyRangedFallback(enemy, nowMs)
         _enemyAiTraceAdd(trace, "bossRange", bossRange)
+
+        const bossMoveIntent = _enemyBossUpdateMoves(enemy, pick, heroTargets, nowMs | 0, inAggroRange, trace)
+        if (bossMoveIntent) {
+            _enemyAiUpdateLastPos(enemy)
+            _enemyAiLogDecision(enemy, nowMs, trace, bossMoveIntent)
+            continue
+        }
 
 
 
@@ -76038,7 +77557,7 @@ game.onUpdate(function () {
 
     worldRuntimeMs = now
 
-
+    _heAutoDebugDumpTick(now)
 
 
 
@@ -78014,6 +79533,18 @@ if (typeof globalThis !== "undefined") {
 
         }
 
+        internals.getFloorThemePalette = function (): string {
+
+            return _dunThemePalette
+
+        }
+
+        internals.getFloorTextureSeed = function (): number {
+
+            return _dunFloorTextureSeed | 0
+
+        }
+
 
 
         internals.getFloorIndex = function (): number {
@@ -78030,18 +79561,20 @@ if (typeof globalThis !== "undefined") {
 
         }
 
-        internals.resetFloorFromSave = function (index: number, kind: string, theme?: { baseFamily?: string; wallFamily?: string; palette?: string }): boolean {
+        internals.resetFloorFromSave = function (index: number, kind: string, theme?: { baseFamily?: string; wallFamily?: string; palette?: string; textureSeed?: number }): boolean {
             try {
                 const idx = (index | 0)
                 const k = String(kind || "")
                 const baseFamily = theme && typeof theme.baseFamily === "string" ? theme.baseFamily : ""
                 const wallFamily = theme && typeof theme.wallFamily === "string" ? theme.wallFamily : ""
                 const palette = theme && typeof theme.palette === "string" ? theme.palette : ""
-                if (baseFamily || wallFamily || palette) {
+                const textureSeed = theme && typeof theme.textureSeed === "number" ? (theme.textureSeed | 0) : 0
+                if (baseFamily || wallFamily || palette || textureSeed) {
                     _dunThemeOverride = {
                         base: baseFamily || _dunBaseFamily,
                         wall: wallFamily || _dunWallFamily,
                         palette: palette || _dunThemePalette,
+                        textureSeed: textureSeed || undefined,
                     }
                 }
                 DUNGEON_MODE_ACTIVE = true
@@ -82759,6 +84292,239 @@ function _uiShopTryBuySelected(hi: number, pid: number, where: string): { ok: bo
 
 }
 
+// ------------------------------------------------------------
+// Debug trace + dump (host-focused, opt-in via flags)
+// ------------------------------------------------------------
+const HE_DEBUG_TRACE_MAX = 400;
+
+function _heGetDebugTraceBuffer(): any[] {
+    const g: any = globalThis as any
+    if (g && Array.isArray(g.__heDebugTraceBuffer)) return g.__heDebugTraceBuffer
+    const arr: any[] = []
+    if (g) g.__heDebugTraceBuffer = arr
+    return arr
+}
+
+function _heDebugTraceInternal(tag: any, data?: any): void {
+    if (!DEBUG_SAVE_TRACE) return
+    const g: any = globalThis as any
+    if (!g) return
+    const buf = _heGetDebugTraceBuffer()
+    let runtimeMs = 0
+    try {
+        if (typeof game !== "undefined" && game && typeof game.runtime === "function") {
+            runtimeMs = game.runtime() | 0
+        }
+    } catch { }
+    const label = (typeof tag === "string") ? tag : String(tag || "")
+    buf.push({
+        t: Date.now(),
+        rt: runtimeMs | 0,
+        tag: label,
+        data: (data === undefined) ? null : data
+    })
+    if (buf.length > HE_DEBUG_TRACE_MAX) {
+        buf.splice(0, buf.length - HE_DEBUG_TRACE_MAX)
+    }
+}
+
+function _heBuildDebugDump(reason?: string): any {
+    const g: any = globalThis as any
+    let runtimeMs = 0
+    try { runtimeMs = game.runtime() | 0 } catch { }
+    const internals = g && g.__HeroEnginePhaserInternals
+    let floorFlags: any = null
+    if (internals && typeof internals.getFloorSaveFlags === "function") {
+        try { floorFlags = internals.getFloorSaveFlags() } catch { }
+    }
+
+    const worldRows = (_engineWorldTileMap && _engineWorldTileMap.length) ? (_engineWorldTileMap.length | 0) : 0
+    const worldCols = (worldRows > 0 && _engineWorldTileMap[0]) ? (_engineWorldTileMap[0].length | 0) : 0
+
+    const teleportRuneActive =
+        !!_dunTeleportRuneTrig &&
+        !(_dunTeleportRuneTrig.flags & sprites.Flag.Destroyed) &&
+        (_dunTeleportRuneName || "") !== ""
+
+    const lastTilemapMsg = g && g.__lastTilemapMsg
+    const tilemapSummary = (lastTilemapMsg && typeof lastTilemapMsg === "object") ? {
+        rev: (typeof lastTilemapMsg.rev === "number") ? (lastTilemapMsg.rev | 0) : null,
+        rows: (typeof lastTilemapMsg.rows === "number") ? (lastTilemapMsg.rows | 0) : null,
+        cols: (typeof lastTilemapMsg.cols === "number") ? (lastTilemapMsg.cols | 0) : null,
+        tileSize: (typeof lastTilemapMsg.tileSize === "number") ? (lastTilemapMsg.tileSize | 0) : null,
+        worldRev: (typeof lastTilemapMsg.worldRev === "number") ? (lastTilemapMsg.worldRev | 0) : null,
+        floorIndex: (typeof lastTilemapMsg.floorIndex === "number") ? (lastTilemapMsg.floorIndex | 0) : null,
+        floorKind: (typeof lastTilemapMsg.floorKind === "string") ? String(lastTilemapMsg.floorKind || "") : null,
+        baseFamily: (typeof lastTilemapMsg.baseFamily === "string") ? String(lastTilemapMsg.baseFamily || "") : null,
+        wallFamily: (typeof lastTilemapMsg.wallFamily === "string") ? String(lastTilemapMsg.wallFamily || "") : null,
+        decorRev: (lastTilemapMsg.decor && typeof lastTilemapMsg.decor.rev === "number") ? (lastTilemapMsg.decor.rev | 0) : null,
+        baseSig: (typeof lastTilemapMsg.baseSig === "number") ? (lastTilemapMsg.baseSig | 0) : null,
+        decorSig: (typeof lastTilemapMsg.decorSig === "number") ? (lastTilemapMsg.decorSig | 0) : null,
+        worldSig: (typeof lastTilemapMsg.worldSig === "number") ? (lastTilemapMsg.worldSig | 0) : null,
+    } : null
+
+    const heroDump: any[] = []
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi]
+        if (!hero) continue
+        const flags = hero.flags | 0
+        const profile =
+            _heroProfileKeyForIndex(hi) ||
+            _getProfileFromHeroSprite(hero) ||
+            ""
+        heroDump.push({
+            hi: hi | 0,
+            pid: sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0,
+            profile,
+            name: sprites.readDataString(hero, HERO_DATA.NAME) || "",
+            family: sprites.readDataString(hero, HERO_DATA.FAMILY) || "",
+            x: hero.x | 0,
+            y: hero.y | 0,
+            hp: sprites.readDataNumber(hero, HERO_DATA.HP) | 0,
+            maxHp: sprites.readDataNumber(hero, HERO_DATA.MAX_HP) | 0,
+            mana: sprites.readDataNumber(hero, HERO_DATA.MANA) | 0,
+            maxMana: sprites.readDataNumber(hero, HERO_DATA.MAX_MANA) | 0,
+            isNpc: sprites.readDataBoolean(hero, HERO_DATA.IS_NPC) ? 1 : 0,
+            isDead: sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD) ? 1 : 0,
+            deadGhost: sprites.readDataBoolean(hero, HERO_DATA.DEAD_GHOST) ? 1 : 0,
+            ghostFlag: (flags & sprites.Flag.Ghost) ? 1 : 0,
+            destroyed: (flags & sprites.Flag.Destroyed) ? 1 : 0,
+            teleMode: sprites.readDataNumber(hero, HERO_TELE_FX_MODE_KEY) | 0,
+            inputLocked: sprites.readDataBoolean(hero, HERO_DATA.INPUT_LOCKED) ? 1 : 0,
+        })
+    }
+
+    const enemyDump: any[] = []
+    for (let ei = 0; ei < enemies.length; ei++) {
+        const enemy = enemies[ei]
+        if (!enemy) continue
+        const flags = enemy.flags | 0
+        enemyDump.push({
+            ei: ei | 0,
+            monsterId: sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "",
+            x: enemy.x | 0,
+            y: enemy.y | 0,
+            hp: sprites.readDataNumber(enemy, ENEMY_DATA.HP) | 0,
+            maxHp: sprites.readDataNumber(enemy, ENEMY_DATA.MAX_HP) | 0,
+            deathUntil: sprites.readDataNumber(enemy, ENEMY_DATA.DEATH_UNTIL) | 0,
+            destroyed: (flags & sprites.Flag.Destroyed) ? 1 : 0,
+        })
+    }
+
+    const npcDump: any[] = []
+    for (let ni = 0; ni < npcActors.length; ni++) {
+        const npc = npcActors[ni]
+        if (!npc) continue
+        npcDump.push({
+            ni: ni | 0,
+            role: sprites.readDataString(npc, "_npcRole") || "",
+            heroName: sprites.readDataString(npc, "heroName") || sprites.readDataString(npc, HERO_DATA.NAME) || "",
+            family: sprites.readDataString(npc, "heroFamily") || sprites.readDataString(npc, HERO_DATA.FAMILY) || "",
+            x: npc.x | 0,
+            y: npc.y | 0,
+        })
+    }
+
+    const traceBuf = _heGetDebugTraceBuffer()
+    const trace = traceBuf.length ? traceBuf.slice(-HE_DEBUG_TRACE_MAX) : []
+
+    return {
+        type: "heDebugDumpV1",
+        createdAt: Date.now(),
+        runtimeMs: runtimeMs | 0,
+        reason: (typeof reason === "string") ? reason : "",
+        host: g && typeof g.__isHost === "boolean" ? !!g.__isHost : null,
+        floor: {
+            index: _dunFloorIndex | 0,
+            kind: String(_dunFloorKind || ""),
+            baseFamily: String(_dunBaseFamily || ""),
+            wallFamily: String(_dunWallFamily || ""),
+            palette: String(_dunThemePalette || ""),
+            objectiveDone: !!_dunObjectiveDone,
+            combatWavesActive: !!_dunCombatWavesActive,
+            combatWavesComplete: !!_dunCombatWavesComplete,
+            doorState: String(_dunDoorState || ""),
+            padPowered: !!_dunIsPadPowered(),
+            safe: (floorFlags && typeof floorFlags.safe === "boolean") ? !!floorFlags.safe : null,
+        },
+        teleport: {
+            runeActive: teleportRuneActive ? 1 : 0,
+            runeName: String(_dunTeleportRuneName || ""),
+            commitAtMs: _dunTeleportCommitAtMs | 0,
+            runeSpinSinceMs: _dunRuneSpinSinceMs | 0,
+            allReadySinceMs: _dunAllReadySinceMs | 0,
+            doorAllReadySinceMs: _dunDoorAllReadySinceMs | 0,
+        },
+        bossIntro: {
+            floorIndex: _dunBossIntroFloor | 0,
+            queued: _dunBossIntroEvent ? 1 : 0,
+            shadowX: _bossIntroShadowX | 0,
+            shadowY: _bossIntroShadowY | 0,
+            shadowUntilMs: _bossIntroShadowUntilMs | 0,
+        },
+        world: {
+            worldRev: _engineWorldRev | 0,
+            decorRev: _engineDecorRev | 0,
+            tileSize: WORLD_TILE_SIZE | 0,
+            rows: worldRows | 0,
+            cols: worldCols | 0,
+        },
+        save: {
+            pendingSaveFromFile: !!(g && g.__pendingSaveFromFile),
+            pendingSaveName: (g && g.__pendingSaveFromFile && g.__pendingSaveFromFile.name) ? String(g.__pendingSaveFromFile.name || "") : null,
+            loadedProfiles: (g && Array.isArray(g.__loadedSaveProfiles)) ? g.__loadedSaveProfiles : [],
+            pendingWorldSnapshot: !!(g && g.__pendingWorldSnapshotForSave),
+            pendingDecor: !!(g && g.__pendingDecorPayload),
+            savedHeroProfiles: (g && g.__heroSavedSnapshotByProfile && typeof g.__heroSavedSnapshotByProfile === "object")
+                ? Object.keys(g.__heroSavedSnapshotByProfile).length
+                : 0,
+            savedNpcKeys: (g && g.__npcSavedSnapshotByKey && typeof g.__npcSavedSnapshotByKey === "object")
+                ? Object.keys(g.__npcSavedSnapshotByKey).length
+                : 0,
+            tilemap: tilemapSummary,
+        },
+        heroes: heroDump,
+        enemies: enemyDump,
+        npcs: npcDump,
+        trace,
+    }
+}
+
+const HE_AUTO_DEBUG_DUMP_INTERVAL_MS = 5000
+let _heAutoDebugDumpLastMs = 0
+let _heAutoDebugDumpInFlight = false
+
+function _heAutoDebugDumpTick(nowMs: number): void {
+    if (!DEBUG_DEBUG_DUMP) return
+    const g: any = globalThis as any
+    if (!g || !g.__isHost) return
+    const net: any = g && g.__net
+    if (!net || typeof net.sendDebugDump !== "function") return
+    const interval = HE_AUTO_DEBUG_DUMP_INTERVAL_MS | 0
+    if (interval <= 0) return
+    if (_heAutoDebugDumpInFlight) return
+    const elapsed = (nowMs | 0) - (_heAutoDebugDumpLastMs | 0)
+    if (_heAutoDebugDumpLastMs && elapsed < interval) return
+    _heAutoDebugDumpLastMs = nowMs | 0
+    _heAutoDebugDumpInFlight = true
+    let p: any = null
+    try {
+        p = net.sendDebugDump(_heBuildDebugDump("auto"), "auto")
+    } catch {
+        _heAutoDebugDumpInFlight = false
+        return
+    }
+    if (p && typeof p.then === "function") {
+        p.then(() => {
+            _heAutoDebugDumpInFlight = false
+        }).catch(() => {
+            _heAutoDebugDumpInFlight = false
+        })
+    } else {
+        _heAutoDebugDumpInFlight = false
+    }
+}
+
 // Install globals once
 
 (() => {
@@ -82859,6 +84625,27 @@ function _uiShopTryBuySelected(hi: number, pid: number, where: string): { ok: bo
 
         }
 
+        g.__heDebugTrace = function (tag: any, data?: any): void {
+            _heDebugTraceInternal(tag, data)
+        }
+
+        g.__heDebugDump = function (reason?: string): any {
+            return _heBuildDebugDump(reason)
+        }
+
+        g.__heDebugDumpToFile = function (reason?: string): Promise<any> {
+            if (!DEBUG_DEBUG_DUMP) return Promise.resolve({ ok: false, reason: "disabled" })
+            if (g && typeof g.__isHost === "boolean" && !g.__isHost) {
+                return Promise.resolve({ ok: false, reason: "not-host" })
+            }
+            const net: any = g && g.__net
+            if (!net || typeof net.sendDebugDump !== "function") {
+                return Promise.resolve({ ok: false, reason: "no-net" })
+            }
+            const payload = _heBuildDebugDump(reason)
+            return net.sendDebugDump(payload, reason)
+        }
+
 
 
         // Command surface (Step 1 skeleton; spending logic + gating later)
@@ -82940,6 +84727,21 @@ g.__heUiCommand = function (cmd: any): any {
         const prof = cmd && typeof cmd.profile === "string" ? cmd.profile : ""
         const r = _heroDeath_contribute(String(prof || ""), pid | 0)
         return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
+    }
+    if (t === "debugDump") {
+        if (!DEBUG_DEBUG_DUMP) return { ok: false, reason: "debug-disabled", snapshot: g.__heGetUiSnapshot(pid) }
+        const reason = cmd && typeof cmd.reason === "string" ? cmd.reason : ""
+        const fn = g && g.__heDebugDumpToFile
+        if (typeof fn !== "function") {
+            return { ok: false, reason: "not-ready", snapshot: g.__heGetUiSnapshot(pid) }
+        }
+        return fn(reason || "").then((res: any) => ({
+            ok: !!res?.ok,
+            reason: String(res?.reason || (res?.ok ? "dumped" : "error")),
+            file: res?.file || null,
+            bytes: res?.bytes || null,
+            snapshot: g.__heGetUiSnapshot(pid),
+        }))
     }
     if (t === "teleportFloor" || t === "teleportShop") {
         if (!DEBUG_DEV_COMMANDS) return { ok: false, reason: "dev-disabled", snapshot: g.__heGetUiSnapshot(pid) }

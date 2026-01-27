@@ -9,7 +9,7 @@ Top-level fields
 - saveKind: `"auto"` or `"manual"` (optional; defaults to `"auto"` when missing).
 - label: human label for manual saves (optional).
 - profiles: array of profile names included in this save.
-- floor: `{ index, kind, baseFamily, wallFamily }` (floor identity + theme hints).
+- floor: `{ index, kind, baseFamily, wallFamily, palette?, textureSeed? }` (floor identity + theme hints).
 - next: `{ index, kind }` (next floor target at time of save).
 - floorState: `{ floorIndex, floorKind, safe, objectiveDone, padPowered, doorState, combatWavesComplete }` (optional).
 - worldSnapshot: snapshot from `netWorld.capture()` (non-hero sprites, host auth).
@@ -23,6 +23,7 @@ Notes
 - Saves are host-only.
 - Autosaves may be pruned on the server; manual saves should not be pruned.
 - Load behavior:
-  - Autosave (`saveKind="auto"`) loads into `next` and ignores floor-local artifacts (tilemap, decor, npcSprites, floorState).
-  - Manual save (`saveKind="manual"`) loads into `floor` and applies floor-local artifacts (tilemap, decor, npcSprites, floorState).
+- Autosave (`saveKind="auto"`) loads into `next` and ignores floor-local artifacts (tilemap, decor, npcSprites, floorState).
+- Manual save (`saveKind="manual"`) loads into `floor` using the same teleport-style restore policy (no tilemap/decor/npc/world snapshot application); only floor flags are applied.
+- worldSnapshot, tilemap, decor, and npcSprites are captured for forward-compatibility but are not restored by default to avoid mismatched world state.
 - Snapshot payloads include only primitive `sprite.data` keys and serialized pixels.

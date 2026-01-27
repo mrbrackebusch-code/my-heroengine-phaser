@@ -30,6 +30,8 @@ const HOST_LEASE_MS = 5000;
 const PORT = Number(process.env.GAME_WS_PORT || 8080);
 const HOST = process.env.GAME_HOST || "0.0.0.0";
 const SAVE_DIR = path.resolve("saves");
+const DEBUG_DUMP_DIR = path.resolve("debug_dumps");
+const DEBUG_DUMP_MAX_BYTES = 2 * 1024 * 1024;
 const HERO_ASSETS_DIR = path.resolve("assets", "heroes");
 const PROFILE_UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
 
@@ -828,6 +830,12 @@ try {
 } catch (e) {
   console.warn("[server] could not create saves dir", SAVE_DIR, e);
 }
+try {
+  fs.mkdirSync(DEBUG_DUMP_DIR, { recursive: true });
+  if (DEBUG_NET) console.log("[server] debug dumps dir:", DEBUG_DUMP_DIR);
+} catch (e) {
+  if (DEBUG_NET) console.warn("[server] could not create debug dumps dir", DEBUG_DUMP_DIR, e);
+}
 loadAllowedProfilesFromAssets();
 
 // Live reload allowed profiles when hero assets change (no server restart needed)
@@ -1075,6 +1083,51 @@ function handleSaveLoadRequest(ws, info, msg) {
   }
 }
 
+function handleDebugDumpMessage(ws, info, msg) {
+  const hostWs = getHostWsLeased();
+  if (!hostWs || ws !== hostWs) return;
+
+  const requestId = (msg && typeof msg.requestId === "string") ? msg.requestId : "";
+  if (!requestId) return;
+
+  const payload = msg && msg.payload;
+  if (!payload || typeof payload !== "object") {
+    sendJson(ws, { type: "debugDumpResult", requestId, ok: false, reason: "no-payload" });
+    return;
+  }
+
+  let text = "";
+  try {
+    text = JSON.stringify(payload, null, 2);
+  } catch (e) {
+    sendJson(ws, { type: "debugDumpResult", requestId, ok: false, reason: "stringify-failed" });
+    return;
+  }
+
+  const bytes = Buffer.byteLength(text, "utf8");
+  if (bytes > DEBUG_DUMP_MAX_BYTES) {
+    sendJson(ws, { type: "debugDumpResult", requestId, ok: false, reason: "too-large", bytes });
+    return;
+  }
+
+  const fname = "debugdump_latest.json";
+  const full = path.join(DEBUG_DUMP_DIR, fname);
+  if (!full.startsWith(DEBUG_DUMP_DIR)) {
+    sendJson(ws, { type: "debugDumpResult", requestId, ok: false, reason: "invalid-path" });
+    return;
+  }
+
+  try {
+    fs.writeFileSync(full, text, "utf8");
+  } catch (e) {
+    if (DEBUG_NET) console.warn("[server.debugDump] write failed", e);
+    sendJson(ws, { type: "debugDumpResult", requestId, ok: false, reason: "write-failed" });
+    return;
+  }
+
+  sendJson(ws, { type: "debugDumpResult", requestId, ok: true, file: fname, bytes });
+}
+
 
 function handleCoinBurstMessage(ws, info, msg) {
   const hostWs = getHostWsLeased();
@@ -1154,6 +1207,7 @@ function onSocketMessage(ws, data) {
   if (msg.type === "saveGame") return handleSaveGameMessage(ws, info, msg);
   if (msg.type === "saveListRequest") return handleSaveListRequest(ws, info, msg);
   if (msg.type === "saveLoadRequest") return handleSaveLoadRequest(ws, info, msg);
+  if (msg.type === "debugDump") return handleDebugDumpMessage(ws, info, msg);
 
   // Unknown message types are ignored for forward-compat
 }

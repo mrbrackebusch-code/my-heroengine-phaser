@@ -4,7 +4,7 @@
   "version": "0.0.0",
   "type": "module",
   "scripts": {
-    "dev": "npm run gen-auras && npm run gen-monster-auras && npm run gen-monster-feet && npm run gen-prop-auras && npm run gen-effect-meta && vite",
+    "dev": "npm run gen-auras && npm run gen-monster-auras && npm run gen-monster-feet && npm run gen-prop-auras && npm run gen-weapon-auras && npm run gen-aura-masks && npm run gen-effect-meta && vite",
     "build": "tsc && vite build",
     "preview": "vite preview",
     "update-hero": "node scripts/updateHeroEngine.cjs",
@@ -12,7 +12,9 @@
     "add-hero": "node scripts/addHeroProfile.mjs",
     "gen-monster-auras": "node scripts/genmonsterauras.mjs",
     "gen-monster-feet": "node scripts/genMonsterAuraFeet.mjs",
-    "gen-prop-auras": "node scripts/genpropauras.mjs --overwrite",
+    "gen-prop-auras": "node scripts/genpropauras.mjs",
+    "gen-weapon-auras": "node scripts/genWeaponAuras.mjs",
+    "gen-aura-masks": "node scripts/genAuraMaskBits.mjs",
     "gen-effect-meta": "node scripts/genEffectAtlasMeta.mjs",
     "check-effects": "node scripts/checkeffects.mjs",
     "gen-weapon-atlases": "node scripts/genweaponmodelatlas.mjs"

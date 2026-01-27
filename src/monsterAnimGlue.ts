@@ -2,6 +2,7 @@
 import type Phaser from "phaser";
 import type { MonsterAtlas } from "./monsterAtlas";
 import { MONSTER_AURA_FEET } from "./generated/monsterAuraFeet";
+import { DEBUG_MONSTER_SPRITES } from "./debugFlags";
 
 type Dir = "up" | "down" | "left" | "right";
 type Phase = "walk" | "attack" | "death";
@@ -132,7 +133,28 @@ export function applyMonsterAnimationForSprite(
         (sprite.name             as string | undefined);
 
     if (!monsterIdRaw) {
-        console.warn("[MonsterAnimGlue] sprite missing monster id/name", sprite);
+        if (DEBUG_MONSTER_SPRITES) {
+            const dataList = (data && (data as any).list) ? Object.keys((data as any).list) : [];
+            const texKey = (sprite as any).texture && (sprite as any).texture.key ? String((sprite as any).texture.key) : "";
+            const frameName = (sprite as any).frame && (sprite as any).frame.name != null ? String((sprite as any).frame.name) : "";
+            const summary = {
+                name: String((sprite as any).name || ""),
+                type: String((sprite as any).type || ""),
+                x: Math.round((sprite as any).x || 0),
+                y: Math.round((sprite as any).y || 0),
+                width: Math.round((sprite as any).width || 0),
+                height: Math.round((sprite as any).height || 0),
+                displayW: Math.round((sprite as any).displayWidth || 0),
+                displayH: Math.round((sprite as any).displayHeight || 0),
+                visible: !!(sprite as any).visible,
+                active: !!(sprite as any).active,
+                depth: Math.round((sprite as any).depth || 0),
+                texture: texKey,
+                frame: frameName,
+                dataKeys: dataList
+            };
+            console.warn("[MonsterAnimGlue] sprite missing monster id/name " + JSON.stringify(summary));
+        }
         return;
     }
 
