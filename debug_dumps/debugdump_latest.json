@@ -1,7 +1,7 @@
 {
   "type": "heDebugDumpV1",
-  "createdAt": 1769573768690,
-  "runtimeMs": 104878,
+  "createdAt": 1769573783695,
+  "runtimeMs": 119882,
   "reason": "auto",
   "host": true,
   "floor": {
@@ -70,8 +70,8 @@
       "profile": "LongBlond",
       "name": "LongBlond",
       "family": "",
-      "x": 859,
-      "y": 139,
+      "x": 925,
+      "y": 882,
       "hp": 1000,
       "maxHp": 1000,
       "mana": 1000,
@@ -88,8 +88,8 @@
   "enemies": [],
   "npcs": [],
   "effects": {
-    "count": 1,
-    "total": 1,
+    "count": 27,
+    "total": 27,
     "applyCount": 0,
     "sampleStride": 4,
     "pixelSampling": 1,
@@ -103,8 +103,8 @@
         "skin": "waves",
         "dir": "",
         "mode": "paint",
-        "tint": 9801635,
-        "alpha": 0.07775626398999491,
+        "tint": 9413519,
+        "alpha": 0.06844720689167119,
         "fps": 0,
         "repeat": 0,
         "yoyo": 0,
@@ -124,7 +124,7 @@
           "texKey": "effects.waves_128x128",
           "frame": 6,
           "visible": 1,
-          "alpha": 0.07775626398999491,
+          "alpha": 0.06844720689167119,
           "depth": 2000000010
         },
         "resolved": {
@@ -177,6 +177,1624 @@
             {
               "hex": 5927902,
               "count": 4
+            }
+          ]
+        }
+      },
+      {
+        "id": 201,
+        "kind": 67,
+        "x": 28,
+        "y": 325,
+        "z": 20,
+        "skin": "smoke",
+        "dir": "",
+        "mode": "paint",
+        "tint": 10068369,
+        "alpha": 0.02,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 1.71,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "screen",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.smoke_128x128",
+          "frame": 14,
+          "visible": 1,
+          "alpha": 0.02,
+          "depth": 2000000020
+        },
+        "resolved": {
+          "textureKey": "effects.smoke_128x128",
+          "frameW": 128,
+          "frameH": 128,
+          "frames": 15,
+          "frameId": 14
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 1024,
+          "nonTransparent": 560,
+          "nonTransparentPct": 0.5469,
+          "avg": {
+            "r": 50,
+            "g": 48,
+            "b": 44,
+            "a": 4
+          },
+          "topColors": [
+            {
+              "hex": 5592405,
+              "count": 95
+            },
+            {
+              "hex": 6710886,
+              "count": 78
+            },
+            {
+              "hex": 0,
+              "count": 77
+            },
+            {
+              "hex": 8421440,
+              "count": 66
+            },
+            {
+              "hex": 8421504,
+              "count": 40
+            },
+            {
+              "hex": 7171437,
+              "count": 27
+            },
+            {
+              "hex": 6316128,
+              "count": 25
+            },
+            {
+              "hex": 7427413,
+              "count": 23
+            }
+          ]
+        }
+      },
+      {
+        "id": 202,
+        "kind": 67,
+        "x": 98,
+        "y": 48,
+        "z": 30,
+        "skin": "rays",
+        "dir": "",
+        "mode": "paint",
+        "tint": 12367785,
+        "alpha": 0.03001666666666667,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 1.8,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "screen",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.rays_128x128",
+          "frame": 5,
+          "visible": 1,
+          "alpha": 0.03001666666666667,
+          "depth": 2000000030
+        },
+        "resolved": {
+          "textureKey": "effects.rays_128x128",
+          "frameW": 128,
+          "frameH": 128,
+          "frames": 6,
+          "frameId": 5
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 1024,
+          "nonTransparent": 347,
+          "nonTransparentPct": 0.3389,
+          "avg": {
+            "r": 75,
+            "g": 75,
+            "b": 32,
+            "a": 19
+          },
+          "topColors": [
+            {
+              "hex": 16776960,
+              "count": 20
+            },
+            {
+              "hex": 14671717,
+              "count": 11
+            },
+            {
+              "hex": 14606181,
+              "count": 10
+            },
+            {
+              "hex": 14540133,
+              "count": 9
+            },
+            {
+              "hex": 14540645,
+              "count": 9
+            },
+            {
+              "hex": 14671718,
+              "count": 9
+            },
+            {
+              "hex": 14408557,
+              "count": 8
+            },
+            {
+              "hex": 14540134,
+              "count": 8
+            }
+          ]
+        }
+      },
+      {
+        "id": 244,
+        "kind": 67,
+        "x": 115,
+        "y": -25,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 10992574,
+        "alpha": 0.03,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.03,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 245,
+        "kind": 67,
+        "x": 232,
+        "y": 273,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 10987710,
+        "alpha": 0.03,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.03,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 246,
+        "kind": 67,
+        "x": 529,
+        "y": 192,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 10993341,
+        "alpha": 0.03,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.03,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 247,
+        "kind": 67,
+        "x": 493,
+        "y": 184,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 10988222,
+        "alpha": 0.03,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.03,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 248,
+        "kind": 67,
+        "x": 528,
+        "y": 288,
+        "z": 20,
+        "skin": "smoke",
+        "dir": "",
+        "mode": "paint",
+        "tint": 10588566,
+        "alpha": 0.0719,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 1.86,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "screen",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.smoke_128x128",
+          "frame": 14,
+          "visible": 1,
+          "alpha": 0.0719,
+          "depth": 2000000020
+        },
+        "resolved": {
+          "textureKey": "effects.smoke_128x128",
+          "frameW": 128,
+          "frameH": 128,
+          "frames": 15,
+          "frameId": 14
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 1024,
+          "nonTransparent": 560,
+          "nonTransparentPct": 0.5469,
+          "avg": {
+            "r": 50,
+            "g": 48,
+            "b": 44,
+            "a": 4
+          },
+          "topColors": [
+            {
+              "hex": 5592405,
+              "count": 95
+            },
+            {
+              "hex": 6710886,
+              "count": 78
+            },
+            {
+              "hex": 0,
+              "count": 77
+            },
+            {
+              "hex": 8421440,
+              "count": 66
+            },
+            {
+              "hex": 8421504,
+              "count": 40
+            },
+            {
+              "hex": 7171437,
+              "count": 27
+            },
+            {
+              "hex": 6316128,
+              "count": 25
+            },
+            {
+              "hex": 7427413,
+              "count": 23
+            }
+          ]
+        }
+      },
+      {
+        "id": 249,
+        "kind": 67,
+        "x": 65,
+        "y": 205,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 12498343,
+        "alpha": 0.03,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.03,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 250,
+        "kind": 67,
+        "x": 138,
+        "y": 130,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 10993322,
+        "alpha": 0.033510000000000005,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.033510000000000005,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 252,
+        "kind": 67,
+        "x": 150,
+        "y": 342,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 11845287,
+        "alpha": 0.04325999999999999,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.04325999999999999,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 253,
+        "kind": 67,
+        "x": 244,
+        "y": 419,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 10992830,
+        "alpha": 0.049019999999999994,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.049019999999999994,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 254,
+        "kind": 67,
+        "x": 308,
+        "y": 432,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 12496807,
+        "alpha": 0.05576999999999999,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.05576999999999999,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 255,
+        "kind": 67,
+        "x": 244,
+        "y": 456,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 12496807,
+        "alpha": 0.0615,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.0615,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 256,
+        "kind": 67,
+        "x": 20,
+        "y": 55,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 12494771,
+        "alpha": 0.09678,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.09678,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 258,
+        "kind": 67,
+        "x": 338,
+        "y": 286,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 12496551,
+        "alpha": 0.1014,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.1014,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 259,
+        "kind": 67,
+        "x": 82,
+        "y": 373,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 11058855,
+        "alpha": 0.10781999999999999,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.10781999999999999,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 260,
+        "kind": 67,
+        "x": 623,
+        "y": 335,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 12494771,
+        "alpha": 0.11679,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.11679,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 261,
+        "kind": 67,
+        "x": 518,
+        "y": 156,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 12429246,
+        "alpha": 0.12426,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.12426,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 262,
+        "kind": 67,
+        "x": 505,
+        "y": 140,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 12494766,
+        "alpha": 0.12927,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.12927,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 263,
+        "kind": 67,
+        "x": 620,
+        "y": 42,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 11773886,
+        "alpha": 0.13677,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.13677,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 264,
+        "kind": 67,
+        "x": 252,
+        "y": 180,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 12298174,
+        "alpha": 0.14325000000000002,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.14325000000000002,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 265,
+        "kind": 67,
+        "x": 69,
+        "y": 174,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 10993332,
+        "alpha": 0.15051,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.15051,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 266,
+        "kind": 67,
+        "x": 212,
+        "y": 74,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 11452071,
+        "alpha": 0.15675,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.15675,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 267,
+        "kind": 67,
+        "x": 212,
+        "y": 164,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 12494766,
+        "alpha": 0.16176000000000001,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.16176000000000001,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 268,
+        "kind": 67,
+        "x": 173,
+        "y": 96,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 12496551,
+        "alpha": 0.16949999999999998,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.16949999999999998,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
+            }
+          ]
+        }
+      },
+      {
+        "id": 269,
+        "kind": 67,
+        "x": 525,
+        "y": 57,
+        "z": 40,
+        "skin": "firefly",
+        "dir": "",
+        "mode": "paint",
+        "tint": 11910823,
+        "alpha": 0.17726999999999998,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "add",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.firefly_7x7",
+          "frame": 0,
+          "visible": 1,
+          "alpha": 0.17726999999999998,
+          "depth": 2000000040
+        },
+        "resolved": {
+          "textureKey": "effects.firefly_7x7",
+          "frameW": 7,
+          "frameH": 7,
+          "frames": 1,
+          "frameId": 0
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 4,
+          "nonTransparent": 1,
+          "nonTransparentPct": 0.25,
+          "avg": {
+            "r": 64,
+            "g": 64,
+            "b": 64,
+            "a": 55
+          },
+          "topColors": [
+            {
+              "hex": 16777215,
+              "count": 1
             }
           ]
         }
