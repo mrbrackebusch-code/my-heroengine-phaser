@@ -1963,6 +1963,113 @@ export class WorldTileRenderer {
     return null;
   }
 
+  /** Build a compact, machine-readable snapshot of what's visually rendered. */
+  getVisualAudit(): any {
+    const map = this.map;
+    const rows = map ? (map.height | 0) : 0;
+    const cols = map ? (map.width | 0) : 0;
+
+    const layerAudit = (layer: Phaser.Tilemaps.TilemapLayer | null, name: string): any => {
+      if (!layer || rows <= 0 || cols <= 0) return null;
+      const rles: string[] = [];
+      let nonEmpty = 0;
+      for (let r = 0; r < rows; r++) {
+        let segs: string[] = [];
+        let cur = -999999;
+        let start = -1;
+        for (let c = 0; c <= cols; c++) {
+          const t = (c < cols) ? (layer.getTileAt(c, r) as any) : null;
+          const gid = (t && typeof t.index === "number") ? (t.index | 0) : -1;
+          if (gid !== cur) {
+            if (cur >= 0 && start >= 0) {
+              const end = (c - 1) | 0;
+              segs.push(start === end ? `${start}=${cur}` : `${start}-${end}=${cur}`);
+              nonEmpty += (end - start + 1) | 0;
+            }
+            cur = gid;
+            start = (gid >= 0) ? (c | 0) : -1;
+          }
+        }
+        if (segs.length) rles.push(`r${r}:${segs.join(",")}`);
+      }
+      return {
+        name,
+        depth: (layer as any).depth ?? null,
+        visible: !!(layer as any).visible,
+        alpha: (layer as any).alpha ?? null,
+        nonEmpty,
+        rows: rles.join("|"),
+      };
+    };
+
+    const layerList: any[] = [];
+    const g = layerAudit(this.groundLayer, "ground");
+    const ch = layerAudit(this.chasmLayer, "chasm");
+    const chO = layerAudit(this.chasmOverlayLayer, "chasmOverlay");
+    const dec = layerAudit(this.decalLayer, "decals");
+    const pr = layerAudit(this.propLayer, "props");
+    if (g) layerList.push(g);
+    if (ch) layerList.push(ch);
+    if (chO) layerList.push(chO);
+    if (dec) layerList.push(dec);
+    if (pr) layerList.push(pr);
+
+    const anyThis: any = this as any;
+    const instByAnchor: Record<string, any> = anyThis.__propInstancesByAnchor || Object.create(null);
+    const propKeys = Object.keys(instByAnchor);
+    propKeys.sort();
+    const props: any[] = [];
+    for (let i = 0; i < propKeys.length; i++) {
+      const k = propKeys[i];
+      const inst = instByAnchor[k];
+      if (!inst) continue;
+      const objs: any[] = Array.isArray(inst.objs) ? inst.objs : [];
+      const overlays: any[] = Array.isArray(inst.overlayObjs) ? inst.overlayObjs : [];
+      const auraCont: any = inst.focusAura ?? null;
+      props.push({
+        anchor: { r: inst.anchorR | 0, c: inst.anchorC | 0 },
+        rawKey: String(inst.rawKey ?? ""),
+        baseName: String(inst.baseName ?? ""),
+        textureKey: String(inst.textureKey ?? ""),
+        baseRef: { row: inst.baseRefRow | 0, col: inst.baseRefCol | 0 },
+        wTiles: (inst.wTiles | 0) || 1,
+        hTiles: (inst.hTiles | 0) || 1,
+        offset: { x: (inst.offsetX | 0), y: (inst.offsetY | 0) },
+        baseDepth: (inst.baseDepth | 0) || 0,
+        objs: objs.map((o: any) => ({
+          x: (o?.x ?? 0) | 0,
+          y: (o?.y ?? 0) | 0,
+          depth: (o?.depth ?? 0) | 0,
+          tex: o?.texture?.key ?? null,
+          frame: (o?.frame?.name ?? o?.frame?.index ?? null),
+          vis: !!o?.visible,
+        })),
+        overlays: overlays.map((o: any) => ({
+          x: (o?.x ?? 0) | 0,
+          y: (o?.y ?? 0) | 0,
+          depth: (o?.depth ?? 0) | 0,
+          tex: o?.texture?.key ?? null,
+          frame: (o?.frame?.name ?? o?.frame?.index ?? null),
+          vis: !!o?.visible,
+        })),
+        aura: auraCont ? {
+          depth: (auraCont?.depth ?? 0) | 0,
+          vis: !!auraCont?.visible,
+          alpha: (auraCont?.alpha ?? null),
+        } : null,
+      });
+    }
+
+    return {
+      rows,
+      cols,
+      tileSize: (this.atlas?.tileSize ?? 32) | 0,
+      gidRanges: this._gidRanges.slice(0),
+      layers: layerList,
+      props,
+    };
+  }
+
 setPropStateAt(anchorR: number, anchorC: number, state: string): boolean {
   const anyThis: any = this as any;
   const instByAnchor: any = anyThis.__propInstancesByAnchor || null;

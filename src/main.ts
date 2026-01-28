@@ -1800,6 +1800,7 @@ private ensureWorldTileRenderer(atlas: TileAtlas) {
         debugLocal: true,
         tileValueToFamily,
     });
+    try { (globalThis as any).__heTileRenderer = this.tileRenderer; } catch { }
 
     return this.tileRenderer;
 }

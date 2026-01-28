@@ -7,7 +7,8 @@ import { getAuraMaskFrameView } from "./auraMaskBits";
 import { tryRunBlocklyHeroLogic } from "./blocklyHeroLogicRuntime";
 import { createVfxRegistry } from "./vfxRegistry";
 import type { VfxHelpers, VfxRegistry } from "./vfxRegistry";
-import { ENEMY_EFFECT_PALETTES } from "./vfxPalettes";
+import { ENEMY_EFFECT_DARKEN_PCT_DEFAULT, ENEMY_EFFECT_PALETTES } from "./vfxPalettes";
+import { ENEMY_EFFECT_PALETTES_BY_DARKEN_PCT } from "./vfxEnemyPalettes";
 import {
     TOWER_TRIAL_BUTTONS,
     towerTrialButtonLabel,
@@ -33,6 +34,9 @@ import {
     DEBUG_AGI_SQUARE_COMET_LOGS,
     DEBUG_AGI_SQUARE_COMET_LOG_THROTTLE_MS,
     DEBUG_AGI_SQUARE_COMET_LOG_VERBOSE,
+    DEBUG_AGI_COMET_ALIGN_LOGS,
+    DEBUG_AGI_COMET_ALIGN_LOG_THROTTLE_MS,
+    DEBUG_AGI_COMET_ALIGN_LOG_VERBOSE,
     DEBUG_AGI_COMBO,
     DEBUG_AGI_COMBO_BUILD,
     DEBUG_AGI_COMBO_EXIT,
@@ -95,6 +99,7 @@ import {
     DEBUG_TOWER_TRIAL_SIM,
     DEBUG_TRAP_LOGS,
     DEBUG_TILEMAP_AUDIT,
+    DEBUG_TILEMAP_AUDIT_DUMP,
     DEBUG_FORCE_TEST_WORLD_KIND,
     DEBUG_FORCE_TEST_WORLD_LOG,
     DEBUG_HERO_LOGIC,
@@ -3275,6 +3280,29 @@ function _ensureAgilitySquareCometFx(
     return fx;
 }
 
+function _agiDashSquareCometCarrier(hero: Sprite): Sprite | null {
+    if (!hero) return null;
+    let spr = sprites.readDataSprite(hero, AGI_SQUARE_COMET_CARRIER_KEY);
+    if (spr && (spr.flags & sprites.Flag.Destroyed)) spr = null as any;
+    if (!spr) {
+        spr = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+        spr.setFlag(SpriteFlag.Ghost, true);
+        spr.setFlag(SpriteFlag.Invisible, true);
+        sprites.setDataSprite(hero, AGI_SQUARE_COMET_CARRIER_KEY, spr as any);
+    }
+    return spr;
+}
+
+function _agiDashSquareCometClear(hero: Sprite): void {
+    if (!hero) return;
+    const spr = sprites.readDataSprite(hero, AGI_SQUARE_COMET_CARRIER_KEY);
+    if (spr && !(spr.flags & sprites.Flag.Destroyed)) {
+        _destroyAgilityCometAurasForFx(spr);
+        spr.destroy();
+    }
+    sprites.setDataSprite(hero, AGI_SQUARE_COMET_CARRIER_KEY, null as any);
+}
+
 function _agiCometPreT(preActive: boolean, activateAt: number, nowMs: number): number {
     if (!preActive) return 1;
     const actAt = activateAt | 0;
@@ -3378,6 +3406,34 @@ function _agiCometAxisScaleForTipOffset(tipOffset?: { dx: number; dy: number } |
     return { sx: 1, sy: lenScale };
 }
 
+function _agiCometAxisScaleForWeaponLen(
+    tipOffset: { dx: number; dy: number } | null,
+    weaponLen: number
+): { sx: number; sy: number } | null {
+    if (!tipOffset) return null;
+    let len = Math.max(1, weaponLen | 0);
+    const padPct = AGI_COMET_ALIGN_LEN_PAD_PCT_X1000 | 0;
+    if (padPct > 0) len = Math.max(1, Math.round((len * padPct) / 1000));
+    const ax = Math.abs(tipOffset.dx || 0);
+    const ay = Math.abs(tipOffset.dy || 0);
+    if (ax === 0 && ay === 0) return null;
+    const dominant = Math.max(ax, ay);
+    if (dominant <= 0) return null;
+    let s = len / dominant;
+    if (!Number.isFinite(s)) return null;
+    s = Math.max(AGI_COMET_ALIGN_LEN_MIN, Math.min(AGI_COMET_ALIGN_LEN_MAX, s));
+    if (ax >= ay) return { sx: s, sy: 1 };
+    return { sx: 1, sy: s };
+}
+
+function _agiCometAlignDirOffset(nx: number, ny: number, isSquare: boolean): { dx: number; dy: number } {
+    const dirKey = _weaponDirKeyFromVector(nx, ny);
+    const map = isSquare ? AGI_SQUARE_COMET_ALIGN_DIR_OFFSETS : AGI_COMET_ALIGN_DIR_OFFSETS;
+    const off = map[dirKey];
+    if (off) return off;
+    return { dx: 0, dy: 0 };
+}
+
 function _agiCometHoldBlend(nowMs: number, startMs: number): number {
     const baseMs = (startMs | 0) > 0 ? (startMs | 0) : (nowMs | 0);
     const period = Math.max(1, AGI_COMET_HOLD_LOOP_MS | 0);
@@ -3468,10 +3524,22 @@ function _agiSquareCometShouldLog(fx: Sprite, nowMs: number): boolean {
     const throttle = DEBUG_AGI_SQUARE_COMET_LOG_THROTTLE_MS | 0;
     const now = nowMs | 0;
     if (throttle > 0) {
-        const last = sprites.readDataNumber(fx, AGI_COMET_LOG_LAST_MS_KEY) | 0;
+        const last = sprites.readDataNumber(fx, AGI_SQUARE_COMET_LOG_LAST_MS_KEY) | 0;
         if (last > 0 && (now - last) < throttle) return false;
     }
-    sprites.setDataNumber(fx, AGI_COMET_LOG_LAST_MS_KEY, now | 0);
+    sprites.setDataNumber(fx, AGI_SQUARE_COMET_LOG_LAST_MS_KEY, now | 0);
+    return true;
+}
+
+function _agiCometAlignShouldLog(fx: Sprite, nowMs: number): boolean {
+    if (!DEBUG_AGI_COMET_ALIGN_LOGS) return false;
+    const throttle = DEBUG_AGI_COMET_ALIGN_LOG_THROTTLE_MS | 0;
+    const now = nowMs | 0;
+    if (throttle > 0) {
+        const last = sprites.readDataNumber(fx, AGI_COMET_ALIGN_LOG_LAST_MS_KEY) | 0;
+        if (last > 0 && (now - last) < throttle) return false;
+    }
+    sprites.setDataNumber(fx, AGI_COMET_ALIGN_LOG_LAST_MS_KEY, now | 0);
     return true;
 }
 
@@ -3527,6 +3595,50 @@ function _agiCometLogLine(payload: {
     console.log(line);
 }
 
+function _agiCometAlignLogLine(payload: {
+    kind: string;
+    heroIndex: number;
+    weaponTipX: number;
+    weaponTipY: number;
+    cometTipX: number;
+    cometTipY: number;
+    baseX: number;
+    baseY: number;
+    alignX: number;
+    alignY: number;
+    nx: number;
+    ny: number;
+    weaponLen: number;
+    tipDist: number;
+    scale: number;
+    axisScaleX: number;
+    axisScaleY: number;
+    rawFrame: number;
+}): void {
+    if (!DEBUG_AGI_COMET_ALIGN_LOGS) return;
+    const dx = payload.cometTipX - payload.weaponTipX;
+    const dy = payload.cometTipY - payload.weaponTipY;
+    let line =
+        "[AGI][COMET][ALIGN]" +
+        " kind=" + payload.kind +
+        " hero=" + (payload.heroIndex | 0) +
+        " wTip=" + payload.weaponTipX.toFixed(1) + "," + payload.weaponTipY.toFixed(1) +
+        " cTip=" + payload.cometTipX.toFixed(1) + "," + payload.cometTipY.toFixed(1) +
+        " d=" + dx.toFixed(2) + "," + dy.toFixed(2) +
+        " base=" + payload.baseX.toFixed(1) + "," + payload.baseY.toFixed(1) +
+        " align=" + payload.alignX.toFixed(1) + "," + payload.alignY.toFixed(1) +
+        " dir=" + payload.nx.toFixed(3) + "," + payload.ny.toFixed(3) +
+        " wLen=" + payload.weaponLen.toFixed(1) +
+        " tipDist=" + payload.tipDist.toFixed(1) +
+        " scale=" + payload.scale.toFixed(3) +
+        " axis=" + payload.axisScaleX.toFixed(3) + "," + payload.axisScaleY.toFixed(3) +
+        " raw=" + (payload.rawFrame | 0);
+    if (DEBUG_AGI_COMET_ALIGN_LOG_VERBOSE) {
+        line += " t=" + (game.runtime() | 0);
+    }
+    console.log(line);
+}
+
 function _updateAgilityCometFx(
     proj: Sprite,
     heroIndex: number,
@@ -3558,11 +3670,9 @@ function _updateAgilityCometFx(
     }
 
     const tipDist = _agiCometTipDistance(sBack, sFront, maxLen, reelT);
-    const baseTipX = anchorX + nx * tipDist;
-    const baseTipY = anchorY + ny * tipDist;
 
     const moveAngle = Math.atan2(ny, nx);
-    const rot = _strengthArcNormalizeAngle(moveAngle - AGI_COMET_SW_BASE_ANGLE);
+    const rot = _strengthArcNormalizeAngle(moveAngle - AGI_COMET_SW_BASE_ANGLE + AGI_SQUARE_COMET_ROT_OFFSET);
 
     const growNorm = Math.max(0, Math.min(1, growthT / Math.max(0.0001, AGI_COMET_GROW_END_T)));
     const growEase = Math.pow(growNorm, AGI_COMET_GROW_EXP);
@@ -3589,34 +3699,101 @@ function _updateAgilityCometFx(
     const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, rawFrame | 0);
     const tipOffset = _agiCometTipOffsetForRaw(STR_ARC_SKIN_ID, rawFrame | 0);
     const fallbackOffset = _agiCometDirOffset(nx, ny);
+    const vis = getHeroVisualInfoForStrength(hero, nx, ny);
+    let wTipX = (vis[2] || 0);
+    let wTipY = (vis[3] || 0);
+    let wTipProj = (wTipX * nx) + (wTipY * ny);
+    if (wTipProj < 0) {
+        wTipX = -wTipX;
+        wTipY = -wTipY;
+        wTipProj = -wTipProj;
+    }
+    let weaponLen = Math.max(0, wTipProj);
+    if (weaponLen <= 0) {
+        const lead = (vis[1] || 0);
+        if (lead > 0) {
+            weaponLen = lead;
+            wTipX = nx * weaponLen;
+            wTipY = ny * weaponLen;
+        }
+    }
+    const weaponTipX = hero.x + wTipX;
+    const weaponTipY = hero.y + wTipY;
+    const axisScale = _agiCometAxisScaleForWeaponLen(tipOffset, weaponLen) || _agiCometAxisScaleForTipOffset(tipOffset);
 
     sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0);
     sprites.setDataNumber(fx, EFFECT_ROT_DATA_KEY, rot);
     sprites.setDataNumber(fx, EFFECT_SCALE_DATA_KEY, scale);
+    sprites.setDataNumber(fx, EFFECT_SCALE_X_DATA_KEY, axisScale.sx);
+    sprites.setDataNumber(fx, EFFECT_SCALE_Y_DATA_KEY, axisScale.sy);
     sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, alpha)));
-    sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, 0);
-    sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, 0);
+    sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, AGI_SQUARE_COMET_FLIP_X | 0);
+    sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, AGI_SQUARE_COMET_FLIP_Y | 0);
 
-    let tipX = baseTipX;
-    let tipY = baseTipY;
+    let tipAnchorX = baseTipX;
+    let tipAnchorY = baseTipY;
+    if (weaponLen > 0 && (wTipX || wTipY)) {
+        tipAnchorX = weaponTipX;
+        tipAnchorY = weaponTipY;
+    }
+    const dirOff = _agiCometAlignDirOffset(nx, ny, false);
+    tipAnchorX += (AGI_COMET_ALIGN_OFF_X | 0) + (dirOff.dx | 0);
+    tipAnchorY += (AGI_COMET_ALIGN_OFF_Y | 0) + (dirOff.dy | 0);
+
+    let tipX = tipAnchorX;
+    let tipY = tipAnchorY;
+    const flipX = (AGI_SQUARE_COMET_FLIP_X | 0) !== 0;
+    const flipY = (AGI_SQUARE_COMET_FLIP_Y | 0) !== 0;
     if (tipOffset) {
         const cos = Math.cos(rot);
         const sin = Math.sin(rot);
-        const offX = (tipOffset.dx * scale);
-        const offY = (tipOffset.dy * scale);
+        const tipDx = (flipX ? -tipOffset.dx : tipOffset.dx);
+        const tipDy = (flipY ? -tipOffset.dy : tipOffset.dy);
+        const offX = (tipDx * scale * (axisScale.sx || 1));
+        const offY = (tipDy * scale * (axisScale.sy || 1));
         const rotX = (offX * cos) - (offY * sin);
         const rotY = (offX * sin) + (offY * cos);
-        tipX = baseTipX - rotX;
-        tipY = baseTipY - rotY;
+        tipX = tipAnchorX - rotX;
+        tipY = tipAnchorY - rotY;
     } else {
-        tipX = baseTipX + (fallbackOffset.dx | 0);
-        tipY = baseTipY + (fallbackOffset.dy | 0);
+        const fbX = flipX ? -(fallbackOffset.dx | 0) : (fallbackOffset.dx | 0);
+        const fbY = flipY ? -(fallbackOffset.dy | 0) : (fallbackOffset.dy | 0);
+        tipX = tipAnchorX + fbX;
+        tipY = tipAnchorY + fbY;
     }
 
     fx.x = tipX;
     fx.y = tipY;
     fx.z = (hero.z | 0) + (AGI_COMET_Z_BIAS | 0);
     fx.setFlag(SpriteFlag.Invisible, false);
+
+    if (_agiCometAlignShouldLog(fx, nowMs | 0)) {
+        const vis = getHeroVisualInfoForStrength(hero, nx, ny);
+        const wTipX = (vis[2] || 0);
+        const wTipY = (vis[3] || 0);
+        const weaponTipX = hero.x + wTipX;
+        const weaponTipY = hero.y + wTipY;
+        _agiCometAlignLogLine({
+            kind: "dash",
+            heroIndex: heroIndex | 0,
+            weaponTipX,
+            weaponTipY,
+            cometTipX: tipX,
+            cometTipY: tipY,
+            baseX: anchorX,
+            baseY: anchorY,
+            alignX: tipAnchorX,
+            alignY: tipAnchorY,
+            nx,
+            ny,
+            weaponLen: weaponLen | 0,
+            tipDist: tipDist | 0,
+            scale,
+            axisScaleX: axisScale.sx || 1,
+            axisScaleY: axisScale.sy || 1,
+            rawFrame: rawFrame | 0
+        });
+    }
 
     // Aura outlines (r1/r2/r3) around the comet.
     let auraIdxR1 = sprites.readDataNumber(proj, WPN_AURA_COL_R1_KEY) | 0;
@@ -3646,6 +3823,8 @@ function _updateAgilityCometFx(
         sprites.setDataNumber(auraFx, EFFECT_FRAME_INDEX_DATA_KEY, auraIdx | 0);
         sprites.setDataNumber(auraFx, EFFECT_ROT_DATA_KEY, rot);
         sprites.setDataNumber(auraFx, EFFECT_SCALE_DATA_KEY, scale);
+        sprites.setDataNumber(auraFx, EFFECT_SCALE_X_DATA_KEY, axisScale.sx);
+        sprites.setDataNumber(auraFx, EFFECT_SCALE_Y_DATA_KEY, axisScale.sy);
         sprites.setDataNumber(auraFx, EFFECT_ALPHA_DATA_KEY, auraAlpha);
         sprites.setDataNumber(auraFx, EFFECT_TINT_DATA_KEY, auraTints[i] | 0);
         auraFx.x = tipX;
@@ -3705,6 +3884,12 @@ function _updateAgilitySquareCometFx(
     const preT = _agiCometPreT(preActive, activateAt | 0, nowMs | 0);
     if (preActive && preT <= 0) {
         fx.setFlag(SpriteFlag.Invisible, true);
+        if (_agiSquareCometShouldLog(fx, nowMs | 0)) {
+            console.log(
+                "[AGI][COMET][SQUARE] skip=pre_t0 hero=" + (heroIndex | 0) +
+                " pre=1 t=" + (nowMs | 0)
+            );
+        }
         return;
     }
 
@@ -3732,6 +3917,14 @@ function _updateAgilitySquareCometFx(
     }
     if (alpha <= 0.01 || scale <= 0.01) {
         fx.setFlag(SpriteFlag.Invisible, true);
+        if (_agiSquareCometShouldLog(fx, nowMs | 0)) {
+            console.log(
+                "[AGI][COMET][SQUARE] skip=alpha_scale hero=" + (heroIndex | 0) +
+                " alpha=" + alpha.toFixed(3) +
+                " scale=" + scale.toFixed(3) +
+                " t=" + (nowMs | 0)
+            );
+        }
         return;
     }
 
@@ -3739,33 +3932,105 @@ function _updateAgilitySquareCometFx(
     const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, rawFrame | 0);
     const tipOffset = _agiCometTipOffsetForRaw(STR_ARC_SKIN_ID, rawFrame | 0);
     const fallbackOffset = _agiCometDirOffset(nx, ny);
+    const vis = getHeroVisualInfoForStrength(hero, nx, ny);
+    let wTipX = (vis[2] || 0);
+    let wTipY = (vis[3] || 0);
+    let wTipProj = (wTipX * nx) + (wTipY * ny);
+    if (wTipProj < 0) {
+        wTipX = -wTipX;
+        wTipY = -wTipY;
+        wTipProj = -wTipProj;
+    }
+    let weaponLen = Math.max(0, wTipProj);
+    if (weaponLen <= 0) {
+        const lead = (vis[1] || 0);
+        if (lead > 0) {
+            weaponLen = lead;
+            wTipX = nx * weaponLen;
+            wTipY = ny * weaponLen;
+        }
+    }
+    const weaponTipX = hero.x + wTipX;
+    const weaponTipY = hero.y + wTipY;
+    const axisScale =
+        _agiCometAxisScaleForWeaponLen(tipOffset, weaponLen) ||
+        _agiCometAxisScaleForTipOffset(tipOffset);
     sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0);
     sprites.setDataNumber(fx, EFFECT_ROT_DATA_KEY, rot);
     sprites.setDataNumber(fx, EFFECT_SCALE_DATA_KEY, scale);
+    sprites.setDataNumber(fx, EFFECT_SCALE_X_DATA_KEY, axisScale.sx);
+    sprites.setDataNumber(fx, EFFECT_SCALE_Y_DATA_KEY, axisScale.sy);
     sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, alpha)));
     sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, 0);
     sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, 0);
 
-    let tipX = baseTipX;
-    let tipY = baseTipY;
+    const dirOff = _agiCometAlignDirOffset(nx, ny, true);
+    const sideX = -ny;
+    const sideY = nx;
+    let tipAnchorX = weaponTipX +
+        (AGI_SQUARE_COMET_ALIGN_OFF_X | 0) +
+        (dirOff.dx | 0) +
+        (nx * (AGI_SQUARE_COMET_ALIGN_FWD_PX | 0)) +
+        (sideX * (AGI_SQUARE_COMET_ALIGN_SIDE_PX | 0));
+    let tipAnchorY = weaponTipY +
+        (AGI_SQUARE_COMET_ALIGN_OFF_Y | 0) +
+        (dirOff.dy | 0) +
+        (ny * (AGI_SQUARE_COMET_ALIGN_FWD_PX | 0)) +
+        (sideY * (AGI_SQUARE_COMET_ALIGN_SIDE_PX | 0));
+    let tipX = tipAnchorX;
+    let tipY = tipAnchorY;
     if (tipOffset) {
         const cos = Math.cos(rot);
         const sin = Math.sin(rot);
-        const offX = (tipOffset.dx * scale);
-        const offY = (tipOffset.dy * scale);
+        const offX = (tipOffset.dx * scale * (axisScale.sx || 1));
+        const offY = (tipOffset.dy * scale * (axisScale.sy || 1));
         const rotX = (offX * cos) - (offY * sin);
         const rotY = (offX * sin) + (offY * cos);
-        tipX = baseTipX - rotX;
-        tipY = baseTipY - rotY;
+        tipX = tipAnchorX - rotX;
+        tipY = tipAnchorY - rotY;
     } else {
-        tipX = baseTipX + (fallbackOffset.dx | 0);
-        tipY = baseTipY + (fallbackOffset.dy | 0);
+        tipX = tipAnchorX + (fallbackOffset.dx | 0);
+        tipY = tipAnchorY + (fallbackOffset.dy | 0);
     }
 
     fx.x = tipX;
     fx.y = tipY;
     fx.z = (hero.z | 0) + (AGI_SQUARE_COMET_Z_BIAS | 0);
     fx.setFlag(SpriteFlag.Invisible, false);
+
+    if (_agiCometAlignShouldLog(fx, nowMs | 0)) {
+        _agiCometAlignLogLine({
+            kind: "dash.square",
+            heroIndex: heroIndex | 0,
+            weaponTipX,
+            weaponTipY,
+            cometTipX: tipX,
+            cometTipY: tipY,
+            baseX: anchorX,
+            baseY: anchorY,
+            alignX: tipAnchorX,
+            alignY: tipAnchorY,
+            nx,
+            ny,
+            weaponLen: weaponLen | 0,
+            tipDist: tipDist | 0,
+            scale,
+            axisScaleX: axisScale.sx || 1,
+            axisScaleY: axisScale.sy || 1,
+            rawFrame: rawFrame | 0
+        });
+    }
+
+    if (_agiSquareCometShouldLog(fx, nowMs | 0)) {
+        console.log(
+            "[AGI][COMET][SQUARE] show=1 hero=" + (heroIndex | 0) +
+            " raw=" + (rawFrame | 0) +
+            " idx=" + (frameIdx | 0) +
+            " pos=" + tipX.toFixed(1) + "," + tipY.toFixed(1) +
+            " scale=" + scale.toFixed(3) +
+            " alpha=" + alpha.toFixed(3)
+        );
+    }
 
     if (_agiSquareCometShouldLog(fx, nowMs | 0)) {
         _agiCometLogLine({
@@ -4288,7 +4553,7 @@ const AGI_COMET_ALPHA = 0.8;
 const AGI_SQUARE_COMET_ALPHA = 1;
 const AGI_COMET_PREACTIVE_ALPHA = 0.28;
 const AGI_COMET_SCALE = 0.95;
-const AGI_SQUARE_COMET_SCALE = 10;
+const AGI_SQUARE_COMET_SCALE = 0.95;
 const AGI_COMET_END_SCALE = 0.3;
 const AGI_COMET_SW_BASE_ANGLE = (3 * Math.PI) / 4; // authored pointing SW
 const AGI_COMET_BASE_DIR_X = -1;
@@ -4302,6 +4567,30 @@ const AGI_COMET_PRE_MS = 120;
 const AGI_COMET_REEL_MS = 200;
 const AGI_COMET_REEL_BACK_PCT_X1000 = 700;
 const AGI_COMET_HOLD_LOOP_MS = 700;
+const AGI_COMET_ALIGN_LEN_MIN = 0.5;
+const AGI_COMET_ALIGN_LEN_MAX = 3;
+const AGI_COMET_ALIGN_LEN_PAD_PCT_X1000 = 1100;
+const AGI_COMET_ALIGN_OFF_X = 0;
+const AGI_COMET_ALIGN_OFF_Y = 0;
+const AGI_SQUARE_COMET_ALIGN_OFF_X = 0;
+const AGI_SQUARE_COMET_ALIGN_OFF_Y = 0;
+const AGI_SQUARE_COMET_ALIGN_FWD_PX = 0;
+const AGI_SQUARE_COMET_ALIGN_SIDE_PX = 0;
+const AGI_SQUARE_COMET_FLIP_X = 0;
+const AGI_SQUARE_COMET_FLIP_Y = 0;
+const AGI_SQUARE_COMET_ROT_OFFSET = 0;
+const AGI_COMET_ALIGN_DIR_OFFSETS: { [key: string]: { dx: number; dy: number } } = {
+    up: { dx: 4, dy: 0 },
+    down: { dx: -4, dy: 0 },
+    left: { dx: 0, dy: 4 },
+    right: { dx: 0, dy: 4 }
+};
+const AGI_SQUARE_COMET_ALIGN_DIR_OFFSETS: { [key: string]: { dx: number; dy: number } } = {
+    up: { dx: 12, dy: 0 },
+    down: { dx: -4, dy: 0 },
+    left: { dx: 0, dy: 12 },
+    right: { dx: 0, dy: 12 }
+};
 const AGI_COMET_PRE_RAW = [22, 16, 21];
 const AGI_COMET_HOLD_RAW = [10, 4];
 const AGI_COMET_BLEND_FX_KEY = "agiCometBlendFx";
@@ -4310,6 +4599,10 @@ const AGI_COMET_AURA_R2_FX_KEY = "agiCometAuraR2Fx";
 const AGI_COMET_AURA_R3_FX_KEY = "agiCometAuraR3Fx";
 const AGI_COMET_AURA_ALPHA_MULT = 1.25;
 const AGI_COMET_LOG_LAST_MS_KEY = "agiCometLogMs";
+const AGI_COMET_ALIGN_LOG_LAST_MS_KEY = "agiCometAlignLogMs";
+const AGI_SQUARE_COMET_LOG_LAST_MS_KEY = "agiSquareCometLogMs";
+const AGI_SQUARE_COMET_TICK_LOG_LAST_MS_KEY = "agiSquareCometTickLogMs";
+const AGI_SQUARE_COMET_CARRIER_KEY = "__agiSquareCometCarrier";
 const AGI_COMET_DIR_OFFSETS: { [k: string]: { dx: number; dy: number } } = {
     left: { dx: 0, dy: 1 },
     right: { dx: 0, dy: 1 },
@@ -13232,7 +13525,7 @@ const BOSS_PAD_SINK_DUST_MASK_ALPHA_SCALE = 0.6
 const BOSS_PAD_SINK_DUST_LAYER_ALPHA = 0.82
 const BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA = 0.35
 const BOSS_PAD_SINK_DUST_FADE_MS = 3000
-const BOSS_PAD_SINK_DUST_SKIN_ID = "smoke 128x128"
+const CLOUD_GEOMETRY_SKIN_ID = "smoke grayscale 128x128"
 const BOSS_PAD_SINK_DUST_TEX_ID = "waves1 texture grayscale 256x256"
 const BOSS_PAD_SINK_DUST_TEX_FPS = 16
 const BOSS_PAD_SINK_DUST_SMOKE_ANIM = "alive"
@@ -13262,6 +13555,9 @@ const HALL_SHOWCASE_ALPHA = 1
 const HALL_DUST_MASK_ALPHA = 0.2
 const HALL_POISON_MASK_ALPHA = 0.12
 const HALL_SHOWCASE_MASK_ALPHA = 0.25
+const HALL_ALPHA_ROW_COUNT = 10
+const HALL_ALPHA_ROW_MIN_SCALE = 1
+const HALL_ALPHA_ROW_MAX_SCALE = 2.5
 const HALL_CLOUD_WIDTH_PX = 260
 const HALL_CLOUD_HEIGHT_PX = 140
 const HALL_CLOUD_PUFF_COUNT = 18
@@ -13859,7 +14155,7 @@ function _dunAmbientPropFitsAt(anchorR: number, anchorC: number, wTiles: number,
 
 function _dunScatterAmbientProps(rows: number, cols: number): void {
     if (!AMBIENT_PROP_SCATTER_ENABLED) return
-    if (_dunFloorKind === DUNGEON_KIND_HALL || _dunFloorKind === DUNGEON_KIND_SHOP) return
+    if (_dunFloorKind === DUNGEON_KIND_HALL || _dunFloorKind === DUNGEON_KIND_SHOP || _dunFloorKind === DUNGEON_KIND_ENTRANCE) return
     if (_dunFloorKind === DUNGEON_KIND_COMBAT && _dunIsBossFloor(_dunFloorIndex | 0)) return
     if (!_engineWorldTileMap || rows <= 0 || cols <= 0) return
 
@@ -14805,7 +15101,8 @@ function _dunDecor_upsertStairsStatueSolid(baseR: number, baseC: number): void {
 
     _dunStairsStatueSolid.top  = (r * tileSize) | 0
 
-    _dunDecor_setOffset(_dunStairsStatueSolid, 0, _dunPadSinkOffYLast | 0)
+    const offX = (_dunFloorKind === DUNGEON_KIND_ENTRANCE) ? -16 : 0
+    _dunDecor_setOffset(_dunStairsStatueSolid, offX | 0, _dunPadSinkOffYLast | 0)
 
 }
 
@@ -14973,18 +15270,32 @@ function _dunDecor_placePadAndStairsVisual(frame0to4: number): void {
 
     const leftC = (pc - 2) | 0
 
-
-
-    // Telepad (2x5) at rows 21/22, cols 0..4 (piece = col)
-
-    for (let x = 0; x < 5; x++) {
-
-        const col = (leftC + x) | 0
-
-        _dunDecor_setDecalSafe(pr + 0, col, (DECAL_DUN_TELEPAD_TOP_BASE + x) | 0)
-
-        _dunDecor_setDecalSafe(pr + 1, col, (DECAL_DUN_TELEPAD_BOT_BASE + x) | 0)
-
+    if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
+        // Entrance: remove the large pad visuals; keep only a small 2x2 under the rune.
+        for (let x = 0; x < 5; x++) {
+            const col = (leftC + x) | 0
+            _dunDecor_setDecalSafe(pr + 0, col, DECAL_NONE)
+            _dunDecor_setDecalSafe(pr + 1, col, DECAL_NONE)
+        }
+        const anchorR = (pr + 1) | 0
+        const anchorC = leftC | 0
+        const existing = _dunFindDecorAtTile(anchorR | 0, anchorC | 0, "telepad")
+        if (existing && !(existing.flags & sprites.Flag.Destroyed)) {
+            _dunDestroySprite(existing)
+        }
+        const smallLeftC = (pc - 1) | 0
+        for (let x = 0; x < 2; x++) {
+            const col = (smallLeftC + x) | 0
+            _dunDecor_setDecalSafe(pr + 0, col, (DECAL_DUN_TELEPAD_TOP_BASE + 1 + x) | 0)
+            _dunDecor_setDecalSafe(pr + 1, col, (DECAL_DUN_TELEPAD_BOT_BASE + 1 + x) | 0)
+        }
+    } else {
+        // Telepad (2x5) at rows 21/22, cols 0..4 (piece = col)
+        for (let x = 0; x < 5; x++) {
+            const col = (leftC + x) | 0
+            _dunDecor_setDecalSafe(pr + 0, col, (DECAL_DUN_TELEPAD_TOP_BASE + x) | 0)
+            _dunDecor_setDecalSafe(pr + 1, col, (DECAL_DUN_TELEPAD_BOT_BASE + x) | 0)
+        }
     }
 
 
@@ -15661,6 +15972,10 @@ function _dunSpawnExitPad(): void {
     // center the 64x64 on the pad tile center
 
     rune.left = (padX - 32) | 0
+    if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
+        rune.left = ((rune.left | 0) - 16) | 0
+        _dunDecor_setOffset(rune, -16, 0)
+    }
 
     rune.top  = (padY - 32 + TELEPORT_RUNE_Y_OFFSET_PX) | 0
 
@@ -15745,7 +16060,7 @@ function _dunSchedulePadSink(
 }
 
 function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
-    if (!BOSS_PAD_SINK_DUST_SKIN_ID) return
+    if (!CLOUD_GEOMETRY_SKIN_ID) return
     if (!BOSS_PAD_SINK_DUST_TEX_ID) return
     let usingFallback = false
     let baseX = 0
@@ -15788,11 +16103,19 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
     const edgePad = Math.max(4, Math.round(tile * 0.15)) | 0
     const bandH = Math.max(6, Math.round(tile * 2.2)) | 0
     const total = BOSS_PAD_SINK_DUST_COUNT | 0
-    const earthPalette = ENEMY_EFFECT_PALETTES.earth || []
+    const tweak = _getVfxTweak()
+    const palettePct = Math.max(0, Math.min(20, tweak.paletteDarkenPct || 0)) | 0
+    const paletteSet = ENEMY_EFFECT_PALETTES_BY_DARKEN_PCT[palettePct] || ENEMY_EFFECT_PALETTES
+    const earthPalette = paletteSet.earth || []
     const earthTint = earthPalette.length
         ? (earthPalette[Math.idiv(Math.max(0, earthPalette.length - 1), 2) | 0] | 0)
         : 0
-    const fillSkinId = _hallEnsurePaletteEffect({ texId: BOSS_PAD_SINK_DUST_TEX_ID, paletteKey: "earth" } as any)
+    const fillSkinId = _hallEnsurePaletteEffect({
+        texId: BOSS_PAD_SINK_DUST_TEX_ID,
+        paletteKey: "earth",
+        paletteDarkenPct: palettePct,
+        disablePaletteMap: !!tweak.disablePaletteMap
+    } as any)
     const fillTint = (fillSkinId === BOSS_PAD_SINK_DUST_TEX_ID) ? (earthTint | 0) : 0
     const regionMinX = (baseX - halfW) | 0
     const regionMaxX = (baseX + halfW) | 0
@@ -15805,14 +16128,14 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
     const tileRadius = Math.max(8, Math.idiv(tilePx, 2)) | 0
     const fillScale = _effectPickScaleForRadius(BOSS_PAD_SINK_DUST_TEX_ID, "", tileRadius | 0)
     const maskRadius = Math.max(halfW | 0, Math.idiv(regionH, 2) | 0) + Math.max(4, Math.round(tile * 0.4)) | 0
-    const layerMaskScale = _effectPickScaleForRadius(BOSS_PAD_SINK_DUST_SKIN_ID, "", maskRadius | 0)
+    const layerMaskScale = _effectPickScaleForRadius(CLOUD_GEOMETRY_SKIN_ID, "", maskRadius | 0)
     if (DEBUG_BOSS_INTRO) {
         console.log("[BOSS][INTRO][DUST] spawn", {
             baseX: baseX | 0,
             baseY: baseY | 0,
             count: total | 0,
             durationMs: durationMs | 0,
-            skin: BOSS_PAD_SINK_DUST_SKIN_ID,
+            skin: CLOUD_GEOMETRY_SKIN_ID,
             tex: BOSS_PAD_SINK_DUST_TEX_ID,
             fallback: usingFallback ? 1 : 0
         })
@@ -15833,25 +16156,29 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
     const lifeMs = (!DEBUG_BOSS_PAD_DUST_PERSIST && (durationMs | 0) > 0)
         ? ((durationMs | 0) + (fadeMs | 0))
         : 0
+    const maskSkin = (tweak.enabled && tweak.forceOpaqueMask)
+        ? _ensureOpaqueMaskSkin(CLOUD_GEOMETRY_SKIN_ID)
+        : CLOUD_GEOMETRY_SKIN_ID
     const maskFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
     maskFx.setFlag(SpriteFlag.Ghost, true)
     maskFx.x = (regionMinX + Math.idiv(regionW, 2)) | 0
     maskFx.y = (regionMinY + Math.idiv(regionH, 2)) | 0
     maskFx.z = 999
     if (lifeMs > 0) maskFx.lifespan = lifeMs | 0
+    const maskBaseAlpha = DEBUG_BOSS_PAD_DUST_PERSIST ? Math.max(0.35, BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA) : BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA
     const maskOpts: EffectApplyOpts = {
-        alpha: DEBUG_BOSS_PAD_DUST_PERSIST ? Math.max(0.35, BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA) : BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA,
+        alpha: _vfxTweakAlpha(maskBaseAlpha, tweak.maskAlphaMult),
         scale: layerMaskScale,
         blend: "normal",
         forceTop: true,
         repeat: -1,
         yoyo: true,
-        fps: 8,
+        fps: _vfxTweakFps(8),
         mode: "full"
     }
     _applySmokeAnim(maskOpts, BOSS_PAD_SINK_DUST_SMOKE_ANIM as any)
     if (earthTint) maskOpts.tint = earthTint | 0
-    applyEffectToSprite(maskFx, BOSS_PAD_SINK_DUST_SKIN_ID, maskOpts)
+    applyEffectToSprite(maskFx, maskSkin, maskOpts)
     sprites.setDataNumber(maskFx, "__padDustBaseX", maskFx.x | 0)
     sprites.setDataNumber(maskFx, "__padDustBaseY", maskFx.y | 0)
     sprites.setDataNumber(maskFx, "__padDustRisePx", BOSS_PAD_SINK_DUST_RISE_PX | 0)
@@ -15866,14 +16193,15 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
             fillFx.y = y | 0
             fillFx.z = 1000
             if (lifeMs > 0) fillFx.lifespan = lifeMs | 0
+            const fillBaseAlpha = DEBUG_BOSS_PAD_DUST_PERSIST ? 1 : BOSS_PAD_SINK_DUST_LAYER_ALPHA
             const fillOpts: EffectApplyOpts = {
-                alpha: DEBUG_BOSS_PAD_DUST_PERSIST ? 1 : BOSS_PAD_SINK_DUST_LAYER_ALPHA,
+                alpha: _vfxTweakAlpha(fillBaseAlpha, tweak.alphaMult),
                 scale: fillScale,
                 blend: "normal",
                 forceTop: true,
                 repeat: -1,
                 yoyo: true,
-                fps: BOSS_PAD_SINK_DUST_TEX_FPS,
+                fps: _vfxTweakFps(BOSS_PAD_SINK_DUST_TEX_FPS | 0),
                 mode: "projectile",
                 maskSprite: maskFx
             }
@@ -15900,7 +16228,7 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
             BOSS_PAD_SINK_DUST_MIN_RADIUS_PX | 0,
             (BOSS_PAD_SINK_DUST_RADIUS_PX | 0) + (Math.randomRange(-BOSS_PAD_SINK_DUST_RADIUS_VAR_PX, BOSS_PAD_SINK_DUST_RADIUS_VAR_PX) | 0)
         ) | 0
-        const maskScale = _effectPickScaleForRadius(BOSS_PAD_SINK_DUST_SKIN_ID, "", radius | 0)
+        const maskScale = _effectPickScaleForRadius(CLOUD_GEOMETRY_SKIN_ID, "", radius | 0)
         const maskAlpha = DEBUG_BOSS_PAD_DUST_PERSIST
             ? alpha
             : Math.max(0.18, Math.min(0.85, alpha * BOSS_PAD_SINK_DUST_MASK_ALPHA_SCALE))
@@ -15911,18 +16239,18 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
         puffFx.z = 1001
         if (lifeMs > 0) puffFx.lifespan = lifeMs | 0
         const puffOpts: EffectApplyOpts = {
-            alpha: maskAlpha,
+            alpha: _vfxTweakAlpha(maskAlpha, tweak.puffAlphaMult),
             scale: maskScale,
             blend: "normal",
             forceTop: true,
             repeat: -1,
             yoyo: true,
-            fps: 8,
+            fps: _vfxTweakFps(8),
             mode: "full"
         }
         _applySmokeAnim(puffOpts, BOSS_PAD_SINK_DUST_SMOKE_ANIM as any)
         if (earthTint) puffOpts.tint = earthTint | 0
-        applyEffectToSprite(puffFx, BOSS_PAD_SINK_DUST_SKIN_ID, puffOpts)
+        applyEffectToSprite(puffFx, maskSkin, puffOpts)
         const rise = Math.max(8, (BOSS_PAD_SINK_DUST_RISE_PX | 0) + (Math.randomRange(-6, 6) | 0)) | 0
         sprites.setDataNumber(puffFx, "__padDustBaseX", puffFx.x | 0)
         sprites.setDataNumber(puffFx, "__padDustBaseY", puffFx.y | 0)
@@ -17514,8 +17842,10 @@ function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
     if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
         const doorLeft = Math.max(0, Math.idiv((cols - 4) | 0, 2)) | 0
         const anchorR = Math.max(1, Math.min(rows - 2, 3)) | 0
-        const anchorC = Math.max(1, Math.min(cols - 2, (doorLeft + 1) | 0)) | 0
-        const chest = _dunSpawnChest(nowMs, _dunColToX(anchorC), _dunRowToY(anchorR), "chest_rainbow", starterOffX, starterOffY)
+        const anchorC = Math.max(1, Math.min(cols - 2, ((doorLeft - 1) | 0))) | 0
+        const entranceOffY = ((starterOffY | 0) - 8) | 0
+        const entranceOffX = ((starterOffX | 0) - 8) | 0
+        const chest = _dunSpawnChest(nowMs, _dunColToX(anchorC), _dunRowToY(anchorR), "chest_rainbow", entranceOffX, entranceOffY)
         if (chest && !(chest.flags & sprites.Flag.Destroyed)) {
             _dunStarterRelicTileR = sprites.readDataNumber(chest, "decorTileR") | 0
             _dunStarterRelicTileC = sprites.readDataNumber(chest, "decorTileC") | 0
@@ -17999,6 +18329,20 @@ function _dunEnterFloor_spawnMemoryBook(nowMs: number): void {
             _dunDecor_setName(_dunBookDecor, `${BOOK_MEMORIES_BASE}@${frameIndex}`)
         }
         sprites.setDataString(it, DECOR_DATA.NAME, `${BOOK_MEMORIES_BASE}@${Math.max(0, (BOOK_FRAME_SPAWN - 1) | 0)}`)
+    }
+
+    if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
+        const offX = 0
+        const offY = -8
+        if (_dunBookStumpDecor) _dunDecor_setOffset(_dunBookStumpDecor, offX | 0, offY | 0)
+        if (_dunBookDecor) _dunDecor_setOffset(_dunBookDecor, offX | 0, offY | 0)
+        if (_dunBookInteractable) _dunDecor_setOffset(_dunBookInteractable, offX | 0, offY | 0)
+        if (_dunBookStumpSolids && _dunBookStumpSolids.length) {
+            for (let i = 0; i < _dunBookStumpSolids.length; i++) {
+                const s = _dunBookStumpSolids[i]
+                if (s) _dunDecor_setOffset(s, offX | 0, offY | 0)
+            }
+        }
     }
 }
 
@@ -19026,7 +19370,6 @@ function _dunEnterFloor_setupEntranceFloor(nowMs: number): void {
 
     _dunRuneSetName("teleport_rune")
     _dunEnterFloor_spawnStarterChest(nowMs)
-    _dunEnterFloor_spawnStarterShrine()
     _dunEnterFloor_spawnMemoryBook(nowMs)
 
 }
@@ -19162,6 +19505,188 @@ function _dunEnterFloor_setupHallFloor(nowMs: number): void {
 
 function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
     void nowMs
+    _dunClearEffectsHall()
+
+    if ((_dunPadTileR | 0) < 0 || (_dunPadTileC | 0) < 0) return
+    const baseX = _dunColToX(_dunPadTileC | 0) | 0
+    const baseY = _dunRowToY(_dunPadTileR | 0) | 0
+    const leftX = (baseX - 140) | 0
+    const rightX = (baseX + 140) | 0
+    const leftOpaqueX = (leftX - 400) | 0
+    const rightOpaqueX = (rightX + 400) | 0
+    const y = (baseY + 40) | 0
+    const yDemo = (baseY + 160) | 0
+    const yShow = (baseY + 280) | 0
+    const yStatic = (baseY + 420) | 0
+
+    _dunSpawnDebugCloud(leftX, y, {
+        texId: HALL_DUST_TEX_ID,
+        tint: _pickEnemyPaletteMid("earth"),
+        tilePx: HALL_DUST_TILE_PX | 0,
+        stepPct: HALL_DUST_TILE_STEP_PCT,
+        alpha: HALL_DUST_ALPHA,
+        maskAlpha: HALL_DUST_MASK_ALPHA,
+        puffAlpha: HALL_CLOUD_PUFF_ALPHA,
+        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+        tag: "hall/dust/normal",
+        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+        paletteKey: "earth",
+        smokeAnim: "alive"
+    })
+
+    _dunSpawnDebugCloud(rightX, y, {
+        texId: HALL_POISON_TEX_ID,
+        tint: _pickEnemyPaletteMid("poison"),
+        tilePx: HALL_POISON_TILE_PX | 0,
+        stepPct: HALL_POISON_TILE_STEP_PCT,
+        alpha: HALL_POISON_ALPHA,
+        maskAlpha: HALL_POISON_MASK_ALPHA,
+        puffAlpha: HALL_CLOUD_PUFF_ALPHA_POISON,
+        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+        tag: "hall/poison/normal",
+        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+        paletteKey: "poison",
+        smokeAnim: "alive"
+    })
+
+    _dunSpawnDebugCloud(leftOpaqueX, y, {
+        texId: HALL_DUST_TEX_ID,
+        tint: _pickEnemyPaletteMid("earth"),
+        tilePx: HALL_DUST_TILE_PX | 0,
+        stepPct: HALL_DUST_TILE_STEP_PCT,
+        alpha: 1,
+        maskAlpha: 1,
+        puffAlpha: 1,
+        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+        tag: "hall/dust/opaque",
+        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+        paletteKey: "earth",
+        smokeAnim: "alive",
+        forceOpaqueMask: true,
+        forceOpaqueFill: true
+    })
+
+    _dunSpawnDebugCloud(rightOpaqueX, y, {
+        texId: HALL_POISON_TEX_ID,
+        tint: _pickEnemyPaletteMid("poison"),
+        tilePx: HALL_POISON_TILE_PX | 0,
+        stepPct: HALL_POISON_TILE_STEP_PCT,
+        alpha: 1,
+        maskAlpha: 1,
+        puffAlpha: 1,
+        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+        tag: "hall/poison/opaque",
+        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+        paletteKey: "poison",
+        smokeAnim: "alive",
+        forceOpaqueMask: true,
+        forceOpaqueFill: true
+    })
+
+    _dunSpawnDebugCloud(leftX, yDemo, {
+        texId: HALL_DUST_TEX_ID,
+        tint: _pickEnemyPaletteMid("earth"),
+        tilePx: HALL_DUST_TILE_PX | 0,
+        stepPct: HALL_DUST_TILE_STEP_PCT,
+        alpha: HALL_DUST_ALPHA,
+        maskAlpha: HALL_DUST_MASK_ALPHA,
+        puffAlpha: HALL_CLOUD_PUFF_ALPHA,
+        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+        tag: "hall/dust/demo",
+        demoIntroMs: HALL_DEMO_INTRO_MS | 0,
+        demoHoldMs: HALL_DEMO_HOLD_MS | 0,
+        demoFadeMs: HALL_DEMO_FADE_MS | 0,
+        paletteKey: "earth",
+        smokeAnim: "alive"
+    })
+
+    _dunSpawnDebugCloud(rightX, yDemo, {
+        texId: HALL_POISON_TEX_ID,
+        tint: _pickEnemyPaletteMid("poison"),
+        tilePx: HALL_POISON_TILE_PX | 0,
+        stepPct: HALL_POISON_TILE_STEP_PCT,
+        alpha: HALL_POISON_ALPHA,
+        maskAlpha: HALL_POISON_MASK_ALPHA,
+        puffAlpha: HALL_CLOUD_PUFF_ALPHA_POISON,
+        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+        tag: "hall/poison/demo",
+        demoIntroMs: HALL_DEMO_INTRO_MS | 0,
+        demoHoldMs: HALL_DEMO_HOLD_MS | 0,
+        demoFadeMs: HALL_DEMO_FADE_MS | 0,
+        paletteKey: "poison",
+        smokeAnim: "alive"
+    })
+
+    _dunSpawnDebugCloud(baseX, yShow, {
+        texId: HALL_SHOWCASE_TEX_ID,
+        tint: 0xffffff,
+        tilePx: HALL_SHOWCASE_TILE_PX | 0,
+        stepPct: HALL_SHOWCASE_TILE_STEP_PCT,
+        alpha: HALL_SHOWCASE_ALPHA,
+        maskAlpha: 1,
+        puffAlpha: 1,
+        puffCount: 1,
+        tag: "hall/showcase",
+        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+        smokeAnim: "alive"
+    })
+
+    _dunSpawnDebugCloud(baseX, yStatic, {
+        texId: HALL_DUST_TEX_ID,
+        tint: _pickEnemyPaletteMid("earth"),
+        tilePx: HALL_DUST_TILE_PX | 0,
+        stepPct: HALL_DUST_TILE_STEP_PCT,
+        alpha: HALL_DUST_ALPHA,
+        maskAlpha: HALL_DUST_MASK_ALPHA,
+        puffAlpha: HALL_CLOUD_PUFF_ALPHA,
+        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+        tag: "hall/dust/static",
+        lifespanMs: 0,
+        paletteKey: "earth",
+        noDemo: true,
+        smokeAnim: "alive"
+    })
+
+    const worldCols = (_engineWorldTileMap && _engineWorldTileMap[0]) ? (_engineWorldTileMap[0].length | 0) : 0
+    if (worldCols >= HALL_ALPHA_ROW_COUNT) {
+        const row = 1
+        const yTop = _dunRowToY(Math.max(1, row | 0))
+        const minCol = 1
+        const maxCol = Math.max(minCol + 1, (worldCols - 2) | 0)
+        const steps = Math.max(1, HALL_ALPHA_ROW_COUNT | 0)
+        for (let i = 0; i < steps; i++) {
+            const t = (steps <= 1) ? 0 : (i / (steps - 1))
+            const maskScale = HALL_ALPHA_ROW_MIN_SCALE + ((HALL_ALPHA_ROW_MAX_SCALE - HALL_ALPHA_ROW_MIN_SCALE) * t)
+            const col = Math.round(minCol + ((maxCol - minCol) * t))
+            const x = _dunColToX(col | 0)
+            const isOpaque = i === (steps - 1)
+            _dunSpawnDebugCloud(x | 0, yTop | 0, {
+                texId: HALL_DUST_TEX_ID,
+                tint: _pickEnemyPaletteMid("earth"),
+                tilePx: HALL_DUST_TILE_PX | 0,
+                stepPct: HALL_DUST_TILE_STEP_PCT,
+                alpha: HALL_DUST_ALPHA,
+                maskAlpha: HALL_DUST_MASK_ALPHA,
+                puffAlpha: 0,
+                puffCount: 0,
+                tag: `hall/alpha/${i}`,
+                paletteKey: "earth",
+                noDemo: true,
+                hideGeometry: true,
+                maskAlphaScale: isOpaque ? undefined : maskScale,
+                forceOpaqueMask: isOpaque ? true : undefined,
+                probeKey: isOpaque ? "maskOpaque" : "maskAlphaScale",
+                probeValue: isOpaque ? 1 : maskScale,
+                smokeAnim: "alive"
+            })
+        }
+    }
+
+    if (DEBUG_EFFECTS_DUMP_ON_HALL) _heQueueEffectsDump("effects-hall", 1200)
+
+}
+
+function _dunClearEffectsHall(): void {
     if (_dunEffectsHallFx && _dunEffectsHallFx.length > 0) {
         for (let i = 0; i < _dunEffectsHallFx.length; i++) {
             const fx = _dunEffectsHallFx[i]
@@ -19181,107 +19706,23 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
         }
         _dunEffectsHallNativeFx = []
     }
+}
 
-    if ((_dunPadTileR | 0) < 0 || (_dunPadTileC | 0) < 0) return
-    const baseX = _dunColToX(_dunPadTileC | 0) | 0
-    const baseY = _dunRowToY(_dunPadTileR | 0) | 0
-    const leftX = (baseX - 140) | 0
-    const rightX = (baseX + 140) | 0
-    const y = (baseY + 40) | 0
-    const yDemo = (baseY + 160) | 0
-    const yShow = (baseY + 280) | 0
-    const yStatic = (baseY + 420) | 0
-
-    _dunSpawnDebugCloud(leftX, y, {
-        texId: HALL_DUST_TEX_ID,
-        tint: _pickEnemyPaletteMid("earth"),
-        tilePx: HALL_DUST_TILE_PX | 0,
-        stepPct: HALL_DUST_TILE_STEP_PCT,
-        alpha: HALL_DUST_ALPHA,
-        maskAlpha: HALL_DUST_MASK_ALPHA,
-        puffAlpha: HALL_CLOUD_PUFF_ALPHA,
-        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
-        paletteKey: "earth",
-        smokeAnim: "alive"
-    })
-
-    _dunSpawnDebugCloud(rightX, y, {
-        texId: HALL_POISON_TEX_ID,
-        tint: _pickEnemyPaletteMid("poison"),
-        tilePx: HALL_POISON_TILE_PX | 0,
-        stepPct: HALL_POISON_TILE_STEP_PCT,
-        alpha: HALL_POISON_ALPHA,
-        maskAlpha: HALL_POISON_MASK_ALPHA,
-        puffAlpha: HALL_CLOUD_PUFF_ALPHA_POISON,
-        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
-        paletteKey: "poison",
-        smokeAnim: "alive"
-    })
-
-    _dunSpawnDebugCloud(leftX, yDemo, {
-        texId: HALL_DUST_TEX_ID,
-        tint: _pickEnemyPaletteMid("earth"),
-        tilePx: HALL_DUST_TILE_PX | 0,
-        stepPct: HALL_DUST_TILE_STEP_PCT,
-        alpha: HALL_DUST_ALPHA,
-        maskAlpha: HALL_DUST_MASK_ALPHA,
-        puffAlpha: HALL_CLOUD_PUFF_ALPHA,
-        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-        demoIntroMs: HALL_DEMO_INTRO_MS | 0,
-        demoHoldMs: HALL_DEMO_HOLD_MS | 0,
-        demoFadeMs: HALL_DEMO_FADE_MS | 0,
-        paletteKey: "earth",
-        smokeAnim: "alive"
-    })
-
-    _dunSpawnDebugCloud(rightX, yDemo, {
-        texId: HALL_POISON_TEX_ID,
-        tint: _pickEnemyPaletteMid("poison"),
-        tilePx: HALL_POISON_TILE_PX | 0,
-        stepPct: HALL_POISON_TILE_STEP_PCT,
-        alpha: HALL_POISON_ALPHA,
-        maskAlpha: HALL_POISON_MASK_ALPHA,
-        puffAlpha: HALL_CLOUD_PUFF_ALPHA_POISON,
-        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-        demoIntroMs: HALL_DEMO_INTRO_MS | 0,
-        demoHoldMs: HALL_DEMO_HOLD_MS | 0,
-        demoFadeMs: HALL_DEMO_FADE_MS | 0,
-        paletteKey: "poison",
-        smokeAnim: "alive"
-    })
-
-    _dunSpawnDebugCloud(baseX, yShow, {
-        texId: HALL_SHOWCASE_TEX_ID,
-        tint: 0xffffff,
-        tilePx: HALL_SHOWCASE_TILE_PX | 0,
-        stepPct: HALL_SHOWCASE_TILE_STEP_PCT,
-        alpha: HALL_SHOWCASE_ALPHA,
-        maskAlpha: 1,
-        puffAlpha: 1,
-        puffCount: 1,
-        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
-        smokeAnim: "alive"
-    })
-
-    _dunSpawnDebugCloud(baseX, yStatic, {
-        texId: HALL_DUST_TEX_ID,
-        tint: _pickEnemyPaletteMid("earth"),
-        tilePx: HALL_DUST_TILE_PX | 0,
-        stepPct: HALL_DUST_TILE_STEP_PCT,
-        alpha: HALL_DUST_ALPHA,
-        maskAlpha: HALL_DUST_MASK_ALPHA,
-        puffAlpha: HALL_CLOUD_PUFF_ALPHA,
-        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-        lifespanMs: 0,
-        paletteKey: "earth",
-        noDemo: true,
-        smokeAnim: "alive"
-    })
-
-    if (DEBUG_EFFECTS_DUMP_ON_HALL) _heQueueEffectsDump("effects-hall", 1200)
-
+function _dunClearHallEffectSpritesAll(): number {
+    if ((_dunFloorKind || "") !== DUNGEON_KIND_HALL) return 0
+    let killed = 0
+    const all = (sprites && typeof sprites.allSprites === "function") ? sprites.allSprites() : []
+    for (let i = 0; i < all.length; i++) {
+        const s = all[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+        if (s.kind !== SpriteKind.HeroEffect && s.kind !== SpriteKind.RelicEffect) continue
+        const skin = (sprites.readDataString(s, "effectSkin") || "").toLowerCase()
+        if (!skin) continue
+        if (skin.indexOf("smoke") < 0 && skin.indexOf("waves") < 0 && skin.indexOf("hallpal") < 0) continue
+        try { s.destroy() } catch { }
+        killed++
+    }
+    return killed | 0
 }
 
 function _pickEnemyPaletteMid(key: "earth" | "poison"): number {
@@ -19299,18 +19740,99 @@ type DebugCloudConfig = {
     maskAlpha: number
     puffAlpha: number
     puffCount: number
+    tag?: string
+    hideGeometry?: boolean
     lifespanMs?: number
     demoIntroMs?: number
     demoHoldMs?: number
     demoFadeMs?: number
     paletteKey?: "earth" | "poison"
+    enforcePaletteOnGeometry?: boolean
+    maskAlphaScale?: number
+    probeKey?: string
+    probeValue?: number
     noDemo?: boolean
     smokeAnim?: "alive" | "fade" | "static"
+    forceOpaqueMask?: boolean
+    forceOpaqueFill?: boolean
+}
+
+type VfxTweakState = {
+    enabled?: boolean
+    alphaMult?: number
+    maskAlphaMult?: number
+    puffAlphaMult?: number
+    forceAlpha?: number | null
+    forceOpaqueMask?: boolean
+    forceOpaqueFill?: boolean
+    fpsMult?: number
+    tintOverride?: number | null
+    paletteDarkenPct?: number
+    disablePaletteMap?: boolean
+    paletteGeometry?: boolean
+    hideGeometry?: boolean
+    smokeAnim?: "alive" | "fade" | "static"
+}
+
+const _vfxTweakDefaults: VfxTweakState = {
+    enabled: false,
+    alphaMult: 1,
+    maskAlphaMult: 1,
+    puffAlphaMult: 1,
+    forceAlpha: null,
+    forceOpaqueMask: false,
+    forceOpaqueFill: false,
+    fpsMult: 1,
+    tintOverride: null,
+    paletteDarkenPct: ENEMY_EFFECT_DARKEN_PCT_DEFAULT | 0,
+    disablePaletteMap: false,
+    paletteGeometry: true,
+    hideGeometry: false,
+    smokeAnim: "alive"
+}
+
+function _getVfxTweak(): VfxTweakState {
+    const g: any = globalThis as any
+    const raw = (g && g.__heVfxTweak) ? g.__heVfxTweak : null
+    if (!raw || typeof raw !== "object") return { ..._vfxTweakDefaults }
+    return {
+        enabled: (raw.enabled ?? _vfxTweakDefaults.enabled) ? true : false,
+        alphaMult: Number.isFinite(raw.alphaMult) ? Number(raw.alphaMult) : _vfxTweakDefaults.alphaMult,
+        maskAlphaMult: Number.isFinite(raw.maskAlphaMult) ? Number(raw.maskAlphaMult) : _vfxTweakDefaults.maskAlphaMult,
+        puffAlphaMult: Number.isFinite(raw.puffAlphaMult) ? Number(raw.puffAlphaMult) : _vfxTweakDefaults.puffAlphaMult,
+        forceAlpha: (raw.forceAlpha === 0 || Number.isFinite(raw.forceAlpha)) ? Number(raw.forceAlpha) : null,
+        forceOpaqueMask: !!raw.forceOpaqueMask,
+        forceOpaqueFill: !!raw.forceOpaqueFill,
+        fpsMult: Number.isFinite(raw.fpsMult) ? Number(raw.fpsMult) : _vfxTweakDefaults.fpsMult,
+        tintOverride: (raw.tintOverride === 0 || Number.isFinite(raw.tintOverride)) ? (raw.tintOverride | 0) : null,
+        paletteDarkenPct: Number.isFinite(raw.paletteDarkenPct) ? (raw.paletteDarkenPct | 0) : _vfxTweakDefaults.paletteDarkenPct,
+        disablePaletteMap: !!raw.disablePaletteMap,
+        paletteGeometry: (raw.paletteGeometry ?? _vfxTweakDefaults.paletteGeometry) ? true : false,
+        hideGeometry: (raw.hideGeometry ?? _vfxTweakDefaults.hideGeometry) ? true : false,
+        smokeAnim: (raw.smokeAnim || _vfxTweakDefaults.smokeAnim) as any
+    }
+}
+
+function _vfxTweakAlpha(value: number, mult: number | undefined): number {
+    if (!Number.isFinite(value)) return 0
+    const tweak = _getVfxTweak()
+    if (tweak.enabled && Number.isFinite(tweak.forceAlpha)) {
+        return Math.max(0, Math.min(1, Number(tweak.forceAlpha)))
+    }
+    const m = Number.isFinite(mult) ? (mult as number) : 1
+    return Math.max(0, Math.min(1, value * m))
+}
+
+function _vfxTweakFps(baseFps: number): number {
+    const tweak = _getVfxTweak()
+    const m = Number.isFinite(tweak.fpsMult) ? Number(tweak.fpsMult) : 1
+    return Math.max(1, Math.round((baseFps | 0) * m))
 }
 
 function _applySmokeAnim(opts: EffectApplyOpts, mode: "alive" | "fade" | "static"): void {
     if (!opts) return
-    const m = (mode || "alive") as string
+    const tweak = _getVfxTweak()
+    const m = ((tweak.enabled && tweak.smokeAnim) ? tweak.smokeAnim : mode) as string
     if (m === "static") {
         opts.frameIndex = 0
         opts.frameIndexIsRaw = true
@@ -19323,20 +19845,50 @@ function _applySmokeAnim(opts: EffectApplyOpts, mode: "alive" | "fade" | "static
         opts.frameListIsRaw = true
         opts.repeat = 0
         opts.yoyo = false
-        opts.fps = SMOKE_ANIM_FADE_FPS
+        opts.fps = _vfxTweakFps(SMOKE_ANIM_FADE_FPS | 0)
         return
     }
     opts.frameList = SMOKE_ANIM_ALIVE_FRAMES
     opts.frameListIsRaw = true
     opts.repeat = -1
     opts.yoyo = true
-    opts.fps = SMOKE_ANIM_ALIVE_FPS
+    opts.fps = _vfxTweakFps(SMOKE_ANIM_ALIVE_FPS | 0)
 }
 
 function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): void {
-    if (!BOSS_PAD_SINK_DUST_SKIN_ID) return
+    if (!CLOUD_GEOMETRY_SKIN_ID) return
     if (!cfg || !cfg.texId) return
-    const cloudTint = (cfg.tint | 0) || 0
+    const tweak = _getVfxTweak()
+    const useOpaqueMask = (typeof cfg.forceOpaqueMask === "boolean")
+        ? cfg.forceOpaqueMask
+        : (tweak.enabled && tweak.forceOpaqueMask)
+    let maskSkin = useOpaqueMask
+        ? _ensureOpaqueMaskSkin(CLOUD_GEOMETRY_SKIN_ID)
+        : CLOUD_GEOMETRY_SKIN_ID
+    const wantGeomPalette = (cfg.enforcePaletteOnGeometry !== false)
+        && !!cfg.paletteKey
+        && !(tweak.enabled && tweak.disablePaletteMap)
+        && !(tweak.enabled && tweak.paletteGeometry === false)
+    if (wantGeomPalette) {
+        maskSkin = _hallEnsurePaletteEffect({
+            texId: maskSkin,
+            tint: cfg.tint,
+            tilePx: cfg.tilePx,
+            stepPct: cfg.stepPct,
+            alpha: cfg.alpha,
+            maskAlpha: cfg.maskAlpha,
+            puffAlpha: cfg.puffAlpha,
+            puffCount: cfg.puffCount,
+            paletteKey: cfg.paletteKey,
+            forceOpaqueFill: useOpaqueMask
+        } as DebugCloudConfig)
+    }
+    if (!useOpaqueMask && Number.isFinite(cfg.maskAlphaScale) && Math.abs((cfg.maskAlphaScale as number) - 1) > 0.01) {
+        maskSkin = _ensureMaskAlphaSkin(maskSkin, Number(cfg.maskAlphaScale))
+    }
+    const cloudTint = (tweak.enabled && Number.isFinite(tweak.tintOverride))
+        ? ((tweak.tintOverride as number) | 0)
+        : ((cfg.tint | 0) || 0)
     const regionW = Math.max(80, HALL_CLOUD_WIDTH_PX | 0) | 0
     const regionH = Math.max(60, HALL_CLOUD_HEIGHT_PX | 0) | 0
     const regionMinX = (cx - Math.idiv(regionW, 2)) | 0
@@ -19345,32 +19897,37 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
     const regionMaxY = (cy + Math.idiv(regionH, 2)) | 0
     const tilePx = Math.max(32, cfg.tilePx | 0) | 0
     const maskRadius = Math.max(Math.idiv(regionW, 2) | 0, Math.idiv(regionH, 2) | 0) + 18
-    const maskScale = _effectPickScaleForRadius(BOSS_PAD_SINK_DUST_SKIN_ID, "", maskRadius | 0)
+    const maskScale = _effectPickScaleForRadius(CLOUD_GEOMETRY_SKIN_ID, "", maskRadius | 0)
 
     const maskFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
     maskFx.setFlag(SpriteFlag.Ghost, true)
+    if (cfg.tag) sprites.setDataString(maskFx, "__hallTag", `${cfg.tag}|mask`)
+    const hideGeom = (typeof cfg.hideGeometry === "boolean") ? cfg.hideGeometry : (tweak.enabled && tweak.hideGeometry)
+    if (hideGeom) maskFx.setFlag(SpriteFlag.Invisible, true)
     maskFx.x = cx | 0
     maskFx.y = cy | 0
     maskFx.z = 1000
     if ((cfg.lifespanMs | 0) > 0) maskFx.lifespan = cfg.lifespanMs | 0
     const maskOpts: EffectApplyOpts = {
-        alpha: Math.max(0.05, Math.min(1, cfg.maskAlpha)),
+        alpha: _vfxTweakAlpha(Math.max(0.05, Math.min(1, cfg.maskAlpha)), tweak.maskAlphaMult),
         scale: maskScale,
         blend: "normal",
         forceTop: true,
         repeat: -1,
-        fps: 8,
+        fps: _vfxTweakFps(8),
         mode: "full"
     }
     _applySmokeAnim(maskOpts, (cfg.smokeAnim || "alive") as any)
     if (cloudTint) maskOpts.tint = cloudTint | 0
-    applyEffectToSprite(maskFx, BOSS_PAD_SINK_DUST_SKIN_ID, maskOpts)
+    applyEffectToSprite(maskFx, maskSkin, maskOpts)
     if (!cfg.noDemo) _hallDemoTag(maskFx, cfg.maskAlpha, cfg)
     _dunEffectsHallFx.push(maskFx)
 
     _dunSpawnHallEffectFill(cx | 0, cy | 0, regionW | 0, regionH | 0, cfg, maskFx)
 
     const puffCount = Math.max(0, cfg.puffCount | 0) | 0
+    const spawnPuffs = !hideGeom
+    if (!spawnPuffs) return
     for (let i = 0; i < puffCount; i++) {
         const ox = Math.randomRange(-Math.idiv(regionW, 2), Math.idiv(regionW, 2)) | 0
         const oy = Math.randomRange(-Math.idiv(regionH, 2), Math.idiv(regionH, 2)) | 0
@@ -19378,25 +19935,26 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
             48,
             (HALL_CLOUD_PUFF_RADIUS_PX | 0) + (Math.randomRange(-HALL_CLOUD_PUFF_RADIUS_VAR_PX, HALL_CLOUD_PUFF_RADIUS_VAR_PX) | 0)
         ) | 0
-        const scale = _effectPickScaleForRadius(BOSS_PAD_SINK_DUST_SKIN_ID, "", radius | 0)
+        const scale = _effectPickScaleForRadius(CLOUD_GEOMETRY_SKIN_ID, "", radius | 0)
         const puffFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
         puffFx.setFlag(SpriteFlag.Ghost, true)
+        if (cfg.tag) sprites.setDataString(puffFx, "__hallTag", `${cfg.tag}|puff`)
         puffFx.x = (cx + ox) | 0
         puffFx.y = (cy + oy) | 0
         puffFx.z = 1002
         if ((cfg.lifespanMs | 0) > 0) puffFx.lifespan = cfg.lifespanMs | 0
         const puffOpts: EffectApplyOpts = {
-            alpha: Math.max(0.05, Math.min(1, cfg.puffAlpha)),
+            alpha: _vfxTweakAlpha(Math.max(0.05, Math.min(1, cfg.puffAlpha)), tweak.puffAlphaMult),
             scale,
             blend: "normal",
             forceTop: true,
             repeat: -1,
-            fps: 8,
+            fps: _vfxTweakFps(8),
             mode: "full"
         }
         _applySmokeAnim(puffOpts, (cfg.smokeAnim || "alive") as any)
         if (cloudTint) puffOpts.tint = cloudTint | 0
-        applyEffectToSprite(puffFx, BOSS_PAD_SINK_DUST_SKIN_ID, puffOpts)
+        applyEffectToSprite(puffFx, maskSkin, puffOpts)
         if (!cfg.noDemo) _hallDemoTag(puffFx, cfg.puffAlpha, cfg)
         _dunEffectsHallFx.push(puffFx)
     }
@@ -19410,22 +19968,31 @@ function _dunSpawnHallEffectFill(
     cfg: DebugCloudConfig,
     maskFx: Sprite
 ): void {
+    const tweak = _getVfxTweak()
     const skinId = _hallEnsurePaletteEffect(cfg)
     const fillFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
     fillFx.setFlag(SpriteFlag.Ghost, true)
+    if (cfg.tag) sprites.setDataString(fillFx, "__hallTag", `${cfg.tag}|fill`)
     fillFx.x = cx | 0
     fillFx.y = cy | 0
     fillFx.z = 1001
     if ((cfg.lifespanMs | 0) > 0) fillFx.lifespan = cfg.lifespanMs | 0
     const fitRadius = Math.max(regionW | 0, regionH | 0) >> 1
-    const useTint = (skinId === cfg.texId) ? (cfg.tint | 0) : 0
+    if (cfg.probeKey) {
+        sprites.setDataString(fillFx, "__hallProbeKey", String(cfg.probeKey || ""))
+        sprites.setDataNumber(fillFx, "__hallProbeValue", Number.isFinite(cfg.probeValue as any) ? Number(cfg.probeValue) : 0)
+        sprites.setDataNumber(fillFx, "__hallProbeRadius", Math.max(16, fitRadius | 0))
+    }
+    const useTint = (skinId === cfg.texId)
+        ? ((tweak.enabled && Number.isFinite(tweak.tintOverride)) ? (tweak.tintOverride as number) : (cfg.tint | 0))
+        : 0
     const fillOpts: EffectApplyOpts = {
-        alpha: Math.max(0.02, Math.min(1, cfg.alpha)),
+        alpha: _vfxTweakAlpha(Math.max(0.02, Math.min(1, cfg.alpha)), tweak.alphaMult),
         fitRadiusPx: Math.max(16, fitRadius | 0),
         blend: "normal",
         forceTop: true,
         repeat: -1,
-        fps: BOSS_PAD_SINK_DUST_TEX_FPS,
+        fps: _vfxTweakFps(BOSS_PAD_SINK_DUST_TEX_FPS | 0),
         mode: "projectile",
         maskSprite: maskFx
     }
@@ -19447,21 +20014,223 @@ function _dunSpawnHallEffectFill(
 }
 
 const _hallPaletteCache: Record<string, string> = Object.create(null)
+const _opaqueMaskCache: Record<string, string> = Object.create(null)
+const _maskAlphaCache: Record<string, string> = Object.create(null)
+let _hallPaletteVersion = 1
+let _opaqueMaskVersion = 1
+let _maskAlphaVersion = 1
+
+function _vfxClearHallPaletteCaches(): void {
+    for (const k of Object.keys(_hallPaletteCache)) delete _hallPaletteCache[k]
+    for (const k of Object.keys(_opaqueMaskCache)) delete _opaqueMaskCache[k]
+    for (const k of Object.keys(_maskAlphaCache)) delete _maskAlphaCache[k]
+}
+
+function _vfxClearHallPaletteTextures(): void {
+    // Intentionally no-op: removing textures can crash live sprites using them.
+}
+
+function _ensureOpaqueMaskSkin(baseSkin: string): string {
+    const skin = String(baseSkin || "").trim()
+    if (!skin) return skin
+    const cacheKey = skin
+    if (_opaqueMaskCache[cacheKey]) return _opaqueMaskCache[cacheKey]
+
+    const atlas = _getEffectAtlasAny()
+    if (!atlas) return skin
+    const resolved = _resolveEffectEntry(atlas, skin, "")
+    if (!resolved) return skin
+    const fw = resolved.frameW | 0
+    const fh = resolved.frameH | 0
+    const frames = resolved.frameIndices && resolved.frameIndices.length ? resolved.frameIndices.slice() : []
+    if (!frames.length || fw <= 0 || fh <= 0) return skin
+
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    if (!sc || !sc.textures || !sc.textures.exists(resolved.textureKey)) return skin
+
+    const outKey = `effects.opaque.${skin.replace(/\\s+/g, "_").toLowerCase()}.v${_opaqueMaskVersion}`
+    const maxTex = (sc.renderer && Number.isFinite((sc.renderer as any).maxTextureSize))
+        ? Math.max(256, ((sc.renderer as any).maxTextureSize | 0))
+        : 4096
+    const cols = Math.max(1, Math.min(frames.length, Math.floor(maxTex / Math.max(1, fw))))
+    const rows = Math.max(1, Math.ceil(frames.length / cols))
+    const canvasW = Math.max(1, cols * fw)
+    const canvasH = Math.max(1, rows * fh)
+    if (canvasW > maxTex || canvasH > maxTex) return skin
+    const canvasTex = sc.textures.createCanvas(outKey, canvasW, canvasH)
+    if (!canvasTex) return skin
+    const ctx = canvasTex.getContext()
+    if (!ctx) return skin
+
+    const tex = sc.textures.get(resolved.textureKey)
+    const srcCanvas = document.createElement("canvas")
+    srcCanvas.width = fw
+    srcCanvas.height = fh
+    const srcCtx = srcCanvas.getContext("2d", { willReadFrequently: true } as any)
+    if (!srcCtx) return skin
+
+    for (let i = 0; i < frames.length; i++) {
+        const frameId = frames[i] | 0
+        const f = tex.get(frameId)
+        if (!f || !f.source || !f.source.image) continue
+        const img = f.source.image as HTMLImageElement | HTMLCanvasElement
+        const sx = (f.cutX | 0)
+        const sy = (f.cutY | 0)
+        srcCtx.clearRect(0, 0, fw, fh)
+        try { srcCtx.drawImage(img, sx, sy, fw, fh, 0, 0, fw, fh) } catch { }
+        const imgData = srcCtx.getImageData(0, 0, fw, fh)
+        const data = imgData.data
+        for (let p = 0; p < data.length; p += 4) {
+            if (data[p + 3] > 0) data[p + 3] = 255
+        }
+        srcCtx.putImageData(imgData, 0, 0)
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        ctx.drawImage(srcCanvas, col * fw, row * fh)
+    }
+
+    canvasTex.refresh()
+    const seq: number[] = []
+    for (let i = 0; i < frames.length; i++) {
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        try { canvasTex.add(i, 0, col * fw, row * fh, fw, fh) } catch { }
+        seq.push(i | 0)
+    }
+
+    const newId = `${skin}__opaque`
+    ;(atlas as any)[newId] = {
+        id: newId,
+        textureKey: outKey,
+        url: "",
+        frameIndices: seq,
+        frameRate: resolved.frameRate,
+        repeat: resolved.repeat,
+        frameW: fw,
+        frameH: fh,
+        palette: resolved.palette,
+        collisionBounds: resolved.collisionBounds
+    }
+    _opaqueMaskCache[cacheKey] = newId
+    return newId
+}
+
+function _ensureMaskAlphaSkin(baseSkin: string, alphaMult: number): string {
+    const skin = String(baseSkin || "").trim()
+    if (!skin) return skin
+    if (!Number.isFinite(alphaMult)) return skin
+    const clamped = Math.max(0, Math.min(4, Number(alphaMult)))
+    if (Math.abs(clamped - 1) <= 0.01) return skin
+    const scalePct = Math.max(0, Math.min(400, Math.round(clamped * 100))) | 0
+    const cacheKey = `${skin}|a${scalePct}`
+    if (_maskAlphaCache[cacheKey]) return _maskAlphaCache[cacheKey]
+
+    const atlas = _getEffectAtlasAny()
+    if (!atlas) return skin
+    const resolved = _resolveEffectEntry(atlas, skin, "")
+    if (!resolved) return skin
+    const fw = resolved.frameW | 0
+    const fh = resolved.frameH | 0
+    const frames = resolved.frameIndices && resolved.frameIndices.length ? resolved.frameIndices.slice() : []
+    if (!frames.length || fw <= 0 || fh <= 0) return skin
+
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    if (!sc || !sc.textures || !sc.textures.exists(resolved.textureKey)) return skin
+
+    const outKey = `effects.alpha.${skin.replace(/\\s+/g, "_").toLowerCase()}.a${scalePct}.v${_maskAlphaVersion}`
+    const maxTex = (sc.renderer && Number.isFinite((sc.renderer as any).maxTextureSize))
+        ? Math.max(256, ((sc.renderer as any).maxTextureSize | 0))
+        : 4096
+    const cols = Math.max(1, Math.min(frames.length, Math.floor(maxTex / Math.max(1, fw))))
+    const rows = Math.max(1, Math.ceil(frames.length / cols))
+    const canvasW = Math.max(1, cols * fw)
+    const canvasH = Math.max(1, rows * fh)
+    if (canvasW > maxTex || canvasH > maxTex) return skin
+    const canvasTex = sc.textures.createCanvas(outKey, canvasW, canvasH)
+    if (!canvasTex) return skin
+    const ctx = canvasTex.getContext()
+    if (!ctx) return skin
+
+    const tex = sc.textures.get(resolved.textureKey)
+    const srcCanvas = document.createElement("canvas")
+    srcCanvas.width = fw
+    srcCanvas.height = fh
+    const srcCtx = srcCanvas.getContext("2d", { willReadFrequently: true } as any)
+    if (!srcCtx) return skin
+
+    for (let i = 0; i < frames.length; i++) {
+        const frameId = frames[i] | 0
+        const f = tex.get(frameId)
+        if (!f || !f.source || !f.source.image) continue
+        const img = f.source.image as HTMLImageElement | HTMLCanvasElement
+        const sx = (f.cutX | 0)
+        const sy = (f.cutY | 0)
+        srcCtx.clearRect(0, 0, fw, fh)
+        try { srcCtx.drawImage(img, sx, sy, fw, fh, 0, 0, fw, fh) } catch { }
+        const imgData = srcCtx.getImageData(0, 0, fw, fh)
+        const data = imgData.data
+        for (let p = 0; p < data.length; p += 4) {
+            const a = data[p + 3]
+            if (a === 0) continue
+            const na = Math.max(0, Math.min(255, Math.round(a * clamped)))
+            data[p + 3] = na
+        }
+        srcCtx.putImageData(imgData, 0, 0)
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        ctx.drawImage(srcCanvas, col * fw, row * fh)
+    }
+
+    canvasTex.refresh()
+    const seq: number[] = []
+    for (let i = 0; i < frames.length; i++) {
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        try { canvasTex.add(i, 0, col * fw, row * fh, fw, fh) } catch { }
+        seq.push(i | 0)
+    }
+
+    const newId = `${skin}__alpha_a${scalePct}`
+    ;(atlas as any)[newId] = {
+        id: newId,
+        textureKey: outKey,
+        url: "",
+        frameIndices: seq,
+        frameRate: resolved.frameRate,
+        repeat: resolved.repeat,
+        frameW: fw,
+        frameH: fh,
+        palette: resolved.palette,
+        collisionBounds: resolved.collisionBounds
+    }
+    _maskAlphaCache[cacheKey] = newId
+    return newId
+}
 
 function _hallEnsurePaletteEffect(cfg: DebugCloudConfig): string {
     const baseId = String(cfg.texId || "").trim()
     if (!baseId) return baseId
     const paletteKey = cfg.paletteKey || ""
     if (!paletteKey) return baseId
-    const cacheKey = `${baseId}|${paletteKey}`
+    const tweak = _getVfxTweak()
+    if (tweak.enabled && tweak.disablePaletteMap) return baseId
+    const pct = Math.max(0, Math.min(20, tweak.paletteDarkenPct || 0)) | 0
+    const opaqueFill = (typeof cfg.forceOpaqueFill === "boolean")
+        ? cfg.forceOpaqueFill
+        : !!(tweak.enabled && tweak.forceOpaqueFill)
+    const cacheKey = `${baseId}|${paletteKey}|${pct}|${opaqueFill ? 1 : 0}`
     if (_hallPaletteCache[cacheKey]) return _hallPaletteCache[cacheKey]
 
     const atlas = _getEffectAtlasAny()
     if (!atlas) return baseId
     const resolved = _resolveEffectEntry(atlas, baseId, "")
     if (!resolved) return baseId
-    const palette = (ENEMY_EFFECT_PALETTES as any)?.[paletteKey] as number[] | undefined
+    const paletteSet = ENEMY_EFFECT_PALETTES_BY_DARKEN_PCT[pct] || ENEMY_EFFECT_PALETTES
+    const palette = (paletteSet as any)?.[paletteKey] as number[] | undefined
     if (!palette || !palette.length) return baseId
+    const ramp = _buildPaletteRamp256(palette)
 
     const g: any = globalThis as any
     const sc: any = g ? g.__phaserScene : null
@@ -19474,8 +20243,16 @@ function _hallEnsurePaletteEffect(cfg: DebugCloudConfig): string {
     const fh = resolved.frameH | 0
     if (fw <= 0 || fh <= 0) return baseId
 
-    const outKey = `effects.hallpal.${baseId.replace(/\\s+/g, "_").toLowerCase()}_${paletteKey}`
-    const canvasTex = sc.textures.createCanvas(outKey, fw * frames.length, fh)
+    const outKey = `effects.hallpal.${baseId.replace(/\\s+/g, "_").toLowerCase()}_${paletteKey}_p${pct}_${opaqueFill ? "o" : "n"}.v${_hallPaletteVersion}`
+    const maxTex = (sc.renderer && Number.isFinite((sc.renderer as any).maxTextureSize))
+        ? Math.max(256, ((sc.renderer as any).maxTextureSize | 0))
+        : 4096
+    const cols = Math.max(1, Math.min(frames.length, Math.floor(maxTex / Math.max(1, fw))))
+    const rows = Math.max(1, Math.ceil(frames.length / cols))
+    const canvasW = Math.max(1, cols * fw)
+    const canvasH = Math.max(1, rows * fh)
+    if (canvasW > maxTex || canvasH > maxTex) return baseId
+    const canvasTex = sc.textures.createCanvas(outKey, canvasW, canvasH)
     if (!canvasTex) return baseId
     const ctx = canvasTex.getContext()
     if (!ctx) return baseId
@@ -19483,11 +20260,8 @@ function _hallEnsurePaletteEffect(cfg: DebugCloudConfig): string {
     const srcCanvas = document.createElement("canvas")
     srcCanvas.width = fw
     srcCanvas.height = fh
-    const srcCtx = srcCanvas.getContext("2d")
+    const srcCtx = srcCanvas.getContext("2d", { willReadFrequently: true } as any)
     if (!srcCtx) return baseId
-
-    const colors = palette.slice()
-    const maxIdx = Math.max(0, colors.length - 1)
 
     for (let i = 0; i < frames.length; i++) {
         const frameId = frames[i] | 0
@@ -19506,24 +20280,35 @@ function _hallEnsurePaletteEffect(cfg: DebugCloudConfig): string {
             const r = data[p]
             const g2 = data[p + 1]
             const b = data[p + 2]
-            const lum = Math.round((r * 0.299) + (g2 * 0.587) + (b * 0.114))
-            const idx = maxIdx ? Math.round((lum / 255) * maxIdx) : 0
-            const col = colors[idx] | 0
+            const lum = Math.max(0, Math.min(255, Math.round((r * 0.299) + (g2 * 0.587) + (b * 0.114))))
+            const col = ramp[lum] | 0
             data[p] = (col >> 16) & 0xff
             data[p + 1] = (col >> 8) & 0xff
             data[p + 2] = col & 0xff
+            if (opaqueFill) data[p + 3] = 255
         }
         srcCtx.putImageData(imgData, 0, 0)
-        ctx.drawImage(srcCanvas, i * fw, 0)
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        ctx.drawImage(srcCanvas, col * fw, row * fh)
     }
 
     canvasTex.refresh()
-    const newId = `${baseId}__hallpal_${paletteKey}`
+    // Register per-frame rectangles so Phaser can address frames by index.
+    const seq: number[] = []
+    for (let i = 0; i < frames.length; i++) {
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        try { canvasTex.add(i, 0, col * fw, row * fh, fw, fh) } catch { }
+        seq.push(i | 0)
+    }
+
+    const newId = `${baseId}__hallpal_${paletteKey}_p${pct}_${opaqueFill ? "o" : "n"}`
     ;(atlas as any)[newId] = {
         id: newId,
         textureKey: outKey,
         url: "",
-        frameIndices: frames.slice(),
+        frameIndices: seq,
         frameRate: resolved.frameRate,
         repeat: resolved.repeat,
         frameW: fw,
@@ -19533,6 +20318,31 @@ function _hallEnsurePaletteEffect(cfg: DebugCloudConfig): string {
     }
     _hallPaletteCache[cacheKey] = newId
     return newId
+}
+
+function _buildPaletteRamp256(stops: number[]): number[] {
+    const out = new Array(256)
+    if (!stops || stops.length <= 0) {
+        for (let i = 0; i < 256; i++) out[i] = 0xffffff
+        return out
+    }
+    if (stops.length === 1) {
+        for (let i = 0; i < 256; i++) out[i] = stops[0] | 0
+        return out
+    }
+    for (let i = 0; i < 256; i++) {
+        const t = i / 255
+        const scaled = t * (stops.length - 1)
+        const idx = Math.floor(scaled)
+        const frac = scaled - idx
+        const c0 = stops[idx] | 0
+        const c1 = stops[Math.min(stops.length - 1, idx + 1)] | 0
+        const r = Math.round(((c0 >> 16) & 0xff) * (1 - frac) + ((c1 >> 16) & 0xff) * frac)
+        const g = Math.round(((c0 >> 8) & 0xff) * (1 - frac) + ((c1 >> 8) & 0xff) * frac)
+        const b = Math.round((c0 & 0xff) * (1 - frac) + (c1 & 0xff) * frac)
+        out[i] = (r << 16) | (g << 8) | b
+    }
+    return out
 }
 
 function _hallDemoTag(fx: Sprite, baseAlpha: number, cfg: DebugCloudConfig): void {
@@ -19670,9 +20480,11 @@ function _dunEnterFloor_setupKind(kind: string, nowMs: number, padX: number, pad
 
     else _dunEnterFloor_setupCombatFloor(nowMs)
 
-    _dunEnterFloor_spawnStarterShrine()
+    if (kind != DUNGEON_KIND_ENTRANCE) {
+        _dunEnterFloor_spawnStarterShrine()
+    }
 
-    if (kind != DUNGEON_KIND_HALL) {
+    if (kind != DUNGEON_KIND_HALL && kind != DUNGEON_KIND_ENTRANCE) {
         _dunEnterFloor_spawnTrapsForFloor(nowMs | 0)
     }
 
@@ -20453,6 +21265,33 @@ function _dunTickEffectsHall(nowMs: number): void {
                 a = baseAlpha * Math.max(0, 1 - (tf / Math.max(1, fade)))
             }
             sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, a)))
+        }
+        const probeKey = sprites.readDataString(fx, "__hallProbeKey") || ""
+        if (probeKey && !(sprites.readDataNumber(fx, "__hallProbeTouched") | 0)) {
+            const probeRadius = Math.max(16, sprites.readDataNumber(fx, "__hallProbeRadius") | 0) | 0
+            const probeRadiusSq = probeRadius * probeRadius
+            for (let hi = 0; hi < heroes.length; hi++) {
+                const hero = heroes[hi]
+                if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
+                const dx = (hero.x - fx.x) | 0
+                const dy = (hero.y - fx.y) | 0
+                if (((dx * dx) + (dy * dy)) > probeRadiusSq) continue
+                sprites.setDataNumber(fx, "__hallProbeTouched", 1)
+                if (DEBUG_EFFECTS_HALL_LOGS) {
+                    const tag = sprites.readDataString(fx, "__hallTag") || ""
+                    const val = sprites.readDataNumber(fx, "__hallProbeValue")
+                    console.log(
+                        "[VFX][HALL][PROBE]" +
+                        " tag=" + tag +
+                        " key=" + probeKey +
+                        " value=" + (Number.isFinite(val) ? Number(val).toFixed(3) : "n/a") +
+                        " hero=" + (sprites.readDataString(hero, HERO_DATA.NAME) || ("#" + hi)) +
+                        " x=" + (fx.x | 0) +
+                        " y=" + (fx.y | 0)
+                    )
+                }
+                break
+            }
         }
         _dunEffectsHallFx[write++] = fx
     }
@@ -25292,7 +26131,7 @@ function _dunStampEntranceTower(): void {
         }
     }
 
-    // Path strip (4x4) placed first so doorway overwrites it.
+    // Path strip (4x4).
     const pathTop = doorTop | 0
     if (pathTop >= 0 && (pathTop + 3) < rows) {
         const pathIds = [DECAL_ENTRANCE_PATH_C0, DECAL_ENTRANCE_PATH_C1, DECAL_ENTRANCE_PATH_C2, DECAL_ENTRANCE_PATH_C3]
@@ -25306,19 +26145,35 @@ function _dunStampEntranceTower(): void {
         }
     }
 
-    const doorIds = [
-        [DECAL_ENTRANCE_DOOR_R0_C0, DECAL_ENTRANCE_DOOR_R0_C1, DECAL_ENTRANCE_DOOR_R0_C2, DECAL_ENTRANCE_DOOR_R0_C3],
-        [DECAL_ENTRANCE_DOOR_R1_C0, DECAL_ENTRANCE_DOOR_R1_C1, DECAL_ENTRANCE_DOOR_R1_C2, DECAL_ENTRANCE_DOOR_R1_C3],
-        [DECAL_ENTRANCE_DOOR_R2_C0, DECAL_ENTRANCE_DOOR_R2_C1, DECAL_ENTRANCE_DOOR_R2_C2, DECAL_ENTRANCE_DOOR_R2_C3],
-        [DECAL_ENTRANCE_DOOR_R3_C0, DECAL_ENTRANCE_DOOR_R3_C1, DECAL_ENTRANCE_DOOR_R3_C2, DECAL_ENTRANCE_DOOR_R3_C3],
-    ]
-    for (let ro = 0; ro < 4; ro++) {
-        const r = (doorTop + ro) | 0
-        if (r < 0 || r >= rows) continue
-        for (let co = 0; co < 4; co++) {
-            const c = (doorLeft + co) | 0
-            if (c < 0 || c >= cols) continue
-            _dunDecor_setDecalSafe(r | 0, c | 0, doorIds[ro][co] | 0)
+    if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
+        const anchorR = (doorTop + 3) | 0
+        const anchorC = doorLeft | 0
+        const existing = _dunFindDecorAtTile(anchorR | 0, anchorC | 0, "entrance_door")
+        if (!existing || (existing.flags & sprites.Flag.Destroyed)) {
+            _dunDecor_spawnAtTile({
+                name: "entrance_door",
+                role: DECOR_ROLE.TRIGGER,
+                tileR: anchorR | 0,
+                tileC: anchorC | 0,
+                pxW: WORLD_TILE_SIZE | 0,
+                pxH: WORLD_TILE_SIZE | 0,
+            })
+        }
+    } else {
+        const doorIds = [
+            [DECAL_ENTRANCE_DOOR_R0_C0, DECAL_ENTRANCE_DOOR_R0_C1, DECAL_ENTRANCE_DOOR_R0_C2, DECAL_ENTRANCE_DOOR_R0_C3],
+            [DECAL_ENTRANCE_DOOR_R1_C0, DECAL_ENTRANCE_DOOR_R1_C1, DECAL_ENTRANCE_DOOR_R1_C2, DECAL_ENTRANCE_DOOR_R1_C3],
+            [DECAL_ENTRANCE_DOOR_R2_C0, DECAL_ENTRANCE_DOOR_R2_C1, DECAL_ENTRANCE_DOOR_R2_C2, DECAL_ENTRANCE_DOOR_R2_C3],
+            [DECAL_ENTRANCE_DOOR_R3_C0, DECAL_ENTRANCE_DOOR_R3_C1, DECAL_ENTRANCE_DOOR_R3_C2, DECAL_ENTRANCE_DOOR_R3_C3],
+        ]
+        for (let ro = 0; ro < 4; ro++) {
+            const r = (doorTop + ro) | 0
+            if (r < 0 || r >= rows) continue
+            for (let co = 0; co < 4; co++) {
+                const c = (doorLeft + co) | 0
+                if (c < 0 || c >= cols) continue
+                _dunDecor_setDecalSafe(r | 0, c | 0, doorIds[ro][co] | 0)
+            }
         }
     }
 
@@ -35462,19 +36317,48 @@ function _createEntranceFloorMap(): number[][] {
         for (let c = walkwayLeftWide; c <= walkwayRight; c++) map[r][c] = TILE_EMPTY
     }
 
-    // Extra ground directly in front of the castle wall (2-tile apron + wider transition).
-    const apronTop = 4
-    const apronBottom = Math.min((rows - 2) | 0, 7) | 0
-    for (let r = apronTop; r <= (apronBottom | 0); r++) {
-        const step = ((r - apronTop) | 0)
-        const extra = Math.min(2, Math.max(0, step)) | 0
-        let left = 1
-        let right = (cols - 2) | 0
-        if (step > 1) {
-            left = Math.max(1, (walkwayLeftWide - extra) | 0) | 0
-            right = Math.min((cols - 2) | 0, (walkwayRight + extra) | 0) | 0
-        }
-        for (let c = left; c <= right; c++) map[r][c] = TILE_EMPTY
+    // Entrance taper: rows 0-3 full ground, then 10-wide, then 8-wide, then 4-row zigzag to walkway.
+    const baseTop = 1 // row 0 in your mental model
+    const fullGroundRows = 4
+    const midWidth20 = 10
+    const midWidth18 = 8
+    const zigRows = 4
+    const walkwayWideW = ((walkwayRight - walkwayLeftWide + 1) | 0)
+
+    const carveSpan = (r: number, left: number, right: number): void => {
+        const l = Math.max(1, left | 0) | 0
+        const rr = Math.min((cols - 2) | 0, right | 0) | 0
+        for (let c = l; c <= rr; c++) map[r][c] = TILE_EMPTY
+    }
+    const carveCentered = (r: number, width: number): void => {
+        const w = Math.max(1, width | 0) | 0
+        const half = Math.idiv((w - 1) | 0, 2) | 0
+        const left = (centerC - half) | 0
+        const right = (left + w - 1) | 0
+        carveSpan(r | 0, left | 0, right | 0)
+    }
+
+    // Rows 0-3 (full ground inside border)
+    for (let i = 0; i < fullGroundRows; i++) {
+        const r = (baseTop + i) | 0
+        if (r < 1 || r > (rows - 2)) continue
+        carveSpan(r | 0, 1, (cols - 2) | 0)
+    }
+
+    const row20 = (baseTop + fullGroundRows) | 0
+    const row18 = (row20 + 1) | 0
+    if (row20 >= 1 && row20 <= (rows - 2)) carveCentered(row20 | 0, midWidth20 | 0)
+    if (row18 >= 1 && row18 <= (rows - 2)) carveCentered(row18 | 0, midWidth18 | 0)
+
+    // Zigzag transition (4 rows) from width=18 down to walkway width.
+    const zigTop = (row18 + 1) | 0
+    const delta = Math.max(0, (midWidth18 - walkwayWideW) | 0) | 0
+    for (let i = 1; i <= zigRows; i++) {
+        const r = (zigTop + (i - 1)) | 0
+        if (r < 1 || r > (rows - 2)) continue
+        const dec = Math.idiv(((delta * i) + (zigRows - 1)) | 0, zigRows) | 0
+        const width = Math.max(walkwayWideW | 0, (midWidth18 - dec) | 0) | 0
+        carveCentered(r | 0, width | 0)
     }
 
     return map
@@ -37258,11 +38142,96 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
                         console.log("[FOCUS][INTERACT] highlight set", { id: found.id | 0, x: found.x | 0, y: found.y | 0 });
                     }
 
-                }
-
-            } catch { }
-
         }
+
+    } catch { }
+
+    _dunAuditDumpFloorOnEntry()
+
+}
+
+function _dunBuildTilemapAuditEntry(): string {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return ""
+    const rows = _engineWorldTileMap.length | 0
+    const cols = (_engineWorldTileMap[0]?.length ?? 0) | 0
+    if (rows <= 0 || cols <= 0) return ""
+
+    const tileChar = (v: number): string => {
+        if ((v | 0) === (TILE_WALL | 0)) return "W"
+        if ((v | 0) === (TILE_EMPTY | 0)) return "G"
+        return "X"
+    }
+
+    const rowParts: string[] = []
+    for (let r = 0; r < rows; r++) {
+        const row = _engineWorldTileMap[r]
+        if (!row) continue
+        let cur = ""
+        let start = 0
+        const segs: string[] = []
+        for (let c = 0; c < cols; c++) {
+            const ch = tileChar(row[c] | 0)
+            if (c === 0) {
+                cur = ch
+                start = 0
+            } else if (ch !== cur) {
+                segs.push(`${cur}${start}-${(c - 1) | 0}`)
+                cur = ch
+                start = c | 0
+            }
+        }
+        if (cols > 0 && cur) segs.push(`${cur}${start}-${(cols - 1) | 0}`)
+        rowParts.push(`r${r}=${segs.join(",")}`)
+    }
+
+    const props: string[] = []
+    const tileSize = WORLD_TILE_SIZE | 0
+    const addDecor = (s: Sprite, kind: string): void => {
+        if (!s || (s.flags & sprites.Flag.Destroyed)) return
+        let name = ""
+        try { name = sprites.readDataString(s, DECOR_DATA.NAME) || "" } catch { name = "" }
+        if (!name) name = kind
+        let r = sprites.readDataNumber(s, "decorTileR") | 0
+        let c = sprites.readDataNumber(s, "decorTileC") | 0
+        if ((r | 0) <= 0 && (c | 0) <= 0 && tileSize > 0) {
+            c = Math.idiv((s.left as any) | 0, tileSize) | 0
+            r = Math.idiv((s.top as any) | 0, tileSize) | 0
+        }
+        const offX = sprites.readDataNumber(s, "decorOffX") | 0
+        const offY = sprites.readDataNumber(s, "decorOffY") | 0
+        const off = (offX | 0) !== 0 || (offY | 0) !== 0 ? `(${offX | 0},${offY | 0})` : ""
+        props.push(`${name}@${r | 0},${c | 0}${off}`)
+    }
+    if (_engineDecorTriggers && _engineDecorTriggers.length) {
+        for (let i = 0; i < _engineDecorTriggers.length; i++) addDecor(_engineDecorTriggers[i], "trig")
+    }
+    if (_engineDecorSolids && _engineDecorSolids.length) {
+        for (let i = 0; i < _engineDecorSolids.length; i++) addDecor(_engineDecorSolids[i], "solid")
+    }
+
+    const mapStr = rowParts.join("|")
+    const propStr = props.join("|")
+    return (
+        `floor=${_dunFloorIndex | 0} kind=${String(_dunFloorKind || "")} rows=${rows | 0} cols=${cols | 0}` +
+        ` map=${mapStr} props=${propStr}`
+    )
+}
+
+function _dunAuditDumpFloorOnEntry(): void {
+    if (!DEBUG_TILEMAP_AUDIT_DUMP) return
+    const entry = _dunBuildTilemapAuditEntry()
+    if (!entry) return
+    _tilemapAuditDumpLatest = entry
+    _tilemapAuditDumpHistory.push(entry)
+    if (_tilemapAuditDumpHistory.length > 30) _tilemapAuditDumpHistory.shift()
+
+    const g: any = globalThis as any
+    const fn = g && g.__heDebugDumpToFile
+    if (typeof fn === "function") {
+        try { fn("tilemap-audit") } catch { }
+    }
+    _heQueueVisualDump("tilemap-visual-entry", 1200)
+}
 
     }
 
@@ -55909,7 +56878,10 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
 
         const lungeEnd = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeEndMs) | 0
 
-        if (lungeStart <= 0 || lungeEnd <= 0) continue
+        if (lungeStart <= 0 || lungeEnd <= 0) {
+            _agiDashSquareCometClear(hero)
+            continue
+        }
 
         const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0
         if (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT) {
@@ -55917,6 +56889,7 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
             sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
             hero.vx = 0
             hero.vy = 0
+            _agiDashSquareCometClear(hero)
             continue
         }
 
@@ -55952,6 +56925,7 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
 
             )
 
+            _agiDashSquareCometClear(hero)
             continue
 
         }
@@ -56224,6 +57198,8 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
 
             hero.vy = 0
 
+            _agiDashSquareCometClear(hero)
+
 
 
 
@@ -56248,6 +57224,74 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
 
             )
 
+        }
+
+        // Square-comet visuals for normal dash (no projectile carrier).
+        {
+            const ax1000 = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeDirX1000) | 0
+            const ay1000 = sprites.readDataNumber(hero, HERO_DATA.AgilityLungeDirY1000) | 0
+            let nx = ax1000 / 1000
+            let ny = ay1000 / 1000
+            const mag = Math.sqrt(nx * nx + ny * ny) || 1
+            nx /= mag
+            ny /= mag
+
+            const vis = getHeroVisualInfoForStrength(hero, nx, ny)
+            let attachPx = 0
+            const wTipX = (vis[2] || 0)
+            const wTipY = (vis[3] || 0)
+            const wTipProj = (wTipX * nx) + (wTipY * ny)
+            if (wTipProj > 0) attachPx = wTipProj
+            if (attachPx <= 0) attachPx = (vis[1] || 0)
+            if (attachPx <= 0) attachPx = findHeroLeadingEdgeDistance(hero, nx, ny)
+            if (attachPx <= 0) attachPx = 0.5 * (Math.abs(nx) * hero.width + Math.abs(ny) * hero.height)
+
+            let reachExtra = sprites.readDataNumber(hero, "AGI_L_EXEC") | 0
+            if (reachExtra < 0) reachExtra = 0
+            let L = (attachPx + reachExtra) | 0
+            if (L < 1) L = 1
+
+            const backLen = Math.max(0, Math.round(attachPx * AGI_TRAIL_BACK_PCT_X1000 / 1000))
+            const sBackAtCast = -backLen
+            let sFrontStop = L - 2
+            if (sFrontStop <= sBackAtCast) sFrontStop = sBackAtCast + 4
+            const maxLen = Math.max(0, sFrontStop - sBackAtCast)
+
+            const now = nowMs | 0
+            const fwdMs = Math.max(1, (lungeEnd - lungeStart) | 0)
+            let u = 0
+            if (now <= lungeStart) u = 0
+            else if (now >= lungeEnd) u = 1
+            else u = Math.max(0, Math.min(1, (now - lungeStart) / fwdMs))
+
+            const sBack = sBackAtCast
+            const sFront = sBackAtCast + (maxLen * u)
+            const reelT = (now > lungeEnd) ? Math.max(0, Math.min(1, (now - lungeEnd) / Math.max(1, AGI_COMET_REEL_MS | 0))) : 0
+
+            const carrier = _agiDashSquareCometCarrier(hero)
+            if (carrier) {
+                const element = sprites.readDataNumber(hero, HERO_DATA.ELEMENT) | 0
+                _updateAgilitySquareCometFx(
+                    carrier,
+                    hi,
+                    hero,
+                    element | 0,
+                    nx,
+                    ny,
+                    hero.x,
+                    hero.y,
+                    sBack,
+                    sFront,
+                    maxLen,
+                    u,
+                    reelT,
+                    now < lungeStart,
+                    lungeStart | 0,
+                    now | 0,
+                    lungeStart | 0,
+                    fwdMs | 0
+                )
+            }
         }
 
     }
@@ -58169,6 +59213,8 @@ function _agiHookUpdateCometSprite(
         activateAt = st.pendingWindupEndMs | 0
         preActive = activateAt > (nowMs | 0)
     }
+    const weaponTipX = baseX + nx * (wLen | 0)
+    const weaponTipY = baseY + ny * (wLen | 0)
     const preT = _agiCometPreT(preActive, activateAt | 0, nowMs | 0)
     if (preActive && preT <= 0) {
         fx.setFlag(SpriteFlag.Invisible, true)
@@ -58203,9 +59249,15 @@ function _agiHookUpdateCometSprite(
 
     const baseTipX = baseX + nx * tip
     const baseTipY = baseY + ny * tip
-    const hasAlign = Number.isFinite(alignX) && Number.isFinite(alignY)
-    const tipAnchorBaseX = hasAlign ? (alignX as number) : baseTipX
-    const tipAnchorBaseY = hasAlign ? (alignY as number) : baseTipY
+    let alignBaseX = alignX as number
+    let alignBaseY = alignY as number
+    if ((state | 0) === AGI_HOOK_STATE.AIMING) {
+        alignBaseX = weaponTipX
+        alignBaseY = weaponTipY
+    }
+    const hasAlign = Number.isFinite(alignBaseX) && Number.isFinite(alignBaseY)
+    const tipAnchorBaseX = hasAlign ? alignBaseX : baseTipX
+    const tipAnchorBaseY = hasAlign ? alignBaseY : baseTipY
     const tipAnchorX = tipAnchorBaseX + (nx * (AGI_COMET_TIP_ALIGN_FWD_PX | 0))
     const tipAnchorY = tipAnchorBaseY + (ny * (AGI_COMET_TIP_ALIGN_FWD_PX | 0))
 
@@ -58237,7 +59289,9 @@ function _agiHookUpdateCometSprite(
     const blendRaw = (isHold && AGI_COMET_HOLD_RAW.length > 1) ? (AGI_COMET_HOLD_RAW[1] | 0) : -1
     const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, baseRaw | 0)
     const tipOffset = _agiCometTipOffsetForRaw(STR_ARC_SKIN_ID, baseRaw | 0)
-    const axisScale = _agiCometAxisScaleForTipOffset(tipOffset)
+    const axisScale =
+        _agiCometAxisScaleForWeaponLen(tipOffset, wLen | 0) ||
+        _agiCometAxisScaleForTipOffset(tipOffset)
     const fallbackOffset = _agiCometDirOffset(nx, ny)
 
     const baseAlpha = isHold ? (alpha * (1 - holdBlend)) : alpha
@@ -58270,6 +59324,31 @@ function _agiHookUpdateCometSprite(
     fx.y = tipY
     fx.z = hero.z + (AGI_COMET_Z_BIAS | 0)
     fx.setFlag(SpriteFlag.Invisible, false)
+
+    if (_agiCometAlignShouldLog(fx, nowMs | 0)) {
+        const weaponTipX = baseX + nx * (wLen | 0)
+        const weaponTipY = baseY + ny * (wLen | 0)
+        _agiCometAlignLogLine({
+            kind: isGhost ? "hook.aim" : ((state | 0) === AGI_HOOK_STATE.EXTEND ? "hook.extend" : "hook.retract"),
+            heroIndex: heroIndex | 0,
+            weaponTipX,
+            weaponTipY,
+            cometTipX: tipX,
+            cometTipY: tipY,
+            baseX,
+            baseY,
+            alignX: tipAnchorX,
+            alignY: tipAnchorY,
+            nx,
+            ny,
+            weaponLen: wLen | 0,
+            tipDist: tip | 0,
+            scale,
+            axisScaleX: axisScale.sx || 1,
+            axisScaleY: axisScale.sy || 1,
+            rawFrame: baseRaw | 0
+        });
+    }
 
     if (isHold && blendRaw >= 0) {
         const blendFx = _agiCometEnsureBlendSprite(fx)
@@ -60951,6 +62030,21 @@ function updateAgilityProjectilesMotionFor(
         startMs | 0,
         dashMs | 0
     )
+    if (DEBUG_AGI_SQUARE_COMET_LOGS) {
+        const now = nowMs | 0;
+        const throttle = DEBUG_AGI_SQUARE_COMET_LOG_THROTTLE_MS | 0;
+        const last = sprites.readDataNumber(proj, AGI_SQUARE_COMET_TICK_LOG_LAST_MS_KEY) | 0;
+        if (throttle <= 0 || last <= 0 || (now - last) >= throttle) {
+            sprites.setDataNumber(proj, AGI_SQUARE_COMET_TICK_LOG_LAST_MS_KEY, now | 0);
+            console.log(
+                "[AGI][COMET][SQUARE] tick hero=" + (heroIndex | 0) +
+                " active=" + (activeNow | 0) +
+                " pre=" + (preActive ? 1 : 0) +
+                " dashMs=" + (dashMs | 0) +
+                " move=" + (sprites.readDataString(proj, PROJ_DATA.MOVE_TYPE) || "")
+            );
+        }
+    }
     _updateAgilitySquareCometFx(
         proj,
         heroIndex,
@@ -78903,6 +79997,7 @@ game.onUpdate(function () {
     worldRuntimeMs = now
 
     _heAutoDebugDumpTick(now)
+    _heVisualDumpTick(now)
     _heEffectsDumpTick(now)
 
 
@@ -85847,6 +86942,11 @@ function _heCollectEffectsDump(): any {
         const maskRef = sprites.readDataSprite(s, EFFECT_MASK_SPRITE_REF_DATA_KEY)
         const maskId = maskRef ? ((maskRef as any).id | 0) : 0
         const maskSkin = maskRef ? (sprites.readDataString(maskRef, "effectSkin") || "") : ""
+        const hallTag = sprites.readDataString(s, "__hallTag") || ""
+        const hallProbeKey = sprites.readDataString(s, "__hallProbeKey") || ""
+        const hallProbeValue = sprites.readDataNumber(s, "__hallProbeValue")
+        const hallProbeRadius = sprites.readDataNumber(s, "__hallProbeRadius")
+        const hallProbeTouched = sprites.readDataNumber(s, "__hallProbeTouched")
 
         let resolved: any = null
         if (atlas && skin) {
@@ -85905,6 +87005,13 @@ function _heCollectEffectsDump(): any {
             blend,
             maskSpriteId: maskId | 0,
             maskSkin,
+            hallTag,
+            hallProbe: hallProbeKey ? {
+                key: hallProbeKey,
+                value: Number.isFinite(hallProbeValue) ? Number(hallProbeValue) : null,
+                radius: Number.isFinite(hallProbeRadius) ? Number(hallProbeRadius) : null,
+                touched: Number.isFinite(hallProbeTouched) ? (hallProbeTouched | 0) : 0
+            } : null,
             native: {
                 exists: !!native,
                 texKey: nativeTex || "",
@@ -86034,6 +87141,27 @@ function _heBuildDebugDump(reason?: string): any {
     const trace = traceBuf.length ? traceBuf.slice(-HE_DEBUG_TRACE_MAX) : []
 
     const effects = _heCollectEffectsDump()
+    if (DEBUG_TILEMAP_AUDIT_DUMP && !_tilemapAuditDumpLatest) {
+        const fn = (typeof _dunBuildTilemapAuditEntry === "function") ? _dunBuildTilemapAuditEntry : null
+        if (fn) {
+            const entry = fn()
+            if (entry) {
+                _tilemapAuditDumpLatest = entry
+                _tilemapAuditDumpHistory.push(entry)
+                if (_tilemapAuditDumpHistory.length > 30) _tilemapAuditDumpHistory.shift()
+            }
+        }
+    }
+    let tilemapVisual: any = null
+    if (DEBUG_TILEMAP_AUDIT_DUMP) {
+        const tr = g && g.__heTileRenderer
+        if (tr && typeof tr.getVisualAudit === "function") {
+            try { tilemapVisual = tr.getVisualAudit() } catch { }
+        }
+    }
+    const vfxTweak = (g && g.__heVfxTweak && typeof g.__heVfxTweak === "object")
+        ? g.__heVfxTweak
+        : null
     return {
         type: "heDebugDumpV1",
         createdAt: Date.now(),
@@ -86075,6 +87203,11 @@ function _heBuildDebugDump(reason?: string): any {
             rows: worldRows | 0,
             cols: worldCols | 0,
         },
+        tilemapAudit: DEBUG_TILEMAP_AUDIT_DUMP ? {
+            latest: String(_tilemapAuditDumpLatest || ""),
+            history: _tilemapAuditDumpHistory.slice(0),
+        } : null,
+        tilemapVisual,
         save: {
             pendingSaveFromFile: !!(g && g.__pendingSaveFromFile),
             pendingSaveName: (g && g.__pendingSaveFromFile && g.__pendingSaveFromFile.name) ? String(g.__pendingSaveFromFile.name || "") : null,
@@ -86093,6 +87226,7 @@ function _heBuildDebugDump(reason?: string): any {
         enemies: enemyDump,
         npcs: npcDump,
         effects,
+        vfxTweak,
         trace,
     }
 }
@@ -86100,6 +87234,68 @@ function _heBuildDebugDump(reason?: string): any {
 const HE_AUTO_DEBUG_DUMP_INTERVAL_MS = 5000
 let _heAutoDebugDumpLastMs = 0
 let _heAutoDebugDumpInFlight = false
+let _tilemapAuditDumpLatest = ""
+let _tilemapAuditDumpHistory: string[] = []
+const HE_VISUAL_DUMP_DELAY_MS = 1200
+const HE_VISUAL_DUMP_COOLDOWN_MS = 1200
+let _heVisualDumpQueuedMs = 0
+let _heVisualDumpReason = ""
+let _heVisualDumpInFlight = false
+let _heVisualDumpLastMs = 0
+let _heVisualDumpLastDecorRev = -1
+
+function _heQueueVisualDump(reason: string, delayMs?: number): void {
+    if (!DEBUG_TILEMAP_AUDIT_DUMP) return
+    const now = game.runtime() | 0
+    const delay = (typeof delayMs === "number" && delayMs >= 0) ? (delayMs | 0) : (HE_VISUAL_DUMP_DELAY_MS | 0)
+    const when = (now + delay) | 0
+    if (_heVisualDumpQueuedMs > 0 && _heVisualDumpQueuedMs <= when) return
+    _heVisualDumpQueuedMs = when
+    _heVisualDumpReason = String(reason || "tilemap-visual")
+}
+
+function _heVisualDumpTick(nowMs: number): void {
+    if (!DEBUG_TILEMAP_AUDIT_DUMP) return
+    const g: any = globalThis as any
+    if (!g || !g.__isHost) return
+    const net: any = g && g.__net
+    if (!net || typeof net.sendDebugDump !== "function") return
+
+    // Queue when decor state changes (props/decals likely changed)
+    if ((_engineDecorRev | 0) !== (_heVisualDumpLastDecorRev | 0)) {
+        _heVisualDumpLastDecorRev = _engineDecorRev | 0
+        _heQueueVisualDump("tilemap-visual-decor", 300)
+    }
+
+    if (_heVisualDumpInFlight) return
+    const now = nowMs | 0
+    if (_heVisualDumpQueuedMs <= 0 || now < (_heVisualDumpQueuedMs | 0)) return
+    const elapsed = now - (_heVisualDumpLastMs | 0)
+    if (_heVisualDumpLastMs && elapsed < (HE_VISUAL_DUMP_COOLDOWN_MS | 0)) return
+
+    _heVisualDumpQueuedMs = 0
+    _heVisualDumpLastMs = now
+    _heVisualDumpInFlight = true
+    const reason = _heVisualDumpReason || "tilemap-visual"
+    _heVisualDumpReason = ""
+
+    let p: any = null
+    try {
+        p = net.sendDebugDump(_heBuildDebugDump(reason), reason)
+    } catch {
+        _heVisualDumpInFlight = false
+        return
+    }
+    if (p && typeof p.then === "function") {
+        p.then(() => {
+            _heVisualDumpInFlight = false
+        }).catch(() => {
+            _heVisualDumpInFlight = false
+        })
+    } else {
+        _heVisualDumpInFlight = false
+    }
+}
 
 function _heAutoDebugDumpTick(nowMs: number): void {
     if (!DEBUG_DEBUG_DUMP) return
@@ -86251,6 +87447,42 @@ function _heAutoDebugDumpTick(nowMs: number): void {
             }
             const payload = _heBuildDebugDump(reason)
             return net.sendDebugDump(payload, reason)
+        }
+
+        if (!g.__heVfxTweak || typeof g.__heVfxTweak !== "object") {
+            g.__heVfxTweak = { ..._vfxTweakDefaults }
+        }
+        g.__heGetVfxTweak = function (): any {
+            return _getVfxTweak()
+        }
+        g.__heVfxRebuildHallPalettes = function (): any {
+            try {
+                if ((_dunFloorKind || "") !== DUNGEON_KIND_HALL) {
+                    return { ok: false, reason: "not-hall" }
+                }
+                _dunClearEffectsHall()
+                _dunClearHallEffectSpritesAll()
+                _hallPaletteVersion++
+                _opaqueMaskVersion++
+                _maskAlphaVersion++
+                _vfxClearHallPaletteCaches()
+                _vfxClearHallPaletteTextures()
+                _dunEnterFloor_spawnEffectsHall(game.runtime() | 0)
+                return { ok: true }
+            } catch (err) {
+                return { ok: false, reason: String((err as any) || "") }
+            }
+        }
+        g.__heVfxClearHallClouds = function (): any {
+            try {
+                if ((_dunFloorKind || "") !== DUNGEON_KIND_HALL) {
+                    return { ok: false, reason: "not-hall", killed: 0 }
+                }
+                const killed = _dunClearHallEffectSpritesAll()
+                return { ok: true, killed }
+            } catch (err) {
+                return { ok: false, reason: String((err as any) || ""), killed: 0 }
+            }
         }
 
 

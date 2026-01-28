@@ -483,6 +483,23 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         focusAuraPadPx: 4,
         focusAuraPadAlways: true,
     },
+    entrance_door: {
+        atlas: "build_atlas",
+        ref: { row: 31, col: 0 },
+        wTiles: 4,
+        hTiles: 4,
+    },
+    // Entrance path test props (force high depth so we can verify overlap)
+    entrance_path_c0: { atlas: "build_atlas", ref: { row: 10, col: 0 }, depthBias: 2000000 },
+    entrance_path_c1: { atlas: "build_atlas", ref: { row: 10, col: 1 }, depthBias: 2000000 },
+    entrance_path_c2: { atlas: "build_atlas", ref: { row: 10, col: 1 }, depthBias: 2000000 },
+    entrance_path_c3: { atlas: "build_atlas", ref: { row: 10, col: 2 }, depthBias: 2000000 },
+    telepad: {
+        atlas: "build_atlas",
+        ref: { row: 14, col: 12 },
+        wTiles: 5,
+        hTiles: 2,
+    },
 
     pedestal: { atlas: "terrain_atlas", ref: { row: 14, col: 19 } },
     pedestal_tl: { atlas: "terrain_atlas", ref: { row: 14, col: 19 }, offsetXPx: -16, offsetYPx: -18 },

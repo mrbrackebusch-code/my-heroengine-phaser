@@ -1,3 +1,5 @@
+import { ENEMY_EFFECT_PALETTES_BY_DARKEN_PCT } from "./vfxEnemyPalettes";
+
 export type VfxElementKey =
     | "none"
     | "fire"
@@ -36,13 +38,8 @@ export const HERO_EFFECT_PALETTES: Record<VfxElementKey, number[]> = {
     ice: [0x3B77BA, 0x679FB1, 0x84BAD0, 0x89D4E7, 0xA7DADB, 0xB6F9FF]
 };
 
-export const ENEMY_EFFECT_PALETTES: Record<VfxElementKey, number[]> = {
-    none: [0x373B33, 0x4D533C, 0x585C43, 0x767B64, 0x81846B, 0xA1A18F],
-    fire: [0x6D110C, 0x781A13, 0x914314, 0x9B6E17, 0xA1924C],
-    water: [0x031135, 0x0E1E3E, 0x293F6B, 0x334770, 0x63718F],
-    lightning: [0x7B551E, 0x865E25, 0x967E37, 0x9B957F],
-    earth: [0x3E2A21, 0x5F4736, 0x6B4E38, 0x7A633F, 0x897748, 0x8C7F5C],
-    air: [0x373B33, 0x4D533C, 0x585C43, 0x767B64, 0x81846B, 0xA1A18F],
-    poison: [0x0A5015, 0x15740F, 0x16591C, 0x207D11, 0x588E19, 0x639720],
-    ice: [0x2D4C6F, 0x48656F, 0x5B7783, 0x608791, 0x718C8C, 0x7D9FA3]
-};
+export const ENEMY_EFFECT_DARKEN_PCT_DEFAULT = 1;
+export const ENEMY_EFFECT_PALETTES: Record<VfxElementKey, number[]> =
+    ENEMY_EFFECT_PALETTES_BY_DARKEN_PCT[ENEMY_EFFECT_DARKEN_PCT_DEFAULT] ||
+    ENEMY_EFFECT_PALETTES_BY_DARKEN_PCT[0] ||
+    HERO_EFFECT_PALETTES;

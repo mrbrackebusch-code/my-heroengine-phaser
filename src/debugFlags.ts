@@ -60,7 +60,10 @@ export const DEBUG_AGI_COMET_LOG_THROTTLE_MS = 120;
 export const DEBUG_AGI_COMET_LOG_VERBOSE = false;
 export const DEBUG_AGI_SQUARE_COMET_LOGS = true;
 export const DEBUG_AGI_SQUARE_COMET_LOG_THROTTLE_MS = 200;
-export const DEBUG_AGI_SQUARE_COMET_LOG_VERBOSE = false;
+export const DEBUG_AGI_SQUARE_COMET_LOG_VERBOSE = true;
+export const DEBUG_AGI_COMET_ALIGN_LOGS = true;
+export const DEBUG_AGI_COMET_ALIGN_LOG_THROTTLE_MS = 160;
+export const DEBUG_AGI_COMET_ALIGN_LOG_VERBOSE = true;
 
 // Move pipeline debug
 export const DEBUG_MOVE_PIPE = false;
@@ -105,7 +108,7 @@ export const DEBUG_BOSS_INTRO = true; // Boss intro/jump/pad sink lifecycle logs
 export const DEBUG_PAD_SINK_PROP_LOGS = true; // [PAD][PILLAR] summarize prop offset ranges during pad sink.
 export const DEBUG_BOSS_PAD_DUST_PERSIST = false; // Keep boss pad dust alive (skip destroy) for visibility.
 export const DEBUG_FORCE_HALL_OF_ENEMIES = false; // Force hall floor kind for enemy showcase/debug.
-export const DEBUG_EFFECTS_HALL_ON_START = false; // Start run in effects hall (debug VFX layout).
+export const DEBUG_EFFECTS_HALL_ON_START = true; // Start run in effects hall (debug VFX layout).
 export const DEBUG_EFFECTS_HALL_LOGS = false; // Log effects hall texture frames (debug).
 export const DEBUG_FOCUS_LOGS = false;
 export const DEBUG_INTERACT_LOGS = false; // General interact pipeline (props/NPC).
@@ -312,6 +315,7 @@ export const DEBUG_TILE_ATLAS_GLOBAL = true; // was DEBUG_TILES_GLOBAL in tileAt
 export const DEBUG_TILES = true;
 export const DEBUG_TILEMAP_GLUE = true; // [tileMapGlue] base render done, etc.
 export const DEBUG_TILEMAP_AUDIT = true; // [TILEMAP][AUDIT] consolidated decor/prop/tilemap checks.
+export const DEBUG_TILEMAP_AUDIT_DUMP = true; // [TILEMAP][AUDIT][DUMP] floor map + props summary on entry.
 export const WORLD_SYNC_HASH_WARN_THRESHOLD_MS = 8000; // warn if host/follower hashes mismatch longer than this (0 disables)
 
 // Prop focus aura (tileMapGlue.ts)

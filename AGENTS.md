@@ -18,6 +18,11 @@ This repository hosts a Phaser + HeroEngine integration. Keep debug/logging cent
 ## Runs / Tests
 - Ask before running long or destructive commands.
 
+## Communication
+- If asking the user to re-verify something basic they likely already did, acknowledge that and explain why you need the confirmation.
+- Use phrasing like: "I understand you likely already did this, but for my algorithms to proceed could you please verify..." or "I know this is frustrating; to continue I need to confirm..."
+- When discussing debug flags, always open `src/debugFlags.ts` and reference the current value before asking the user to toggle or verify a flag.
+
 ## Asset Rules (Ironclad)
 - All asset PNG filenames MUST include their frame size as `WxH` (e.g., `Book 32x40.png`). No exceptions.
 - Never trim or auto-fix PNG dimensions at runtime. If a sheet is not an exact multiple of its frame size, HARD FAIL.
