@@ -8332,7 +8332,7 @@ export const EFFECT_ATLAS_META = {
       "centerY": 12
     }
   },
-  "fluidExtras texture 256x256": {
+  "fluidExtras texture grayscale 256x256": {
     "frameIndices": [
       0,
       1,
@@ -8383,15 +8383,15 @@ export const EFFECT_ATLAS_META = {
     "palette": {
       "colors": [
         0,
-        65536,
-        131072,
-        196608,
-        262144,
-        327680,
-        393216,
-        458752
+        65793,
+        131586,
+        263172,
+        328965,
+        197379,
+        460551,
+        394758
       ],
-      "tint": 5703424
+      "tint": 1973790
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -8406,7 +8406,7 @@ export const EFFECT_ATLAS_META = {
     },
     "emptyCount": 3
   },
-  "fluidJumpy texture 256x256": {
+  "fluidJumpy texture grayscale 256x256": {
     "frameIndices": [
       0,
       1,
@@ -8457,15 +8457,15 @@ export const EFFECT_ATLAS_META = {
     "palette": {
       "colors": [
         0,
-        65536,
-        131072,
-        196608,
-        262144,
-        327680,
-        393216,
-        458752
+        65793,
+        131586,
+        263172,
+        328965,
+        197379,
+        460551,
+        394758
       ],
-      "tint": 5703424
+      "tint": 1973790
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -8480,7 +8480,7 @@ export const EFFECT_ATLAS_META = {
     },
     "emptyCount": 3
   },
-  "fluidSimple texture 256x256": {
+  "fluidSimple texture grayscale 256x256": {
     "frameIndices": [
       0,
       1,
@@ -8532,15 +8532,15 @@ export const EFFECT_ATLAS_META = {
     "palette": {
       "colors": [
         0,
-        65536,
-        131072,
-        196608,
-        262144,
-        327680,
-        393216,
-        458752
+        65793,
+        131586,
+        263172,
+        328965,
+        197379,
+        460551,
+        394758
       ],
-      "tint": 5703424
+      "tint": 1973790
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -12161,7 +12161,7 @@ export const EFFECT_ATLAS_META = {
       "centerY": 6
     }
   },
-  "magic1 texture 256x256": {
+  "magic2 texture grayscale 256x256": {
     "frameIndices": [
       0,
       1,
@@ -12199,78 +12199,16 @@ export const EFFECT_ATLAS_META = {
     ],
     "palette": {
       "colors": [
-        8553090,
-        8421504,
-        8026746,
-        7697781,
-        8618883,
-        7763574,
-        8289918,
-        8158332
+        2960685,
+        2894892,
+        3026478,
+        2829099,
+        3092271,
+        2763306,
+        3158064,
+        2697513
       ],
-      "tint": 8553090
-    },
-    "collisionBounds": {
-      "frameIndex": 0,
-      "minX": 0,
-      "minY": 0,
-      "maxX": 255,
-      "maxY": 255,
-      "w": 256,
-      "h": 256,
-      "centerX": 128,
-      "centerY": 128
-    },
-    "emptyCount": 15
-  },
-  "magic2 texture 256x256": {
-    "frameIndices": [
-      0,
-      1,
-      2,
-      3,
-      4,
-      5,
-      6,
-      7,
-      8,
-      9,
-      10,
-      11,
-      12,
-      13,
-      14,
-      15,
-      16,
-      17,
-      18,
-      19,
-      20,
-      21,
-      22,
-      23,
-      24,
-      25,
-      26,
-      27,
-      28,
-      29,
-      30,
-      31,
-      32
-    ],
-    "palette": {
-      "colors": [
-        10879130,
-        10485916,
-        10027162,
-        10682522,
-        11010198,
-        10944667,
-        11468951,
-        10354843
-      ],
-      "tint": 10879130
+      "tint": 2960685
     },
     "collisionBounds": {
       "frameIndex": 0,
@@ -26319,7 +26257,7 @@ export const EFFECT_ATLAS_META = {
       "centerY": 107
     }
   },
-  "waves1 texture 256x256": {
+  "waves1 texture grayscale 256x256": {
     "frameIndices": [
       0,
       1,
@@ -26448,7 +26386,7 @@ export const EFFECT_ATLAS_META = {
     },
     "emptyCount": 12
   },
-  "waves2 texture 256x256": {
+  "waves2 texture grayscale 256x256": {
     "frameIndices": [
       0,
       1,
@@ -26577,7 +26515,7 @@ export const EFFECT_ATLAS_META = {
     },
     "emptyCount": 12
   },
-  "waves3 texture 256x256": {
+  "waves3 texture grayscale 256x256": {
     "frameIndices": [
       0,
       1,
@@ -26706,7 +26644,7 @@ export const EFFECT_ATLAS_META = {
     },
     "emptyCount": 12
   },
-  "waves4 texture 256x256": {
+  "waves4 texture grayscale 256x256": {
     "frameIndices": [
       0,
       1,
@@ -26785,7 +26723,7 @@ export const EFFECT_ATLAS_META = {
     },
     "emptyCount": 14
   },
-  "waves5 texture 256x256": {
+  "waves5 texture grayscale 256x256": {
     "frameIndices": [
       0,
       1,

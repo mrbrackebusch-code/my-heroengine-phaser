@@ -30,6 +30,9 @@ import {
     DEBUG_AGI_COMET_LOGS,
     DEBUG_AGI_COMET_LOG_THROTTLE_MS,
     DEBUG_AGI_COMET_LOG_VERBOSE,
+    DEBUG_AGI_SQUARE_COMET_LOGS,
+    DEBUG_AGI_SQUARE_COMET_LOG_THROTTLE_MS,
+    DEBUG_AGI_SQUARE_COMET_LOG_VERBOSE,
     DEBUG_AGI_COMBO,
     DEBUG_AGI_COMBO_BUILD,
     DEBUG_AGI_COMBO_EXIT,
@@ -59,6 +62,14 @@ import {
     DEBUG_BOSS_PAD_DUST_PERSIST,
     DEBUG_PAD_SINK_PROP_LOGS,
     DEBUG_DUNGEON_LOGS,
+    DEBUG_EFFECTS_HALL_ON_START,
+    DEBUG_EFFECTS_HALL_LOGS,
+    DEBUG_EFFECTS_DUMP,
+    DEBUG_EFFECTS_DUMP_PIXELS,
+    DEBUG_EFFECTS_DUMP_MAX,
+    DEBUG_EFFECTS_DUMP_SAMPLE_STRIDE,
+    DEBUG_EFFECTS_DUMP_ON_HALL,
+    DEBUG_EFFECTS_DUMP_AFTER_N_APPLIES,
     DEBUG_DEV_COMMANDS,
     DEBUG_FORCE_HALL_OF_ENEMIES,
     DEBUG_DRAW_ENEMY_WALL_COLLIDERS,
@@ -3101,6 +3112,12 @@ function _destroyAgilityCometFx(proj: Sprite): void {
         fx.destroy();
     }
     sprites.setDataSprite(proj, AGI_COMET_FX_KEY, null as any);
+    const squareFx = sprites.readDataSprite(proj, AGI_SQUARE_COMET_FX_KEY);
+    if (squareFx && !(squareFx.flags & sprites.Flag.Destroyed)) {
+        _destroyAgilityCometAurasForFx(squareFx);
+        squareFx.destroy();
+    }
+    sprites.setDataSprite(proj, AGI_SQUARE_COMET_FX_KEY, null as any);
 }
 
 function _destroyAgilityCometAurasForFx(fx: Sprite): void {
@@ -3217,6 +3234,47 @@ function _ensureAgilityCometFx(
     return fx;
 }
 
+function _ensureAgilitySquareCometFx(
+    proj: Sprite,
+    heroIndex: number,
+    hero: Sprite,
+    element: number,
+    dashMs: number
+): Sprite | null {
+    if (!proj || !hero) return null;
+    let fx = sprites.readDataSprite(proj, AGI_SQUARE_COMET_FX_KEY);
+    if (fx && (fx.flags & sprites.Flag.Destroyed)) fx = null;
+    if (fx) return fx;
+
+    fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+    fx.setFlag(SpriteFlag.Ghost, true);
+    fx.setFlag(SpriteFlag.Invisible, true);
+    fx.x = hero.x;
+    fx.y = hero.y;
+    fx.z = (hero.z | 0) + (AGI_SQUARE_COMET_Z_BIAS | 0);
+
+    const dash = dashMs | 0;
+    if (dash > 0) {
+        const lifeMs = Math.max(300, (dash + 350) | 0);
+        fx.lifespan = lifeMs | 0;
+    }
+
+    const opts: EffectApplyOpts = {
+        mode: "full",
+        alpha: AGI_SQUARE_COMET_ALPHA,
+        blend: "normal",
+        repeat: -1
+    };
+    applyEffectToSprite(fx, STR_ARC_SKIN_ID, opts);
+    sprites.setDataString(fx, EFFECT_FRAME_LIST_DATA_KEY, "");
+    sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, 0);
+    sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY, 0);
+    sprites.setDataNumber(fx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, 0);
+
+    sprites.setDataSprite(proj, AGI_SQUARE_COMET_FX_KEY, fx);
+    return fx;
+}
+
 function _agiCometPreT(preActive: boolean, activateAt: number, nowMs: number): number {
     if (!preActive) return 1;
     const actAt = activateAt | 0;
@@ -3260,6 +3318,30 @@ function _agiCometPickRawFrame(
         return _strengthArcPickFromSequence(AGI_ARC_SEQ_COMET_RAW, growEase, 1, false);
     }
     return (AGI_COMET_HOLD_RAW && AGI_COMET_HOLD_RAW.length) ? (AGI_COMET_HOLD_RAW[0] | 0) : 0;
+}
+
+function _agiSquareCometPickRawFrame(
+    preActive: boolean,
+    preT: number,
+    growthT: number,
+    reelT: number
+): number {
+    const reel = Math.max(0, Math.min(1, reelT));
+    if (preActive) {
+        const t = Math.max(0, Math.min(1, preT));
+        return _strengthArcPickFromSequence(AGI_COMET_PRE_RAW, t, 1, false);
+    }
+    if (reel > 0) {
+        return _strengthArcPickFromSequence(AGI_ARC_SEQ_STREAK_SOLID_RAW, reel, 1, true);
+    }
+    const growNorm = Math.max(0, Math.min(1, growthT / Math.max(0.0001, AGI_COMET_GROW_END_T)));
+    const growEase = Math.pow(growNorm, AGI_COMET_GROW_EXP);
+    if (growthT < AGI_COMET_GROW_END_T) {
+        return _strengthArcPickFromSequence(AGI_ARC_SEQ_STREAK_SOLID_RAW, growEase, 1, false);
+    }
+    return (AGI_ARC_SEQ_STREAK_SOLID_RAW && AGI_ARC_SEQ_STREAK_SOLID_RAW.length)
+        ? (AGI_ARC_SEQ_STREAK_SOLID_RAW[AGI_ARC_SEQ_STREAK_SOLID_RAW.length - 1] | 0)
+        : 0;
 }
 
 function _agiCometFrameMetrics(skinId: string, rawFrame: number): EffectFrameMetrics | null {
@@ -3381,6 +3463,18 @@ function _agiCometShouldLog(fx: Sprite, nowMs: number): boolean {
     return true;
 }
 
+function _agiSquareCometShouldLog(fx: Sprite, nowMs: number): boolean {
+    if (!DEBUG_AGI_SQUARE_COMET_LOGS) return false;
+    const throttle = DEBUG_AGI_SQUARE_COMET_LOG_THROTTLE_MS | 0;
+    const now = nowMs | 0;
+    if (throttle > 0) {
+        const last = sprites.readDataNumber(fx, AGI_COMET_LOG_LAST_MS_KEY) | 0;
+        if (last > 0 && (now - last) < throttle) return false;
+    }
+    sprites.setDataNumber(fx, AGI_COMET_LOG_LAST_MS_KEY, now | 0);
+    return true;
+}
+
 function _agiCometLogLine(payload: {
     kind: string;
     heroIndex: number;
@@ -3402,7 +3496,7 @@ function _agiCometLogLine(payload: {
     reelT: number;
     skinId: string;
 }): void {
-    if (!DEBUG_AGI_COMET_LOGS) return;
+    if (!(DEBUG_AGI_COMET_LOGS || DEBUG_AGI_SQUARE_COMET_LOGS)) return;
     const deg = 180 / Math.PI;
     const axis = _agiCometAxisInfo(payload.skinId || STR_ARC_SKIN_ID, payload.rawFrame | 0);
     let line =
@@ -3426,7 +3520,7 @@ function _agiCometLogLine(payload: {
         " pre=" + (payload.preActive ? 1 : 0) +
         " growT=" + payload.growthT.toFixed(3) +
         " reelT=" + payload.reelT.toFixed(3);
-    if (DEBUG_AGI_COMET_LOG_VERBOSE) {
+    if (DEBUG_AGI_COMET_LOG_VERBOSE || DEBUG_AGI_SQUARE_COMET_LOG_VERBOSE) {
         line += " skin=" + (payload.skinId || STR_ARC_SKIN_ID) + " axisSrc=" + (axis.axisSrc || "frame_center");
     }
     // eslint-disable-next-line no-console
@@ -3563,6 +3657,119 @@ function _updateAgilityCometFx(
     if (_agiCometShouldLog(fx, nowMs | 0)) {
         _agiCometLogLine({
             kind: "thrust",
+            heroIndex: heroIndex | 0,
+            ghost: false,
+            rawFrame: rawFrame | 0,
+            frameIdx: frameIdx | 0,
+            moveAngle,
+            rot,
+            tipX,
+            tipY,
+            baseX: anchorX,
+            baseY: anchorY,
+            nx,
+            ny,
+            scale,
+            alpha,
+            preActive,
+            growthT,
+            reelT,
+            skinId: STR_ARC_SKIN_ID
+        });
+    }
+}
+
+function _updateAgilitySquareCometFx(
+    proj: Sprite,
+    heroIndex: number,
+    hero: Sprite,
+    element: number,
+    nx: number,
+    ny: number,
+    anchorX: number,
+    anchorY: number,
+    sBack: number,
+    sFront: number,
+    maxLen: number,
+    growthT: number,
+    reelT: number,
+    preActive: boolean,
+    activateAt: number,
+    nowMs: number,
+    startMs: number,
+    dashMs: number
+): void {
+    const fx = _ensureAgilitySquareCometFx(proj, heroIndex, hero, element | 0, dashMs | 0);
+    if (!fx || (fx.flags & sprites.Flag.Destroyed)) return;
+
+    const preT = _agiCometPreT(preActive, activateAt | 0, nowMs | 0);
+    if (preActive && preT <= 0) {
+        fx.setFlag(SpriteFlag.Invisible, true);
+        return;
+    }
+
+    const tipDist = _agiCometTipDistance(sBack, sFront, maxLen, reelT);
+    const baseTipX = anchorX + nx * tipDist;
+    const baseTipY = anchorY + ny * tipDist;
+
+    const moveAngle = Math.atan2(ny, nx);
+    const rot = _strengthArcNormalizeAngle(moveAngle - AGI_COMET_SW_BASE_ANGLE);
+
+    const growNorm = Math.max(0, Math.min(1, growthT / Math.max(0.0001, AGI_COMET_GROW_END_T)));
+    const growEase = Math.pow(growNorm, AGI_COMET_GROW_EXP);
+
+    let scale = AGI_SQUARE_COMET_SCALE * (0.55 + (0.45 * growEase));
+    if (preActive) scale *= 0.75;
+    if (reelT > 0) {
+        const reelEase = Math.max(0, Math.min(1, reelT));
+        scale *= Math.max(AGI_COMET_END_SCALE, 1 - (0.7 * reelEase));
+    }
+
+    let alpha = preActive ? (AGI_COMET_PREACTIVE_ALPHA * (0.4 + (0.6 * preT))) : (AGI_SQUARE_COMET_ALPHA * (0.6 + (0.4 * growEase)));
+    if (reelT > 0) {
+        const reelEase = Math.max(0, Math.min(1, reelT));
+        alpha *= Math.max(0, 1 - reelEase);
+    }
+    if (alpha <= 0.01 || scale <= 0.01) {
+        fx.setFlag(SpriteFlag.Invisible, true);
+        return;
+    }
+
+    const rawFrame = _agiSquareCometPickRawFrame(preActive, preT, growthT, reelT);
+    const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, rawFrame | 0);
+    const tipOffset = _agiCometTipOffsetForRaw(STR_ARC_SKIN_ID, rawFrame | 0);
+    const fallbackOffset = _agiCometDirOffset(nx, ny);
+    sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0);
+    sprites.setDataNumber(fx, EFFECT_ROT_DATA_KEY, rot);
+    sprites.setDataNumber(fx, EFFECT_SCALE_DATA_KEY, scale);
+    sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, alpha)));
+    sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, 0);
+    sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, 0);
+
+    let tipX = baseTipX;
+    let tipY = baseTipY;
+    if (tipOffset) {
+        const cos = Math.cos(rot);
+        const sin = Math.sin(rot);
+        const offX = (tipOffset.dx * scale);
+        const offY = (tipOffset.dy * scale);
+        const rotX = (offX * cos) - (offY * sin);
+        const rotY = (offX * sin) + (offY * cos);
+        tipX = baseTipX - rotX;
+        tipY = baseTipY - rotY;
+    } else {
+        tipX = baseTipX + (fallbackOffset.dx | 0);
+        tipY = baseTipY + (fallbackOffset.dy | 0);
+    }
+
+    fx.x = tipX;
+    fx.y = tipY;
+    fx.z = (hero.z | 0) + (AGI_SQUARE_COMET_Z_BIAS | 0);
+    fx.setFlag(SpriteFlag.Invisible, false);
+
+    if (_agiSquareCometShouldLog(fx, nowMs | 0)) {
+        _agiCometLogLine({
+            kind: "thrust.square",
             heroIndex: heroIndex | 0,
             ghost: false,
             rawFrame: rawFrame | 0,
@@ -4074,10 +4281,14 @@ const ENABLE_AGI_FX_SEGMENTS = false;
 const AGI_FX_SEG_SPACING_PX = 24;
 const AGI_FX_SEG_MAX = 16;
 const AGI_COMET_FX_KEY = "agiCometFx";
+const AGI_SQUARE_COMET_FX_KEY = "agiSquareCometFx";
 const AGI_COMET_Z_BIAS = 18;
+const AGI_SQUARE_COMET_Z_BIAS = 5000;
 const AGI_COMET_ALPHA = 0.8;
+const AGI_SQUARE_COMET_ALPHA = 1;
 const AGI_COMET_PREACTIVE_ALPHA = 0.28;
 const AGI_COMET_SCALE = 0.95;
+const AGI_SQUARE_COMET_SCALE = 10;
 const AGI_COMET_END_SCALE = 0.3;
 const AGI_COMET_SW_BASE_ANGLE = (3 * Math.PI) / 4; // authored pointing SW
 const AGI_COMET_BASE_DIR_X = -1;
@@ -10212,6 +10423,12 @@ const FOCUS_OUTLINE_DEPTH_BIAS_DEFAULT = 1
 const OBJECTIVE_OUTLINE_COLOR = 7
 const OBJECTIVE_OUTLINE_RADIUS = 2
 const OBJECTIVE_OUTLINE_DEPTH_BIAS = 1
+const SHOPKEEPER_OUTLINE_COLOR = 1
+const SHOPKEEPER_OUTLINE_RADIUS = 2
+const SHOPKEEPER_OUTLINE_DEPTH_BIAS = -2
+const SHOP_STATUE_OUTLINE_COLOR = 1
+const SHOP_STATUE_OUTLINE_RADIUS = 2
+const SHOP_STATUE_OUTLINE_DEPTH_BIAS = -2
 
 let _dunStairsStatueFocusActive = -1
 
@@ -11935,6 +12152,7 @@ function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts):
     } else {
         sprites.setDataNumber(s, EFFECT_ANIM_DELAY_START_MS_DATA_KEY, 0)
     }
+    if (DEBUG_EFFECTS_DUMP_AFTER_N_APPLIES > 0) _heNoteEffectApplied()
 }
 
 let __vfxRegistry: VfxRegistry | null = null
@@ -13004,7 +13222,7 @@ const BOSS_PAD_SINK_DELAY_MS = 0
 const BOSS_PAD_SINK_ANIM_MS = 3000
 const BOSS_PAD_SINK_SHAKE_MS = 1200
 const BOSS_PAD_SINK_SHAKE_INTENSITY = 0.003
-const BOSS_PAD_SINK_DUST_MS = 2600
+const BOSS_PAD_SINK_DUST_MS = 7000
 const BOSS_PAD_SINK_DUST_RADIUS_PX = 120
 const BOSS_PAD_SINK_DUST_RADIUS_VAR_PX = 48
 const BOSS_PAD_SINK_DUST_MIN_RADIUS_PX = 64
@@ -13013,9 +13231,15 @@ const BOSS_PAD_SINK_DUST_ALPHA_BOOST = 0.6
 const BOSS_PAD_SINK_DUST_MASK_ALPHA_SCALE = 0.6
 const BOSS_PAD_SINK_DUST_LAYER_ALPHA = 0.82
 const BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA = 0.35
+const BOSS_PAD_SINK_DUST_FADE_MS = 3000
 const BOSS_PAD_SINK_DUST_SKIN_ID = "smoke 128x128"
-const BOSS_PAD_SINK_DUST_TEX_ID = "waves1 texture 256x256"
-const BOSS_PAD_SINK_DUST_TEX_FPS = 8
+const BOSS_PAD_SINK_DUST_TEX_ID = "waves1 texture grayscale 256x256"
+const BOSS_PAD_SINK_DUST_TEX_FPS = 16
+const BOSS_PAD_SINK_DUST_SMOKE_ANIM = "alive"
+const SMOKE_ANIM_ALIVE_FRAMES = "0,1,2,3,4,5,6,7"
+const SMOKE_ANIM_FADE_FRAMES = "8,9,10,11,12,13,14"
+const SMOKE_ANIM_ALIVE_FPS = 12
+const SMOKE_ANIM_FADE_FPS = 10
 const BOSS_PAD_SINK_DUST_TILE_PX = 96
 const BOSS_PAD_SINK_DUST_TILE_STEP_PCT = 0.6
 const BOSS_PAD_SINK_DUST_COUNT = 50
@@ -13023,6 +13247,33 @@ const BOSS_PAD_SINK_DUST_RISE_PX = 32
 const BOSS_PAD_SINK_DUST_RISE_PORTION = 1
 const BOSS_PAD_SINK_DUST_SPREAD_X_PX = 56
 const BOSS_PAD_SINK_DUST_SPREAD_Y_PX = 32
+const HALL_DUST_TEX_ID = "waves1 texture grayscale 256x256"
+const HALL_POISON_TEX_ID = "waves2 texture grayscale 256x256"
+const HALL_SHOWCASE_TEX_ID = "waves1 texture grayscale 256x256"
+const HALL_DUST_TILE_PX = 256
+const HALL_DUST_TILE_STEP_PCT = 0.85
+const HALL_POISON_TILE_PX = 256
+const HALL_POISON_TILE_STEP_PCT = 0.85
+const HALL_SHOWCASE_TILE_PX = 256
+const HALL_SHOWCASE_TILE_STEP_PCT = 0.85
+const HALL_DUST_ALPHA = 1
+const HALL_POISON_ALPHA = 0.6
+const HALL_SHOWCASE_ALPHA = 1
+const HALL_DUST_MASK_ALPHA = 0.2
+const HALL_POISON_MASK_ALPHA = 0.12
+const HALL_SHOWCASE_MASK_ALPHA = 0.25
+const HALL_CLOUD_WIDTH_PX = 260
+const HALL_CLOUD_HEIGHT_PX = 140
+const HALL_CLOUD_PUFF_COUNT = 18
+const HALL_CLOUD_PUFF_ALPHA = 0.55
+const HALL_CLOUD_PUFF_ALPHA_POISON = 0.25
+const HALL_CLOUD_PUFF_RADIUS_PX = 120
+const HALL_CLOUD_PUFF_RADIUS_VAR_PX = 48
+const HALL_TEX_LOG_EVERY_MS = 500
+const HALL_EFFECTS_LIFESPAN_MS = 0
+const HALL_DEMO_INTRO_MS = 0
+const HALL_DEMO_HOLD_MS = 0
+const HALL_DEMO_FADE_MS = 0
 
 
 
@@ -13043,6 +13294,8 @@ let _dunPadSinkUseDust = false
 let _dunPadSinkDustFx: Sprite[] = []
 let _dunPadSinkDustFillFx: Sprite[] = []
 let _dunPadSinkDustMaskFx: Sprite | null = null
+let _dunEffectsHallFx: Sprite[] = []
+let _dunEffectsHallNativeFx: any[] = []
 
 
 
@@ -13787,12 +14040,23 @@ function _dunSpawnInteractableProp(args: {
     const it = sprites.create(img, (SpriteKind as any).FloorInteractable)
     it.setFlag(SpriteFlag.Ghost, true)
     it.setFlag(SpriteFlag.Invisible, true)
-    it.setPosition(_dunColToX(tileC), _dunRowToY(tileR))
     it.z = 6
 
     sprites.setDataString(it, DECOR_DATA.NAME, name)
     sprites.setDataNumber(it, "decorTileR", tileR)
     sprites.setDataNumber(it, "decorTileC", tileC)
+
+    // Align interactable to the actual decor sprite (respect offsets).
+    const decorOffX = sprites.readDataNumber(decor, "decorOffX") | 0
+    const decorOffY = sprites.readDataNumber(decor, "decorOffY") | 0
+    sprites.setDataNumber(it, "decorOffX", decorOffX | 0)
+    sprites.setDataNumber(it, "decorOffY", decorOffY | 0)
+    if ((decor as any).left != null || (decor as any).top != null) {
+        if ((decor as any).left != null) (it as any).left = ((decor as any).left | 0)
+        if ((decor as any).top != null) (it as any).top = ((decor as any).top | 0)
+    } else {
+        it.setPosition(decor.x | 0, decor.y | 0)
+    }
 
     const action = (args.action && String(args.action).trim())
         ? String(args.action).trim()
@@ -15043,6 +15307,19 @@ function _dunPickThemeForFloor(floorIndex: number, kind: string): void {
     }
 
     const floorKind = String(kind || "")
+    if (floorKind === DUNGEON_KIND_ENTRANCE) {
+        _dunBaseFamily = "ground_black"
+        _dunWallFamily = "chasm_black"
+        _dunThemePalette = "obsidian"
+        _dunFloorTextureSeed = Math.randomRange(1, 0x7fffffff) | 0
+        if (isPhaserRuntime()) {
+            ;(globalThis as any).__floorBaseFamily = _dunBaseFamily
+            ;(globalThis as any).__floorWallFamily = _dunWallFamily
+            ;(globalThis as any).__floorThemePalette = _dunThemePalette
+            ;(globalThis as any).__floorTextureSeed = _dunFloorTextureSeed | 0
+        }
+        return
+    }
     let pool = DUNGEON_THEME_PAIRS.filter(p => !p.kinds || p.kinds.indexOf(floorKind) >= 0)
     if (!pool.length) pool = DUNGEON_THEME_PAIRS.slice()
     if (!pool.length) return
@@ -15279,6 +15556,8 @@ function _dunSpawnExitPad(): void {
     _dunPadSinkDustFx = []
     _dunPadSinkDustFillFx = []
     _dunPadSinkDustMaskFx = null
+    _dunEffectsHallFx = []
+    _dunEffectsHallNativeFx = []
 
     _dunTeleportCommitAtMs = 0
 
@@ -15304,7 +15583,12 @@ function _dunSpawnExitPad(): void {
 
     if (rows > 0 && cols > 0) {
 
-        if (_dunFloorKind === DUNGEON_KIND_SHOP) {
+        if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
+            const padR = Math.max(1, Math.min((rows - 2) | 0, 1)) | 0
+            const padC = _dunDoorClampCenterC(cols | 0) | 0
+            padRow = padR | 0
+            padCol = padC | 0
+        } else if (_dunFloorKind === DUNGEON_KIND_SHOP) {
             const padR = Math.max(1, Math.min((rows - 2) | 0, (SHOP_PAD_ROW_INSET | 0))) | 0
             const padC = _dunDoorClampCenterC(cols | 0) | 0
             padRow = padR | 0
@@ -15319,6 +15603,10 @@ function _dunSpawnExitPad(): void {
         padX = _dunColToX(padCol)
 
         padY = _dunRowToY(padRow)
+
+        if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
+            padX = (padX - 16) | 0
+        }
 
 
 
@@ -15504,6 +15792,8 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
     const earthTint = earthPalette.length
         ? (earthPalette[Math.idiv(Math.max(0, earthPalette.length - 1), 2) | 0] | 0)
         : 0
+    const fillSkinId = _hallEnsurePaletteEffect({ texId: BOSS_PAD_SINK_DUST_TEX_ID, paletteKey: "earth" } as any)
+    const fillTint = (fillSkinId === BOSS_PAD_SINK_DUST_TEX_ID) ? (earthTint | 0) : 0
     const regionMinX = (baseX - halfW) | 0
     const regionMaxX = (baseX + halfW) | 0
     const regionMinY = (baseY + halfH + edgePad) | 0
@@ -15539,13 +15829,17 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
     }
     _dunPadSinkDustMaskFx = null
 
+    const fadeMs = DEBUG_BOSS_PAD_DUST_PERSIST ? 0 : Math.max(0, BOSS_PAD_SINK_DUST_FADE_MS | 0)
+    const lifeMs = (!DEBUG_BOSS_PAD_DUST_PERSIST && (durationMs | 0) > 0)
+        ? ((durationMs | 0) + (fadeMs | 0))
+        : 0
     const maskFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
     maskFx.setFlag(SpriteFlag.Ghost, true)
     maskFx.x = (regionMinX + Math.idiv(regionW, 2)) | 0
     maskFx.y = (regionMinY + Math.idiv(regionH, 2)) | 0
     maskFx.z = 999
-    if (!DEBUG_BOSS_PAD_DUST_PERSIST && durationMs > 0) maskFx.lifespan = durationMs | 0
-    applyEffectToSprite(maskFx, BOSS_PAD_SINK_DUST_SKIN_ID, {
+    if (lifeMs > 0) maskFx.lifespan = lifeMs | 0
+    const maskOpts: EffectApplyOpts = {
         alpha: DEBUG_BOSS_PAD_DUST_PERSIST ? Math.max(0.35, BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA) : BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA,
         scale: layerMaskScale,
         blend: "normal",
@@ -15554,10 +15848,14 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
         yoyo: true,
         fps: 8,
         mode: "full"
-    })
+    }
+    _applySmokeAnim(maskOpts, BOSS_PAD_SINK_DUST_SMOKE_ANIM as any)
+    if (earthTint) maskOpts.tint = earthTint | 0
+    applyEffectToSprite(maskFx, BOSS_PAD_SINK_DUST_SKIN_ID, maskOpts)
     sprites.setDataNumber(maskFx, "__padDustBaseX", maskFx.x | 0)
     sprites.setDataNumber(maskFx, "__padDustBaseY", maskFx.y | 0)
     sprites.setDataNumber(maskFx, "__padDustRisePx", BOSS_PAD_SINK_DUST_RISE_PX | 0)
+    _padDustTagFade(maskFx, maskOpts.alpha || 0, nowMs | 0, durationMs | 0, fadeMs | 0)
     _dunPadSinkDustMaskFx = maskFx
 
     for (let y = regionMinY; y <= regionMaxY; y += stepPx) {
@@ -15567,8 +15865,8 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
             fillFx.x = x | 0
             fillFx.y = y | 0
             fillFx.z = 1000
-            if (!DEBUG_BOSS_PAD_DUST_PERSIST && durationMs > 0) fillFx.lifespan = durationMs | 0
-            applyEffectToSprite(fillFx, BOSS_PAD_SINK_DUST_TEX_ID, {
+            if (lifeMs > 0) fillFx.lifespan = lifeMs | 0
+            const fillOpts: EffectApplyOpts = {
                 alpha: DEBUG_BOSS_PAD_DUST_PERSIST ? 1 : BOSS_PAD_SINK_DUST_LAYER_ALPHA,
                 scale: fillScale,
                 blend: "normal",
@@ -15577,12 +15875,14 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
                 yoyo: true,
                 fps: BOSS_PAD_SINK_DUST_TEX_FPS,
                 mode: "projectile",
-                maskSprite: maskFx,
-                tint: earthTint
-            })
+                maskSprite: maskFx
+            }
+            if (fillTint) fillOpts.tint = fillTint | 0
+            applyEffectToSprite(fillFx, fillSkinId, fillOpts)
             sprites.setDataNumber(fillFx, "__padDustBaseX", fillFx.x | 0)
             sprites.setDataNumber(fillFx, "__padDustBaseY", fillFx.y | 0)
             sprites.setDataNumber(fillFx, "__padDustRisePx", BOSS_PAD_SINK_DUST_RISE_PX | 0)
+            _padDustTagFade(fillFx, fillOpts.alpha || 0, nowMs | 0, durationMs | 0, fadeMs | 0)
             _dunPadSinkDustFillFx.push(fillFx)
         }
     }
@@ -15609,8 +15909,8 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
         puffFx.x = (baseX + ox) | 0
         puffFx.y = (baseY + oy) | 0
         puffFx.z = 1001
-        if (!DEBUG_BOSS_PAD_DUST_PERSIST && durationMs > 0) puffFx.lifespan = durationMs | 0
-        applyEffectToSprite(puffFx, BOSS_PAD_SINK_DUST_SKIN_ID, {
+        if (lifeMs > 0) puffFx.lifespan = lifeMs | 0
+        const puffOpts: EffectApplyOpts = {
             alpha: maskAlpha,
             scale: maskScale,
             blend: "normal",
@@ -15619,11 +15919,15 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
             yoyo: true,
             fps: 8,
             mode: "full"
-        })
+        }
+        _applySmokeAnim(puffOpts, BOSS_PAD_SINK_DUST_SMOKE_ANIM as any)
+        if (earthTint) puffOpts.tint = earthTint | 0
+        applyEffectToSprite(puffFx, BOSS_PAD_SINK_DUST_SKIN_ID, puffOpts)
         const rise = Math.max(8, (BOSS_PAD_SINK_DUST_RISE_PX | 0) + (Math.randomRange(-6, 6) | 0)) | 0
         sprites.setDataNumber(puffFx, "__padDustBaseX", puffFx.x | 0)
         sprites.setDataNumber(puffFx, "__padDustBaseY", puffFx.y | 0)
         sprites.setDataNumber(puffFx, "__padDustRisePx", rise | 0)
+        _padDustTagFade(puffFx, puffOpts.alpha || 0, nowMs | 0, durationMs | 0, fadeMs | 0)
         _dunPadSinkDustFx.push(puffFx)
     }
 }
@@ -15666,6 +15970,7 @@ function _dunTickPadSink(nowMs: number): void {
                 }
                 fx.x = baseX | 0
                 fx.y = y | 0
+                _padDustApplyFade(fx, now | 0)
                 _dunPadSinkDustFx[write++] = fx
             }
             if (write < _dunPadSinkDustFx.length) _dunPadSinkDustFx.length = write
@@ -15680,6 +15985,7 @@ function _dunTickPadSink(nowMs: number): void {
                 }
                 _dunPadSinkDustMaskFx.x = baseX | 0
                 _dunPadSinkDustMaskFx.y = y | 0
+                _padDustApplyFade(_dunPadSinkDustMaskFx, now | 0)
             }
             if (_dunPadSinkDustFillFx && _dunPadSinkDustFillFx.length > 0) {
                 let fillWrite = 0
@@ -15696,6 +16002,7 @@ function _dunTickPadSink(nowMs: number): void {
                     }
                     fx.x = baseX | 0
                     fx.y = y | 0
+                    _padDustApplyFade(fx, now | 0)
                     _dunPadSinkDustFillFx[fillWrite++] = fx
                 }
                 if (fillWrite < _dunPadSinkDustFillFx.length) _dunPadSinkDustFillFx.length = fillWrite
@@ -15755,9 +16062,39 @@ function _dunTickPadSink(nowMs: number): void {
     if (DEBUG_PAD_SINK_PROP_LOGS) _dunPadSinkPropLogReset(_dunPadSinkAnimStartMs | 0, _dunPadSinkAnimUntilMs | 0)
     if (_dunPadSinkUseDust && !_dunPadSinkDustSpawned) {
         _dunPadSinkDustSpawned = true
-        const dustMs = Math.max(600, Math.min(6000, (_dunPadSinkAnimMs | 0) + 600)) | 0
+        const dustMs = Math.max(2000, (BOSS_PAD_SINK_DUST_MS | 0)) | 0
         _dunSpawnPadSinkDust(now | 0, dustMs | 0)
     }
+}
+
+function _padDustTagFade(
+    fx: Sprite,
+    baseAlpha: number,
+    startMs: number,
+    durationMs: number,
+    fadeMs: number
+): void {
+    if (!fx || (fx.flags & sprites.Flag.Destroyed)) return
+    if ((fadeMs | 0) <= 0 || (durationMs | 0) <= 0) return
+    const fadeStart = ((startMs | 0) + (durationMs | 0)) | 0
+    sprites.setDataNumber(fx, "__padDustFadeStart", fadeStart | 0)
+    sprites.setDataNumber(fx, "__padDustFadeMs", fadeMs | 0)
+    sprites.setDataNumber(fx, "__padDustBaseAlpha", Number.isFinite(baseAlpha) ? baseAlpha : 0)
+}
+
+function _padDustApplyFade(fx: Sprite, nowMs: number): void {
+    if (!fx || (fx.flags & sprites.Flag.Destroyed)) return
+    const fadeStart = sprites.readDataNumber(fx, "__padDustFadeStart") | 0
+    const fadeMs = sprites.readDataNumber(fx, "__padDustFadeMs") | 0
+    if ((fadeStart | 0) <= 0 || (fadeMs | 0) <= 0) return
+    const baseAlpha = sprites.readDataNumber(fx, "__padDustBaseAlpha")
+    if (nowMs < (fadeStart | 0)) {
+        sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, baseAlpha)))
+        return
+    }
+    const t = Math.max(0, Math.min(1, (nowMs - (fadeStart | 0)) / Math.max(1, fadeMs | 0)))
+    const a = Math.max(0, Math.min(1, baseAlpha * (1 - t)))
+    sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, a)
 }
 
 function _dunSpawnDoorExit(nowMs: number): void {
@@ -16783,6 +17120,9 @@ function _dunEnterFloor_initState(nextIndex: number, kind: string, nowMs: number
     if (DEBUG_FORCE_HALL_OF_ENEMIES) {
         nextKind = DUNGEON_KIND_HALL
     }
+    if (DEBUG_EFFECTS_HALL_ON_START && (next | 0) <= 0) {
+        nextKind = DUNGEON_KIND_HALL
+    }
 
 
 
@@ -16924,9 +17264,20 @@ function _dunEnterFloor_spawnCoordsAroundPad(padX: number, padY: number): number
         }
     }
 
+    if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
+        const rows = _dunWorldRows() | 0
+        const cols = _dunWorldCols() | 0
+        if (rows > 0 && cols > 0) {
+            const centerC = Math.idiv(cols | 0, 2) | 0
+            baseX = _dunColToX(centerC | 0) | 0
+            baseY = _dunRowToY(Math.max(1, (rows - 2) | 0)) | 0
+            spawnYOffsetPx = 0
+        }
+    }
+
     const baseY2 = (baseY + spawnYOffsetPx) | 0
 
-    const offset = 28
+    const offset = (_dunFloorKind === DUNGEON_KIND_ENTRANCE) ? 16 : 28
 
     return [
 
@@ -17159,6 +17510,26 @@ function _dunEnterFloor_spawnStarterChest(nowMs: number): void {
 
     const starterOffX = -16
     const starterOffY = 48
+
+    if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
+        const doorLeft = Math.max(0, Math.idiv((cols - 4) | 0, 2)) | 0
+        const anchorR = Math.max(1, Math.min(rows - 2, 3)) | 0
+        const anchorC = Math.max(1, Math.min(cols - 2, (doorLeft + 1) | 0)) | 0
+        const chest = _dunSpawnChest(nowMs, _dunColToX(anchorC), _dunRowToY(anchorR), "chest_rainbow", starterOffX, starterOffY)
+        if (chest && !(chest.flags & sprites.Flag.Destroyed)) {
+            _dunStarterRelicTileR = sprites.readDataNumber(chest, "decorTileR") | 0
+            _dunStarterRelicTileC = sprites.readDataNumber(chest, "decorTileC") | 0
+            sprites.setDataString(chest, INTERACT_DATA.CHEST_ROLE, "starter_relic")
+            _dunConfigureChestRelicOffer(chest, {
+                poolIds: _relicStarterOfferPool(),
+                title: "Starter Relic",
+                flavorText: "Choose your first relic.",
+                theme: "starter",
+                count: RELIC_STARTER_OFFER_COUNT | 0,
+            })
+            return
+        }
+    }
 
     if (padR >= 0 && padC >= 0) {
         // Place the starter relic chest offset from the pad's bottom-left tile.
@@ -17528,16 +17899,17 @@ function _dunEnterFloor_spawnMemoryBook(nowMs: number): void {
         return true
     }
 
-    let anchorR = Math.max(1, Math.min(rows - 1, padR + 3)) | 0
+    const entrancePadBoost = (_dunFloorKind === DUNGEON_KIND_ENTRANCE) ? 1 : 0
+    let anchorR = Math.max(1, Math.min(rows - 1, (padR + 3 + entrancePadBoost) | 0)) | 0
     let anchorC = Math.max(0, Math.min(cols - 2, padC + 2)) | 0
 
     const candidates = [
-        { r: (padR + 3) | 0, c: (padC + 2) | 0 },
-        { r: (padR + 3) | 0, c: (padC + 1) | 0 },
-        { r: (padR + 4) | 0, c: (padC + 2) | 0 },
-        { r: (padR + 4) | 0, c: (padC + 1) | 0 },
-        { r: (padR + 3) | 0, c: (padC + 3) | 0 },
-        { r: (padR + 2) | 0, c: (padC + 2) | 0 },
+        { r: (padR + 3 + entrancePadBoost) | 0, c: (padC + 2) | 0 },
+        { r: (padR + 3 + entrancePadBoost) | 0, c: (padC + 1) | 0 },
+        { r: (padR + 4 + entrancePadBoost) | 0, c: (padC + 2) | 0 },
+        { r: (padR + 4 + entrancePadBoost) | 0, c: (padC + 1) | 0 },
+        { r: (padR + 3 + entrancePadBoost) | 0, c: (padC + 3) | 0 },
+        { r: (padR + 2 + entrancePadBoost) | 0, c: (padC + 2) | 0 },
     ]
 
     let found = false
@@ -18650,6 +19022,8 @@ function _dunEnterFloor_setupEntranceFloor(nowMs: number): void {
 
     _dunSetPadPowered(true)
 
+    _dunStampEntranceTower()
+
     _dunRuneSetName("teleport_rune")
     _dunEnterFloor_spawnStarterChest(nowMs)
     _dunEnterFloor_spawnStarterShrine()
@@ -18778,8 +19152,507 @@ function _dunEnterFloor_setupHallFloor(nowMs: number): void {
     _dunObjectiveDone = true
     _dunSetPadPowered(true)
 
+    if (DEBUG_EFFECTS_HALL_ON_START) {
+        _dunEnterFloor_spawnEffectsHall(nowMs | 0)
+        return
+    }
+
     _dunEnterFloor_spawnHallEnemies()
 }
+
+function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
+    void nowMs
+    if (_dunEffectsHallFx && _dunEffectsHallFx.length > 0) {
+        for (let i = 0; i < _dunEffectsHallFx.length; i++) {
+            const fx = _dunEffectsHallFx[i]
+            if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.destroy()
+        }
+        _dunEffectsHallFx = []
+    }
+    if (_dunEffectsHallNativeFx && _dunEffectsHallNativeFx.length > 0) {
+        for (let i = 0; i < _dunEffectsHallNativeFx.length; i++) {
+            const item = _dunEffectsHallNativeFx[i]
+            if (item && item.sprite && typeof item.sprite.destroy === "function") {
+                try { item.sprite.destroy(); } catch { }
+            }
+            if (item && item.timer && typeof item.timer.remove === "function") {
+                try { item.timer.remove(); } catch { }
+            }
+        }
+        _dunEffectsHallNativeFx = []
+    }
+
+    if ((_dunPadTileR | 0) < 0 || (_dunPadTileC | 0) < 0) return
+    const baseX = _dunColToX(_dunPadTileC | 0) | 0
+    const baseY = _dunRowToY(_dunPadTileR | 0) | 0
+    const leftX = (baseX - 140) | 0
+    const rightX = (baseX + 140) | 0
+    const y = (baseY + 40) | 0
+    const yDemo = (baseY + 160) | 0
+    const yShow = (baseY + 280) | 0
+    const yStatic = (baseY + 420) | 0
+
+    _dunSpawnDebugCloud(leftX, y, {
+        texId: HALL_DUST_TEX_ID,
+        tint: _pickEnemyPaletteMid("earth"),
+        tilePx: HALL_DUST_TILE_PX | 0,
+        stepPct: HALL_DUST_TILE_STEP_PCT,
+        alpha: HALL_DUST_ALPHA,
+        maskAlpha: HALL_DUST_MASK_ALPHA,
+        puffAlpha: HALL_CLOUD_PUFF_ALPHA,
+        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+        paletteKey: "earth",
+        smokeAnim: "alive"
+    })
+
+    _dunSpawnDebugCloud(rightX, y, {
+        texId: HALL_POISON_TEX_ID,
+        tint: _pickEnemyPaletteMid("poison"),
+        tilePx: HALL_POISON_TILE_PX | 0,
+        stepPct: HALL_POISON_TILE_STEP_PCT,
+        alpha: HALL_POISON_ALPHA,
+        maskAlpha: HALL_POISON_MASK_ALPHA,
+        puffAlpha: HALL_CLOUD_PUFF_ALPHA_POISON,
+        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+        paletteKey: "poison",
+        smokeAnim: "alive"
+    })
+
+    _dunSpawnDebugCloud(leftX, yDemo, {
+        texId: HALL_DUST_TEX_ID,
+        tint: _pickEnemyPaletteMid("earth"),
+        tilePx: HALL_DUST_TILE_PX | 0,
+        stepPct: HALL_DUST_TILE_STEP_PCT,
+        alpha: HALL_DUST_ALPHA,
+        maskAlpha: HALL_DUST_MASK_ALPHA,
+        puffAlpha: HALL_CLOUD_PUFF_ALPHA,
+        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+        demoIntroMs: HALL_DEMO_INTRO_MS | 0,
+        demoHoldMs: HALL_DEMO_HOLD_MS | 0,
+        demoFadeMs: HALL_DEMO_FADE_MS | 0,
+        paletteKey: "earth",
+        smokeAnim: "alive"
+    })
+
+    _dunSpawnDebugCloud(rightX, yDemo, {
+        texId: HALL_POISON_TEX_ID,
+        tint: _pickEnemyPaletteMid("poison"),
+        tilePx: HALL_POISON_TILE_PX | 0,
+        stepPct: HALL_POISON_TILE_STEP_PCT,
+        alpha: HALL_POISON_ALPHA,
+        maskAlpha: HALL_POISON_MASK_ALPHA,
+        puffAlpha: HALL_CLOUD_PUFF_ALPHA_POISON,
+        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+        demoIntroMs: HALL_DEMO_INTRO_MS | 0,
+        demoHoldMs: HALL_DEMO_HOLD_MS | 0,
+        demoFadeMs: HALL_DEMO_FADE_MS | 0,
+        paletteKey: "poison",
+        smokeAnim: "alive"
+    })
+
+    _dunSpawnDebugCloud(baseX, yShow, {
+        texId: HALL_SHOWCASE_TEX_ID,
+        tint: 0xffffff,
+        tilePx: HALL_SHOWCASE_TILE_PX | 0,
+        stepPct: HALL_SHOWCASE_TILE_STEP_PCT,
+        alpha: HALL_SHOWCASE_ALPHA,
+        maskAlpha: 1,
+        puffAlpha: 1,
+        puffCount: 1,
+        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+        smokeAnim: "alive"
+    })
+
+    _dunSpawnDebugCloud(baseX, yStatic, {
+        texId: HALL_DUST_TEX_ID,
+        tint: _pickEnemyPaletteMid("earth"),
+        tilePx: HALL_DUST_TILE_PX | 0,
+        stepPct: HALL_DUST_TILE_STEP_PCT,
+        alpha: HALL_DUST_ALPHA,
+        maskAlpha: HALL_DUST_MASK_ALPHA,
+        puffAlpha: HALL_CLOUD_PUFF_ALPHA,
+        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+        lifespanMs: 0,
+        paletteKey: "earth",
+        noDemo: true,
+        smokeAnim: "alive"
+    })
+
+    if (DEBUG_EFFECTS_DUMP_ON_HALL) _heQueueEffectsDump("effects-hall", 1200)
+
+}
+
+function _pickEnemyPaletteMid(key: "earth" | "poison"): number {
+    const palette = (ENEMY_EFFECT_PALETTES as any)?.[key] as number[] | undefined
+    if (!palette || !palette.length) return 0
+    return palette[Math.idiv(Math.max(0, palette.length - 1), 2) | 0] | 0
+}
+
+type DebugCloudConfig = {
+    texId: string
+    tint: number
+    tilePx: number
+    stepPct: number
+    alpha: number
+    maskAlpha: number
+    puffAlpha: number
+    puffCount: number
+    lifespanMs?: number
+    demoIntroMs?: number
+    demoHoldMs?: number
+    demoFadeMs?: number
+    paletteKey?: "earth" | "poison"
+    noDemo?: boolean
+    smokeAnim?: "alive" | "fade" | "static"
+}
+
+function _applySmokeAnim(opts: EffectApplyOpts, mode: "alive" | "fade" | "static"): void {
+    if (!opts) return
+    const m = (mode || "alive") as string
+    if (m === "static") {
+        opts.frameIndex = 0
+        opts.frameIndexIsRaw = true
+        opts.repeat = 0
+        opts.yoyo = false
+        return
+    }
+    if (m === "fade") {
+        opts.frameList = SMOKE_ANIM_FADE_FRAMES
+        opts.frameListIsRaw = true
+        opts.repeat = 0
+        opts.yoyo = false
+        opts.fps = SMOKE_ANIM_FADE_FPS
+        return
+    }
+    opts.frameList = SMOKE_ANIM_ALIVE_FRAMES
+    opts.frameListIsRaw = true
+    opts.repeat = -1
+    opts.yoyo = true
+    opts.fps = SMOKE_ANIM_ALIVE_FPS
+}
+
+function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): void {
+    if (!BOSS_PAD_SINK_DUST_SKIN_ID) return
+    if (!cfg || !cfg.texId) return
+    const cloudTint = (cfg.tint | 0) || 0
+    const regionW = Math.max(80, HALL_CLOUD_WIDTH_PX | 0) | 0
+    const regionH = Math.max(60, HALL_CLOUD_HEIGHT_PX | 0) | 0
+    const regionMinX = (cx - Math.idiv(regionW, 2)) | 0
+    const regionMaxX = (cx + Math.idiv(regionW, 2)) | 0
+    const regionMinY = (cy - Math.idiv(regionH, 2)) | 0
+    const regionMaxY = (cy + Math.idiv(regionH, 2)) | 0
+    const tilePx = Math.max(32, cfg.tilePx | 0) | 0
+    const maskRadius = Math.max(Math.idiv(regionW, 2) | 0, Math.idiv(regionH, 2) | 0) + 18
+    const maskScale = _effectPickScaleForRadius(BOSS_PAD_SINK_DUST_SKIN_ID, "", maskRadius | 0)
+
+    const maskFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+    maskFx.setFlag(SpriteFlag.Ghost, true)
+    maskFx.x = cx | 0
+    maskFx.y = cy | 0
+    maskFx.z = 1000
+    if ((cfg.lifespanMs | 0) > 0) maskFx.lifespan = cfg.lifespanMs | 0
+    const maskOpts: EffectApplyOpts = {
+        alpha: Math.max(0.05, Math.min(1, cfg.maskAlpha)),
+        scale: maskScale,
+        blend: "normal",
+        forceTop: true,
+        repeat: -1,
+        fps: 8,
+        mode: "full"
+    }
+    _applySmokeAnim(maskOpts, (cfg.smokeAnim || "alive") as any)
+    if (cloudTint) maskOpts.tint = cloudTint | 0
+    applyEffectToSprite(maskFx, BOSS_PAD_SINK_DUST_SKIN_ID, maskOpts)
+    if (!cfg.noDemo) _hallDemoTag(maskFx, cfg.maskAlpha, cfg)
+    _dunEffectsHallFx.push(maskFx)
+
+    _dunSpawnHallEffectFill(cx | 0, cy | 0, regionW | 0, regionH | 0, cfg, maskFx)
+
+    const puffCount = Math.max(0, cfg.puffCount | 0) | 0
+    for (let i = 0; i < puffCount; i++) {
+        const ox = Math.randomRange(-Math.idiv(regionW, 2), Math.idiv(regionW, 2)) | 0
+        const oy = Math.randomRange(-Math.idiv(regionH, 2), Math.idiv(regionH, 2)) | 0
+        const radius = Math.max(
+            48,
+            (HALL_CLOUD_PUFF_RADIUS_PX | 0) + (Math.randomRange(-HALL_CLOUD_PUFF_RADIUS_VAR_PX, HALL_CLOUD_PUFF_RADIUS_VAR_PX) | 0)
+        ) | 0
+        const scale = _effectPickScaleForRadius(BOSS_PAD_SINK_DUST_SKIN_ID, "", radius | 0)
+        const puffFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+        puffFx.setFlag(SpriteFlag.Ghost, true)
+        puffFx.x = (cx + ox) | 0
+        puffFx.y = (cy + oy) | 0
+        puffFx.z = 1002
+        if ((cfg.lifespanMs | 0) > 0) puffFx.lifespan = cfg.lifespanMs | 0
+        const puffOpts: EffectApplyOpts = {
+            alpha: Math.max(0.05, Math.min(1, cfg.puffAlpha)),
+            scale,
+            blend: "normal",
+            forceTop: true,
+            repeat: -1,
+            fps: 8,
+            mode: "full"
+        }
+        _applySmokeAnim(puffOpts, (cfg.smokeAnim || "alive") as any)
+        if (cloudTint) puffOpts.tint = cloudTint | 0
+        applyEffectToSprite(puffFx, BOSS_PAD_SINK_DUST_SKIN_ID, puffOpts)
+        if (!cfg.noDemo) _hallDemoTag(puffFx, cfg.puffAlpha, cfg)
+        _dunEffectsHallFx.push(puffFx)
+    }
+}
+
+function _dunSpawnHallEffectFill(
+    cx: number,
+    cy: number,
+    regionW: number,
+    regionH: number,
+    cfg: DebugCloudConfig,
+    maskFx: Sprite
+): void {
+    const skinId = _hallEnsurePaletteEffect(cfg)
+    const fillFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+    fillFx.setFlag(SpriteFlag.Ghost, true)
+    fillFx.x = cx | 0
+    fillFx.y = cy | 0
+    fillFx.z = 1001
+    if ((cfg.lifespanMs | 0) > 0) fillFx.lifespan = cfg.lifespanMs | 0
+    const fitRadius = Math.max(regionW | 0, regionH | 0) >> 1
+    const useTint = (skinId === cfg.texId) ? (cfg.tint | 0) : 0
+    const fillOpts: EffectApplyOpts = {
+        alpha: Math.max(0.02, Math.min(1, cfg.alpha)),
+        fitRadiusPx: Math.max(16, fitRadius | 0),
+        blend: "normal",
+        forceTop: true,
+        repeat: -1,
+        fps: BOSS_PAD_SINK_DUST_TEX_FPS,
+        mode: "projectile",
+        maskSprite: maskFx
+    }
+    if (useTint) fillOpts.tint = useTint | 0
+    applyEffectToSprite(fillFx, skinId, fillOpts)
+    if (!cfg.noDemo) _hallDemoTag(fillFx, cfg.alpha, cfg)
+    _dunEffectsHallFx.push(fillFx)
+    if (DEBUG_EFFECTS_HALL_LOGS) {
+        console.log(
+            "[VFX][HALL][FILL]" +
+            " texId=" + cfg.texId +
+            " skinId=" + skinId +
+            " fps=" + (BOSS_PAD_SINK_DUST_TEX_FPS | 0) +
+            " fitR=" + (fitRadius | 0) +
+            " alpha=" + Number(cfg.alpha).toFixed(2) +
+            " tint=0x" + ((cfg.tint | 0) >>> 0).toString(16).padStart(6, "0")
+        )
+    }
+}
+
+const _hallPaletteCache: Record<string, string> = Object.create(null)
+
+function _hallEnsurePaletteEffect(cfg: DebugCloudConfig): string {
+    const baseId = String(cfg.texId || "").trim()
+    if (!baseId) return baseId
+    const paletteKey = cfg.paletteKey || ""
+    if (!paletteKey) return baseId
+    const cacheKey = `${baseId}|${paletteKey}`
+    if (_hallPaletteCache[cacheKey]) return _hallPaletteCache[cacheKey]
+
+    const atlas = _getEffectAtlasAny()
+    if (!atlas) return baseId
+    const resolved = _resolveEffectEntry(atlas, baseId, "")
+    if (!resolved) return baseId
+    const palette = (ENEMY_EFFECT_PALETTES as any)?.[paletteKey] as number[] | undefined
+    if (!palette || !palette.length) return baseId
+
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    if (!sc || !sc.textures || !sc.textures.exists(resolved.textureKey)) return baseId
+
+    const tex = sc.textures.get(resolved.textureKey)
+    const frames = resolved.frameIndices && resolved.frameIndices.length ? resolved.frameIndices.slice() : []
+    if (!frames.length) return baseId
+    const fw = resolved.frameW | 0
+    const fh = resolved.frameH | 0
+    if (fw <= 0 || fh <= 0) return baseId
+
+    const outKey = `effects.hallpal.${baseId.replace(/\\s+/g, "_").toLowerCase()}_${paletteKey}`
+    const canvasTex = sc.textures.createCanvas(outKey, fw * frames.length, fh)
+    if (!canvasTex) return baseId
+    const ctx = canvasTex.getContext()
+    if (!ctx) return baseId
+
+    const srcCanvas = document.createElement("canvas")
+    srcCanvas.width = fw
+    srcCanvas.height = fh
+    const srcCtx = srcCanvas.getContext("2d")
+    if (!srcCtx) return baseId
+
+    const colors = palette.slice()
+    const maxIdx = Math.max(0, colors.length - 1)
+
+    for (let i = 0; i < frames.length; i++) {
+        const frameId = frames[i] | 0
+        const f = tex.get(frameId)
+        if (!f || !f.source || !f.source.image) continue
+        const img = f.source.image as HTMLImageElement | HTMLCanvasElement
+        const sx = (f.cutX | 0)
+        const sy = (f.cutY | 0)
+        srcCtx.clearRect(0, 0, fw, fh)
+        try { srcCtx.drawImage(img, sx, sy, fw, fh, 0, 0, fw, fh) } catch { }
+        const imgData = srcCtx.getImageData(0, 0, fw, fh)
+        const data = imgData.data
+        for (let p = 0; p < data.length; p += 4) {
+            const a = data[p + 3]
+            if (a === 0) continue
+            const r = data[p]
+            const g2 = data[p + 1]
+            const b = data[p + 2]
+            const lum = Math.round((r * 0.299) + (g2 * 0.587) + (b * 0.114))
+            const idx = maxIdx ? Math.round((lum / 255) * maxIdx) : 0
+            const col = colors[idx] | 0
+            data[p] = (col >> 16) & 0xff
+            data[p + 1] = (col >> 8) & 0xff
+            data[p + 2] = col & 0xff
+        }
+        srcCtx.putImageData(imgData, 0, 0)
+        ctx.drawImage(srcCanvas, i * fw, 0)
+    }
+
+    canvasTex.refresh()
+    const newId = `${baseId}__hallpal_${paletteKey}`
+    ;(atlas as any)[newId] = {
+        id: newId,
+        textureKey: outKey,
+        url: "",
+        frameIndices: frames.slice(),
+        frameRate: resolved.frameRate,
+        repeat: resolved.repeat,
+        frameW: fw,
+        frameH: fh,
+        palette: resolved.palette,
+        collisionBounds: resolved.collisionBounds
+    }
+    _hallPaletteCache[cacheKey] = newId
+    return newId
+}
+
+function _hallDemoTag(fx: Sprite, baseAlpha: number, cfg: DebugCloudConfig): void {
+    const intro = cfg.demoIntroMs | 0
+    const hold = cfg.demoHoldMs | 0
+    const fade = cfg.demoFadeMs | 0
+    if ((intro | 0) <= 0 && (fade | 0) <= 0 && (hold | 0) <= 0) {
+        sprites.setDataNumber(fx, "__hallDemoStart", 0)
+        sprites.setDataNumber(fx, "__hallDemoIntro", 0)
+        sprites.setDataNumber(fx, "__hallDemoHold", 0)
+        sprites.setDataNumber(fx, "__hallDemoFade", 0)
+        sprites.setDataNumber(fx, "__hallDemoAlpha", Number.isFinite(baseAlpha) ? baseAlpha : 0)
+        sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Number.isFinite(baseAlpha) ? baseAlpha : 0)
+        return
+    }
+    sprites.setDataNumber(fx, "__hallDemoStart", (game.runtime() | 0))
+    sprites.setDataNumber(fx, "__hallDemoIntro", intro | 0)
+    sprites.setDataNumber(fx, "__hallDemoHold", hold | 0)
+    sprites.setDataNumber(fx, "__hallDemoFade", fade | 0)
+    sprites.setDataNumber(fx, "__hallDemoAlpha", Number.isFinite(baseAlpha) ? baseAlpha : 0)
+}
+
+function _dunSpawnHallTiledLayer(
+    cx: number,
+    cy: number,
+    regionW: number,
+    regionH: number,
+    tilePx: number,
+    cfg: DebugCloudConfig,
+    maskFx: Sprite
+): void {
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    if (!sc || !sc.textures) return
+    const atlas = _getEffectAtlasAny()
+    if (!atlas) return
+    const resolved = _resolveEffectEntry(atlas, cfg.texId, "")
+    if (!resolved) return
+    const texKey = resolved.textureKey
+    if (!texKey || !sc.textures.exists(texKey)) return
+    const frameIndex = resolved.frameIndices && resolved.frameIndices.length ? resolved.frameIndices[0] : 0
+    const tileSprite = sc.add.tileSprite(cx, cy, regionW, regionH, texKey, frameIndex)
+    tileSprite.setOrigin(0.5, 0.5)
+    tileSprite.setAlpha(Math.max(0.02, Math.min(1, cfg.alpha)))
+    if ((cfg.tint | 0) === 0) tileSprite.setTint(0xffffff)
+    else tileSprite.setTint(cfg.tint | 0)
+    tileSprite.setDepth(1001)
+    if (typeof tileSprite.setBlendMode === "function") tileSprite.setBlendMode(0)
+    if (DEBUG_EFFECTS_HALL_LOGS) {
+        const frameCount = resolved.frameIndices ? (resolved.frameIndices.length | 0) : 0
+        console.log(
+            "[VFX][HALL][TILE]" +
+            " texId=" + cfg.texId +
+            " texKey=" + texKey +
+            " frame=" + (frameIndex | 0) +
+            " frames=" + (frameCount | 0) +
+            " fps=" + (BOSS_PAD_SINK_DUST_TEX_FPS | 0) +
+            " tilePx=" + (tilePx | 0) +
+            " size=" + (regionW | 0) + "x" + (regionH | 0) +
+            " alpha=" + Number(cfg.alpha).toFixed(2) +
+            " tint=0x" + ((cfg.tint | 0) >>> 0).toString(16).padStart(6, "0")
+        )
+    }
+
+    const fw = resolved.frameW | 0
+    const fh = resolved.frameH | 0
+    if (fw > 0 && fh > 0) {
+        const sx = (tilePx | 0) / fw
+        const sy = (tilePx | 0) / fh
+        if (Number.isFinite(sx) && Number.isFinite(sy) && typeof tileSprite.setTileScale === "function") {
+            tileSprite.setTileScale(sx, sy)
+        }
+    }
+
+    const maskNative = (maskFx as any).native
+    if (maskNative && typeof maskNative.createBitmapMask === "function") {
+        try {
+            const mask = maskNative.createBitmapMask()
+            tileSprite.setMask(mask)
+        } catch { }
+    }
+
+    let timer: any = null
+    const fps = Math.max(1, BOSS_PAD_SINK_DUST_TEX_FPS | 0) | 0
+    const frames = resolved.frameIndices && resolved.frameIndices.length ? resolved.frameIndices.slice() : []
+    if (frames.length > 1 && sc.time && typeof sc.time.addEvent === "function") {
+        let idx = 0
+        timer = sc.time.addEvent({
+            delay: Math.max(10, Math.round(1000 / fps)),
+            loop: true,
+            callback: () => {
+                if (!tileSprite || tileSprite.destroyed) return
+                idx = (idx + 1) % frames.length
+                const frameId = frames[idx] | 0
+                try {
+                    tileSprite.setTexture(texKey, frameId)
+                } catch {
+                    try { tileSprite.setFrame(frameId); } catch { }
+                }
+                if (DEBUG_EFFECTS_HALL_LOGS) {
+                    const now = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
+                    const last = (tileSprite as any).__heHallTexLogAt | 0
+                    if (!last || (now - last) >= (HALL_TEX_LOG_EVERY_MS | 0)) {
+                        (tileSprite as any).__heHallTexLogAt = now | 0
+                        console.log(
+                            "[VFX][HALL][FRAME]" +
+                            " texId=" + cfg.texId +
+                            " frame=" + (frameId | 0) +
+                            " idx=" + (idx | 0) +
+                            " fps=" + (fps | 0)
+                        )
+                    }
+                }
+            }
+        })
+    }
+
+    _dunEffectsHallNativeFx.push({ sprite: tileSprite, timer })
+}
+
 
 
 
@@ -19515,6 +20388,7 @@ function dungeonTick(nowMs: number): void {
     _dunStoryTick(now)
 
     _dunTickPadSink(now)
+    _dunTickEffectsHall(now)
 
 
 
@@ -19548,6 +20422,41 @@ function dungeonTick(nowMs: number): void {
 
     _dunTickPadHoldTeleport(now)
 
+}
+
+function _dunTickEffectsHall(nowMs: number): void {
+    if (!DEBUG_EFFECTS_HALL_ON_START) return
+    if ((_dunFloorKind || "") !== DUNGEON_KIND_HALL) return
+    if (!_dunEffectsHallFx || !_dunEffectsHallFx.length) return
+    const now = nowMs | 0
+    let write = 0
+    for (let i = 0; i < _dunEffectsHallFx.length; i++) {
+        const fx = _dunEffectsHallFx[i]
+        if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+        const start = sprites.readDataNumber(fx, "__hallDemoStart") | 0
+        if (start > 0) {
+            const intro = Math.max(0, sprites.readDataNumber(fx, "__hallDemoIntro") | 0) | 0
+            const hold = Math.max(0, sprites.readDataNumber(fx, "__hallDemoHold") | 0) | 0
+            const fade = Math.max(0, sprites.readDataNumber(fx, "__hallDemoFade") | 0) | 0
+            const baseAlpha = Math.max(0, sprites.readDataNumber(fx, "__hallDemoAlpha") || 0)
+            const span = (intro + hold + fade) | 0
+            let t = (now - start) | 0
+            if (span > 0 && t >= span) {
+                sprites.setDataNumber(fx, "__hallDemoStart", now | 0)
+                t = 0
+            }
+            let a = baseAlpha
+            if (intro > 0 && t < intro) {
+                a = baseAlpha * (t / intro)
+            } else if (fade > 0 && t >= (intro + hold)) {
+                const tf = Math.max(0, t - (intro + hold))
+                a = baseAlpha * Math.max(0, 1 - (tf / Math.max(1, fade)))
+            }
+            sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, a)))
+        }
+        _dunEffectsHallFx[write++] = fx
+    }
+    if (write < _dunEffectsHallFx.length) _dunEffectsHallFx.length = write
 }
 
 
@@ -24126,6 +25035,78 @@ const DECAL_TRIAL_PATCH_CORNER_SE = 3035
 const DECAL_TRIAL_PATCH_CORNER_NW = 3036
 const DECAL_TRIAL_PATCH_CORNER_NE = 3037
 
+const DECAL_CLIFF_RIM_NW_TL = 3040
+const DECAL_CLIFF_RIM_NW_TR = 3041
+const DECAL_CLIFF_RIM_NW_BL = 3042
+const DECAL_CLIFF_RIM_NW_BR = 3043
+const DECAL_CLIFF_RIM_NE_TL = 3044
+const DECAL_CLIFF_RIM_NE_TR = 3045
+const DECAL_CLIFF_RIM_NE_BL = 3046
+const DECAL_CLIFF_RIM_NE_BR = 3047
+const DECAL_CLIFF_RIM_SW_TL = 3048
+const DECAL_CLIFF_RIM_SW_TR = 3049
+const DECAL_CLIFF_RIM_SW_BL = 3050
+const DECAL_CLIFF_RIM_SW_BR = 3051
+const DECAL_CLIFF_RIM_SE_TL = 3052
+const DECAL_CLIFF_RIM_SE_TR = 3053
+const DECAL_CLIFF_RIM_SE_BL = 3054
+const DECAL_CLIFF_RIM_SE_BR = 3055
+const DECAL_CLIFF_RIM_EDGE_N_A = 3056
+const DECAL_CLIFF_RIM_EDGE_N_B = 3057
+const DECAL_CLIFF_RIM_EDGE_S_A = 3058
+const DECAL_CLIFF_RIM_EDGE_S_B = 3059
+const DECAL_CLIFF_RIM_EDGE_W = 3060
+const DECAL_CLIFF_RIM_EDGE_E = 3061
+
+const DECAL_ENTRANCE_TOWER_L_R0 = 3100
+const DECAL_ENTRANCE_TOWER_C_R0 = 3101
+const DECAL_ENTRANCE_TOWER_R_R0 = 3102
+const DECAL_ENTRANCE_TOWER_L_R1 = 3103
+const DECAL_ENTRANCE_TOWER_C_R1 = 3104
+const DECAL_ENTRANCE_TOWER_R_R1 = 3105
+const DECAL_ENTRANCE_TOWER_L_R2 = 3106
+const DECAL_ENTRANCE_TOWER_C_R2 = 3107
+const DECAL_ENTRANCE_TOWER_R_R2 = 3108
+const DECAL_ENTRANCE_TOWER_L_R3 = 3109
+const DECAL_ENTRANCE_TOWER_C_R3 = 3110
+const DECAL_ENTRANCE_TOWER_R_R3 = 3111
+const DECAL_ENTRANCE_TOWER_L_R4 = 3112
+const DECAL_ENTRANCE_TOWER_C_R4 = 3113
+const DECAL_ENTRANCE_TOWER_R_R4 = 3114
+
+const DECAL_ENTRANCE_DOOR_R0_C0 = 3120
+const DECAL_ENTRANCE_DOOR_R0_C1 = 3121
+const DECAL_ENTRANCE_DOOR_R0_C2 = 3122
+const DECAL_ENTRANCE_DOOR_R0_C3 = 3123
+const DECAL_ENTRANCE_DOOR_R1_C0 = 3124
+const DECAL_ENTRANCE_DOOR_R1_C1 = 3125
+const DECAL_ENTRANCE_DOOR_R1_C2 = 3126
+const DECAL_ENTRANCE_DOOR_R1_C3 = 3127
+const DECAL_ENTRANCE_DOOR_R2_C0 = 3128
+const DECAL_ENTRANCE_DOOR_R2_C1 = 3129
+const DECAL_ENTRANCE_DOOR_R2_C2 = 3130
+const DECAL_ENTRANCE_DOOR_R2_C3 = 3131
+const DECAL_ENTRANCE_DOOR_R3_C0 = 3132
+const DECAL_ENTRANCE_DOOR_R3_C1 = 3133
+const DECAL_ENTRANCE_DOOR_R3_C2 = 3134
+const DECAL_ENTRANCE_DOOR_R3_C3 = 3135
+const DECAL_ENTRANCE_PATH_C0 = 3136
+const DECAL_ENTRANCE_PATH_C1 = 3137
+const DECAL_ENTRANCE_PATH_C2 = 3138
+const DECAL_ENTRANCE_PATH_C3 = 3139
+const DECAL_ENTRANCE_CAV_L_R0 = 3140
+const DECAL_ENTRANCE_CAV_C_R0 = 3141
+const DECAL_ENTRANCE_CAV_R_R0 = 3142
+const DECAL_ENTRANCE_CAV_L_R1 = 3143
+const DECAL_ENTRANCE_CAV_C_R1 = 3144
+const DECAL_ENTRANCE_CAV_R_R1 = 3145
+const DECAL_ENTRANCE_CAV_L_R2 = 3146
+const DECAL_ENTRANCE_CAV_C_R2 = 3147
+const DECAL_ENTRANCE_CAV_R_R2 = 3148
+const DECAL_ENTRANCE_CAV_L_R3 = 3149
+const DECAL_ENTRANCE_CAV_C_R3 = 3150
+const DECAL_ENTRANCE_CAV_R_R3 = 3151
+
 function _shopTrialArenaDestroyProps(): void {
     if (!_shopTrialArenaProps || _shopTrialArenaProps.length <= 0) return
     for (let i = 0; i < _shopTrialArenaProps.length; i++) {
@@ -24166,6 +25147,235 @@ function _shopTrialArenaRingVariantId(r: number, c: number): number {
     if (idx === 1) return DECAL_TRIAL_PATCH_B
     if (idx === 2) return DECAL_TRIAL_PATCH_C
     return DECAL_TRIAL_PATCH_D
+}
+
+function _stampCliffRimOnMap(): void {
+    if (!_engineDecalGrid || _engineDecalGrid.length <= 0) return
+
+    const rows = _engineDecalGrid.length | 0
+    const cols = (_engineDecalGrid[0]?.length ?? 0) | 0
+    if (rows < 2 || cols < 2) return
+
+    const top = 0
+    const left = 0
+    const bottom = (rows - 1) | 0
+    const right = (cols - 1) | 0
+
+    const set = (r: number, c: number, id: number): void => {
+        _dunDecor_setDecalSafe(r | 0, c | 0, id | 0)
+    }
+
+    // Corners (2x2 each).
+    set(top | 0, left | 0, DECAL_CLIFF_RIM_NW_TL)
+    set(top | 0, (left + 1) | 0, DECAL_CLIFF_RIM_NW_TR)
+    set((top + 1) | 0, left | 0, DECAL_CLIFF_RIM_NW_BL)
+    set((top + 1) | 0, (left + 1) | 0, DECAL_CLIFF_RIM_NW_BR)
+
+    set(top | 0, (right - 1) | 0, DECAL_CLIFF_RIM_NE_TL)
+    set(top | 0, right | 0, DECAL_CLIFF_RIM_NE_TR)
+    set((top + 1) | 0, (right - 1) | 0, DECAL_CLIFF_RIM_NE_BL)
+    set((top + 1) | 0, right | 0, DECAL_CLIFF_RIM_NE_BR)
+
+    set((bottom - 1) | 0, left | 0, DECAL_CLIFF_RIM_SW_TL)
+    set((bottom - 1) | 0, (left + 1) | 0, DECAL_CLIFF_RIM_SW_TR)
+    set(bottom | 0, left | 0, DECAL_CLIFF_RIM_SW_BL)
+    set(bottom | 0, (left + 1) | 0, DECAL_CLIFF_RIM_SW_BR)
+
+    set((bottom - 1) | 0, (right - 1) | 0, DECAL_CLIFF_RIM_SE_TL)
+    set((bottom - 1) | 0, right | 0, DECAL_CLIFF_RIM_SE_TR)
+    set(bottom | 0, (right - 1) | 0, DECAL_CLIFF_RIM_SE_BL)
+    set(bottom | 0, right | 0, DECAL_CLIFF_RIM_SE_BR)
+
+    // Top and bottom edges (repeat 1x2 pattern).
+    const topStart = (left + 2) | 0
+    const topEnd = (right - 2) | 0
+    for (let c = topStart | 0; (c | 0) <= (topEnd | 0); c++) {
+        const useA = (((c - topStart) & 1) | 0) === 0
+        set(top | 0, c | 0, useA ? DECAL_CLIFF_RIM_EDGE_N_A : DECAL_CLIFF_RIM_EDGE_N_B)
+        set(bottom | 0, c | 0, useA ? DECAL_CLIFF_RIM_EDGE_S_A : DECAL_CLIFF_RIM_EDGE_S_B)
+    }
+
+    // Left and right edges (single-tile repeat).
+    const sideStart = (top + 2) | 0
+    const sideEnd = (bottom - 2) | 0
+    for (let r = sideStart | 0; (r | 0) <= (sideEnd | 0); r++) {
+        set(r | 0, left | 0, DECAL_CLIFF_RIM_EDGE_W)
+        set(r | 0, right | 0, DECAL_CLIFF_RIM_EDGE_E)
+    }
+
+    if (DEBUG_TILEMAP_AUDIT) {
+        let count = 0
+        let minR = 999999
+        let maxR = -1
+        let minC = 999999
+        let maxC = -1
+        for (let r = 0; r < rows; r++) {
+            const row = _engineDecalGrid[r]
+            if (!row) continue
+            for (let c = 0; c < cols; c++) {
+                const id = row[c] | 0
+                if (id >= DECAL_CLIFF_RIM_NW_TL && id <= DECAL_CLIFF_RIM_EDGE_E) {
+                    count++
+                    if (r < minR) minR = r
+                    if (r > maxR) maxR = r
+                    if (c < minC) minC = c
+                    if (c > maxC) maxC = c
+                }
+            }
+        }
+        const boxH = (maxR >= minR) ? ((maxR - minR + 1) | 0) : 0
+        const boxW = (maxC >= minC) ? ((maxC - minC + 1) | 0) : 0
+        console.log(
+            `[TILEMAP][AUDIT][RIM] rows=${rows | 0} cols=${cols | 0} count=${count | 0}` +
+            ` box=${boxW | 0}x${boxH | 0} minR=${minR | 0} maxR=${maxR | 0} minC=${minC | 0} maxC=${maxC | 0}`
+        )
+    }
+}
+
+function _auditDecalRangeStats(minId: number, maxId: number): { count: number; minR: number; maxR: number; minC: number; maxC: number } {
+    const out = { count: 0, minR: 999999, maxR: -1, minC: 999999, maxC: -1 }
+    if (!_engineDecalGrid || _engineDecalGrid.length <= 0) return out
+    const rows = _engineDecalGrid.length | 0
+    const cols = (_engineDecalGrid[0]?.length ?? 0) | 0
+    for (let r = 0; r < rows; r++) {
+        const row = _engineDecalGrid[r]
+        if (!row) continue
+        for (let c = 0; c < cols; c++) {
+            const id = row[c] | 0
+            if (id < (minId | 0) || id > (maxId | 0)) continue
+            out.count++
+            if (r < out.minR) out.minR = r
+            if (r > out.maxR) out.maxR = r
+            if (c < out.minC) out.minC = c
+            if (c > out.maxC) out.maxC = c
+        }
+    }
+    return out
+}
+
+function _dunStampEntranceTower(): void {
+    if (!_engineDecalGrid || _engineDecalGrid.length <= 0) return
+    const rows = _engineDecalGrid.length | 0
+    const cols = (_engineDecalGrid[0]?.length ?? 0) | 0
+    if (rows <= 0 || cols <= 0) return
+
+    const towerHeight = 4
+    let topRow = 0
+    if ((topRow + towerHeight) > rows) topRow = Math.max(0, rows - towerHeight)
+
+    const leftCol = 0
+    const rightCol = (cols - 1) | 0
+
+    const towerRowIds = [
+        [DECAL_ENTRANCE_TOWER_L_R0, DECAL_ENTRANCE_TOWER_C_R0, DECAL_ENTRANCE_TOWER_R_R0],
+        [DECAL_ENTRANCE_TOWER_L_R1, DECAL_ENTRANCE_TOWER_C_R1, DECAL_ENTRANCE_TOWER_R_R1],
+        [DECAL_ENTRANCE_TOWER_L_R2, DECAL_ENTRANCE_TOWER_C_R2, DECAL_ENTRANCE_TOWER_R_R2],
+        [DECAL_ENTRANCE_TOWER_L_R3, DECAL_ENTRANCE_TOWER_C_R3, DECAL_ENTRANCE_TOWER_R_R3],
+        [DECAL_ENTRANCE_TOWER_L_R4, DECAL_ENTRANCE_TOWER_C_R4, DECAL_ENTRANCE_TOWER_R_R4],
+    ]
+
+    const doorTop = (topRow + 0) | 0
+    const doorLeft = Math.max(0, Math.idiv((cols - 4) | 0, 2)) | 0
+    const doorRight = (doorLeft + 3) | 0
+    const sideLeft = (doorLeft - 1) | 0
+    const sideRight = (doorRight + 1) | 0
+
+    for (let ro = 0; ro < towerHeight; ro++) {
+        const r = (topRow + ro) | 0
+        const ids = towerRowIds[ro]
+        const outerId = ids[1] | 0
+        const sideId = ids[0] | 0
+        for (let c = leftCol; c <= rightCol; c++) {
+            let id = outerId
+            if (c === sideLeft || c === sideRight) id = sideId
+            _dunDecor_setDecalSafe(r | 0, c | 0, id | 0)
+        }
+    }
+
+    // Path strip (4x4) placed first so doorway overwrites it.
+    const pathTop = doorTop | 0
+    if (pathTop >= 0 && (pathTop + 3) < rows) {
+        const pathIds = [DECAL_ENTRANCE_PATH_C0, DECAL_ENTRANCE_PATH_C1, DECAL_ENTRANCE_PATH_C2, DECAL_ENTRANCE_PATH_C3]
+        for (let ro = 0; ro < 4; ro++) {
+            const r = (pathTop + ro) | 0
+            for (let co = 0; co < 4; co++) {
+                const c = (doorLeft + co) | 0
+                if (c < 0 || c >= cols) continue
+                _dunDecor_setDecalSafe(r | 0, c | 0, pathIds[co] | 0)
+            }
+        }
+    }
+
+    const doorIds = [
+        [DECAL_ENTRANCE_DOOR_R0_C0, DECAL_ENTRANCE_DOOR_R0_C1, DECAL_ENTRANCE_DOOR_R0_C2, DECAL_ENTRANCE_DOOR_R0_C3],
+        [DECAL_ENTRANCE_DOOR_R1_C0, DECAL_ENTRANCE_DOOR_R1_C1, DECAL_ENTRANCE_DOOR_R1_C2, DECAL_ENTRANCE_DOOR_R1_C3],
+        [DECAL_ENTRANCE_DOOR_R2_C0, DECAL_ENTRANCE_DOOR_R2_C1, DECAL_ENTRANCE_DOOR_R2_C2, DECAL_ENTRANCE_DOOR_R2_C3],
+        [DECAL_ENTRANCE_DOOR_R3_C0, DECAL_ENTRANCE_DOOR_R3_C1, DECAL_ENTRANCE_DOOR_R3_C2, DECAL_ENTRANCE_DOOR_R3_C3],
+    ]
+    for (let ro = 0; ro < 4; ro++) {
+        const r = (doorTop + ro) | 0
+        if (r < 0 || r >= rows) continue
+        for (let co = 0; co < 4; co++) {
+            const c = (doorLeft + co) | 0
+            if (c < 0 || c >= cols) continue
+            _dunDecor_setDecalSafe(r | 0, c | 0, doorIds[ro][co] | 0)
+        }
+    }
+
+    const cavRowTop = doorTop | 0
+    const cavIds = [
+        [DECAL_ENTRANCE_CAV_L_R0, DECAL_ENTRANCE_CAV_C_R0, DECAL_ENTRANCE_CAV_R_R0],
+        [DECAL_ENTRANCE_CAV_L_R1, DECAL_ENTRANCE_CAV_C_R1, DECAL_ENTRANCE_CAV_R_R1],
+        [DECAL_ENTRANCE_CAV_L_R2, DECAL_ENTRANCE_CAV_C_R2, DECAL_ENTRANCE_CAV_R_R2],
+        [DECAL_ENTRANCE_CAV_L_R3, DECAL_ENTRANCE_CAV_C_R3, DECAL_ENTRANCE_CAV_R_R3],
+    ]
+    const cavGap = 2
+    const leftCavRight = (doorLeft - cavGap - 1) | 0
+    const leftCavLeft = (leftCavRight - 2) | 0
+    const rightCavLeft = (doorRight + cavGap + 1) | 0
+    const rightCavRight = (rightCavLeft + 2) | 0
+
+    const stampCavity = (startC: number): void => {
+        for (let ro = 0; ro < 4; ro++) {
+            const r = (cavRowTop + ro) | 0
+            if (r < 0 || r >= rows) continue
+            for (let co = 0; co < 3; co++) {
+                const c = (startC + co) | 0
+                if (c < 0 || c >= cols) continue
+                _dunDecor_setDecalSafe(r | 0, c | 0, cavIds[ro][co] | 0)
+            }
+        }
+    }
+    if (leftCavLeft >= 0 && leftCavRight < cols) stampCavity(leftCavLeft | 0)
+    if (rightCavLeft >= 0 && rightCavRight < cols) stampCavity(rightCavLeft | 0)
+
+    if (DEBUG_TILEMAP_AUDIT) {
+        let count = 0
+        let minR = 999999
+        let maxR = -1
+        let minC = 999999
+        let maxC = -1
+        for (let r = 0; r < rows; r++) {
+            const row = _engineDecalGrid[r]
+            if (!row) continue
+            for (let c = 0; c < cols; c++) {
+                const id = row[c] | 0
+                if (id >= 3100 && id <= 3151) {
+                    count++
+                    if (r < minR) minR = r
+                    if (r > maxR) maxR = r
+                    if (c < minC) minC = c
+                    if (c > maxC) maxC = c
+                }
+            }
+        }
+        const boxH = (maxR >= minR) ? ((maxR - minR + 1) | 0) : 0
+        const boxW = (maxC >= minC) ? ((maxC - minC + 1) | 0) : 0
+        console.log(
+            `[TILEMAP][AUDIT][ENTRANCE] rows=${rows | 0} cols=${cols | 0} count=${count | 0}` +
+            ` box=${boxW | 0}x${boxH | 0} minR=${minR | 0} maxR=${maxR | 0} minC=${minC | 0} maxC=${maxC | 0}`
+        )
+    }
 }
 
 function _shopTrialArenaSpawnTrigger(name: string, tileR: number, tileC: number): Sprite {
@@ -24406,6 +25616,8 @@ function _shopTrialArenaStampDecals(r0: number, c0: number, h: number, w: number
             _dunDecor_setDecalSafe(r | 0, c | 0, id | 0)
         }
     }
+
+    _stampCliffRimOnMap()
 }
 
 function _shopTrialArenaAudit(reason: string): void {
@@ -27186,7 +28398,8 @@ function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
             (si === 2) ? "pedestal_tr" :
             "pedestal_br"
 
-        _shopUpsertPedestalSolid(si, pedR, pedC, off.x | 0, off.y | 0, pedName)
+        // Pedestal stays tile-aligned; statue gets the visual offset.
+        _shopUpsertPedestalSolid(si, pedR, pedC, 0, 0, pedName)
 
 
 
@@ -34185,6 +35398,12 @@ function _worldgen_connectIslandsWithBridges(map: number[][]): _WorldgenBridgePl
 
 function _createTileMap2D(): number[][] {
 
+    // Entrance floor: deterministic walkway + chasm walls.
+    if ((_dunFloorKind || "") === DUNGEON_KIND_ENTRANCE) {
+        _worldgenBridgePlacements = [];
+        return _createEntranceFloorMap();
+    }
+
     // Shop floors use a deterministic open layout so we can place the platform + stairs cleanly.
     if ((_dunFloorKind || "") === DUNGEON_KIND_SHOP) {
         _worldgenBridgePlacements = [];
@@ -34219,6 +35438,43 @@ function _createShopFloorMap(): number[][] {
             row.push(isBorder ? TILE_WALL : TILE_EMPTY)
         }
         map.push(row)
+    }
+
+    return map
+}
+
+function _createEntranceFloorMap(): number[][] {
+    _worldgenBridgePlacements = []
+    const cols = Math.max(WORLD_TILES_W, MIN_WORLD_TILES_W)
+    const rows = Math.max(WORLD_TILES_H, MIN_WORLD_TILES_H)
+    const map: number[][] = []
+    for (let r = 0; r < rows; r++) {
+        const row: number[] = []
+        for (let c = 0; c < cols; c++) row.push(TILE_WALL)
+        map.push(row)
+    }
+
+    const centerC = Math.idiv(cols | 0, 2) | 0
+    const walkwayLeft = Math.max(1, (centerC - 1) | 0) | 0
+    const walkwayRight = Math.min((cols - 2) | 0, (centerC + 2) | 0) | 0
+    const walkwayLeftWide = Math.max(1, (walkwayLeft - 2) | 0) | 0
+    for (let r = 1; r <= (rows - 2); r++) {
+        for (let c = walkwayLeftWide; c <= walkwayRight; c++) map[r][c] = TILE_EMPTY
+    }
+
+    // Extra ground directly in front of the castle wall (2-tile apron + wider transition).
+    const apronTop = 4
+    const apronBottom = Math.min((rows - 2) | 0, 7) | 0
+    for (let r = apronTop; r <= (apronBottom | 0); r++) {
+        const step = ((r - apronTop) | 0)
+        const extra = Math.min(2, Math.max(0, step)) | 0
+        let left = 1
+        let right = (cols - 2) | 0
+        if (step > 1) {
+            left = Math.max(1, (walkwayLeftWide - extra) | 0) | 0
+            right = Math.min((cols - 2) | 0, (walkwayRight + extra) | 0) | 0
+        }
+        for (let c = left; c <= right; c++) map[r][c] = TILE_EMPTY
     }
 
     return map
@@ -35386,6 +36642,28 @@ function initWorldDecorPostPass(): void {
 
     }
 
+    if (DEBUG_TILEMAP_AUDIT) {
+        const stats = _auditDecalRangeStats(DECAL_CLIFF_RIM_NW_TL, DECAL_CLIFF_RIM_EDGE_E)
+        const boxH = (stats.maxR >= stats.minR) ? ((stats.maxR - stats.minR + 1) | 0) : 0
+        const boxW = (stats.maxC >= stats.minC) ? ((stats.maxC - stats.minC + 1) | 0) : 0
+        console.log(
+            `[TILEMAP][AUDIT][RIM-STAMP] phase=before rows=${rows | 0} cols=${cols | 0}` +
+            ` count=${stats.count | 0} box=${boxW | 0}x${boxH | 0} minR=${stats.minR | 0} maxR=${stats.maxR | 0}` +
+            ` minC=${stats.minC | 0} maxC=${stats.maxC | 0}`
+        )
+    }
+    _stampCliffRimOnMap()
+    if (DEBUG_TILEMAP_AUDIT) {
+        const stats = _auditDecalRangeStats(DECAL_CLIFF_RIM_NW_TL, DECAL_CLIFF_RIM_EDGE_E)
+        const boxH = (stats.maxR >= stats.minR) ? ((stats.maxR - stats.minR + 1) | 0) : 0
+        const boxW = (stats.maxC >= stats.minC) ? ((stats.maxC - stats.minC + 1) | 0) : 0
+        console.log(
+            `[TILEMAP][AUDIT][RIM-STAMP] phase=after rows=${rows | 0} cols=${cols | 0}` +
+            ` count=${stats.count | 0} box=${boxW | 0}x${boxH | 0} minR=${stats.minR | 0} maxR=${stats.maxR | 0}` +
+            ` minC=${stats.minC | 0} maxC=${stats.maxC | 0}`
+        )
+    }
+
 
 
     // ----------------------------------------------------------
@@ -35850,16 +37128,13 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
 
 
-    // Clear focus outline on interactables each tick
-
+    // Clear focus outline on interactables each tick (prefer decor sprite so offsets match)
     for (let i = 0; i < _dunInteractables.length; i++) {
-
         const it = _dunInteractables[i]
-
         if (!it || (it.flags & sprites.Flag.Destroyed)) continue
-
-        _setFocusOutline(it, false)
-
+        const decor = _interactableDecorForRange(it)
+        if (decor && !(decor.flags & sprites.Flag.Destroyed)) _setFocusOutline(decor, false)
+        else _setFocusOutline(it, false)
     }
 
     let focusThisTick = false
@@ -35953,12 +37228,21 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
 
             sprites.setDataNumber(hero, HERO_FOCUS_ACTIVE_KEY, 1)
 
-            _setFocusOutline(found, true)
+            const decor = _interactableDecorForRange(found)
+            if (decor && !(decor.flags & sprites.Flag.Destroyed)) _setFocusOutline(decor, true)
+            else _setFocusOutline(found, true)
 
             focusThisTick = true
-            focusR = sprites.readDataNumber(found, "decorTileR") | 0
-            focusC = sprites.readDataNumber(found, "decorTileC") | 0
-            focusName = sprites.readDataString(found, DECOR_DATA.NAME) || ""
+            const focusDecor = _interactableDecorForRange(found)
+            if (focusDecor && !(focusDecor.flags & sprites.Flag.Destroyed)) {
+                focusR = sprites.readDataNumber(focusDecor, "decorTileR") | 0
+                focusC = sprites.readDataNumber(focusDecor, "decorTileC") | 0
+                focusName = sprites.readDataString(focusDecor, DECOR_DATA.NAME) || ""
+            } else {
+                focusR = sprites.readDataNumber(found, "decorTileR") | 0
+                focusC = sprites.readDataNumber(found, "decorTileC") | 0
+                focusName = sprites.readDataString(found, DECOR_DATA.NAME) || ""
+            }
 
             try {
 
@@ -36158,7 +37442,23 @@ function _dunUpdateObjectiveNpcOutline(nowMs: number): void {
     }
 
     if (shouldHighlight && target && !(target.flags & sprites.Flag.Destroyed)) {
-        _setFocusOutline(target, true, OBJECTIVE_OUTLINE_COLOR, OBJECTIVE_OUTLINE_RADIUS, OBJECTIVE_OUTLINE_DEPTH_BIAS)
+        if (target === shopkeeperNpc) {
+            _setFocusOutline(
+                target,
+                true,
+                SHOPKEEPER_OUTLINE_COLOR,
+                SHOPKEEPER_OUTLINE_RADIUS,
+                SHOPKEEPER_OUTLINE_DEPTH_BIAS
+            )
+        } else {
+            _setFocusOutline(
+                target,
+                true,
+                OBJECTIVE_OUTLINE_COLOR,
+                OBJECTIVE_OUTLINE_RADIUS,
+                OBJECTIVE_OUTLINE_DEPTH_BIAS
+            )
+        }
     }
 
     _dunObjectiveNpcOutlineSprite = target || null
@@ -36663,9 +37963,13 @@ function _shopUpdateFocusHighlights(nowMs: number): void {
         if (!st || (st.flags & sprites.Flag.Destroyed)) continue
 
         if (_shopIsStatueFocused(st, now)) {
-
-            _setFocusOutline(st, true)
-
+            _setFocusOutline(
+                st,
+                true,
+                SHOP_STATUE_OUTLINE_COLOR,
+                SHOP_STATUE_OUTLINE_RADIUS,
+                SHOP_STATUE_OUTLINE_DEPTH_BIAS
+            )
         }
 
     }
@@ -36697,7 +38001,15 @@ function _shopUpdateFocusHighlights(nowMs: number): void {
 
     }
 
-    if (keeperFocused) _setFocusOutline(shopkeeperNpc, true)
+    if (keeperFocused) {
+        _setFocusOutline(
+            shopkeeperNpc,
+            true,
+            SHOPKEEPER_OUTLINE_COLOR,
+            SHOPKEEPER_OUTLINE_RADIUS,
+            SHOPKEEPER_OUTLINE_DEPTH_BIAS
+        )
+    }
 
 }
 
@@ -53200,6 +54512,9 @@ const AGI_HOOKSHOT_CHAIN_TEX_BASE_PX = 128
 const AGI_HOOKSHOT_CHAIN_SCALE = 0.2
 const AGI_HOOKSHOT_CHAIN_OVERLAP_PCT_X1000 = 200
 const AGI_HOOKSHOT_CHAIN_Z_BIAS = (AGI_COMET_Z_BIAS | 0) - 2
+const AGI_HOOKSHOT_CHAIN_LOOP_Z_BIAS = (AGI_COMET_Z_BIAS | 0) + 2
+const AGI_HOOKSHOT_CHAIN_FG_START_PCT_X1000 = 600
+const AGI_HOOKSHOT_CHAIN_FG_HAND_PX = 6
 const AGI_HOOKSHOT_SPEAR_Z_BIAS = (AGI_COMET_Z_BIAS | 0) + 2
 // Placeholder spear line visual (legacy). Disabled so only comet/chain render.
 const AGI_HOOKSHOT_SHOW_SPEAR_VISUAL = false
@@ -57308,7 +58623,10 @@ function _agiHookUpdateChain(
     baseX: number,
     baseY: number,
     endX: number,
-    endY: number
+    endY: number,
+    nx: number,
+    ny: number,
+    weaponLen: number
 ): void {
     const dx = endX - baseX
     const dy = endY - baseY
@@ -57339,6 +58657,10 @@ function _agiHookUpdateChain(
         link.z = hero.z + (AGI_HOOKSHOT_CHAIN_Z_BIAS | 0)
         st.chain.push(link)
     }
+    const sideView = Math.abs(nx) > Math.abs(ny)
+    const handFrontPx = sideView ? Math.max(0, AGI_HOOKSHOT_CHAIN_FG_HAND_PX | 0) : 0
+    const useWeaponLen = (weaponLen > 0) ? (weaponLen | 0) : (dist | 0)
+    const frontStart = Math.max(0, Math.round((useWeaponLen * (AGI_HOOKSHOT_CHAIN_FG_START_PCT_X1000 | 0)) / 1000))
     for (let i = 0; i < st.chain.length; i++) {
         const link = st.chain[i]
         if (i >= count) {
@@ -57346,9 +58668,12 @@ function _agiHookUpdateChain(
             continue
         }
         const t = (count <= 1) ? 0 : (i * spacing) / dist
+        const distAt = dist * t
+        const front = (i === 0) || (handFrontPx > 0 && distAt <= handFrontPx) || (distAt >= frontStart)
         link.x = baseX + dx * t
         link.y = baseY + dy * t
-        link.z = hero.z + (AGI_HOOKSHOT_CHAIN_Z_BIAS | 0)
+        const loopZ = hero.z + (AGI_HOOKSHOT_CHAIN_LOOP_Z_BIAS | 0)
+        link.z = front ? loopZ : (hero.z + (AGI_HOOKSHOT_CHAIN_Z_BIAS | 0))
         link.setFlag(SpriteFlag.Invisible, false)
         const texKey = _agiHookChainTextureForIndex(i, count)
         const applied = _agiHookApplyChainTexture(link, texKey, rot)
@@ -58196,7 +59521,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
             _agiHookUpdateWeaponCarrier(st, hi, hero, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0)
             const tipX = base.x + nx * (st.tipDist | 0)
             const tipY = base.y + ny * (st.tipDist | 0)
-            _agiHookUpdateChain(st, hero, base.x, base.y, tipX, tipY)
+            _agiHookUpdateChain(st, hero, base.x, base.y, tipX, tipY, nx, ny, weaponLen | 0)
             _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.EXTEND, false, tipX, tipY)
 
             hero.vx = 0
@@ -58281,7 +59606,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 _agiHookUpdateWeaponCarrier(st, hi, hero, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0)
                 const tipX = base.x + nx * (st.tipDist | 0)
                 const tipY = base.y + ny * (st.tipDist | 0)
-                _agiHookUpdateChain(st, hero, base.x, base.y, tipX, tipY)
+                _agiHookUpdateChain(st, hero, base.x, base.y, tipX, tipY, nx, ny, weaponLen | 0)
                 _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.RETRACT, false, tipX, tipY)
 
                 hero.vx = 0
@@ -58367,7 +59692,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 _agiHookUpdateWeaponCarrier(st, hi, hero, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0)
                 const tipX = base.x + nx * (st.tipDist | 0)
                 const tipY = base.y + ny * (st.tipDist | 0)
-                _agiHookUpdateChain(st, hero, base.x, base.y, tipX, tipY)
+                _agiHookUpdateChain(st, hero, base.x, base.y, tipX, tipY, nx, ny, weaponLen | 0)
                 _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.RETRACT, false, tipX, tipY)
 
                 if (newDist <= (weaponLen + 0.1)) {
@@ -58415,7 +59740,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 }
                 const handNow = _agiHookHandBase(hero, nx, ny)
                 _agiHookUpdateWeaponCarrier(st, hi, hero, nx, ny, handNow.x, handNow.y, st.tipDist | 0, weaponLen | 0)
-                _agiHookUpdateChain(st, hero, handNow.x, handNow.y, st.targetX, st.targetY)
+                _agiHookUpdateChain(st, hero, handNow.x, handNow.y, st.targetX, st.targetY, nx, ny, weaponLen | 0)
                 _agiHookUpdateCometSprite(st, hero, hi, nx, ny, handNow.x, handNow.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.RETRACT, false, st.targetX, st.targetY)
 
                 if (newDist <= 0.1) {
@@ -59607,6 +60932,26 @@ function updateAgilityProjectilesMotionFor(
     const reelTComet = (reachT > 0) ? Math.max(0, Math.min(1, (nowMs - reachT) / Math.max(1, AGI_COMET_REEL_MS))) : 0;
     const elementNow = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
     _updateAgilityCometFx(
+        proj,
+        heroIndex,
+        hero,
+        elementNow | 0,
+        nx,
+        ny,
+        anchorX,
+        anchorY,
+        sBack,
+        sFront,
+        maxLen,
+        growthTComet,
+        reelTComet,
+        preActive,
+        activateAt | 0,
+        nowMs | 0,
+        startMs | 0,
+        dashMs | 0
+    )
+    _updateAgilitySquareCometFx(
         proj,
         heroIndex,
         hero,
@@ -77558,6 +78903,7 @@ game.onUpdate(function () {
     worldRuntimeMs = now
 
     _heAutoDebugDumpTick(now)
+    _heEffectsDumpTick(now)
 
 
 
@@ -84328,6 +85674,265 @@ function _heDebugTraceInternal(tag: any, data?: any): void {
     }
 }
 
+const HE_EFFECTS_DUMP_DELAY_MS = 1200
+let _heEffectsDumpQueuedMs = 0
+let _heEffectsDumpReason = ""
+let _heEffectsDumpInFlight = false
+let _heEffectApplyCount = 0
+let _heEffectDumpTriggeredAt = 0
+
+function _heQueueEffectsDump(reason: string, delayMs?: number): void {
+    if (!DEBUG_DEBUG_DUMP || !DEBUG_EFFECTS_DUMP) return
+    const now = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
+    const delay = (delayMs != null ? delayMs : HE_EFFECTS_DUMP_DELAY_MS) | 0
+    const when = (now + Math.max(0, delay)) | 0
+    if (_heEffectsDumpQueuedMs > 0 && _heEffectsDumpQueuedMs <= when) return
+    _heEffectsDumpQueuedMs = when
+    _heEffectsDumpReason = String(reason || "")
+}
+
+function _heNoteEffectApplied(): void {
+    if (DEBUG_EFFECTS_DUMP_AFTER_N_APPLIES <= 0) return
+    _heEffectApplyCount = (_heEffectApplyCount + 1) | 0
+    if ((_heEffectDumpTriggeredAt | 0) > 0) return
+    if ((_heEffectApplyCount | 0) >= (DEBUG_EFFECTS_DUMP_AFTER_N_APPLIES | 0)) {
+        _heEffectDumpTriggeredAt = _heEffectApplyCount | 0
+        _heQueueEffectsDump(`effects-apply-${_heEffectApplyCount | 0}`, 1200)
+    }
+}
+
+function _heEffectsDumpTick(nowMs: number): void {
+    if (!DEBUG_DEBUG_DUMP || !DEBUG_EFFECTS_DUMP) return
+    if (_heEffectsDumpQueuedMs <= 0) return
+    if (_heEffectsDumpInFlight) return
+    const now = nowMs | 0
+    if (now < (_heEffectsDumpQueuedMs | 0)) return
+    const g: any = globalThis as any
+    const fn = g && g.__heDebugDumpToFile
+    if (typeof fn !== "function") {
+        _heEffectsDumpQueuedMs = 0
+        _heEffectsDumpReason = ""
+        return
+    }
+    _heEffectsDumpInFlight = true
+    const reason = _heEffectsDumpReason || "effects"
+    let p: any = null
+    try { p = fn(reason) } catch { p = null }
+    _heEffectsDumpQueuedMs = 0
+    _heEffectsDumpReason = ""
+    if (p && typeof p.then === "function") {
+        p.then(() => { _heEffectsDumpInFlight = false }).catch(() => { _heEffectsDumpInFlight = false })
+    } else {
+        _heEffectsDumpInFlight = false
+    }
+}
+
+function _heSampleEffectFrameColors(
+    texKey: string,
+    frameId: number,
+    frameW: number,
+    frameH: number,
+    stride: number
+): any {
+    if (!isPhaserRuntime()) return null
+    if (typeof document === "undefined") return null
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    if (!sc || !sc.textures || !sc.textures.exists(texKey)) return null
+    const tex = sc.textures.get(texKey)
+    const f = tex?.get?.(frameId)
+    if (!f || !f.source || !f.source.image) return null
+    const img = f.source.image as HTMLImageElement | HTMLCanvasElement
+    const sx = (f.cutX | 0)
+    const sy = (f.cutY | 0)
+    const fw = frameW | 0
+    const fh = frameH | 0
+    if (fw <= 0 || fh <= 0) return null
+
+    const canvas = document.createElement("canvas")
+    canvas.width = fw
+    canvas.height = fh
+    const ctx = canvas.getContext("2d", { willReadFrequently: true } as any) as CanvasRenderingContext2D | null
+    if (!ctx) return null
+    try { ctx.drawImage(img, sx, sy, fw, fh, 0, 0, fw, fh) } catch { return null }
+    let data: ImageData | null = null
+    try { data = ctx.getImageData(0, 0, fw, fh) } catch { data = null }
+    if (!data) return null
+
+    const step = Math.max(1, stride | 0)
+    const pix = data.data
+    let total = 0
+    let nonZero = 0
+    let sumR = 0
+    let sumG = 0
+    let sumB = 0
+    let sumA = 0
+    const counts: { [k: number]: number } = Object.create(null)
+    for (let y = 0; y < fh; y += step) {
+        const row = y * fw
+        for (let x = 0; x < fw; x += step) {
+            const i = ((row + x) << 2)
+            const r = pix[i]
+            const g2 = pix[i + 1]
+            const b = pix[i + 2]
+            const a = pix[i + 3]
+            total++
+            sumR += r
+            sumG += g2
+            sumB += b
+            sumA += a
+            if (a > 0) {
+                nonZero++
+                const key = (r << 16) | (g2 << 8) | b
+                counts[key] = (counts[key] | 0) + 1
+            }
+        }
+    }
+    const colors: { hex: number; count: number }[] = []
+    for (const k in counts) {
+        colors.push({ hex: Number(k) | 0, count: counts[k] | 0 })
+    }
+    colors.sort((a, b) => (b.count | 0) - (a.count | 0))
+    const top = colors.slice(0, 8)
+    const denom = Math.max(1, total)
+    return {
+        stride: step | 0,
+        totalSamples: total | 0,
+        nonTransparent: nonZero | 0,
+        nonTransparentPct: Number((nonZero / denom).toFixed(4)),
+        avg: {
+            r: Math.round(sumR / denom),
+            g: Math.round(sumG / denom),
+            b: Math.round(sumB / denom),
+            a: Math.round(sumA / denom)
+        },
+        topColors: top
+    }
+}
+
+function _heCollectEffectsDump(): any {
+    if (!DEBUG_EFFECTS_DUMP) return null
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    const atlas = _getEffectAtlasAny()
+    const all = (sprites && typeof sprites.allSprites === "function") ? sprites.allSprites() : []
+    const max = Math.max(0, DEBUG_EFFECTS_DUMP_MAX | 0) | 0
+    const out: any[] = []
+    let total = 0
+    for (let i = 0; i < all.length; i++) {
+        const s = all[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+        const skin = (sprites.readDataString(s, "effectSkin") || "").trim()
+        const dir = (sprites.readDataString(s, "effectDir") || "").trim()
+        const mode = (sprites.readDataString(s, EFFECT_MODE_DATA_KEY) || "").trim()
+        const isEffect = !!skin || !!mode || (s.kind === SpriteKind.HeroEffect) || (s.kind === SpriteKind.RelicEffect)
+        if (!isEffect) continue
+        total++
+        if (max > 0 && out.length >= max) continue
+
+        const tint = sprites.readDataNumber(s, EFFECT_TINT_DATA_KEY)
+        const alpha = sprites.readDataNumber(s, EFFECT_ALPHA_DATA_KEY)
+        const fps = sprites.readDataNumber(s, EFFECT_FPS_DATA_KEY)
+        const repeat = sprites.readDataNumber(s, "effectRepeat")
+        const yoyo = sprites.readDataNumber(s, EFFECT_YOYO_DATA_KEY)
+        const frameIndex = sprites.readDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY)
+        const frameIndexRaw = sprites.readDataNumber(s, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY) | 0
+        const frameList = sprites.readDataString(s, EFFECT_FRAME_LIST_DATA_KEY) || ""
+        const frameListRaw = sprites.readDataNumber(s, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY) | 0
+        const scale = sprites.readDataNumber(s, EFFECT_SCALE_DATA_KEY)
+        const scaleX = sprites.readDataNumber(s, EFFECT_SCALE_X_DATA_KEY)
+        const scaleY = sprites.readDataNumber(s, EFFECT_SCALE_Y_DATA_KEY)
+        const rot = sprites.readDataNumber(s, EFFECT_ROT_DATA_KEY)
+        const blend = sprites.readDataString(s, EFFECT_BLEND_DATA_KEY) || ""
+        const maskRef = sprites.readDataSprite(s, EFFECT_MASK_SPRITE_REF_DATA_KEY)
+        const maskId = maskRef ? ((maskRef as any).id | 0) : 0
+        const maskSkin = maskRef ? (sprites.readDataString(maskRef, "effectSkin") || "") : ""
+
+        let resolved: any = null
+        if (atlas && skin) {
+            resolved = _resolveEffectEntry(atlas, skin, dir || "")
+        }
+        const native: any = (s as any).native
+        const nativeFrame = native && native.frame ? (native.frame.name ?? native.frame.index ?? null) : null
+        const nativeTex = native && native.texture ? (native.texture.key ?? "") : ""
+        const nativeVisible = native ? !!native.visible : false
+        const nativeAlpha = native ? Number(native.alpha ?? 1) : null
+        const nativeDepth = native ? Number(native.depth ?? 0) : null
+        const frameW = resolved ? (resolved.frameW | 0) : 0
+        const frameH = resolved ? (resolved.frameH | 0) : 0
+        const frameCount = resolved && resolved.frameIndices ? (resolved.frameIndices.length | 0) : 0
+
+        let frameId: number | null = null
+        if (typeof nativeFrame === "number" && Number.isFinite(nativeFrame)) {
+            frameId = nativeFrame | 0
+        } else if (resolved && frameCount > 0) {
+            let idx = Number.isFinite(frameIndex) && (frameIndex >= 0) ? (frameIndex | 0) : 0
+            if (frameIndexRaw && resolved.frameIndices) {
+                const found = resolved.frameIndices.indexOf(idx | 0)
+                if (found >= 0) idx = found
+            }
+            idx = Math.max(0, Math.min(frameCount - 1, idx | 0))
+            frameId = resolved.frameIndices[idx] | 0
+        }
+
+        let sample: any = null
+        if (DEBUG_EFFECTS_DUMP_PIXELS && sc && resolved && nativeTex && frameId != null && frameW > 0 && frameH > 0) {
+            sample = _heSampleEffectFrameColors(nativeTex, frameId | 0, frameW | 0, frameH | 0, DEBUG_EFFECTS_DUMP_SAMPLE_STRIDE | 0)
+        }
+
+        out.push({
+            id: (s as any).id | 0,
+            kind: s.kind | 0,
+            x: s.x | 0,
+            y: s.y | 0,
+            z: s.z | 0,
+            skin,
+            dir,
+            mode,
+            tint: Number.isFinite(tint) ? (tint | 0) : null,
+            alpha: Number.isFinite(alpha) ? Number(alpha) : null,
+            fps: Number.isFinite(fps) ? Number(fps) : null,
+            repeat: Number.isFinite(repeat) ? Number(repeat) : null,
+            yoyo: Number.isFinite(yoyo) ? (yoyo | 0) : 0,
+            frameIndex: Number.isFinite(frameIndex) ? (frameIndex | 0) : null,
+            frameIndexRaw: frameIndexRaw ? 1 : 0,
+            frameList: frameList || "",
+            frameListRaw: frameListRaw ? 1 : 0,
+            scale: Number.isFinite(scale) ? Number(scale) : null,
+            scaleX: Number.isFinite(scaleX) ? Number(scaleX) : null,
+            scaleY: Number.isFinite(scaleY) ? Number(scaleY) : null,
+            rot: Number.isFinite(rot) ? Number(rot) : null,
+            blend,
+            maskSpriteId: maskId | 0,
+            maskSkin,
+            native: {
+                exists: !!native,
+                texKey: nativeTex || "",
+                frame: nativeFrame,
+                visible: nativeVisible ? 1 : 0,
+                alpha: (nativeAlpha != null && Number.isFinite(nativeAlpha)) ? Number(nativeAlpha) : null,
+                depth: (nativeDepth != null && Number.isFinite(nativeDepth)) ? Number(nativeDepth) : null
+            },
+            resolved: resolved ? {
+                textureKey: String(resolved.textureKey || ""),
+                frameW: frameW | 0,
+                frameH: frameH | 0,
+                frames: frameCount | 0,
+                frameId: frameId != null ? (frameId | 0) : null
+            } : null,
+            sample
+        })
+    }
+    return {
+        count: out.length | 0,
+        total: total | 0,
+        applyCount: _heEffectApplyCount | 0,
+        sampleStride: DEBUG_EFFECTS_DUMP_SAMPLE_STRIDE | 0,
+        pixelSampling: DEBUG_EFFECTS_DUMP_PIXELS ? 1 : 0,
+        items: out
+    }
+}
+
 function _heBuildDebugDump(reason?: string): any {
     const g: any = globalThis as any
     let runtimeMs = 0
@@ -84428,6 +86033,7 @@ function _heBuildDebugDump(reason?: string): any {
     const traceBuf = _heGetDebugTraceBuffer()
     const trace = traceBuf.length ? traceBuf.slice(-HE_DEBUG_TRACE_MAX) : []
 
+    const effects = _heCollectEffectsDump()
     return {
         type: "heDebugDumpV1",
         createdAt: Date.now(),
@@ -84486,6 +86092,7 @@ function _heBuildDebugDump(reason?: string): any {
         heroes: heroDump,
         enemies: enemyDump,
         npcs: npcDump,
+        effects,
         trace,
     }
 }

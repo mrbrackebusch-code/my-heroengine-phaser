@@ -58,6 +58,9 @@ export const DEBUG_AGI_HOOKSHOT_SLOW_MULT = 1;
 export const DEBUG_AGI_COMET_LOGS = false;
 export const DEBUG_AGI_COMET_LOG_THROTTLE_MS = 120;
 export const DEBUG_AGI_COMET_LOG_VERBOSE = false;
+export const DEBUG_AGI_SQUARE_COMET_LOGS = true;
+export const DEBUG_AGI_SQUARE_COMET_LOG_THROTTLE_MS = 200;
+export const DEBUG_AGI_SQUARE_COMET_LOG_VERBOSE = false;
 
 // Move pipeline debug
 export const DEBUG_MOVE_PIPE = false;
@@ -97,11 +100,13 @@ export const DEBUG_STATUE_STAMP = false;
 export const DEBUG_STATUE_PEDESTAL = false;
 
 // Dungeon/shop/relic/UI logs (HeroEngineInPhaser.ts)
-export const DEBUG_DUNGEON_LOGS = false;
+export const DEBUG_DUNGEON_LOGS = true;
 export const DEBUG_BOSS_INTRO = true; // Boss intro/jump/pad sink lifecycle logs.
 export const DEBUG_PAD_SINK_PROP_LOGS = true; // [PAD][PILLAR] summarize prop offset ranges during pad sink.
 export const DEBUG_BOSS_PAD_DUST_PERSIST = false; // Keep boss pad dust alive (skip destroy) for visibility.
 export const DEBUG_FORCE_HALL_OF_ENEMIES = false; // Force hall floor kind for enemy showcase/debug.
+export const DEBUG_EFFECTS_HALL_ON_START = false; // Start run in effects hall (debug VFX layout).
+export const DEBUG_EFFECTS_HALL_LOGS = false; // Log effects hall texture frames (debug).
 export const DEBUG_FOCUS_LOGS = false;
 export const DEBUG_INTERACT_LOGS = false; // General interact pipeline (props/NPC).
 export const DEBUG_INTERACT_TICK_LOGS = false; // Tick-level spam; keep off unless needed.
@@ -188,6 +193,12 @@ export const DEBUG_EFFECT_AURA_PRIORITY_RADII = "1,2,3,4"; // Aura radii to prel
 export const DEBUG_EFFECT_AURA_STREAM_REST = false; // After preload, stream remaining aura radii in the background.
 export const DEBUG_EFFECT_AURA_STREAM_DELAY_MS = 1500; // Delay before background aura streaming begins.
 export const DEBUG_EFFECT_ATLAS_SKIP_AURA_SCAN = false; // Skip pixel scans for aura sheets when meta is missing.
+export const DEBUG_EFFECTS_DUMP = true; // Include effect sprites + samples in debug dumps.
+export const DEBUG_EFFECTS_DUMP_PIXELS = true; // Sample effect frame pixels (slower).
+export const DEBUG_EFFECTS_DUMP_MAX = 250; // Max effect entries in a dump.
+export const DEBUG_EFFECTS_DUMP_SAMPLE_STRIDE = 4; // Pixel stride for sampling (1 = every pixel).
+export const DEBUG_EFFECTS_DUMP_ON_HALL = true; // Auto-write a debug dump when effects hall spawns.
+export const DEBUG_EFFECTS_DUMP_AFTER_N_APPLIES = 0; // Auto-dump after N applyEffectToSprite calls (0 = off).
 export const DEBUG_STR_ARC_GALLERY = false; // Strength arc frame gallery overlay (arc/fill/aura sheets)
 export const DEBUG_STR_ARC_GALLERY_SKIN = "Sword Arcs";
 export const DEBUG_STR_ARC_GALLERY_FILL_SKIN = "torrentacle texture";
@@ -369,7 +380,7 @@ export const DEBUG_MAIN_LIFECYCLE = false;
 export const DEBUG_PHASER_BANNER = false; // Phaser startup banner/version log.
 export const DEBUG_SAVE_LOGS = false;
 export const DEBUG_SAVE_TRACE = false; // Capture in-memory save/load trace for debug dumps.
-export const DEBUG_DEBUG_DUMP = false; // Allow writing debug dump files via __heDebugDumpToFile.
+export const DEBUG_DEBUG_DUMP = true; // Allow writing debug dump files via __heDebugDumpToFile.
 export const DEBUG_RELICTIP_LOGS = false;
 export const DEBUG_COINFX = false;
 export const DEBUG_HOST_LOGIC = false;

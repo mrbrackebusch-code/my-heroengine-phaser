@@ -1002,6 +1002,80 @@ function _decor_decalIdToKey(id: number): string {
     if (v === 3036) return "trial_patch_corner_nw"
     if (v === 3037) return "trial_patch_corner_ne"
 
+    // Mountain rim cliffs (mountains.png)
+    if (v === 3040) return "cliff_rim_nw_tl"
+    if (v === 3041) return "cliff_rim_nw_tr"
+    if (v === 3042) return "cliff_rim_nw_bl"
+    if (v === 3043) return "cliff_rim_nw_br"
+    if (v === 3044) return "cliff_rim_ne_tl"
+    if (v === 3045) return "cliff_rim_ne_tr"
+    if (v === 3046) return "cliff_rim_ne_bl"
+    if (v === 3047) return "cliff_rim_ne_br"
+    if (v === 3048) return "cliff_rim_sw_tl"
+    if (v === 3049) return "cliff_rim_sw_tr"
+    if (v === 3050) return "cliff_rim_sw_bl"
+    if (v === 3051) return "cliff_rim_sw_br"
+    if (v === 3052) return "cliff_rim_se_tl"
+    if (v === 3053) return "cliff_rim_se_tr"
+    if (v === 3054) return "cliff_rim_se_bl"
+    if (v === 3055) return "cliff_rim_se_br"
+    if (v === 3056) return "cliff_rim_edge_n_a"
+    if (v === 3057) return "cliff_rim_edge_n_b"
+    if (v === 3058) return "cliff_rim_edge_s_a"
+    if (v === 3059) return "cliff_rim_edge_s_b"
+    if (v === 3060) return "cliff_rim_edge_w"
+    if (v === 3061) return "cliff_rim_edge_e"
+
+    // Entrance tower (build_atlas.png)
+    if (v === 3100) return "entrance_tower_left_r0"
+    if (v === 3101) return "entrance_tower_center_r0"
+    if (v === 3102) return "entrance_tower_right_r0"
+    if (v === 3103) return "entrance_tower_left_r1"
+    if (v === 3104) return "entrance_tower_center_r1"
+    if (v === 3105) return "entrance_tower_right_r1"
+    if (v === 3106) return "entrance_tower_left_r2"
+    if (v === 3107) return "entrance_tower_center_r2"
+    if (v === 3108) return "entrance_tower_right_r2"
+    if (v === 3109) return "entrance_tower_left_r3"
+    if (v === 3110) return "entrance_tower_center_r3"
+    if (v === 3111) return "entrance_tower_right_r3"
+    if (v === 3112) return "entrance_tower_left_r4"
+    if (v === 3113) return "entrance_tower_center_r4"
+    if (v === 3114) return "entrance_tower_right_r4"
+
+    if (v === 3120) return "entrance_door_r0_c0"
+    if (v === 3121) return "entrance_door_r0_c1"
+    if (v === 3122) return "entrance_door_r0_c2"
+    if (v === 3123) return "entrance_door_r0_c3"
+    if (v === 3124) return "entrance_door_r1_c0"
+    if (v === 3125) return "entrance_door_r1_c1"
+    if (v === 3126) return "entrance_door_r1_c2"
+    if (v === 3127) return "entrance_door_r1_c3"
+    if (v === 3128) return "entrance_door_r2_c0"
+    if (v === 3129) return "entrance_door_r2_c1"
+    if (v === 3130) return "entrance_door_r2_c2"
+    if (v === 3131) return "entrance_door_r2_c3"
+    if (v === 3132) return "entrance_door_r3_c0"
+    if (v === 3133) return "entrance_door_r3_c1"
+    if (v === 3134) return "entrance_door_r3_c2"
+    if (v === 3135) return "entrance_door_r3_c3"
+    if (v === 3136) return "entrance_path_c0"
+    if (v === 3137) return "entrance_path_c1"
+    if (v === 3138) return "entrance_path_c2"
+    if (v === 3139) return "entrance_path_c3"
+    if (v === 3140) return "entrance_cav_left_r0"
+    if (v === 3141) return "entrance_cav_center_r0"
+    if (v === 3142) return "entrance_cav_right_r0"
+    if (v === 3143) return "entrance_cav_left_r1"
+    if (v === 3144) return "entrance_cav_center_r1"
+    if (v === 3145) return "entrance_cav_right_r1"
+    if (v === 3146) return "entrance_cav_left_r2"
+    if (v === 3147) return "entrance_cav_center_r2"
+    if (v === 3148) return "entrance_cav_right_r2"
+    if (v === 3149) return "entrance_cav_left_r3"
+    if (v === 3150) return "entrance_cav_center_r3"
+    if (v === 3151) return "entrance_cav_right_r3"
+
     return ""
 }
 
@@ -1248,7 +1322,7 @@ const HERO_AIM_ANGLE_MDEG_KEY = "aimAng";
 //  - "rotate": rotate the weapon overlays to the aim angle
 //  - "ghost": keep weapon cardinal, show a rotated ghost at aim
 //  - "projectile": no weapon changes (only projectiles follow aim)
-const WPN_AIM_RENDER_MODE: "rotate" | "ghost" | "projectile" = "projectile";
+const WPN_AIM_RENDER_MODE: "rotate" | "ghost" | "projectile" = "rotate";
 const WPN_AIM_GHOST_ALPHA = 0.6;
 const WPN_AIM_GHOST_OFFSET_PX = 6;
 

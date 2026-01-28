@@ -65,6 +65,14 @@ without new art.
 Important: for elemental theming, prefer **overlay textures** over plain tint.
 Never use `heroEffects` assets on enemy VFX.
 
+### Proven masking pattern (important)
+When masking an animated fill, keep **both mask + fill inside the effect system**:
+- Mask sprite uses `frameIndex: 0` (static).
+- Fill sprite uses `mode: "projectile"` with `maskSprite: maskFx` and animates via `effectAnimGlue`.
+
+Avoid applying a BitmapMask from a live **effect sprite** onto a native Phaser
+`Sprite` or `TileSprite` — that path can stop target animation.
+
 ## 5a) Element Palettes (tints only)
 
 Element palettes live in `src/vfxPalettes.ts`:

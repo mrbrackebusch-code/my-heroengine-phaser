@@ -1,0 +1,187 @@
+{
+  "type": "heDebugDumpV1",
+  "createdAt": 1769573768690,
+  "runtimeMs": 104878,
+  "reason": "auto",
+  "host": true,
+  "floor": {
+    "index": 0,
+    "kind": "entrance",
+    "baseFamily": "ground_black",
+    "wallFamily": "chasm_black",
+    "palette": "obsidian",
+    "objectiveDone": false,
+    "combatWavesActive": false,
+    "combatWavesComplete": false,
+    "doorState": "",
+    "padPowered": true,
+    "safe": true
+  },
+  "teleport": {
+    "runeActive": 1,
+    "runeName": "teleport_rune",
+    "commitAtMs": 0,
+    "runeSpinSinceMs": 0,
+    "allReadySinceMs": 0,
+    "doorAllReadySinceMs": 0
+  },
+  "bossIntro": {
+    "floorIndex": -1,
+    "queued": 0,
+    "shadowX": 0,
+    "shadowY": 0,
+    "shadowUntilMs": 0
+  },
+  "world": {
+    "worldRev": 3,
+    "decorRev": 37,
+    "tileSize": 32,
+    "rows": 34,
+    "cols": 60
+  },
+  "save": {
+    "pendingSaveFromFile": false,
+    "pendingSaveName": null,
+    "loadedProfiles": [],
+    "pendingWorldSnapshot": false,
+    "pendingDecor": false,
+    "savedHeroProfiles": 0,
+    "savedNpcKeys": 0,
+    "tilemap": {
+      "rev": 84,
+      "rows": 34,
+      "cols": 60,
+      "tileSize": 32,
+      "worldRev": 3,
+      "floorIndex": -1,
+      "floorKind": "entrance",
+      "baseFamily": "ground_black",
+      "wallFamily": "chasm_black",
+      "decorRev": 37,
+      "baseSig": 117636201,
+      "decorSig": 1020642864,
+      "worldSig": 372397799
+    }
+  },
+  "heroes": [
+    {
+      "hi": 0,
+      "pid": 1,
+      "profile": "LongBlond",
+      "name": "LongBlond",
+      "family": "",
+      "x": 859,
+      "y": 139,
+      "hp": 1000,
+      "maxHp": 1000,
+      "mana": 1000,
+      "maxMana": 1000,
+      "isNpc": 0,
+      "isDead": 0,
+      "deadGhost": 0,
+      "ghostFlag": 0,
+      "destroyed": 0,
+      "teleMode": 0,
+      "inputLocked": 0
+    }
+  ],
+  "enemies": [],
+  "npcs": [],
+  "effects": {
+    "count": 1,
+    "total": 1,
+    "applyCount": 0,
+    "sampleStride": 4,
+    "pixelSampling": 1,
+    "items": [
+      {
+        "id": 34,
+        "kind": 67,
+        "x": 320,
+        "y": 240,
+        "z": 10,
+        "skin": "waves",
+        "dir": "",
+        "mode": "paint",
+        "tint": 9801635,
+        "alpha": 0.07775626398999491,
+        "fps": 0,
+        "repeat": 0,
+        "yoyo": 0,
+        "frameIndex": -1,
+        "frameIndexRaw": 0,
+        "frameList": "",
+        "frameListRaw": 0,
+        "scale": 3,
+        "scaleX": 0,
+        "scaleY": 0,
+        "rot": 0,
+        "blend": "screen",
+        "maskSpriteId": 0,
+        "maskSkin": "",
+        "native": {
+          "exists": true,
+          "texKey": "effects.waves_128x128",
+          "frame": 6,
+          "visible": 1,
+          "alpha": 0.07775626398999491,
+          "depth": 2000000010
+        },
+        "resolved": {
+          "textureKey": "effects.waves_128x128",
+          "frameW": 128,
+          "frameH": 128,
+          "frames": 7,
+          "frameId": 6
+        },
+        "sample": {
+          "stride": 4,
+          "totalSamples": 1024,
+          "nonTransparent": 130,
+          "nonTransparentPct": 0.127,
+          "avg": {
+            "r": 13,
+            "g": 15,
+            "b": 29,
+            "a": 4
+          },
+          "topColors": [
+            {
+              "hex": 255,
+              "count": 7
+            },
+            {
+              "hex": 5797602,
+              "count": 6
+            },
+            {
+              "hex": 6058208,
+              "count": 5
+            },
+            {
+              "hex": 5598683,
+              "count": 4
+            },
+            {
+              "hex": 5599715,
+              "count": 4
+            },
+            {
+              "hex": 5601245,
+              "count": 4
+            },
+            {
+              "hex": 5927130,
+              "count": 4
+            },
+            {
+              "hex": 5927902,
+              "count": 4
+            }
+          ]
+        }
+      }
+    ]
+  },
+  "trace": []
+}

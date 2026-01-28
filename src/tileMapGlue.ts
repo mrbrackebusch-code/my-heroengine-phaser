@@ -5067,6 +5067,7 @@ private _debugTilemapAuditDecals(reason: string, decalNameGrid: string[][], rows
   const anyThis: any = this as any;
   const texKeys: Record<string, 1> = Object.create(null);
   let trialCells = 0;
+  let entranceCells = 0;
   let minR = 999999;
   let maxR = -1;
   let minC = 999999;
@@ -5077,13 +5078,17 @@ private _debugTilemapAuditDecals(reason: string, decalNameGrid: string[][], rows
     for (let c = 0; c < cols; c++) {
       const name = row[c] ?? "";
       if (!name) continue;
-      if (String(name).indexOf("trial_") !== 0) continue;
-      trialCells++;
+      const key = String(name);
+      const isTrial = key.indexOf("trial_") === 0;
+      const isEntrance = key.indexOf("entrance_") === 0;
+      if (!isTrial && !isEntrance) continue;
+      if (isTrial) trialCells++;
+      if (isEntrance) entranceCells++;
       if (r < minR) minR = r;
       if (r > maxR) maxR = r;
       if (c < minC) minC = c;
       if (c > maxC) maxC = c;
-      const vis = DECAL_VISUALS_BY_NAME[String(name)] as any;
+      const vis = DECAL_VISUALS_BY_NAME[key] as any;
       let tk = "";
       if (vis?.textureKey) tk = String(vis.textureKey || "");
       else if (vis?.atlas) tk = String(this.atlas.resolveAtlasTextureKey(String(vis.atlas || "")));
@@ -5097,13 +5102,14 @@ private _debugTilemapAuditDecals(reason: string, decalNameGrid: string[][], rows
   const mageGidVal = (typeof mageGid === "number") ? (mageGid | 0) : -1;
   const buildGidVal = (typeof buildGid === "number") ? (buildGid | 0) : -1;
   const texList = Object.keys(texKeys).sort().join("|") || "n/a";
-  const sig = `${reason}|${rows}|${cols}|${trialCells}|${minR}|${maxR}|${minC}|${maxC}|${texList}|${mageGidVal}|${buildGidVal}`;
+  const sig = `${reason}|${rows}|${cols}|${trialCells}|${entranceCells}|${minR}|${maxR}|${minC}|${maxC}|${texList}|${mageGidVal}|${buildGidVal}`;
   if (anyThis.__tileAuditDecalSig === sig) return;
   anyThis.__tileAuditDecalSig = sig;
   console.log(
     `[TILEMAP][AUDIT][DECALS] reason=${String(reason || "")}` +
     ` rows=${rows | 0} cols=${cols | 0}` +
     ` trialCells=${trialCells | 0}` +
+    ` entranceCells=${entranceCells | 0}` +
     ` box=${dims.w | 0}x${dims.h | 0}` +
     ` boxPx=${(dims.w * tileSize) | 0}x${(dims.h * tileSize) | 0}` +
     ` tex=${texList}` +

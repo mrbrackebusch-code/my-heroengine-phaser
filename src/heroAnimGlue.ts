@@ -78,8 +78,8 @@ const HERO_STR_TRACE_LAST_FRAME_KEY = "__strTraceLastFrame";
 
 const HERO_AIM_TILT_MAX_DEG = 8;
 const HERO_AIM_TILT_MAX_RAD = (HERO_AIM_TILT_MAX_DEG * Math.PI) / 180;
-const HERO_AIM_TILT_UP_DEG = 30;
-const HERO_AIM_TILT_SIDE_DEG = 45;
+const HERO_AIM_TILT_UP_DEG = 0;
+const HERO_AIM_TILT_SIDE_DEG = 10;
 
 // Strength swing reset tuning (manual frame timeline)
 const STR_RESET_ENABLE = true;
