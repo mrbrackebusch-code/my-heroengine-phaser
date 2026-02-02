@@ -73,8 +73,22 @@ PR guardrails
 - When GitHub usernames are added to .github/student-owners.json, PRs will be limited to each student folder.
 
 Student folders
-- Kyle: src/student/Kyle/
+- Alan: src/student/Alan/
+- Marcel: src/student/Marcel/
+- Jordyn: src/student/Jordyn/
+- Angel: src/student/Angel/
+- Nixie: src/student/Nixie/
+- Hanna: src/student/Hanna/
+- Mehki: src/student/Mehki/
+- Lourdes: src/student/Lourdes/
 - Jason: src/student/Jason/
+- Daniel: src/student/Daniel/
+- Elizabeth: src/student/Elizabeth/
+- Kyle: src/student/Kyle/
+- Khaliyah: src/student/Khaliyah/
+- Addisyn: src/student/Addisyn/
+- ChrisP: src/student/ChrisP/
 - Abraham: src/student/Abraham/
 - ChrisS: src/student/ChrisS/
-- ChrisP: src/student/ChrisP/
+- Cortez: src/student/Cortez/
+- Esau: src/student/Esau/

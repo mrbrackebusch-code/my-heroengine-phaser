@@ -3575,11 +3575,19 @@ function _agiCometElementTexturePick(element: number, dir: string): { skinId: st
     return pick;
 }
 
+function _effectSpriteHasFrameSource(s: Sprite): boolean {
+    const native: any = s ? (s as any).native : null;
+    const frame: any = native ? native.frame : null;
+    const source: any = frame ? frame.source : null;
+    return !!(source && source.image);
+}
+
 function _agiSquareCometFillHide(proj: Sprite): void {
     if (!proj) return;
     const fx = sprites.readDataSprite(proj, AGI_SQUARE_COMET_FILL_FX_KEY);
     if (fx && !(fx.flags & sprites.Flag.Destroyed)) {
         fx.setFlag(SpriteFlag.Invisible, true);
+        sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, null as any);
     }
 }
 
@@ -3593,6 +3601,18 @@ function _ensureAgilitySquareCometFillFx(
     const pick = _agiCometElementTexturePick(element | 0, dir || "");
     let fx = sprites.readDataSprite(proj, AGI_SQUARE_COMET_FILL_FX_KEY);
     if (!pick || !pick.skinId) {
+        if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.setFlag(SpriteFlag.Invisible, true);
+        return null;
+    }
+    const atlas = _getEffectAtlasAny();
+    const resolved = atlas ? _resolveEffectEntry(atlas, pick.skinId, pick.dir || "") : null;
+    const g: any = globalThis as any;
+    const sc: any = g ? g.__phaserScene : null;
+    if (!resolved || !sc || !sc.textures || !sc.textures.exists(resolved.textureKey)) {
+        if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.setFlag(SpriteFlag.Invisible, true);
+        return null;
+    }
+    if (!_effectSpriteHasFrameSource(maskFx)) {
         if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.setFlag(SpriteFlag.Invisible, true);
         return null;
     }
@@ -3873,6 +3893,8 @@ function _updateAgilityCometFx(
     if (preActive && preT <= 0) {
         fx.setFlag(SpriteFlag.Invisible, true);
         _setAgilityCometAurasVisible(fx, false);
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY);
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY);
         return;
     }
 
@@ -3899,6 +3921,8 @@ function _updateAgilityCometFx(
     if (alpha <= 0.01 || scale <= 0.01) {
         fx.setFlag(SpriteFlag.Invisible, true);
         _setAgilityCometAurasVisible(fx, false);
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY);
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY);
         return;
     }
 
@@ -4151,6 +4175,8 @@ function _updateAgilitySquareCometFx(
     if (preActive && preT <= 0) {
         fx.setFlag(SpriteFlag.Invisible, true);
         _agiSquareCometFillHide(proj);
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY);
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY);
         if (_agiSquareCometShouldLog(fx, nowMs | 0)) {
             console.log(
                 "[AGI][COMET][SQUARE] skip=pre_t0 hero=" + (heroIndex | 0) +
@@ -4185,6 +4211,8 @@ function _updateAgilitySquareCometFx(
     if (alpha <= 0.01 || scale <= 0.01) {
         fx.setFlag(SpriteFlag.Invisible, true);
         _agiSquareCometFillHide(proj);
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY);
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY);
         if (_agiSquareCometShouldLog(fx, nowMs | 0)) {
             console.log(
                 "[AGI][COMET][SQUARE] skip=alpha_scale hero=" + (heroIndex | 0) +
@@ -63300,6 +63328,8 @@ function _agiHookUpdateCometSprite(
     if (preActive && preT <= 0) {
         fx.setFlag(SpriteFlag.Invisible, true)
         _setAgilityCometAurasVisible(fx, false)
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY)
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY)
         return
     }
 
@@ -63397,6 +63427,8 @@ function _agiHookUpdateCometSprite(
     if (alpha <= 0.01 || scale <= 0.01) {
         fx.setFlag(SpriteFlag.Invisible, true)
         _setAgilityCometAurasVisible(fx, false)
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY)
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY)
         return
     }
 

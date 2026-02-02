@@ -1,25 +1,25 @@
 {
   "type": "heDebugDumpV1",
-  "createdAt": 1770047073039,
-  "runtimeMs": 16692,
+  "createdAt": 1770047384865,
+  "runtimeMs": 181193,
   "reason": "auto",
   "host": true,
   "floor": {
-    "index": 1,
-    "kind": "combat",
-    "baseFamily": "ground_light",
-    "wallFamily": "chasm_light",
-    "palette": "stone_light",
+    "index": 0,
+    "kind": "entrance",
+    "baseFamily": "ground_black",
+    "wallFamily": "chasm_black",
+    "palette": "obsidian",
     "objectiveDone": false,
     "combatWavesActive": false,
-    "combatWavesComplete": true,
+    "combatWavesComplete": false,
     "doorState": "",
-    "padPowered": false,
-    "safe": false
+    "padPowered": true,
+    "safe": true
   },
   "teleport": {
-    "runeActive": 0,
-    "runeName": "",
+    "runeActive": 1,
+    "runeName": "teleport_rune",
     "commitAtMs": 0,
     "runeSpinSinceMs": 0,
     "allReadySinceMs": 0,
@@ -33,8 +33,8 @@
     "shadowUntilMs": 0
   },
   "world": {
-    "worldRev": 4,
-    "decorRev": 279,
+    "worldRev": 3,
+    "decorRev": 259,
     "tileSize": 32,
     "rows": 34,
     "cols": 60
@@ -53,19 +53,19 @@
     "savedHeroProfiles": 0,
     "savedNpcKeys": 0,
     "tilemap": {
-      "rev": 22,
+      "rev": 25,
       "rows": 34,
       "cols": 60,
       "tileSize": 32,
-      "worldRev": 4,
-      "floorIndex": 1,
-      "floorKind": "combat",
-      "baseFamily": "ground_light",
-      "wallFamily": "chasm_light",
-      "decorRev": 279,
-      "baseSig": 1192708247,
-      "decorSig": 1163978892,
-      "worldSig": -516771115
+      "worldRev": 3,
+      "floorIndex": -1,
+      "floorKind": "entrance",
+      "baseFamily": "ground_black",
+      "wallFamily": "chasm_black",
+      "decorRev": 259,
+      "baseSig": 1055817701,
+      "decorSig": 203159717,
+      "worldSig": -1426229920
     }
   },
   "heroes": [
@@ -75,8 +75,8 @@
       "profile": "LongBlond",
       "name": "LongBlond",
       "family": "",
-      "x": 705,
-      "y": 357,
+      "x": 1031,
+      "y": 533,
       "hp": 1000,
       "maxHp": 1000,
       "mana": 1000,
@@ -90,48 +90,7 @@
       "inputLocked": 0
     }
   ],
-  "enemies": [
-    {
-      "ei": 0,
-      "monsterId": "slime",
-      "x": 415,
-      "y": 111,
-      "hp": 21,
-      "maxHp": 21,
-      "deathUntil": 0,
-      "destroyed": 0
-    },
-    {
-      "ei": 1,
-      "monsterId": "slime",
-      "x": 1842,
-      "y": 68,
-      "hp": 21,
-      "maxHp": 21,
-      "deathUntil": 0,
-      "destroyed": 0
-    },
-    {
-      "ei": 2,
-      "monsterId": "slime",
-      "x": 66,
-      "y": 1011,
-      "hp": 21,
-      "maxHp": 21,
-      "deathUntil": 0,
-      "destroyed": 0
-    },
-    {
-      "ei": 3,
-      "monsterId": "slime",
-      "x": 1820,
-      "y": 966,
-      "hp": 21,
-      "maxHp": 21,
-      "deathUntil": 0,
-      "destroyed": 0
-    }
-  ],
+  "enemies": [],
   "npcs": [],
   "effects": null,
   "effectsHallTrace": null,
@@ -146,13 +105,13 @@
   "screenSnapResults": [],
   "screenSnapDiag": {
     "renderer": {
-      "type": "2",
-      "isWebGL": true,
+      "type": "",
+      "isWebGL": false,
       "isCanvas": false,
-      "hasGL": true,
+      "hasGL": false,
       "resolution": 1,
-      "width": 833,
-      "height": 512
+      "width": 0,
+      "height": 0
     },
     "pump": {
       "frame": 0,

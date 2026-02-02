@@ -2,11 +2,25 @@
 
 This folder is reserved for student-developed systems. Each student works only inside their own folder:
 
-- src/student/Kyle/
+- src/student/Alan/
+- src/student/Marcel/
+- src/student/Jordyn/
+- src/student/Angel/
+- src/student/Nixie/
+- src/student/Hanna/
+- src/student/Mehki/
+- src/student/Lourdes/
 - src/student/Jason/
+- src/student/Daniel/
+- src/student/Elizabeth/
+- src/student/Kyle/
+- src/student/Khaliyah/
+- src/student/Addisyn/
+- src/student/ChrisP/
 - src/student/Abraham/
 - src/student/ChrisS/
-- src/student/ChrisP/
+- src/student/Cortez/
+- src/student/Esau/
 
 Rules
 - Do not edit files outside your folder unless the maintainer asks.
