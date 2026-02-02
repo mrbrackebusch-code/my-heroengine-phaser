@@ -1949,8 +1949,7 @@ function _playDefaultAnimPath(
         } catch {}
 
         const SHOULD_LOG_TIMESCALE = false;
-        if (SHOULD_LOG_TIMESCALE) {
-        if (shouldProve) {
+        if (SHOULD_LOG_TIMESCALE && shouldProve) {
             console.log(
                 "[PROVE][HERO-ANIM][TIMESCALE]",
                 "| heroName", req.heroName,
@@ -1962,8 +1961,6 @@ function _playDefaultAnimPath(
                 "| timeScale", safe
             );
         }
-    };
-
     };
 
     if (

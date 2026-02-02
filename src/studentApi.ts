@@ -15,6 +15,17 @@ import { registerPropSpec } from "./propSpecs";
 import { registerDecalVisual, registerPropVisual, registerExternalTileSheet } from "./tileAtlas";
 import { registerTrapDefinition } from "./trapRegistry";
 import { registerStudentRelic, registerStudentVfxPreset, type StudentVfxPreset, type StudentRelicDefinition } from "./studentHooks";
+import { registerStudentDebugStartFloor } from "./studentDebug";
+import {
+    createOverlay,
+    getOverlay,
+    hideOverlay,
+    isOverlayVisible,
+    removeOverlay,
+    setOverlayHtml,
+    setOverlayVisible,
+    showOverlay,
+} from "./ui/overlayManager";
 
 export type StudentDataEntry = {
     id?: string;
@@ -74,49 +85,15 @@ export type StudentOverlayOptions = {
     visible?: boolean;
     mountId?: string;
     style?: Partial<CSSStyleDeclaration>;
+    blocksInput?: boolean;
 };
 
-const _overlayById = new Map<string, HTMLElement>();
-
-function _createOverlay(overlayId: string, opts: StudentOverlayOptions): HTMLElement | null {
-    if (typeof document === "undefined") return null;
-    const existing = document.getElementById(overlayId) as HTMLElement | null;
-    if (existing) return existing;
-
-    const el = document.createElement("div");
-    el.id = overlayId;
-    if (opts.className) el.className = opts.className;
-    if (typeof opts.html === "string") el.innerHTML = opts.html;
-    el.style.position = "absolute";
-    el.style.left = "0";
-    el.style.top = "0";
-    el.style.right = "0";
-    el.style.bottom = "0";
-    el.style.display = opts.visible === false ? "none" : "block";
-
-    if (opts.style) {
-        Object.assign(el.style, opts.style);
-    }
-
-    const mount = opts.mountId ? document.getElementById(opts.mountId) : null;
-    (mount || document.body).appendChild(el);
-    _overlayById.set(overlayId, el);
-    return el;
-}
-
-function _getOverlay(overlayId: string): HTMLElement | null {
-    if (typeof document === "undefined") return null;
-    const el = document.getElementById(overlayId) as HTMLElement | null;
-    if (el) return el;
-    return _overlayById.get(overlayId) || null;
-}
-
-function _removeOverlay(overlayId: string): void {
-    const el = _getOverlay(overlayId);
-    if (!el) return;
-    if (el.parentElement) el.parentElement.removeChild(el);
-    _overlayById.delete(overlayId);
-}
+export type StudentDebugStartFloorOptions = {
+    floorIndex?: number;
+    kind?: string;
+    enabled?: boolean;
+    profile?: string;
+};
 
 export type StudentApi = {
     id: string;
@@ -156,6 +133,14 @@ export type StudentApi = {
         createOverlay: (opts: StudentOverlayOptions) => HTMLElement | null;
         getOverlay: (id: string) => HTMLElement | null;
         removeOverlay: (id: string) => void;
+        showOverlay: (id: string) => void;
+        hideOverlay: (id: string) => void;
+        setOverlayHtml: (id: string, html: string) => void;
+        setOverlayVisible: (id: string, visible: boolean) => void;
+        isOverlayVisible: (id: string) => boolean;
+    };
+    debug: {
+        setStartFloor: (opts: StudentDebugStartFloorOptions) => void;
     };
 };
 
@@ -273,17 +258,58 @@ export function createStudentApi(system: StudentSystemDefinition): StudentApi {
         createOverlay: (opts: StudentOverlayOptions) => {
             const raw = opts?.id || "";
             const domId = `student-${domPrefix}-${_normalizeDomId(raw)}`;
-            return _createOverlay(domId, opts);
+            return createOverlay({
+                id: domId,
+                html: opts?.html,
+                mountId: opts?.mountId,
+                className: opts?.className,
+                blocksInput: opts?.blocksInput,
+                visible: opts?.visible,
+                style: opts?.style,
+            });
         },
         getOverlay: (id: string) => {
             const domId = `student-${domPrefix}-${_normalizeDomId(id)}`;
-            return _getOverlay(domId);
+            return getOverlay(domId);
         },
         removeOverlay: (id: string) => {
             const domId = `student-${domPrefix}-${_normalizeDomId(id)}`;
-            _removeOverlay(domId);
+            removeOverlay(domId);
+        },
+        showOverlay: (id: string) => {
+            const domId = `student-${domPrefix}-${_normalizeDomId(id)}`;
+            showOverlay(domId);
+        },
+        hideOverlay: (id: string) => {
+            const domId = `student-${domPrefix}-${_normalizeDomId(id)}`;
+            hideOverlay(domId);
+        },
+        setOverlayHtml: (id: string, html: string) => {
+            const domId = `student-${domPrefix}-${_normalizeDomId(id)}`;
+            setOverlayHtml(domId, html);
+        },
+        setOverlayVisible: (id: string, visible: boolean) => {
+            const domId = `student-${domPrefix}-${_normalizeDomId(id)}`;
+            setOverlayVisible(domId, visible);
+        },
+        isOverlayVisible: (id: string) => {
+            const domId = `student-${domPrefix}-${_normalizeDomId(id)}`;
+            return isOverlayVisible(domId);
         },
     };
 
-    return { id: normId || rawId, name, namespace, key, assets, data, props, traps, relics, vfx, ui };
+    const debug = {
+        setStartFloor: (opts: StudentDebugStartFloorOptions) => {
+            const profile = String((opts && opts.profile) ? opts.profile : name || rawId || normId || "").trim();
+            if (!profile) return;
+            registerStudentDebugStartFloor({
+                profile,
+                floorIndex: (opts && typeof opts.floorIndex === "number") ? (opts.floorIndex | 0) : undefined,
+                kind: (opts && typeof opts.kind === "string") ? String(opts.kind || "") : undefined,
+                enabled: (opts && typeof opts.enabled === "boolean") ? !!opts.enabled : undefined,
+            });
+        },
+    };
+
+    return { id: normId || rawId, name, namespace, key, assets, data, props, traps, relics, vfx, ui, debug };
 }

@@ -766,9 +766,9 @@
 }
 
 .shopui-icon {
-  width: 48px;
-  height: 48px;
-  flex: 0 0 48px;
+  width: 32px;
+  height: 32px;
+  flex: 0 0 32px;
   box-sizing: border-box;
 }
 .relic-offer-item .shopui-icon {
@@ -949,6 +949,31 @@
       .hud-wisdom-overlay.dir-right .hud-wisdom-arrow { transform: rotate(90deg); }
       .hud-wisdom-overlay.dir-down .hud-wisdom-arrow { transform: rotate(180deg); }
       .hud-wisdom-overlay.dir-left .hud-wisdom-arrow { transform: rotate(-90deg); }
+
+      /* Nearest monster indicator (DOM) */
+      #monster-indicator {
+        position: fixed;
+        width: 40px;
+        height: 40px;
+        left: 0;
+        top: 0;
+        display: none;
+        pointer-events: none;
+        z-index: 8;
+        transform: translate(-50%, -50%);
+        filter: drop-shadow(0 2px 6px rgba(0, 0, 0, 0.7));
+      }
+      #monster-indicator .monster-indicator-arrow {
+        width: 100%;
+        height: 100%;
+        display: block;
+      }
+      #monster-indicator .monster-indicator-outline {
+        fill: rgba(6, 6, 8, 0.95);
+      }
+      #monster-indicator .monster-indicator-fill {
+        fill: #f1c46a;
+      }
 
       #hud-wisdom-cancel {
         position: absolute;
@@ -1192,6 +1217,18 @@
         margin-bottom: 0;
         letter-spacing: 0.2px;
         text-align: right;
+      }
+      #hud-you-slot.hud-coins-angry {
+        color: #ff4b4b;
+        text-shadow: 0 0 6px rgba(255, 75, 75, 0.85);
+        animation: hud-coins-angry 0.35s ease-in-out 2;
+      }
+      @keyframes hud-coins-angry {
+        0% { transform: translateX(0); }
+        25% { transform: translateX(-1px); }
+        50% { transform: translateX(1px); }
+        75% { transform: translateX(-1px); }
+        100% { transform: translateX(0); }
       }
 
       .hud-you-stat {
@@ -1870,7 +1907,7 @@
   font-size: 10px;
   font-weight: 800;
   letter-spacing: 0.3px;
-  text-transform: uppercase;
+  text-transform: none;
 }
 
 #weapon-tooltip .weapon-tip-rarity.rarity-common { color: #ffffff; }
@@ -2340,6 +2377,12 @@
           </div>
           <div id="relic-tooltip" aria-hidden="true"></div>
           <div id="weapon-tooltip" aria-hidden="true"></div>
+          <div id="monster-indicator" aria-hidden="true">
+            <svg class="monster-indicator-arrow" viewBox="0 0 64 64" aria-hidden="true">
+              <path class="monster-indicator-outline" d="M4 32 L52 8 L52 22 L60 22 L60 42 L52 42 L52 56 Z"></path>
+              <path class="monster-indicator-fill" d="M10 32 L48 12 L48 24 L54 24 L54 40 L48 40 L48 52 Z"></path>
+            </svg>
+          </div>
           <!-- Level Up overlay (DOM) -->
           <div id="levelup-layer" aria-hidden="true">
             <div id="levelup-box">
@@ -2788,6 +2831,7 @@
           relicOfferItems: document.getElementById("relic-offer-items"),
           relicOfferHint: document.getElementById("relic-offer-hint"),
           hud: document.getElementById("hud"),
+          monsterIndicator: document.getElementById("monster-indicator"),
           loadingOverlay: document.getElementById("loading-overlay"),
           loadingMsg: document.getElementById("loading-msg"),
           loadingName: document.getElementById("loading-name"),
@@ -2947,6 +2991,58 @@
           _hud_wisdomState.lastActive = true;
           _hud_wisdomState.lastSeqKey = seqKey;
           _hud_wisdomState.lastProgress = prog;
+        }
+
+        const MONSTER_INDICATOR_MARGIN_PX = 14;
+
+        function _hud_updateMonsterIndicator(snap) {
+          const el = R.monsterIndicator;
+          if (!el) return;
+          const info = (snap && snap.ready) ? snap.nearestMonster : null;
+          if (!info || !info.active) {
+            if (el.style.display !== "none") el.style.display = "none";
+            return;
+          }
+          const nx = Number(info.nx);
+          const ny = Number(info.ny);
+          if (!isFinite(nx) || !isFinite(ny)) {
+            if (el.style.display !== "none") el.style.display = "none";
+            return;
+          }
+          const len = Math.hypot(nx, ny);
+          if (!(len > 0.0001)) {
+            if (el.style.display !== "none") el.style.display = "none";
+            return;
+          }
+
+          const canvas = document.querySelector("#app canvas");
+          if (!canvas) {
+            if (el.style.display !== "none") el.style.display = "none";
+            return;
+          }
+          const rect = canvas.getBoundingClientRect();
+          if (!(rect.width > 0 && rect.height > 0)) {
+            if (el.style.display !== "none") el.style.display = "none";
+            return;
+          }
+
+          const ux = nx / len;
+          const uy = ny / len;
+          const halfW = Math.max(0, (rect.width / 2) - MONSTER_INDICATOR_MARGIN_PX);
+          const halfH = Math.max(0, (rect.height / 2) - MONSTER_INDICATOR_MARGIN_PX);
+          const ax = Math.max(0.0001, Math.abs(ux));
+          const ay = Math.max(0.0001, Math.abs(uy));
+          const scale = Math.min(halfW / ax, halfH / ay);
+          const cx = rect.left + (rect.width / 2);
+          const cy = rect.top + (rect.height / 2);
+          const x = cx + (ux * scale);
+          const y = cy + (uy * scale);
+
+          const deg = (Math.atan2(uy, ux) * (180 / Math.PI)) + 180;
+          el.style.left = `${x}px`;
+          el.style.top = `${y}px`;
+          el.style.transform = `translate(-50%, -50%) rotate(${deg}deg)`;
+          if (el.style.display !== "block") el.style.display = "block";
         }
 
         function _zoom_getBounds() {
@@ -3361,6 +3457,25 @@
           );
         } catch (_e) {}
       }
+
+      let _hudCoinsAngryTimer = 0;
+      function _hud_flashCoinsAngry(pidMaybe) {
+        const pid = (pidMaybe | 0) || 0;
+        if (pid > 0) {
+          const localPid = getPid ? (getPid() | 0) : 0;
+          if (localPid > 0 && localPid !== pid) return;
+        }
+        const el = R.youSlot || R.youCoins;
+        if (!el) return;
+        el.classList.remove("hud-coins-angry");
+        void el.offsetWidth;
+        el.classList.add("hud-coins-angry");
+        if (_hudCoinsAngryTimer) clearTimeout(_hudCoinsAngryTimer);
+        _hudCoinsAngryTimer = setTimeout(() => {
+          try { el.classList.remove("hud-coins-angry"); } catch (_e) {}
+        }, 500);
+      }
+      window.__heHudFlashCoins = _hud_flashCoinsAngry;
 
       
   function _hud_readAnimatedCoins(actualCoins, coinsEl) {
@@ -5653,6 +5768,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             _minimap_draw(null);
             _hud_clearWisdomOverlay();
             _hud_renderWeapons(R.weaponsBox, null);
+            _hud_updateMonsterIndicator(null);
             return;
           }
 
@@ -5680,6 +5796,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             _minimap_draw(null);
             _hud_clearWisdomOverlay();
             _hud_renderWeapons(R.weaponsBox, null);
+            _hud_updateMonsterIndicator(null);
             return;
           }
 
@@ -5689,6 +5806,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const maxMana = readNum(spritesNS, hero, "maxMana");
           const snap = _getUiSnapshotCached(pid);
           _hud_updateWisdomOverlay(snap);
+          _hud_updateMonsterIndicator(snap);
           const objTitle = (snap && snap.ready) ? String(snap.objectiveTitle || "") : "";
           const objSub = (snap && snap.ready) ? String(snap.objectiveSub || "") : "";
           const objState = (snap && snap.ready) ? String(snap.objectiveState || "") : "";
@@ -6258,6 +6376,13 @@ function _readTeamCoins(pid, hero, spritesNS) {
           if (!el) return;
           const s = String(txt ?? "");
           if (el.textContent !== s) el.textContent = s;
+        }
+
+        function _properCase(s) {
+          const raw = String(s || "").trim();
+          if (!raw) return "";
+          const low = raw.toLowerCase();
+          return low.charAt(0).toUpperCase() + low.slice(1);
         }
 
         function isOpen() {

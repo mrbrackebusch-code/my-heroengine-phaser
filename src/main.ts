@@ -23,6 +23,7 @@ import { preloadHookshotThrustSheet } from "./hookshotWeaponAtlas";
 import { AURA_RADII } from "./auraConfig";
 import { preloadStudentAssets } from "./studentAssets";
 import { initStudentSystems } from "./studentSystems";
+import { applyStudentPropDefinitions } from "./studentSystemsHooks";
 import "./studentAutoLoad";
 
 
@@ -1766,6 +1767,7 @@ async create() {
       isHost: _isHostClient,
       getGlobals: () => (globalThis as any),
     });
+    applyStudentPropDefinitions();
     _tryPruneUnconnectedHeroes("scene-create");
 
     // 9) Keyboard -> controller wiring (all clients)

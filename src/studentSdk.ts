@@ -13,6 +13,7 @@ export type {
     StudentDataEntry,
     StudentDataKind,
     StudentOverlayOptions,
+    StudentDebugStartFloorOptions,
 } from "./studentApi";
 
 export type { PropSpec } from "./propSpecs";

@@ -11,6 +11,20 @@ import { tryRunBlocklyHeroLogic } from "./blocklyHeroLogicRuntime";
 import { createVfxRegistry } from "./vfxRegistry";
 import type { VfxHelpers, VfxRegistry } from "./vfxRegistry";
 import { applyStudentRelicDefinitions, applyStudentVfxPresets } from "./studentHooks";
+import {
+    dispatchStudentNpcInteract,
+    dispatchStudentPropInteract,
+    getStudentDropHooks,
+    getStudentNpc,
+    getStudentProp,
+    isProfileAllowed,
+    listStudentDropTables,
+    listStudentMonsterDrops,
+    type StudentDropEntry,
+    type StudentDropTable,
+    type StudentMonsterDrop,
+} from "./studentSystemsHooks";
+import { pickStudentDebugStartFloor } from "./studentDebug";
 import { ENEMY_EFFECT_DARKEN_PCT_DEFAULT, ENEMY_EFFECT_PALETTES } from "./vfxPalettes";
 import { ENEMY_EFFECT_PALETTES_BY_DARKEN_PCT } from "./vfxEnemyPalettes";
 import {
@@ -148,6 +162,7 @@ import {
     DEBUG_STR_PROJECTILE_METRICS,
     DEBUG_STR_PROJECTILE_FRAMES,
     DEBUG_STR_PROJECTILE_FRAMES_THROTTLE_MS,
+    DEBUG_STUDENT_SYSTEMS_LOGS,
     DEBUG_UI_LOGS,
     DEBUG_UIAPI_LOGS,
     DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE,
@@ -3128,12 +3143,19 @@ function _destroyAgilityCometFx(proj: Sprite): void {
     if (!proj) return;
     const fx = sprites.readDataSprite(proj, AGI_COMET_FX_KEY);
     if (fx && !(fx.flags & sprites.Flag.Destroyed)) {
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY);
         _destroyAgilityCometAurasForFx(fx);
         fx.destroy();
     }
     sprites.setDataSprite(proj, AGI_COMET_FX_KEY, null as any);
     const squareFx = sprites.readDataSprite(proj, AGI_SQUARE_COMET_FX_KEY);
+    const fillFx = sprites.readDataSprite(proj, AGI_SQUARE_COMET_FILL_FX_KEY);
+    if (fillFx && !(fillFx.flags & sprites.Flag.Destroyed)) {
+        fillFx.destroy();
+    }
+    sprites.setDataSprite(proj, AGI_SQUARE_COMET_FILL_FX_KEY, null as any);
     if (squareFx && !(squareFx.flags & sprites.Flag.Destroyed)) {
+        _destroyAxisDebugSprite(squareFx, AGI_COMET_AXIS_DEBUG_SPR_KEY);
         _destroyAgilityCometAurasForFx(squareFx);
         squareFx.destroy();
     }
@@ -3312,7 +3334,7 @@ function _agiDashSquareCometClear(hero: Sprite): void {
     if (!hero) return;
     const spr = sprites.readDataSprite(hero, AGI_SQUARE_COMET_CARRIER_KEY);
     if (spr && !(spr.flags & sprites.Flag.Destroyed)) {
-        _destroyAgilityCometAurasForFx(spr);
+        _destroyAgilityCometFx(spr);
         spr.destroy();
     }
     sprites.setDataSprite(hero, AGI_SQUARE_COMET_CARRIER_KEY, null as any);
@@ -3409,7 +3431,12 @@ function _agiSquareCometPickRawFrame(
         : 0;
 }
 
-function _agiCometFrameMetrics(skinId: string, rawFrame: number): EffectFrameMetrics | null {
+function _agiCometFrameMetricsForDir(
+    skinId: string,
+    rawFrame: number,
+    dirX: number,
+    dirY: number
+): EffectFrameMetrics | null {
     const atlas = _getEffectAtlasAny();
     const resolved = atlas ? _resolveEffectEntry(atlas, skinId, "") : null;
     if (!resolved || !resolved.textureKey) return null;
@@ -3421,9 +3448,13 @@ function _agiCometFrameMetrics(skinId: string, rawFrame: number): EffectFrameMet
         frameW,
         frameH,
         rawFrame | 0,
-        AGI_COMET_BASE_DIR_X,
-        AGI_COMET_BASE_DIR_Y
+        dirX,
+        dirY
     );
+}
+
+function _agiCometFrameMetrics(skinId: string, rawFrame: number): EffectFrameMetrics | null {
+    return _agiCometFrameMetricsForDir(skinId, rawFrame | 0, AGI_COMET_BASE_DIR_X, AGI_COMET_BASE_DIR_Y);
 }
 
 function _agiCometTipOffsetForRaw(skinId: string, rawFrame: number): { dx: number; dy: number } | null {
@@ -3436,6 +3467,17 @@ function _agiCometTipOffsetForRaw(skinId: string, rawFrame: number): { dx: numbe
         if (off) dy += off;
     }
     return { dx, dy };
+}
+
+function _agiCometTailOffsetForRaw(skinId: string, rawFrame: number): { dx: number; dy: number } | null {
+    const metrics = _agiCometFrameMetricsForDir(
+        skinId,
+        rawFrame | 0,
+        -(AGI_COMET_BASE_DIR_X | 0),
+        -(AGI_COMET_BASE_DIR_Y | 0)
+    );
+    if (!metrics) return null;
+    return { dx: metrics.tipDx | 0, dy: metrics.tipDy | 0 };
 }
 
 function _agiCometAxisScaleForTipOffset(tipOffset?: { dx: number; dy: number } | null): { sx: number; sy: number } {
@@ -3460,6 +3502,28 @@ function _agiCometAxisScaleForWeaponLen(
     const ax = Math.abs(tipOffset.dx || 0);
     const ay = Math.abs(tipOffset.dy || 0);
     if (ax === 0 && ay === 0) return null;
+    const dominant = Math.max(ax, ay);
+    if (dominant <= 0) return null;
+    let s = len / dominant;
+    if (!Number.isFinite(s)) return null;
+    s = Math.max(AGI_COMET_ALIGN_LEN_MIN, Math.min(AGI_COMET_ALIGN_LEN_MAX, s));
+    if (ax >= ay) return { sx: s, sy: 1 };
+    return { sx: 1, sy: s };
+}
+
+function _agiCometAxisScaleForWeaponLenWithTail(
+    tipOffset: { dx: number; dy: number } | null,
+    tailOffset: { dx: number; dy: number } | null,
+    weaponLen: number
+): { sx: number; sy: number } | null {
+    if (!tipOffset || !tailOffset) return null;
+    let len = Math.max(1, weaponLen | 0);
+    const padPct = AGI_COMET_ALIGN_LEN_PAD_PCT_X1000 | 0;
+    if (padPct > 0) len = Math.max(1, Math.round((len * padPct) / 1000));
+    const dx = (tipOffset.dx || 0) - (tailOffset.dx || 0);
+    const dy = (tipOffset.dy || 0) - (tailOffset.dy || 0);
+    const ax = Math.abs(dx);
+    const ay = Math.abs(dy);
     const dominant = Math.max(ax, ay);
     if (dominant <= 0) return null;
     let s = len / dominant;
@@ -3503,6 +3567,61 @@ function _agiCometAxisScaleForWeaponDir(
     const ay = Math.abs(ny);
     if (ax >= ay) return { sx: s, sy: 1 };
     return { sx: 1, sy: s };
+}
+
+function _agiCometElementTexturePick(element: number, dir: string): { skinId: string; dir?: string } | null {
+    const pick = _strengthArcTexturePick(element | 0, dir || "");
+    if (!pick || !pick.skinId) return null;
+    return pick;
+}
+
+function _agiSquareCometFillHide(proj: Sprite): void {
+    if (!proj) return;
+    const fx = sprites.readDataSprite(proj, AGI_SQUARE_COMET_FILL_FX_KEY);
+    if (fx && !(fx.flags & sprites.Flag.Destroyed)) {
+        fx.setFlag(SpriteFlag.Invisible, true);
+    }
+}
+
+function _ensureAgilitySquareCometFillFx(
+    proj: Sprite,
+    maskFx: Sprite,
+    element: number,
+    dir: string
+): Sprite | null {
+    if (!proj || !maskFx) return null;
+    const pick = _agiCometElementTexturePick(element | 0, dir || "");
+    let fx = sprites.readDataSprite(proj, AGI_SQUARE_COMET_FILL_FX_KEY);
+    if (!pick || !pick.skinId) {
+        if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.setFlag(SpriteFlag.Invisible, true);
+        return null;
+    }
+    if (fx && (fx.flags & sprites.Flag.Destroyed)) fx = null;
+    if (!fx) {
+        fx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+        fx.setFlag(SpriteFlag.Ghost, true);
+        fx.setFlag(SpriteFlag.Invisible, true);
+        sprites.setDataSprite(proj, AGI_SQUARE_COMET_FILL_FX_KEY, fx);
+    }
+    const skinId = pick.skinId;
+    const dirKey = pick.dir || "";
+    const curSkin = sprites.readDataString(fx, "effectSkin") || "";
+    const curDir = sprites.readDataString(fx, "effectDir") || "";
+    if (curSkin !== skinId || curDir !== dirKey) {
+        const opts: EffectApplyOpts = {
+            mode: "projectile",
+            repeat: -1,
+            alpha: 1,
+            blend: "normal",
+            frameIndex: 0,
+            maskSprite: maskFx
+        };
+        if (dirKey) opts.dir = dirKey;
+        applyEffectToSprite(fx, skinId, opts);
+    } else {
+        sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, maskFx as any);
+    }
+    return fx;
 }
 
 function _agiCometAlignDirOffset(nx: number, ny: number, isSquare: boolean): { dx: number; dy: number } {
@@ -3786,6 +3905,7 @@ function _updateAgilityCometFx(
     const rawFrame = _agiCometPickRawFrame(preActive, preT, growthT, reelT, nowMs, startMs);
     const frameIdx = _strengthArcFrameIndexFromRaw(AGI_SQUARE_COMET_SKIN_ID, rawFrame | 0);
     const tipOffset = _agiCometTipOffsetForRaw(AGI_SQUARE_COMET_SKIN_ID, rawFrame | 0);
+    const tailOffset = _agiCometTailOffsetForRaw(AGI_SQUARE_COMET_SKIN_ID, rawFrame | 0);
     const fallbackOffset = _agiCometDirOffset(nx, ny);
     const vis = getHeroVisualInfoForStrength(hero, nx, ny);
     let wTipX = (vis[2] || 0);
@@ -3807,7 +3927,18 @@ function _updateAgilityCometFx(
     }
     const weaponTipX = hero.x + wTipX;
     const weaponTipY = hero.y + wTipY;
-    const axisScale = _agiCometAxisScaleForWeaponLen(tipOffset, weaponLen) || _agiCometAxisScaleForTipOffset(tipOffset);
+    let baseX = anchorX;
+    let baseY = anchorY;
+    if (weaponLen > 0 && (wTipX || wTipY)) {
+        baseX = weaponTipX - (nx * weaponLen);
+        baseY = weaponTipY - (ny * weaponLen);
+    }
+    if (weaponLen <= 0) weaponLen = 1;
+    const axisScale =
+        _agiCometAxisScaleForWeaponLenWithTail(tipOffset, tailOffset, weaponLen) ||
+        _agiCometAxisScaleForWeaponLen(tipOffset, weaponLen) ||
+        _agiCometAxisScaleForTipOffset(tipOffset) ||
+        { sx: 1, sy: 1 };
 
     sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0);
     sprites.setDataNumber(fx, EFFECT_ROT_DATA_KEY, rot);
@@ -3818,12 +3949,8 @@ function _updateAgilityCometFx(
     sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, AGI_SQUARE_COMET_FLIP_X | 0);
     sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, AGI_SQUARE_COMET_FLIP_Y | 0);
 
-    let tipAnchorX = baseTipX;
-    let tipAnchorY = baseTipY;
-    if (weaponLen > 0 && (wTipX || wTipY)) {
-        tipAnchorX = weaponTipX;
-        tipAnchorY = weaponTipY;
-    }
+    let tipAnchorX = baseX;
+    let tipAnchorY = baseY;
     const dirOff = _agiCometAlignDirOffset(nx, ny, false);
     tipAnchorX += (AGI_COMET_ALIGN_OFF_X | 0) + (dirOff.dx | 0);
     tipAnchorY += (AGI_COMET_ALIGN_OFF_Y | 0) + (dirOff.dy | 0);
@@ -3832,13 +3959,14 @@ function _updateAgilityCometFx(
     let tipY = tipAnchorY;
     const flipX = (AGI_SQUARE_COMET_FLIP_X | 0) !== 0;
     const flipY = (AGI_SQUARE_COMET_FLIP_Y | 0) !== 0;
-    if (tipOffset) {
+    const anchorOffset = tailOffset || tipOffset;
+    if (anchorOffset) {
         const cos = Math.cos(rot);
         const sin = Math.sin(rot);
-        const tipDx = (flipX ? -tipOffset.dx : tipOffset.dx);
-        const tipDy = (flipY ? -tipOffset.dy : tipOffset.dy);
-        const offX = (tipDx * scale * (axisScale.sx || 1));
-        const offY = (tipDy * scale * (axisScale.sy || 1));
+        const offDx = (flipX ? -anchorOffset.dx : anchorOffset.dx);
+        const offDy = (flipY ? -anchorOffset.dy : anchorOffset.dy);
+        const offX = (offDx * scale * (axisScale.sx || 1));
+        const offY = (offDy * scale * (axisScale.sy || 1));
         const rotX = (offX * cos) - (offY * sin);
         const rotY = (offX * sin) + (offY * cos);
         tipX = tipAnchorX - rotX;
@@ -3854,6 +3982,19 @@ function _updateAgilityCometFx(
     fx.y = tipY;
     fx.z = (hero.z | 0) + (AGI_COMET_Z_BIAS | 0);
     fx.setFlag(SpriteFlag.Invisible, false);
+
+    _updateWeaponAxisDebugForHero(heroIndex | 0, hero, baseX, baseY, nx, ny, weaponLen | 0);
+    _updateCometAxisDebugForFx(
+        heroIndex | 0,
+        fx,
+        baseX,
+        baseY,
+        rot,
+        tipOffset,
+        tailOffset,
+        axisScale,
+        scale
+    );
 
     if (_agiCometAlignShouldLog(fx, nowMs | 0)) {
         let weaponBoxW = 0;
@@ -4009,6 +4150,7 @@ function _updateAgilitySquareCometFx(
     const preT = _agiCometPreT(preActive, activateAt | 0, nowMs | 0);
     if (preActive && preT <= 0) {
         fx.setFlag(SpriteFlag.Invisible, true);
+        _agiSquareCometFillHide(proj);
         if (_agiSquareCometShouldLog(fx, nowMs | 0)) {
             console.log(
                 "[AGI][COMET][SQUARE] skip=pre_t0 hero=" + (heroIndex | 0) +
@@ -4042,6 +4184,7 @@ function _updateAgilitySquareCometFx(
     }
     if (alpha <= 0.01 || scale <= 0.01) {
         fx.setFlag(SpriteFlag.Invisible, true);
+        _agiSquareCometFillHide(proj);
         if (_agiSquareCometShouldLog(fx, nowMs | 0)) {
             console.log(
                 "[AGI][COMET][SQUARE] skip=alpha_scale hero=" + (heroIndex | 0) +
@@ -4076,29 +4219,56 @@ function _updateAgilitySquareCometFx(
     const frameIdx = _strengthArcFrameIndexFromRaw(AGI_SQUARE_COMET_SKIN_ID, rawFrame | 0);
     const tipOffset = _agiCometTipOffsetForRaw(AGI_SQUARE_COMET_SKIN_ID, rawFrame | 0);
     const fallbackOffset = _agiCometDirOffset(nx, ny);
-    const vis = getHeroVisualInfoForStrength(hero, nx, ny);
-    let wTipX = (vis[2] || 0);
-    let wTipY = (vis[3] || 0);
-    let wTipProj = (wTipX * nx) + (wTipY * ny);
-    if (wTipProj < 0) {
-        wTipX = -wTipX;
-        wTipY = -wTipY;
-        wTipProj = -wTipProj;
-    }
-    let weaponLen = Math.max(0, wTipProj);
-    if (weaponLen <= 0) {
-        const lead = (vis[1] || 0);
-        if (lead > 0) {
-            weaponLen = lead;
-            wTipX = nx * weaponLen;
-            wTipY = ny * weaponLen;
+    const info = _getHeroWeaponFgInfo(hero);
+    let baseX = hero.x;
+    let baseY = hero.y;
+    let weaponLen = 0;
+    let weaponTipX = hero.x;
+    let weaponTipY = hero.y;
+    if (info) {
+        baseX = hero.x + (info.offX || 0);
+        baseY = hero.y + (info.offY || 0);
+        const lead = _weaponLeadingEdgeForFrameIndex(info, STR_WPN_AURA_OUTLINE_RADIUS | 0, nx, ny, 0);
+        if (Number.isFinite(lead) && lead > 0) {
+            weaponLen = Math.round(lead);
+            weaponTipX = baseX + nx * weaponLen;
+            weaponTipY = baseY + ny * weaponLen;
         }
     }
-    const weaponTipX = hero.x + wTipX;
-    const weaponTipY = hero.y + wTipY;
+    if (weaponLen <= 0) {
+        const vis = getHeroVisualInfoForStrength(hero, nx, ny);
+        let wTipX = (vis[2] || 0);
+        let wTipY = (vis[3] || 0);
+        let wTipProj = (wTipX * nx) + (wTipY * ny);
+        if (wTipProj < 0) {
+            wTipX = -wTipX;
+            wTipY = -wTipY;
+            wTipProj = -wTipProj;
+        }
+        if (wTipProj > 0) {
+            weaponLen = Math.round(wTipProj);
+            weaponTipX = hero.x + wTipX;
+            weaponTipY = hero.y + wTipY;
+            baseX = weaponTipX - nx * weaponLen;
+            baseY = weaponTipY - ny * weaponLen;
+        } else {
+            const lead = (vis[1] || 0);
+            if (lead > 0) {
+                weaponLen = Math.round(lead);
+                baseX = hero.x;
+                baseY = hero.y;
+                weaponTipX = baseX + nx * weaponLen;
+                weaponTipY = baseY + ny * weaponLen;
+            }
+        }
+    }
+    if (weaponLen <= 0) weaponLen = 1;
+    const tailOffset = _agiCometTailOffsetForRaw(AGI_SQUARE_COMET_SKIN_ID, rawFrame | 0);
     const axisScale =
+        _agiCometAxisScaleForWeaponLenWithTail(tipOffset, tailOffset, weaponLen) ||
         _agiCometAxisScaleForWeaponLen(tipOffset, weaponLen) ||
-        _agiCometAxisScaleForTipOffset(tipOffset);
+        _agiCometAxisScaleForTipOffset(tipOffset) ||
+        { sx: 1, sy: 1 };
     sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0);
     sprites.setDataNumber(fx, EFFECT_ROT_DATA_KEY, rot);
     sprites.setDataNumber(fx, EFFECT_SCALE_DATA_KEY, scale);
@@ -4107,27 +4277,29 @@ function _updateAgilitySquareCometFx(
     sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, alpha)));
     sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, 0);
     sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, 0);
+    const elemTint = _elementTintForMode(_heroBodyEffectElement(hero, element | 0) | 0, "offense") | 0;
 
     const dirOff = _agiCometAlignDirOffset(nx, ny, true);
     const sideX = -ny;
     const sideY = nx;
-    let tipAnchorX = weaponTipX +
+    let tipAnchorX = baseX +
         (AGI_SQUARE_COMET_ALIGN_OFF_X | 0) +
         (dirOff.dx | 0) +
         (nx * (AGI_SQUARE_COMET_ALIGN_FWD_PX | 0)) +
         (sideX * (AGI_SQUARE_COMET_ALIGN_SIDE_PX | 0));
-    let tipAnchorY = weaponTipY +
+    let tipAnchorY = baseY +
         (AGI_SQUARE_COMET_ALIGN_OFF_Y | 0) +
         (dirOff.dy | 0) +
         (ny * (AGI_SQUARE_COMET_ALIGN_FWD_PX | 0)) +
         (sideY * (AGI_SQUARE_COMET_ALIGN_SIDE_PX | 0));
+    const anchorOffset = tailOffset || tipOffset;
     let tipX = tipAnchorX;
     let tipY = tipAnchorY;
-    if (tipOffset) {
+    if (anchorOffset) {
         const cos = Math.cos(rot);
         const sin = Math.sin(rot);
-        const offX = (tipOffset.dx * scale * (axisScale.sx || 1));
-        const offY = (tipOffset.dy * scale * (axisScale.sy || 1));
+        const offX = (anchorOffset.dx * scale * (axisScale.sx || 1));
+        const offY = (anchorOffset.dy * scale * (axisScale.sy || 1));
         const rotX = (offX * cos) - (offY * sin);
         const rotY = (offX * sin) + (offY * cos);
         tipX = tipAnchorX - rotX;
@@ -4141,6 +4313,37 @@ function _updateAgilitySquareCometFx(
     fx.y = tipY;
     fx.z = (hero.z | 0) + (AGI_SQUARE_COMET_Z_BIAS | 0);
     fx.setFlag(SpriteFlag.Invisible, false);
+
+    const fillDir = _enemyDirFromVector(nx, ny);
+    const fillFx = _ensureAgilitySquareCometFillFx(proj, fx, element | 0, fillDir);
+    if (fillFx && !(fillFx.flags & sprites.Flag.Destroyed)) {
+        fillFx.x = tipX;
+        fillFx.y = tipY;
+        fillFx.z = (fx.z | 0) - 1;
+        fillFx.setFlag(SpriteFlag.Invisible, false);
+        sprites.setDataNumber(fillFx, EFFECT_ROT_DATA_KEY, rot);
+        sprites.setDataNumber(fillFx, EFFECT_SCALE_DATA_KEY, scale);
+        sprites.setDataNumber(fillFx, EFFECT_SCALE_X_DATA_KEY, axisScale.sx);
+        sprites.setDataNumber(fillFx, EFFECT_SCALE_Y_DATA_KEY, axisScale.sy);
+        sprites.setDataNumber(fillFx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, alpha)));
+        sprites.setDataNumber(fx, EFFECT_TINT_DATA_KEY, 0);
+    } else {
+        if (elemTint) sprites.setDataNumber(fx, EFFECT_TINT_DATA_KEY, elemTint | 0);
+        else sprites.setDataNumber(fx, EFFECT_TINT_DATA_KEY, 0);
+    }
+
+    _updateWeaponAxisDebugForHero(heroIndex | 0, hero, baseX, baseY, nx, ny, weaponLen | 0);
+    _updateCometAxisDebugForFx(
+        heroIndex | 0,
+        fx,
+        baseX,
+        baseY,
+        rot,
+        tipOffset,
+        tailOffset,
+        axisScale,
+        scale
+    );
 
     if (_agiCometAlignShouldLog(fx, nowMs | 0)) {
         _agiCometAlignLogLine({
@@ -4711,6 +4914,7 @@ const AGI_FX_SEG_SPACING_PX = 24;
 const AGI_FX_SEG_MAX = 16;
 const AGI_COMET_FX_KEY = "agiCometFx";
 const AGI_SQUARE_COMET_FX_KEY = "agiSquareCometFx";
+const AGI_SQUARE_COMET_FILL_FX_KEY = "agiSquareCometFillFx";
 const AGI_COMET_Z_BIAS = 18;
 const AGI_SQUARE_COMET_Z_BIAS = 5000;
 const AGI_COMET_ALPHA = 0.8;
@@ -4756,14 +4960,11 @@ const AGI_SQUARE_COMET_ALIGN_DIR_OFFSETS: { [key: string]: { dx: number; dy: num
     left: { dx: 0, dy: 0 },
     right: { dx: 0, dy: 0 }
 };
-// SwordArcs3 (6 cols): row 8 -> frames 48..53
-// Aim indicator: col 4 row 8 (frame 52)
-// Launch: col 0..2 row 8 (frames 48,49,50)
-// Fade out: col 3..5 row 8 (frames 51,52,53)
-const AGI_COMET_PRE_RAW = [52];
-const AGI_COMET_HOLD_RAW = [50];
-const AGI_COMET_GROW_RAW = [48, 49, 50];
-const AGI_COMET_REEL_RAW = [51, 52, 53];
+// Comet 198x198: windup + fade sequencing for non-square comet.
+const AGI_COMET_PRE_RAW = [6, 0, 1, 2];
+const AGI_COMET_HOLD_RAW = [2];
+const AGI_COMET_GROW_RAW = [0, 1, 2];
+const AGI_COMET_REEL_RAW = [2, 1];
 const AGI_HOOK_COMET_SKIN_ID = "Comet";
 const AGI_HOOK_COMET_GROW_RAW = [0, 1, 2];
 const AGI_HOOK_COMET_FORWARD_RAW = [3, 4, 5];
@@ -4834,6 +5035,11 @@ const WPN_DOWN_FORCE_SIDE_SIGN = -1;
 const WPN_AURA_DEBUG_COLORS = [2, 7, 9, 14]; // r0..r3 overlay colors
 const WPN_AURA_DEBUG_Z_BOOST = 5000;
 const WPN_TIP_DEBUG_MIN_SIZE = 256;
+const AGI_WPN_AXIS_DEBUG_SPR_KEY = "__agiWpnAxisDbg";
+const AGI_COMET_AXIS_DEBUG_SPR_KEY = "__agiCometAxisDbg";
+const AGI_AXIS_DEBUG_MIN_SIZE = 16;
+const AGI_WPN_AXIS_DEBUG_COLOR = 2;
+const AGI_COMET_AXIS_DEBUG_COLOR = 9;
 const HERO_AURA_SIDE_PAD_PX = 2;
 const HERO_AURA_SIDE_RADIUS_PAD = 1;
 const WPN_TRACE_ID_KEY = "__wpnTraceId";
@@ -11086,6 +11292,7 @@ const INTERACT_DATA = {
 }
 
 const INTERACT_ACTION_PROP = "prop"
+const INTERACT_ACTION_NPC = "npc"
 const INTERACT_ACTION_HEADSTONE = "headstone"
 const INTERACT_ACTION_RELIC_OFFER = "relic_offer"
 
@@ -12795,7 +13002,54 @@ function _dunHandleInteractProp(it: Sprite, hero: Sprite, pid: number, hi: numbe
         }
     }
 
+    try {
+        dispatchStudentPropInteract({
+            pid: pid | 0,
+            hi: hi | 0,
+            hero,
+            target: it,
+            action: String(action || ""),
+            name: String(name || ""),
+            base: String(baseName || ""),
+            now: nowMs | 0,
+            prop: getStudentProp(baseName),
+        })
+    } catch { /* ignore */ }
+
     return true
+}
+
+function _dunFindStudentNpcInRange(hero: Sprite): Sprite | null {
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return null
+    for (let i = 0; i < npcActors.length; i++) {
+        const npc = npcActors[i]
+        if (!npc || (npc.flags & sprites.Flag.Destroyed)) continue
+        const id = sprites.readDataString(npc, STUDENT_NPC_ID_KEY) || ""
+        if (!id) continue
+        if (_isHeroInInteractRange(hero, npc, NPC_INTERACT_EXTRA_X_PX, NPC_INTERACT_EXTRA_Y_PX)) return npc
+    }
+    return null
+}
+
+function _dunHandleStudentNpcInteract(hero: Sprite, pid: number, hi: number, nowMs: number): boolean {
+    const npc = _dunFindStudentNpcInRange(hero)
+    if (!npc) return false
+    const npcId = sprites.readDataString(npc, STUDENT_NPC_ID_KEY) || ""
+    if (!npcId) return false
+    try {
+        return dispatchStudentNpcInteract({
+            pid: pid | 0,
+            hi: hi | 0,
+            hero,
+            target: npc,
+            action: INTERACT_ACTION_NPC,
+            npcId: String(npcId || ""),
+            now: nowMs | 0,
+            npc: getStudentNpc(npcId),
+        })
+    } catch {
+        return false
+    }
 }
 
 type TrapInteractState = {
@@ -17032,6 +17286,7 @@ type NpcLpcOptions = {
 
 const NPC_LPC_FLAG_KEY = "npcLpc"
 const NPC_LPC_HERO_INDEX_BASE = 1000
+const STUDENT_NPC_ID_KEY = "studentNpcId"
 
 function _npcSnapshotKeyFromParts(role: string, heroName: string, family: string): string {
     const r = (role || "").trim()
@@ -17046,6 +17301,20 @@ function _markNpcLpcSprite(s: Sprite, role: string): void {
     sprites.setDataBoolean(s, HERO_DATA.IS_NPC, true)
     sprites.setDataBoolean(s, NPC_LPC_FLAG_KEY, true)
     if (role) sprites.setDataString(s, "_npcRole", role)
+}
+
+function _resolveStudentNpcDefinition(profileName: string, npcRole?: string | null): any | null {
+    const roleKey = String(npcRole || "").trim();
+    if (roleKey) {
+        const byRole = getStudentNpc(roleKey);
+        if (byRole) return byRole;
+    }
+    const nameKey = String(profileName || "").trim();
+    if (nameKey) {
+        const byName = getStudentNpc(nameKey);
+        if (byName) return byName;
+    }
+    return null;
 }
 
 function _spawnNpcLpcActor(profileName: string, familyNum: number, x: number, y: number, opts?: NpcLpcOptions): Sprite {
@@ -17110,6 +17379,10 @@ function _spawnNpcLpcActor(profileName: string, familyNum: number, x: number, y:
     if (w.sup != null) sprites.setDataString(npc, HERO_DATA_WEAPON_SUPPORT_ID, w.sup || "")
 
     if (opts?.npcRole) sprites.setDataString(npc, "_npcRole", opts.npcRole)
+    const studentNpcDef = _resolveStudentNpcDefinition(profileName, opts?.npcRole || "")
+    if (studentNpcDef && studentNpcDef.id) {
+        sprites.setDataString(npc, STUDENT_NPC_ID_KEY, String(studentNpcDef.id || ""))
+    }
 
     // Apply any pending saved snapshot for this NPC (role+name+family keyed).
     try {
@@ -22224,10 +22497,67 @@ function _dunEnterFloor(nextIndex: number, kind: string, nowMs: number): void {
 
 
 
+type DebugStartFloorChoice = {
+    floorIndex: number;
+    kind: string;
+    profile: string;
+};
+
+function _dunNormalizeDebugStartKind(raw: any): string {
+    const k = String(raw || "").trim().toLowerCase();
+    if (!k) return "";
+    if (k === "safe") return DUNGEON_KIND_SHOP;
+    if (k === "shop") return DUNGEON_KIND_SHOP;
+    if (k === "combat" || k === "fight" || k === "monsters") return DUNGEON_KIND_COMBAT;
+    if (k === "story") return DUNGEON_KIND_STORY;
+    if (k === "treasure" || k === "relic") return DUNGEON_KIND_TREASURE;
+    if (k === "hall" || k === "hallof_enemies") return DUNGEON_KIND_HALL;
+    if (k === "entrance" || k === "start") return DUNGEON_KIND_ENTRANCE;
+    return "";
+}
+
+function _dunResolveStudentDebugStartFloor(): DebugStartFloorChoice | null {
+    const profiles: string[] = [];
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi];
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue;
+        if (sprites.readDataBoolean(hero, HERO_DATA.IS_NPC)) continue;
+        const profileKey = _heroProfileKeyForIndex(hi);
+        if (profileKey) profiles.push(profileKey);
+    }
+
+    const entry = pickStudentDebugStartFloor(profiles);
+    if (!entry) return null;
+
+    let floorIndex = (typeof entry.floorIndex === "number" && isFinite(entry.floorIndex)) ? (entry.floorIndex | 0) : 0;
+    if (floorIndex < 0) floorIndex = 0;
+
+    let kind = _dunNormalizeDebugStartKind(entry.kind || "");
+    if (!kind) {
+        kind = (floorIndex <= 0) ? DUNGEON_KIND_ENTRANCE : _dunPickNextFloorKind(floorIndex | 0);
+    }
+
+    if (kind !== DUNGEON_KIND_ENTRANCE && (floorIndex | 0) <= 0) {
+        floorIndex = 1;
+    }
+
+    return { floorIndex: floorIndex | 0, kind, profile: String(entry.profile || "") };
+}
+
+
+
 function dungeonStartRun(nowMs: number): void {
 
     DUNGEON_MODE_ACTIVE = true
     resetAllTrapInstances()
+    const override = _dunResolveStudentDebugStartFloor()
+    if (override) {
+        if (DEBUG_STUDENT_SYSTEMS_LOGS) {
+            console.log(`[STUDENT][DEBUG] startFloor profile=${override.profile} floor=${override.floorIndex | 0} kind=${override.kind}`)
+        }
+        _dunEnterFloor(override.floorIndex | 0, override.kind, nowMs | 0)
+        return
+    }
     _dunEnterFloor(0, DUNGEON_KIND_ENTRANCE, nowMs | 0)
 
 }
@@ -22485,6 +22815,7 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
 
 
         // Try interactables first
+        let handledProp = false
 
         for (let i = 0; i < _dunInteractables.length; i++) {
 
@@ -22520,8 +22851,15 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
             if (used) continue
 
             const handled = _dunHandleInteractable(it, hero, pid | 0, hi | 0, nowMs | 0)
-            if (handled) break
+            if (handled) {
+                handledProp = true
+                break
+            }
 
+        }
+
+        if (!handledProp) {
+            _dunHandleStudentNpcInteract(hero, pid | 0, hi | 0, nowMs | 0)
         }
 
 
@@ -33554,6 +33892,7 @@ function shopHandleControls(nowMs: number): void {
             if (!trySpendHeroCoins(hi, price)) {
 
                 logShop(`[SHOP][BUY_DENY] hi=${hi} pid=${pid} ring=${si} price=${price} coins=${getHeroCoins(hi) | 0}`)
+                _shopFlashCoinsInsufficient(hi)
 
                 continue
 
@@ -33570,6 +33909,7 @@ function shopHandleControls(nowMs: number): void {
             // Hero takes the offer (EQUIP SLOT drives gameplay)
 
             _shopEquipWeaponToHeroSlot(hero, equipSlot, takeId, { rarity: takeRarity, variant: takeVariant })
+            _shopSyncRenderSlotsForHero(hero, renderSlot, takeId)
 
 
 
@@ -33666,6 +34006,7 @@ function shopHandleControls(nowMs: number): void {
 
 
             _shopEnsureStatueRow(now)
+            _shopUpdateUiForHero(hi, now)
 
             continue
 
@@ -34387,6 +34728,23 @@ function _shopEquipWeaponToHeroSlot(hero: Sprite, equipSlot: string, weaponId: s
 
 }
 
+function _shopSyncRenderSlotsForHero(hero: Sprite, renderSlot: string, weaponId: string): void {
+    if (!hero) return
+    const slot = (renderSlot || "").toLowerCase()
+    const wid = weaponId || ""
+    if (!slot) return
+    if (slot === "slash") {
+        sprites.setDataString(hero, HERO_DATA.WEAPON_SLASH_ID, wid)
+        sprites.setDataString(hero, HERO_DATA.WEAPON_EXEC_ID, wid)
+        sprites.setDataString(hero, HERO_DATA.WEAPON_COMBO_ID, wid)
+        return
+    }
+    if (slot === "thrust") { sprites.setDataString(hero, HERO_DATA.WEAPON_THRUST_ID, wid); return }
+    if (slot === "cast") { sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, wid); return }
+    if (slot === "exec") { sprites.setDataString(hero, HERO_DATA.WEAPON_EXEC_ID, wid); return }
+    if (slot === "combo") { sprites.setDataString(hero, HERO_DATA.WEAPON_COMBO_ID, wid); return }
+}
+
 
 
 function _shopClearWeaponFromHeroSlotIfMatches(hero: Sprite, equipSlot: string, weaponId: string): boolean {
@@ -34551,6 +34909,19 @@ function _shopSetUiBoughtFlagFromOffer(hi: number, pid: number, offer: Sprite): 
 
     shopBoughtByHero[hi] = (boughtBy === (pid | 0))
 
+}
+
+function _shopFlashCoinsInsufficient(hi: number): void {
+    if (!isPhaserRuntime()) return
+    const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
+    let pid = 0
+    try { pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0 } catch { pid = 0 }
+    try {
+        const g: any = globalThis as any
+        const fn = g && g.__heHudFlashCoins
+        if (typeof fn === "function") fn(pid | 0)
+    } catch { }
 }
 
 
@@ -37355,6 +37726,7 @@ let _shopGrantedCoins = false
 function _shopInit_grantCoinsOnce(): void {
 
     if (_shopGrantedCoins) return
+    if (!DEBUG_DEV_COMMANDS) return
 
     _shopGrantedCoins = true
 
@@ -37832,10 +38204,6 @@ function shopInitPOC(): void {
 
 
 
-    _shopInit_grantCoinsOnce()
-
-
-
     _shopInit_ensureTriggerZone()
 
 
@@ -38095,6 +38463,7 @@ function _shopInputs_handleBuyIfEdge(
         if (!trySpendHeroCoins(hi, price | 0)) {
 
             logShop("[SHOP][BUY] denied-insufficient pid=" + pid + " hi=" + hi + " ring=" + ringIndex + " price=" + price + " coins=" + (getHeroCoins(hi) | 0))
+            _shopFlashCoinsInsufficient(hi)
 
         } else {
 
@@ -58208,6 +58577,7 @@ function _destroyWeaponTipDebugSprite(heroIndex: number, hero?: Sprite): void {
     if (spr && !(spr.flags & sprites.Flag.Destroyed)) {
         spr.setFlag(SpriteFlag.Invisible, true);
     }
+    _destroyAxisDebugSprite(h, AGI_WPN_AXIS_DEBUG_SPR_KEY);
 }
 
 function _ensureWeaponTipDebugSprite(
@@ -58227,6 +58597,158 @@ function _ensureWeaponTipDebugSprite(
     spr.setFlag(SpriteFlag.Ghost, true);
     spr.setFlag(SpriteFlag.Invisible, false);
     return spr;
+}
+
+function _destroyAxisDebugSprite(owner: Sprite, key: string): void {
+    if (!owner) return;
+    const spr = sprites.readDataSprite(owner, key);
+    if (spr && !(spr.flags & sprites.Flag.Destroyed)) {
+        spr.setFlag(SpriteFlag.Invisible, true);
+    }
+}
+
+function _disposeAxisDebugSprite(owner: Sprite, key: string): void {
+    if (!owner) return;
+    const spr = sprites.readDataSprite(owner, key);
+    if (spr && !(spr.flags & sprites.Flag.Destroyed)) {
+        spr.destroy();
+    }
+    sprites.setDataSprite(owner, key, null as any);
+}
+
+function _ensureAxisDebugSprite(owner: Sprite, key: string, size: number, z: number): Sprite | null {
+    if (!owner) return null;
+    const s = Math.max(AGI_AXIS_DEBUG_MIN_SIZE | 0, size | 0);
+    let spr = sprites.readDataSprite(owner, key);
+    if (!spr || (spr.flags & sprites.Flag.Destroyed)) {
+        spr = sprites.create(image.create(s, s), SpriteKind.HeroEffect);
+        sprites.setDataSprite(owner, key, spr);
+    } else if (spr.image && (spr.image.width !== s || spr.image.height !== s)) {
+        spr.setImage(image.create(s, s));
+    }
+    spr.z = z | 0;
+    spr.setFlag(SpriteFlag.Ghost, true);
+    spr.setFlag(SpriteFlag.Invisible, false);
+    return spr;
+}
+
+function _updateAxisDebugLine(
+    owner: Sprite,
+    key: string,
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    color: number,
+    z: number
+): void {
+    if (!owner) return;
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
+    const size = Math.max(AGI_AXIS_DEBUG_MIN_SIZE | 0, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy))) + 6);
+    const spr = _ensureAxisDebugSprite(owner, key, size | 0, z | 0);
+    if (!spr || !spr.image) return;
+    const img = spr.image;
+    _projectileClearImage(img);
+    const cx = Math.idiv(img.width, 2);
+    const cy = Math.idiv(img.height, 2);
+    const hx = dx * 0.5;
+    const hy = dy * 0.5;
+    const xA = Math.round(cx - hx);
+    const yA = Math.round(cy - hy);
+    const xB = Math.round(cx + hx);
+    const yB = Math.round(cy + hy);
+    img.drawLine(xA, yA, xB, yB, color | 0);
+    spr.x = (x0 + x1) * 0.5;
+    spr.y = (y0 + y1) * 0.5;
+}
+
+function _updateWeaponAxisDebugForHero(
+    heroIndex: number,
+    hero: Sprite,
+    baseX: number,
+    baseY: number,
+    nx: number,
+    ny: number,
+    weaponLen: number
+): void {
+    if (!_agiCometAlignVisEnabled(heroIndex)) {
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY);
+        return;
+    }
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) {
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY);
+        return;
+    }
+    const len = Math.max(1, weaponLen | 0);
+    const x0 = baseX;
+    const y0 = baseY;
+    const x1 = baseX + (nx * len);
+    const y1 = baseY + (ny * len);
+    _updateAxisDebugLine(
+        hero,
+        AGI_WPN_AXIS_DEBUG_SPR_KEY,
+        x0,
+        y0,
+        x1,
+        y1,
+        AGI_WPN_AXIS_DEBUG_COLOR,
+        (hero.z | 0) + (WPN_AURA_DEBUG_Z_BOOST | 0) + 3
+    );
+}
+
+function _updateCometAxisDebugForFx(
+    heroIndex: number,
+    fx: Sprite,
+    tailX: number,
+    tailY: number,
+    rot: number,
+    tipOffset: { dx: number; dy: number } | null,
+    tailOffset: { dx: number; dy: number } | null,
+    axisScale: { sx: number; sy: number } | null,
+    scale: number
+): void {
+    if (!_agiCometAlignVisEnabled(heroIndex)) {
+        if (fx) _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY);
+        return;
+    }
+    if (!fx || (fx.flags & sprites.Flag.Destroyed)) return;
+    let dxLocal = 0;
+    let dyLocal = 0;
+    if (tipOffset && tailOffset) {
+        dxLocal = (tipOffset.dx || 0) - (tailOffset.dx || 0);
+        dyLocal = (tipOffset.dy || 0) - (tailOffset.dy || 0);
+    } else if (tipOffset) {
+        dxLocal = tipOffset.dx || 0;
+        dyLocal = tipOffset.dy || 0;
+    } else {
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY);
+        return;
+    }
+    const sx = (axisScale && Number.isFinite(axisScale.sx)) ? axisScale.sx : 1;
+    const sy = (axisScale && Number.isFinite(axisScale.sy)) ? axisScale.sy : 1;
+    const s = (Number.isFinite(scale) && scale > 0) ? scale : 1;
+    const dxScaled = dxLocal * s * sx;
+    const dyScaled = dyLocal * s * sy;
+    const cos = Math.cos(rot || 0);
+    const sin = Math.sin(rot || 0);
+    const dxWorld = (dxScaled * cos) - (dyScaled * sin);
+    const dyWorld = (dxScaled * sin) + (dyScaled * cos);
+    const x0 = tailX;
+    const y0 = tailY;
+    const x1 = tailX + dxWorld;
+    const y1 = tailY + dyWorld;
+    _updateAxisDebugLine(
+        fx,
+        AGI_COMET_AXIS_DEBUG_SPR_KEY,
+        x0,
+        y0,
+        x1,
+        y1,
+        AGI_COMET_AXIS_DEBUG_COLOR,
+        (fx.z | 0) + 1
+    );
 }
 
 function _updateWeaponTipDebugForHero(heroIndex: number, hero: Sprite, nx: number, ny: number): void {
@@ -58971,12 +59493,17 @@ const AGI_THRUST_FORWARD_FRAC_X1000 = 250
 const AGI_THRUST_WINDUP_MIN_MS = 400
 const AGI_THRUST_FORWARD_MIN_MS = 200
 const AGI_THRUST_LANDING_MIN_MS = 200
+const AGI_THRUST_WINDUP_FRAME_COLS = [0, 1, 2, 3]
+const AGI_THRUST_FORWARD_FRAME_COLS = [4, 5]
+const AGI_THRUST_LANDING_FRAME_COLS = [6, 7]
+const AGI_HOOKSHOT_WINDUP_FRAME_COLS = [0, 1, 2]
+const AGI_HOOKSHOT_LANDING_FRAME_COLS = [6, 7, 7]
 const AGI_THRUST_WINDUP_PULLBACK_PCT_X1000 = 200
 const AGI_WINDUP_PULLBACK_ENABLED = false
 
 // Hookshot forward needs 3 frames (4,5,5) at 10 fps.
 const AGI_HOOKSHOT_FORWARD_MIN_MS = 300
-const AGI_HOOKSHOT_FORWARD_HERO_COLS = [0, 1, 1]
+const AGI_HOOKSHOT_FORWARD_HERO_COLS = [4, 5, 5]
 
 // Legacy AGI trail/charge rendering is disabled (comet-only visuals).
 const AGI_DISABLE_LEGACY_AGI_TRAIL_FX = true
@@ -60421,6 +60948,7 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
             hero.vx = 0
 
             hero.vy = 0
+            clearHeroFrameColOverride(hi)
 
             _dbgContract_noteWhy(hi, "AMBIENT_SKIP_AGI_EXEC", "updateAgilityThrustMotionAll(skipArmedOrExecuting)")
 
@@ -60652,7 +61180,23 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
 
         sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, prog)
 
-
+        // Frame alignment: explicit thrust frames per part (windup/forward/landing).
+        {
+            let frames: number[] | null = null
+            if (desiredPart === "windup") {
+                frames = (hookState === AGI_HOOK_STATE.PENDING) ? AGI_HOOKSHOT_WINDUP_FRAME_COLS : AGI_THRUST_WINDUP_FRAME_COLS
+            } else if (desiredPart === "forward") {
+                frames = AGI_THRUST_FORWARD_FRAME_COLS
+            } else if (desiredPart === "landing") {
+                frames = AGI_THRUST_LANDING_FRAME_COLS
+            }
+            if (frames && frames.length) {
+                const slice = Math.max(1, Math.round(partDur / Math.max(1, frames.length)))
+                const idx = Math.min(frames.length - 1, Math.floor(t / slice))
+                const col = frames[idx | 0] | 0
+                sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, col | 0)
+            }
+        }
 
         // NEW universal contract: keep the coarse whole-phase progress updated too.
 
@@ -60711,6 +61255,7 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
 
             hero.vy = 0
 
+            clearHeroFrameColOverride(hi)
             _agiDashSquareCometClear(hero)
 
 
@@ -62101,19 +62646,21 @@ function _agiHookTimingPosX1000(st: AgiHookshotState, hero: Sprite, nowMs: numbe
     return { pos: pos | 0, pendingAdd: res.pendingAdd | 0, isExec: res.isExec | 0 }
 }
 
-function _agiHookEnsureAimDots(st: AgiHookshotState, hero: Sprite, fillIdx: number, edgeIdx: number): Sprite[] {
+function _agiHookEnsureAimDots(st: AgiHookshotState, hero: Sprite, fillIdx: number, edgeIdx: number, tint?: number): Sprite[] {
     let arr = st.aimIndicator || null;
     const count = Math.max(1, AGI_HOOKSHOT_AIM_DOT_COUNT | 0);
     if (!arr) arr = [];
     if (arr.length < count) {
         for (let i = arr.length; i < count; i++) {
             const dot = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
-            applyEffectToSprite(dot, AGI_HOOKSHOT_AIM_INDICATOR_SKIN_ID, {
+            const opts: EffectApplyOpts = {
                 frameIndex: i,
                 frameIndexIsRaw: false,
                 alpha: 1,
                 blend: "normal"
-            });
+            };
+            if (tint) opts.tint = tint | 0;
+            applyEffectToSprite(dot, AGI_HOOKSHOT_AIM_INDICATOR_SKIN_ID, opts);
             dot.setFlag(SpriteFlag.Ghost, true);
             dot.setFlag(SpriteFlag.Invisible, true);
             dot.z = hero.z + (AGI_COMET_Z_BIAS | 0) + 3 + i;
@@ -62123,12 +62670,14 @@ function _agiHookEnsureAimDots(st: AgiHookshotState, hero: Sprite, fillIdx: numb
     for (let i = 0; i < arr.length; i++) {
         const d = arr[i];
         if (!d || (d.flags & sprites.Flag.Destroyed)) continue;
-        applyEffectToSprite(d, AGI_HOOKSHOT_AIM_INDICATOR_SKIN_ID, {
+        const opts: EffectApplyOpts = {
             frameIndex: i,
             frameIndexIsRaw: false,
             alpha: 1,
             blend: "normal"
-        });
+        };
+        if (tint) opts.tint = tint | 0;
+        applyEffectToSprite(d, AGI_HOOKSHOT_AIM_INDICATOR_SKIN_ID, opts);
         if (i >= count) d.setFlag(SpriteFlag.Invisible, true);
     }
     st.aimIndicator = arr;
@@ -62171,8 +62720,9 @@ function _agiHookUpdateAimDots(
     const fillIdx = (palette.r3 | 0) || (palette.r2 | 0) || (palette.r1 | 0) || 1;
     const baseEdge = (palette.edge | 0) || 15;
     const edgeIdx = _agiHookAimDotEdgeForTerrain(baseEdge | 0);
+    const elemTint = _elementTintForMode(st.element | 0, "offense") | 0;
     const timing = _agiHookTimingPosX1000(st, hero, nowMs | 0);
-    const dots = _agiHookEnsureAimDots(st, hero, fillIdx | 0, edgeIdx | 0);
+    const dots = _agiHookEnsureAimDots(st, hero, fillIdx | 0, edgeIdx | 0, elemTint | 0);
     const dist = Math.hypot(tipX - baseX, tipY - baseY);
     const baseLen = Math.max(1, weaponLen | 0);
     const start = Math.max(2, Math.round((baseLen * (AGI_HOOKSHOT_AIM_DOT_START_PCT_X1000 | 0)) / 1000));
@@ -62205,6 +62755,7 @@ function _agiHookUpdateAimDots(
         dot.setFlag(SpriteFlag.Invisible, false);
         dot.setFlag(SpriteFlag.Ghost, true);
         sprites.setDataNumber(dot, EFFECT_ALPHA_DATA_KEY, alpha);
+        if (elemTint) sprites.setDataNumber(dot, EFFECT_TINT_DATA_KEY, elemTint | 0);
     }
 }
 
@@ -62236,11 +62787,13 @@ function _agiHookClearVisuals(st: AgiHookshotState): void {
     st.aimSpear = null
     _agiHookRetireWeaponCarrier(st)
     if (st.aimComet) {
+        _destroyAxisDebugSprite(st.aimComet, AGI_COMET_AXIS_DEBUG_SPR_KEY);
         _destroyAgilityCometAurasForFx(st.aimComet);
         _agiHookDestroySprite(st.aimComet)
     }
     st.aimComet = null
     if (st.comet) {
+        _destroyAxisDebugSprite(st.comet, AGI_COMET_AXIS_DEBUG_SPR_KEY);
         _destroyAgilityCometAurasForFx(st.comet);
         _agiHookDestroySprite(st.comet)
     }
@@ -62775,35 +63328,26 @@ function _agiHookUpdateCometSprite(
         tip = Math.max(wLen, tip - backOff)
     }
 
-    const baseTipX = baseX + nx * tip
-    const baseTipY = baseY + ny * tip
+    const stateNow = state | 0
     let alignBaseX = alignX as number
     let alignBaseY = alignY as number
-    if ((state | 0) === AGI_HOOK_STATE.AIMING) {
+    if (stateNow === AGI_HOOK_STATE.AIMING) {
         alignBaseX = weaponTipX
         alignBaseY = weaponTipY
     } else if (Number.isFinite(alignBaseX) && Number.isFinite(alignBaseY)) {
         // Use the moving spear tip when provided (extend/retract).
-        // This keeps the comet locked to the weapon tip instead of the hero.
     } else {
         alignBaseX = weaponTipX
         alignBaseY = weaponTipY
     }
     const hasAlign = Number.isFinite(alignBaseX) && Number.isFinite(alignBaseY)
-    const tipAnchorBaseX = hasAlign ? alignBaseX : baseTipX
-    const tipAnchorBaseY = hasAlign ? alignBaseY : baseTipY
+    const tipWorldX = hasAlign ? alignBaseX : weaponTipX
+    const tipWorldY = hasAlign ? alignBaseY : weaponTipY
+    const buttWorldX = tipWorldX - (nx * (wLen | 0))
+    const buttWorldY = tipWorldY - (ny * (wLen | 0))
     const aimScale = (typeof aimLenMult === "number" && Number.isFinite(aimLenMult) && aimLenMult > 0) ? aimLenMult : 1;
-    let tipAnchorX = tipAnchorBaseX + (nx * (AGI_COMET_TIP_ALIGN_FWD_PX | 0))
-    let tipAnchorY = tipAnchorBaseY + (ny * (AGI_COMET_TIP_ALIGN_FWD_PX | 0))
-    if ((state | 0) !== AGI_HOOK_STATE.AIMING) {
-        tipAnchorX += nx * (AGI_HOOKSHOT_COMET_TIP_FWD_PX | 0);
-        tipAnchorY += ny * (AGI_HOOKSHOT_COMET_TIP_FWD_PX | 0);
-    }
-    if ((state | 0) === AGI_HOOK_STATE.AIMING && aimScale > 1) {
-        const extra = Math.max(0, (wLen * (aimScale - 1)) * 0.5);
-        tipAnchorX += nx * extra;
-        tipAnchorY += ny * extra;
-    }
+    const tailAnchorX = buttWorldX
+    const tailAnchorY = buttWorldY
 
     const moveAngle = Math.atan2(ny, nx)
     const rot = _strengthArcNormalizeAngle(moveAngle - AGI_COMET_SW_BASE_ANGLE)
@@ -62818,7 +63362,6 @@ function _agiHookUpdateCometSprite(
     let rawFrame = (AGI_HOOK_COMET_HOLD_RAW && AGI_HOOK_COMET_HOLD_RAW.length) ? (AGI_HOOK_COMET_HOLD_RAW[0] | 0) : 0
     let isHold = false
     let recoverT = 0
-    const stateNow = state | 0
     if (preActive) {
         rawFrame = pick(AGI_HOOK_COMET_GROW_RAW, Math.max(0, Math.min(1, preT)))
     } else if (stateNow === AGI_HOOK_STATE.AIMING) {
@@ -62862,15 +63405,15 @@ function _agiHookUpdateCometSprite(
     const blendRaw = -1
     const frameIdx = _strengthArcFrameIndexFromRaw(AGI_HOOK_COMET_SKIN_ID, baseRaw | 0)
     const tipOffset = _agiCometTipOffsetForRaw(AGI_HOOK_COMET_SKIN_ID, baseRaw | 0)
+    const tailOffset = _agiCometTailOffsetForRaw(AGI_HOOK_COMET_SKIN_ID, baseRaw | 0)
+    const desiredLen = (stateNow === AGI_HOOK_STATE.AIMING)
+        ? Math.max(1, Math.round((wLen | 0) * aimScale))
+        : Math.max(1, (wLen | 0));
     let axisScale =
-        _agiCometAxisScaleForWeaponLen(tipOffset, wLen | 0) ||
+        _agiCometAxisScaleForWeaponLenWithTail(tipOffset, tailOffset, desiredLen | 0) ||
+        _agiCometAxisScaleForWeaponLen(tipOffset, desiredLen | 0) ||
         _agiCometAxisScaleForTipOffset(tipOffset) ||
         { sx: 1, sy: 1 };
-    if (aimScale !== 1 && tipOffset) {
-        const desiredLen = Math.max(1, (wLen | 0) * aimScale);
-        const artScale = _agiCometAxisScaleForArtAxis(tipOffset, desiredLen);
-        if (artScale) axisScale = artScale;
-    }
     const fallbackOffset = _agiCometDirOffset(nx, ny)
 
     const baseAlpha = isHold ? (alpha * (1 - holdBlend)) : alpha
@@ -62883,26 +63426,40 @@ function _agiHookUpdateCometSprite(
     sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, 0)
     sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, 0)
 
-    let tipX = tipAnchorX
-    let tipY = tipAnchorY
-    if (tipOffset) {
+    const anchorOffset = tailOffset || tipOffset
+    let tipX = tailAnchorX
+    let tipY = tailAnchorY
+    if (anchorOffset) {
         const cos = Math.cos(rot)
         const sin = Math.sin(rot)
-        const offX = (tipOffset.dx * scale * (axisScale.sx || 1))
-        const offY = (tipOffset.dy * scale * (axisScale.sy || 1))
+        const offX = (anchorOffset.dx * scale * (axisScale.sx || 1))
+        const offY = (anchorOffset.dy * scale * (axisScale.sy || 1))
         const rotX = (offX * cos) - (offY * sin)
         const rotY = (offX * sin) + (offY * cos)
-        tipX = tipAnchorX - rotX
-        tipY = tipAnchorY - rotY
+        tipX = tailAnchorX - rotX
+        tipY = tailAnchorY - rotY
     } else {
-        tipX = tipAnchorX + (fallbackOffset.dx | 0)
-        tipY = tipAnchorY + (fallbackOffset.dy | 0)
+        tipX = tailAnchorX + (fallbackOffset.dx | 0)
+        tipY = tailAnchorY + (fallbackOffset.dy | 0)
     }
 
     fx.x = tipX
     fx.y = tipY
     fx.z = hero.z + (AGI_COMET_Z_BIAS | 0)
     fx.setFlag(SpriteFlag.Invisible, false)
+
+    _updateWeaponAxisDebugForHero(heroIndex | 0, hero, tailAnchorX, tailAnchorY, nx, ny, wLen | 0)
+    _updateCometAxisDebugForFx(
+        heroIndex | 0,
+        fx,
+        tailAnchorX,
+        tailAnchorY,
+        rot,
+        tipOffset,
+        tailOffset,
+        axisScale,
+        scale
+    )
 
     if (_agiCometAlignShouldLog(fx, nowMs | 0)) {
         let weaponBoxW = 0;
@@ -62954,8 +63511,8 @@ function _agiHookUpdateCometSprite(
             cometTipY: tipY,
             baseX,
             baseY,
-            alignX: tipAnchorX,
-            alignY: tipAnchorY,
+            alignX: tailAnchorX,
+            alignY: tailAnchorY,
             nx,
             ny,
             weaponLen: wLen | 0,
@@ -63829,6 +64386,7 @@ function _agiHookFinish(
     _agiHookLog( heroIndex, hero, st, "FINISH", `reason=${reason} unlock=${unlockNow ? 1 : 0} landMs=${landMs | 0} busyUntil=${busyUntilNew}`, true)
 
     _agiHookClearLungeSchedule(hero)
+    clearHeroFrameColOverride(heroIndex)
     if (st.targetKind === AGI_HOOK_TARGET.MONSTER && st.targetSpriteId) {
         const e = _agiHookFindEnemyById(st.targetSpriteId | 0)
         if (e) sprites.setDataNumber(e, ENEMY_DATA.HOOKSHOT_PULLING, 0)
@@ -64219,6 +64777,29 @@ function updateAgilityHookshotAll(nowMs: number): void {
             _agiHookHideAimDots(st)
             const nx = st.dirX || 1
             const ny = st.dirY || 0
+            const fwdDur = Math.max(AGI_HOOKSHOT_FORWARD_MIN_MS | 0, st.forwardMs | 0, AGI_THRUST_FORWARD_MIN_MS | 0)
+            const curPart = (sprites.readDataString(hero, HERO_DATA.PhasePartName) || "").toLowerCase()
+            if (curPart !== "forward") {
+                _animKeys_setPhasePart(
+                    hi,
+                    hero,
+                    "forward",
+                    now | 0,
+                    fwdDur | 0,
+                    now | 0,
+                    "AGI_HOOK_FORWARD",
+                    "updateAgilityHookshotAll"
+                )
+            }
+            {
+                const elapsed = Math.max(0, (now | 0) - (st.cometStartMs | 0))
+                const frameMs = Math.max(1, Math.round(fwdDur / Math.max(1, AGI_HOOKSHOT_FORWARD_HERO_COLS.length)))
+                const frameIdx = Math.min(AGI_HOOKSHOT_FORWARD_HERO_COLS.length - 1, Math.floor(elapsed / frameMs))
+                const heroCol = AGI_HOOKSHOT_FORWARD_HERO_COLS[frameIdx | 0] | 0
+                sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, heroCol)
+                const prog = Math.idiv(Math.min(elapsed, fwdDur) * PHASE_PROGRESS_MAX, Math.max(1, fwdDur))
+                sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, prog)
+            }
             const base = _agiHookHandBase(hero, nx, ny)
             const wallsBlock = _agiHookWallsBlock()
             let weaponLen = st.weaponLen | 0
@@ -64298,8 +64879,8 @@ function updateAgilityHookshotAll(nowMs: number): void {
             if (st.hitReady && now >= (st.minThrustEndMs | 0)) {
                 st.returnOnly = 0
                 _agiHookSetState(hi, hero, st, AGI_HOOK_STATE.RETRACT)
-                st.recoverHoldPending = 1
-                st.lastAnimFrame = sprites.readDataNumber(hero, HERO_CANON_FRAME_IN_CANON_CLIP_KEY) | 0
+                st.recoverHoldPending = 0
+                st.lastAnimFrame = -1
                 sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
                 _agiHookLog(hi, hero, st, "RETRACT_START", `returnOnly=${st.returnOnly | 0}`, true)
             } else {
@@ -64320,19 +64901,28 @@ function updateAgilityHookshotAll(nowMs: number): void {
             const wallsBlock = _agiHookWallsBlock()
             let weaponLen = st.weaponLen | 0
             if (weaponLen <= 0) weaponLen = _agiHookWeaponLength(hero, nx, ny)
-
-            const curFrame = sprites.readDataNumber(hero, HERO_CANON_FRAME_IN_CANON_CLIP_KEY) | 0
-            if (st.recoverHoldPending) {
-                if (st.lastAnimFrame >= 0 && curFrame !== st.lastAnimFrame) {
-                    st.recoverHoldPending = 0
-                    sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 1)
-                } else {
-                    sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
-                }
-                st.lastAnimFrame = curFrame | 0
-            } else {
-                sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 1)
+            const fwdDur = Math.max(AGI_HOOKSHOT_FORWARD_MIN_MS | 0, st.forwardMs | 0, AGI_THRUST_FORWARD_MIN_MS | 0)
+            const curPart = (sprites.readDataString(hero, HERO_DATA.PhasePartName) || "").toLowerCase()
+            if (curPart !== "forward") {
+                _animKeys_setPhasePart(
+                    hi,
+                    hero,
+                    "forward",
+                    now | 0,
+                    fwdDur | 0,
+                    now | 0,
+                    "AGI_HOOK_FORWARD_HOLD",
+                    "updateAgilityHookshotAll"
+                )
             }
+            sprites.setDataNumber(
+                hero,
+                HERO_DATA.FRAME_COL_OVERRIDE,
+                AGI_HOOKSHOT_FORWARD_HERO_COLS[AGI_HOOKSHOT_FORWARD_HERO_COLS.length - 1] | 0
+            )
+            sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, PHASE_PROGRESS_MAX)
+            sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+            st.recoverHoldPending = 0
 
             if (!st.returnOnly && st.targetKind !== AGI_HOOK_TARGET.MONSTER) {
                 if (btnEdge || cancelEdge) {
@@ -64379,7 +64969,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
 
                 if (newDist <= (weaponLen + 0.1)) {
                     sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
-                    _agiHookFinish(hi, hero, st, now, false, "return_only_done")
+                    _agiHookBeginRecover(hi, hero, st, now, "return_only_done")
                 }
                 continue
             }
@@ -64461,7 +65051,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 if (newDist <= (weaponLen + 0.1)) {
                     sprites.setDataNumber(enemy, ENEMY_DATA.HOOKSHOT_PULLING, 0)
                     sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
-                    _agiHookFinish(hi, hero, st, now, false, "monster_done")
+                    _agiHookBeginRecover(hi, hero, st, now, "monster_done")
                 }
                 continue
             }
@@ -64510,13 +65100,69 @@ function updateAgilityHookshotAll(nowMs: number): void {
                     sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
                     if (st.targetKind === AGI_HOOK_TARGET.PROP) {
                         _agiHookApplyPropBounce(hi, hero, st, nx, ny)
-                        _agiHookFinish(hi, hero, st, now, false, "prop_done")
+                        _agiHookBeginRecover(hi, hero, st, now, "prop_done")
                     } else {
-                        _agiHookFinish(hi, hero, st, now, false, "ground_done")
+                        _agiHookBeginRecover(hi, hero, st, now, "ground_done")
                     }
                 }
             }
 
+            continue
+        }
+
+        if (state === AGI_HOOK_STATE.RECOVER) {
+            _agiHookHideAimDots(st)
+            const nx = st.dirX || 1
+            const ny = st.dirY || 0
+            let weaponLen = st.weaponLen | 0
+            if (weaponLen <= 0) weaponLen = _agiHookWeaponLength(hero, nx, ny)
+
+            const base = _agiHookHandBase(hero, nx, ny)
+            const tipX = base.x + nx * (weaponLen | 0)
+            const tipY = base.y + ny * (weaponLen | 0)
+
+            const recEnd = st.recoverEndMs | 0
+            const recDur = recEnd > 0 ? Math.max(1, (recEnd - (st.cometStartMs | 0)) | 0) : Math.max(1, _agiHookRecoverMs(hero) | 0)
+            const elapsed = Math.max(0, (now | 0) - (st.cometStartMs | 0))
+            const prog = Math.idiv(Math.min(elapsed, recDur) * PHASE_PROGRESS_MAX, Math.max(1, recDur))
+            sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, prog)
+            {
+                const frameMs = Math.max(1, Math.round(recDur / Math.max(1, AGI_HOOKSHOT_LANDING_FRAME_COLS.length)))
+                const frameIdx = Math.min(AGI_HOOKSHOT_LANDING_FRAME_COLS.length - 1, Math.floor(elapsed / frameMs))
+                const heroCol = AGI_HOOKSHOT_LANDING_FRAME_COLS[frameIdx | 0] | 0
+                sprites.setDataNumber(hero, HERO_DATA.FRAME_COL_OVERRIDE, heroCol)
+            }
+            sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+
+            _agiHookUpdateCometSprite(
+                st,
+                hero,
+                hi,
+                nx,
+                ny,
+                base.x,
+                base.y,
+                weaponLen | 0,
+                weaponLen | 0,
+                now | 0,
+                AGI_HOOK_STATE.RECOVER,
+                false,
+                tipX,
+                tipY,
+                1
+            )
+
+            _agiHookHideChain(st)
+            _agiHookHideSpearVisuals(st)
+            _agiHookRetireWeaponCarrier(st)
+            hero.vx = 0
+            hero.vy = 0
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+            sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+
+            if (recEnd > 0 && now >= recEnd) {
+                _agiHookFinish(hi, hero, st, now, false, "recover_done", true)
+            }
             continue
         }
     }
@@ -81358,6 +82004,168 @@ function _enemyHitRunEffects(ctx: EnemyHitContext): void {
 
 const ENEMY_DEATH_MS_DEFAULT = 2
 
+type StudentDropRoll = {
+    itemId: string;
+    count: number;
+};
+
+function _normalizeMonsterIdForDrops(raw: string): string {
+    return String(raw || "").trim().toLowerCase().replace(/enemy$/i, "").trim();
+}
+
+function _buildStudentDropTableMap(): Map<string, StudentDropTable> {
+    const map = new Map<string, StudentDropTable>();
+    const tables = listStudentDropTables();
+    for (let i = 0; i < tables.length; i++) {
+        const def = tables[i];
+        if (!def) continue;
+        const id = String(def.id || "").trim();
+        if (!id) continue;
+        map.set(id, def);
+    }
+    return map;
+}
+
+function _rollStudentDropTable(table: StudentDropTable, rolls: number): StudentDropRoll[] {
+    if (!table || !Array.isArray(table.entries)) return [];
+    const entries: StudentDropEntry[] = [];
+    let totalWeight = 0;
+    for (let i = 0; i < table.entries.length; i++) {
+        const entry = table.entries[i];
+        if (!entry) continue;
+        const itemId = String(entry.itemId || "").trim();
+        if (!itemId) continue;
+        const weight = Number(entry.weight);
+        if (!(weight > 0)) continue;
+        entries.push({ ...entry, itemId, weight });
+        totalWeight += weight;
+    }
+
+    const rollCount = Math.max(0, rolls | 0);
+    if (entries.length === 0 || !(totalWeight > 0) || rollCount <= 0) return [];
+
+    const results = new Map<string, number>();
+
+    for (let r = 0; r < rollCount; r++) {
+        let pick = Math.random() * totalWeight;
+        let chosen: StudentDropEntry | null = null;
+        for (let i = 0; i < entries.length; i++) {
+            const entry = entries[i];
+            pick -= entry.weight;
+            if (pick <= 0) {
+                chosen = entry;
+                break;
+            }
+        }
+        if (!chosen) chosen = entries[entries.length - 1] || null;
+        if (!chosen) continue;
+
+        const min = chosen.min == null ? 1 : Math.max(0, chosen.min | 0);
+        const max = chosen.max == null ? min : Math.max(min, chosen.max | 0);
+        let count = min;
+        if (max > min) {
+            count = min + Math.floor(Math.random() * (max - min + 1));
+        }
+        if (count <= 0) continue;
+        const key = String(chosen.itemId || "").trim();
+        if (!key) continue;
+        results.set(key, (results.get(key) || 0) + count);
+    }
+
+    const out: StudentDropRoll[] = [];
+    for (const [itemId, count] of results) {
+        out.push({ itemId, count });
+    }
+    return out;
+}
+
+function _resolveStudentMonsterDrops(monsterIdRaw: string): Array<{
+    def: StudentMonsterDrop;
+    dropTableId: string;
+    drops: StudentDropRoll[];
+}> {
+    const monsterId = _normalizeMonsterIdForDrops(monsterIdRaw);
+    if (!monsterId) return [];
+
+    const defs = listStudentMonsterDrops();
+    if (!defs || defs.length === 0) return [];
+
+    const tableMap = _buildStudentDropTableMap();
+    if (tableMap.size === 0) return [];
+
+    const out: Array<{ def: StudentMonsterDrop; dropTableId: string; drops: StudentDropRoll[] }> = [];
+
+    for (let i = 0; i < defs.length; i++) {
+        const def = defs[i];
+        if (!def) continue;
+        const defMonsterId = _normalizeMonsterIdForDrops(def.monsterId);
+        if (!defMonsterId || defMonsterId !== monsterId) continue;
+
+        const dropTableId = String(def.dropTableId || "").trim();
+        if (!dropTableId) continue;
+        const table = tableMap.get(dropTableId);
+        if (!table) continue;
+
+        const chance = def.chancePct == null ? 100 : Number(def.chancePct);
+        if (!(chance > 0)) continue;
+        if (chance < 100 && (Math.random() * 100) >= chance) continue;
+
+        const minRolls = def.minRolls == null ? 1 : Math.max(0, def.minRolls | 0);
+        const maxRolls = def.maxRolls == null ? minRolls : Math.max(minRolls, def.maxRolls | 0);
+        const rollCount = maxRolls > minRolls
+            ? (minRolls + Math.floor(Math.random() * (maxRolls - minRolls + 1)))
+            : minRolls;
+        if (rollCount <= 0) continue;
+
+        const drops = _rollStudentDropTable(table, rollCount);
+        if (drops.length === 0) continue;
+
+        out.push({ def, dropTableId, drops });
+    }
+
+    return out;
+}
+
+function _dispatchStudentMonsterDrops(params: {
+    enemy: Sprite;
+    eIndex: number;
+    killerHi: number;
+    now: number;
+    dropX: number;
+    dropY: number;
+}): void {
+    const hooks = getStudentDropHooks();
+    if (!hooks || typeof hooks.onMonsterDrops !== "function") return;
+
+    const profileKey = (params.killerHi >= 0) ? _heroProfileKeyForIndex(params.killerHi) : "";
+    if (!isProfileAllowed(hooks, profileKey)) return;
+
+    const monsterId = sprites.readDataString(params.enemy, ENEMY_DATA.MONSTER_ID) || "";
+    if (!monsterId) return;
+
+    const resolved = _resolveStudentMonsterDrops(monsterId);
+    if (resolved.length === 0) return;
+
+    for (let i = 0; i < resolved.length; i++) {
+        const entry = resolved[i];
+        const ctx = {
+            now: params.now | 0,
+            monsterId,
+            dropTableId: entry.dropTableId,
+            drops: entry.drops.map((drop) => ({ ...drop })),
+            x: params.dropX | 0,
+            y: params.dropY | 0,
+            killerHi: params.killerHi | 0,
+            eIndex: params.eIndex | 0,
+            enemy: params.enemy,
+            data: entry.def?.data,
+        };
+        try {
+            hooks.onMonsterDrops(ctx);
+        } catch { /* ignore */ }
+    }
+}
+
 
 
 function handleEnemyKilledAndScheduleDeath(eIndex: number, enemy: Sprite, srcHi: number, now: number): void {
@@ -81489,6 +82297,18 @@ function handleEnemyKilledAndScheduleDeath(eIndex: number, enemy: Sprite, srcHi:
         logCoins("[COINS] kill reward dropped (no hero)", { eIndex, srcHi: (srcHi == null ? -1 : (srcHi | 0)), lastHit: (sprites.readDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY) | 0) })
 
     }
+
+    // ----------------------------
+    // Student drop tables (per monster)
+    // ----------------------------
+    _dispatchStudentMonsterDrops({
+        enemy,
+        eIndex: eIndex | 0,
+        killerHi: killerHi | 0,
+        now: now | 0,
+        dropX: coinPopX | 0,
+        dropY: coinPopY | 0,
+    })
 
 
 
@@ -89715,6 +90535,100 @@ function _uiGetSafeForSpend(hi: number): { ok: boolean, reason: string } {
 
 
 
+const UI_MONSTER_INDICATOR_SCREEN_PAD_PX = 8
+
+function _uiWorldViewRectForHero(hero: Sprite): { x: number, y: number, w: number, h: number } | null {
+    if (!hero) return null
+    try {
+        const sc: any = (globalThis as any).__phaserScene
+        const cam = sc && sc.cameras && sc.cameras.main ? sc.cameras.main : null
+        const view = cam && cam.worldView ? cam.worldView : null
+        if (view && Number.isFinite(view.x) && Number.isFinite(view.y) && Number.isFinite(view.width) && Number.isFinite(view.height)) {
+            return { x: Number(view.x || 0), y: Number(view.y || 0), w: Number(view.width || 0), h: Number(view.height || 0) }
+        }
+    } catch { }
+
+    const w = scene.screenWidth() | 0
+    const h = scene.screenHeight() | 0
+    if (w <= 0 || h <= 0) return null
+    const cx = hero.x | 0
+    const cy = hero.y | 0
+    return {
+        x: (cx - Math.idiv(w, 2)) | 0,
+        y: (cy - Math.idiv(h, 2)) | 0,
+        w: w | 0,
+        h: h | 0,
+    }
+}
+
+function _uiEnemyVisibleInView(enemy: Sprite, view: { x: number, y: number, w: number, h: number }): boolean {
+    if (!enemy || !view) return false
+    const dims = _enemyGetColliderDims(enemy)
+    const halfW = Math.max(1, Math.idiv(dims.w | 0, 2)) | 0
+    const halfH = Math.max(1, Math.idiv(dims.h | 0, 2)) | 0
+    const left = (enemy.x - halfW) | 0
+    const right = (enemy.x + halfW) | 0
+    const top = (enemy.y - halfH) | 0
+    const bottom = (enemy.y + halfH) | 0
+    const pad = UI_MONSTER_INDICATOR_SCREEN_PAD_PX | 0
+    const viewLeft = (view.x - pad) | 0
+    const viewTop = (view.y - pad) | 0
+    const viewRight = (view.x + view.w + pad) | 0
+    const viewBottom = (view.y + view.h + pad) | 0
+    if (right < viewLeft) return false
+    if (left > viewRight) return false
+    if (bottom < viewTop) return false
+    if (top > viewBottom) return false
+    return true
+}
+
+function _uiNearestMonsterIndicatorForHero(hero: Sprite): any | null {
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return null
+    if (!enemies || enemies.length <= 0) return null
+
+    const view = _uiWorldViewRectForHero(hero)
+    let anyVisible = false
+    let nearestDx = 0
+    let nearestDy = 0
+    let nearestD2 = 0
+    let hasNearest = false
+
+    for (let i = 0; i < enemies.length; i++) {
+        const e = enemies[i]
+        if (!e || (e.flags & sprites.Flag.Destroyed)) continue
+
+        if (view && !anyVisible) {
+            if (_uiEnemyVisibleInView(e, view)) anyVisible = true
+        }
+
+        const dx = (e.x - hero.x)
+        const dy = (e.y - hero.y)
+        const d2 = (dx * dx) + (dy * dy)
+        if (!hasNearest || d2 < nearestD2) {
+            hasNearest = true
+            nearestD2 = d2
+            nearestDx = dx
+            nearestDy = dy
+        }
+    }
+
+    if (!hasNearest) return null
+    if (anyVisible) return { active: false, visible: true }
+
+    const dist = Math.sqrt(nearestD2)
+    if (!(dist > 0)) return { active: false }
+    const nx = nearestDx / dist
+    const ny = nearestDy / dist
+    return {
+        active: true,
+        nx,
+        ny,
+        dist: Math.round(dist),
+        dx: Math.round(nearestDx),
+        dy: Math.round(nearestDy),
+    }
+}
+
 function _uiBuildSnapshot(pid: number, hi: number): any {
 
     const hero = (hi >= 0 && hi < heroes.length) ? heroes[hi] : null
@@ -90058,6 +90972,7 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
     const supportActive = !!supportPuzzleActive[hi]
     const supportSeq = supportActive ? (supportPuzzleSeq[hi] || []).slice(0) : []
     const supportProgress = supportActive ? (supportPuzzleProgress[hi] | 0) : 0
+    const nearestMonster = _uiNearestMonsterIndicatorForHero(hero)
 
 
 
@@ -90147,6 +91062,7 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
             progress: supportProgress,
             wrongUntilMs: supportPuzzleWrongUntil[hi] | 0,
         },
+        nearestMonster: nearestMonster || null,
 
 
 
@@ -90437,7 +91353,10 @@ function _uiShopTryBuyIndex(hi: number, pid: number, index: number, where: strin
 
     const price = (item.price | 0)
 
-    if (!trySpendHeroCoins(hi, price | 0)) return { ok: false, reason: "coins" }
+    if (!trySpendHeroCoins(hi, price | 0)) {
+        _shopFlashCoinsInsufficient(hi)
+        return { ok: false, reason: "coins" }
+    }
 
     const granted = _relicGrantToPid(pid | 0, String(item.relicId || ""), "shop-ui")
 

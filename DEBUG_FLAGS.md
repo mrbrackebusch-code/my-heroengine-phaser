@@ -7,9 +7,22 @@ existing flag in `src/debugFlags.ts` or add a new flag there (and update this do
 
 How to use
 - Flip flags in `src/debugFlags.ts`, rebuild/reload.
+- Students can toggle a curated subset in `src/student/studentDebugOverrides.ts` without touching core; rebuild/reload.
 - Keep defaults quiet; turn on only what you need.
 
+Student override keys (src/student/studentDebugOverrides.ts)
+- These override the corresponding flags in `src/debugFlags.ts`.
+- overlayLogs -> DEBUG_STUDENT_OVERLAY_LOGS
+- systemsLogs -> DEBUG_STUDENT_SYSTEMS_LOGS
+- uiLogs -> DEBUG_UI_LOGS
+- uiApiLogs -> DEBUG_UIAPI_LOGS
+- interactLogs -> DEBUG_INTERACT_LOGS
+- propInteractLogs -> DEBUG_PROP_INTERACT_LOGS
+- trapLogs -> DEBUG_TRAP_LOGS
+- shrineOverlayLogs -> DEBUG_SHRINE_OVERLAY_LOGS
+
 Quick index (by subsystem)
+- Student systems: `DEBUG_STUDENT_SYSTEMS_LOGS`, `DEBUG_STUDENT_OVERLAY_LOGS` (student overrides supported)
 - HeroEngine core: `DEBUG_HERO_LOGIC`, `DEBUG_FILTER_LOGS`, `DEBUG_FILTER_PHRASE`, `DEBUG_WARN_PUBLISH_HERO_ACTION_PHASE`
 - Anim keys: `DEBUG_ANIM_KEYS`, `DEBUG_ANIM_KEYS_*`, `DEBUG_HERO_ANIM_FRAMES*`, `DEBUG_HERO_ANIM_STRENGTH_TRACE`, `DEBUG_STR_PROJECTILE_METRICS`
 - Agility/integrator: `DEBUG_AGILITY`, `DEBUG_AGI_ANIM_SLOWMO`, `DEBUG_AGI_COMBO_*`, `DEBUG_AGI_AIM_*`, `DEBUG_AGI_HOOKSHOT_*` (logs/ticks/slow), `DEBUG_AGI_COMET_*` (comet frame/rotation/axis logs), `DEBUG_AGI_COMET_ALIGN_VIS*` (weapon bounds + tip overlay), `DEBUG_INTEGRATOR`
@@ -35,6 +48,7 @@ Quick index (by subsystem)
 
 Log prefix map (common noisy ones)
 - `Phaser v3.x.x` banner: `DEBUG_PHASER_BANNER`
+- `[OVERLAY]` / `[OVERLAY][GATE]`: `DEBUG_STUDENT_OVERLAY_LOGS`
 - `>>> [net.tilemap]`: `DEBUG_TILEMAP_COMPAT`
 - `[tileMapGlue] base render done`: `DEBUG_TILEMAP_GLUE`
 - `[TILEMAP][AUDIT]`: `DEBUG_TILEMAP_AUDIT`

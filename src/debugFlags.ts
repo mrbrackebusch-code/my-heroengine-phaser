@@ -1,11 +1,20 @@
+import { STUDENT_DEBUG_OVERRIDES } from "./student/studentDebugOverrides";
+
 // Central debug/logging toggles (code-only).
 // Edit this file instead of adding new local debug flags.
 // When you add or change a flag, update DEBUG_FLAGS.md too.
+
+// Student overrides are authoritative for selected flags below.
+const _studentOverrides = STUDENT_DEBUG_OVERRIDES || {};
+const _studentOverride = (val: boolean | undefined, fallback: boolean): boolean =>
+    (typeof val === "boolean" ? val : fallback);
 
 // ------------------------------------------------------------
 // Cross-module / shared
 // ------------------------------------------------------------
 export const DEBUG_NPC_PIPELINE = false; // NPC pipeline logs across engine/glue layers.
+export const DEBUG_STUDENT_SYSTEMS_LOGS = _studentOverride(_studentOverrides.systemsLogs, false); // Student system register/init logs.
+export const DEBUG_STUDENT_OVERLAY_LOGS = _studentOverride(_studentOverrides.overlayLogs, false); // Student overlay manager logs.
 
 // ------------------------------------------------------------
 // HeroEngineInPhaser.ts (core hero logic, input, anim)
@@ -122,10 +131,10 @@ export const DEBUG_EFFECTS_HALL_TRACE_LITE = false; // Set true to reduce trace 
 export const DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE = 0; // >0 to override trace interval (ms).
 export const DEBUG_EFFECTS_HALL_TRACE_DURATION_MS_OVERRIDE = 0; // >0 to override trace duration (ms).
 export const DEBUG_FOCUS_LOGS = false;
-export const DEBUG_INTERACT_LOGS = false; // General interact pipeline (props/NPC).
+export const DEBUG_INTERACT_LOGS = _studentOverride(_studentOverrides.interactLogs, false); // General interact pipeline (props/NPC).
 export const DEBUG_INTERACT_TICK_LOGS = false; // Tick-level spam; keep off unless needed.
-export const DEBUG_PROP_INTERACT_LOGS = false; // Prop-specific interact/dispatch logs.
-export const DEBUG_TRAP_LOGS = false; // Trap prompt + trap effect logs.
+export const DEBUG_PROP_INTERACT_LOGS = _studentOverride(_studentOverrides.propInteractLogs, false); // Prop-specific interact/dispatch logs.
+export const DEBUG_TRAP_LOGS = _studentOverride(_studentOverrides.trapLogs, false); // Trap prompt + trap effect logs.
 export const DEBUG_TRAP_FORCE_ID = ""; // Force a specific trap spec id (overrides registry).
 export const DEBUG_TRAP_FORCE_KIND = ""; // Force a trap kind (maps to default trap id).
 export const DEBUG_TRAP_FORCE_SEED = 0; // Force a specific trap seed (0 disables).
@@ -133,12 +142,12 @@ export const DEBUG_TRAP_DUMP_INSTANCE = false; // Log generated trap inputs/expe
 export const DEBUG_TRAP_SHOW_SOLUTION = true; // Show expected output in trap editor (debug only).
 export const DEBUG_SHRINE_FORCE_OPEN_EDITOR = false; // Shrine: force open read-only Blockly on interact.
 export const DEBUG_SHRINE_FORCE_ACTIVATE = true; // Shrine: force activation on interact (skip ritual).
-export const DEBUG_SHRINE_OVERLAY_LOGS = false; // Shrine: log overlay state changes/failures.
+export const DEBUG_SHRINE_OVERLAY_LOGS = _studentOverride(_studentOverrides.shrineOverlayLogs, false); // Shrine: log overlay state changes/failures.
 export const DEBUG_SHRINE_OBSERVER = false; // Shrine: checklist observer (end-to-end report).
 export const DEBUG_CHEST_INTERACT_LOGS = false; // Legacy: use DEBUG_INTERACT_LOGS.
 export const DEBUG_RELIC_LOGS = false;
-export const DEBUG_UI_LOGS = false;
-export const DEBUG_UIAPI_LOGS = false;
+export const DEBUG_UI_LOGS = _studentOverride(_studentOverrides.uiLogs, false);
+export const DEBUG_UIAPI_LOGS = _studentOverride(_studentOverrides.uiApiLogs, false);
 export const DEBUG_SHOP_LOGS = false;
 export const DEBUG_COINS_LOGS = false;
 export const DEBUG_DEV_COMMANDS = true; // Allow __heUiCommand debug actions (teleport, etc).
@@ -179,8 +188,8 @@ export const DEBUG_COMPAT_TILEMAP_STUB = false;
 export const DEBUG_SPRITE_SYNC = false;
 export const DEBUG_DRAW_WALL_COLLIDERS = false; //Show tile collisions for all
 export const DEBUG_DRAW_ENEMY_WALL_COLLIDERS = false; //Enemy collider
-export const DEBUG_ENEMY_POS_GUARD = true; // Track enemy x/y setters and report call sites.
-export const DEBUG_ENEMY_POS_GUARD_THROW = true; // Throw on unregistered enemy position writes.
+export const DEBUG_ENEMY_POS_GUARD = false; // Track enemy x/y setters and report call sites.
+export const DEBUG_ENEMY_POS_GUARD_THROW = false; // Throw on unregistered enemy position writes.
 export const DEBUG_DRAW_ENEMY_SPRITE_BOUNDS = false; // Engine sprite bounds (Arcade image)
 export const DEBUG_DRAW_ENEMY_COLLIDER_BOUNDS = false; // Enemy collider base-size bounds (colW/colH)
 export const DEBUG_DRAW_ENEMY_HITBOX = false; // Engine overlap bounds (AABB used for overlaps)
@@ -194,24 +203,24 @@ export const DEBUG_DRAW_HERO_HITBOX = false; // Hero overlap bounds (AABB used f
 export const DEBUG_DRAW_HERO_NATIVE_BOUNDS = false; // Hero native sprite bounds (rendered art)
 export const DEBUG_DRAW_HERO_WALL_COLLIDERS = false; // Hero wall footprint
 export const DEBUG_DRAW_HERO_NAV_FOOTPRINT = false; // Hero nav footprint (same as wall for now)
-export const DEBUG_DRAW_DECOR_COLLIDERS = true; // Decor prop collider bounds (triggers + solids)
-export const DEBUG_DRAW_DECOR_AURA_MASK = true; // Decor prop aura-mask outline (uses precomputed mask bits)
+export const DEBUG_DRAW_DECOR_COLLIDERS = false; // Decor prop collider bounds (triggers + solids)
+export const DEBUG_DRAW_DECOR_AURA_MASK = false; // Decor prop aura-mask outline (uses precomputed mask bits)
 export const DEBUG_EFFECT_ANIMS = false; // Effect anim application logs (effects.*)
-export const DEBUG_EFFECT_MASKS = true; // Effect mask debug logs (silhouette / mask attach)
-export const DEBUG_AURA_MASK_BIN_LOGS = true; // Aura mask binary loader logs (errors/diagnostics)
+export const DEBUG_EFFECT_MASKS = false; // Effect mask debug logs (silhouette / mask attach)
+export const DEBUG_AURA_MASK_BIN_LOGS = false; // Aura mask binary loader logs (errors/diagnostics)
 export const DEBUG_EFFECT_ATLAS = false; // Effect atlas load summary (frames/cols/rows)
 export const DEBUG_EFFECT_FORCE_RELOAD = false; // Force reload effects.* textures even when URL matches (hot-reload only).
-export const DEBUG_EFFECT_PURGE_CACHES = true; // Purge effects.* textures/anims on preload (hot-reload only).
+export const DEBUG_EFFECT_PURGE_CACHES = false; // Purge effects.* textures/anims on preload (hot-reload only).
 export const DEBUG_EFFECT_AURA_PRIORITY_ENABLED = false; // Load only selected aura radii during preload.
 export const DEBUG_EFFECT_AURA_PRIORITY_RADII = "1,2,3,4"; // Aura radii to preload when priority mode is enabled.
 export const DEBUG_EFFECT_AURA_STREAM_REST = false; // After preload, stream remaining aura radii in the background.
 export const DEBUG_EFFECT_AURA_STREAM_DELAY_MS = 1500; // Delay before background aura streaming begins.
 export const DEBUG_EFFECT_ATLAS_SKIP_AURA_SCAN = false; // Skip pixel scans for aura sheets when meta is missing.
-export const DEBUG_EFFECTS_DUMP = true; // Include effect sprites + samples in debug dumps.
-export const DEBUG_EFFECTS_DUMP_PIXELS = true; // Sample effect frame pixels (slower).
+export const DEBUG_EFFECTS_DUMP = false; // Include effect sprites + samples in debug dumps.
+export const DEBUG_EFFECTS_DUMP_PIXELS = false; // Sample effect frame pixels (slower).
 export const DEBUG_EFFECTS_DUMP_MAX = 250; // Max effect entries in a dump.
 export const DEBUG_EFFECTS_DUMP_SAMPLE_STRIDE = 4; // Pixel stride for sampling (1 = every pixel).
-export const DEBUG_EFFECTS_DUMP_ON_HALL = true; // Auto-write a debug dump when effects hall spawns.
+export const DEBUG_EFFECTS_DUMP_ON_HALL = false; // Auto-write a debug dump when effects hall spawns.
 export const DEBUG_EFFECTS_DUMP_AFTER_N_APPLIES = 0; // Auto-dump after N applyEffectToSprite calls (0 = off).
 export const DEBUG_STR_ARC_GALLERY = false; // Strength arc frame gallery overlay (arc/fill/aura sheets)
 export const DEBUG_STR_ARC_GALLERY_SKIN = "SwordArcs3";
@@ -233,7 +242,7 @@ export const DEBUG_VFX_GALLERY_SCALE = 0.5; // Sprite scale for gallery tiles.
 export const DEBUG_VFX_GALLERY_PADDING = 6; // Padding between tiles.
 export const DEBUG_VFX_GALLERY_ALPHA = 1; // Base alpha for gallery sprites.
 export const DEBUG_VFX_GALLERY_ANIM_FPS = 12; // Animation fps for gallery.
-export const DEBUG_VFX_GALLERY_HIDE_AURAS = true; // Hide *_aura_rN entries by default.
+export const DEBUG_VFX_GALLERY_HIDE_AURAS = false; // Hide *_aura_rN entries by default.
 export const DEBUG_VFX_GALLERY_YOYO = false; // Enable yoyo for gallery anims.
 export const DEBUG_STR_ARC_CAPTURE = false; // Dump arc source frames to a PNG download for comparison.
 export const DEBUG_STR_ARC_CAPTURE_SKIN = "SwordArcs3";

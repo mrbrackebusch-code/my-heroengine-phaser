@@ -16,15 +16,42 @@ Student SDK (safe hooks)
 - assets: registerImage, registerSpritesheet, registerAtlas, registerAudio, registerJson, registerTileSheet
 - data: register, list, get (materials, songs, items, etc.)
 - props: registerSpec, registerVisual, registerDecal
+- npc/prop registry: registerStudentNpc, listStudentNpcs, registerStudentNpcInteractHandler; registerStudentProp, listStudentProps, registerStudentPropInteractHandler
 - traps: registerDefinition
 - relics: register (adds to core relic catalog)
 - vfx: register (adds to VFX registry)
 - ui: createOverlay, getOverlay, removeOverlay
+- debug: setStartFloor (optional start floor override for your profile)
 - Prefer importing from src/studentSystemsHooks.ts for all hooks.
 
 Notes
 - Keys are automatically namespaced per student. Use the returned key for references.
+- NPC ids should use the <Name>NPC convention (example: ShopkeeperNPC).
+- Student props can alias visuals/specs via visualKey/specKey; interactAction can be "prop" or "npc".
+- Student NPCs are tagged when you spawn an LPC NPC with npcRole or profileName matching the NPC id.
 - If you need new hooks or APIs in core, ask the maintainer.
+
+Debug flags (student-friendly)
+- Edit `src/student/studentDebugOverrides.ts` to toggle curated debug logs without touching core.
+- Flip booleans to true/false, then rebuild/reload.
+- These override the corresponding flags in `src/debugFlags.ts`.
+- Keys:
+  - overlayLogs -> overlay manager logs (create/show/hide/remove + input gate)
+  - systemsLogs -> student system register/init logs
+  - uiLogs -> UI state logs
+  - uiApiLogs -> UI API hook install logs
+  - interactLogs -> interact pipeline logs
+  - propInteractLogs -> prop interact logs
+  - trapLogs -> trap prompt/effect logs
+  - shrineOverlayLogs -> shrine overlay logs
+
+Debug start floor (per-student, no merge conflicts)
+- In your `src/student/<Name>/index.ts`, inside your system register, call:
+  - `api.debug.setStartFloor({ enabled: true, floorIndex: 1, kind: "shop" })`
+- `floorIndex` 0 always forces entrance; for shop/story/treasure/combat use >= 1.
+- `kind` supports: `entrance`, `shop` (aka `safe`), `combat`, `story`, `treasure` (aka `relic`), `hall`.
+- If your player profile name differs from your system name, pass `profile: "YourProfile"`.
+- If multiple profiles set overrides, the first connected hero/profile wins.
 
 Assets
 - PNG filenames MUST include their frame size as WxH (example: "Book 32x40.png").
