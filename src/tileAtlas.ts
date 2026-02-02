@@ -158,6 +158,9 @@ export interface DecorVisualRef {
     // When set, collision uses the bottom N pixels of the frame as a base-only box.
     collisionBaseHeightPx?: number;
     collisionUseAura?: boolean;
+
+    // If true, use for collision/mask lookup only; do not render a visual.
+    collisionOnly?: boolean;
 }
 
 
@@ -194,6 +197,12 @@ export const DECAL_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
 
     telepad4_top: { atlas: "build_atlas", ref: { row: 13, col: 14 } },
     telepad4_bot: { atlas: "build_atlas", ref: { row: 14, col: 14 } },
+
+    // Shop platform center fill (shopPlatform.png)
+    shop_platform_center_a: { textureKey: "tiles.shopPlatform", ref: { row: 2, col: 5 } },
+    shop_platform_center_b: { textureKey: "tiles.shopPlatform", ref: { row: 2, col: 6 } },
+    shop_platform_center_c: { textureKey: "tiles.shopPlatform", ref: { row: 3, col: 5 } },
+    shop_platform_center_d: { textureKey: "tiles.shopPlatform", ref: { row: 3, col: 6 } },
 
     // Trial arena tiles (magecity.png)
     trial_floor_corner_nw: { textureKey: "tiles.magecity", ref: { row: 9, col: 0 } },
@@ -406,6 +415,51 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         wTiles: 1,
         hTiles: 3,
     },
+    // Entrance collision-only props (use aura masks for SOLID collisions).
+    // Doorway tiles: build_atlas rows 28..31, cols 0..3.
+    entrance_gate: {
+        atlas: "build_atlas",
+        ref: { row: 28, col: 0 },
+        wTiles: 1,
+        hTiles: 1,
+        anim: {
+            states: {
+                r0c0: { row: 28, col: 0 },
+                r0c1: { row: 28, col: 1 },
+                r0c2: { row: 28, col: 2 },
+                r0c3: { row: 28, col: 3 },
+                r1c0: { row: 29, col: 0 },
+                r1c1: { row: 29, col: 1 },
+                r1c2: { row: 29, col: 2 },
+                r1c3: { row: 29, col: 3 },
+                r2c0: { row: 30, col: 0 },
+                r2c1: { row: 30, col: 1 },
+                r2c2: { row: 30, col: 2 },
+                r2c3: { row: 30, col: 3 },
+                r3c0: { row: 31, col: 0 },
+                r3c1: { row: 31, col: 1 },
+                r3c2: { row: 31, col: 2 },
+                r3c3: { row: 31, col: 3 },
+            },
+        },
+        collisionOnly: true,
+    },
+    // Castle wall tiles: build_atlas rows 24..27, col 0.
+    entrance_wall: {
+        atlas: "build_atlas",
+        ref: { row: 24, col: 0 },
+        wTiles: 1,
+        hTiles: 1,
+        anim: {
+            states: {
+                r0: { row: 24, col: 0 },
+                r1: { row: 25, col: 0 },
+                r2: { row: 26, col: 0 },
+                r3: { row: 27, col: 0 },
+            },
+        },
+        collisionOnly: true,
+    },
     trial_fence_mid_2x4: {
         atlas: "build_atlas",
         ref: { row: 19, col: 18 },
@@ -552,10 +606,6 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         offsetYPx: -16,
         focusAuraAllowInset: true,
         focusAuraUseOutline: true,
-        overlay: {
-            frameIndex: 1,
-            depthBias: 1,
-        },
     },
 
     book_stump: {
@@ -694,6 +744,20 @@ stone_door_open: {
 
 
 };
+
+export function registerDecalVisual(name: string, visual: DecorVisualRef): string {
+    const key = String(name || "").trim();
+    if (!key || !visual) return "";
+    DECAL_VISUALS_BY_NAME[key] = visual;
+    return key;
+}
+
+export function registerPropVisual(name: string, visual: DecorVisualRef): string {
+    const key = String(name || "").trim();
+    if (!key || !visual) return "";
+    PROP_VISUALS_BY_NAME[key] = visual;
+    return key;
+}
 
 
 
@@ -844,6 +908,8 @@ export interface TileSheetInfo {
     textureKey: string;
     cols: number;
     rows: number;
+    frameW: number;
+    frameH: number;
     tileSize: number;
 }
 
@@ -1022,6 +1088,7 @@ interface TileSheetDef {
     rows: number; // fallback
     frameW: number;
     frameH: number;
+    requireAura?: boolean;
 }
 
 type AnimSheetDef = { textureKey: string, url: string, frameW: number, frameH: number }
@@ -1092,6 +1159,12 @@ function _parseFrameSizeFromName(baseName: string): { frameW: number; frameH: nu
     const frameH = parseInt(match[2], 10) | 0;
     if (frameW <= 0 || frameH <= 0) return null;
     return { frameW, frameH };
+}
+
+function _auraFrameSize(baseW: number, baseH: number, radius: number): { frameW: number; frameH: number } {
+    const r = radius | 0;
+    if (r <= 0) return { frameW: baseW | 0, frameH: baseH | 0 };
+    return { frameW: ((baseW + r * 2) | 0), frameH: ((baseH + r * 2) | 0) };
 }
 
 
@@ -1211,6 +1284,10 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
             sheet.frameH | 0
         );
 
+        if (sheet.requireAura === false) {
+            continue;
+        }
+
         const texKey = sheet.textureKey;
         const isAnim = texKey.startsWith("anims.");
         const baseName = texKey.replace(/^tiles\./, "").replace(/^anims\./, "");
@@ -1225,6 +1302,7 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
             }
 
             const auraTexKey = auraKey(texKey, radius);
+            const auraSize = _auraFrameSize(sheet.frameW | 0, sheet.frameH | 0, radius | 0);
 
             const auraUrlBusted = _withDevAssetBuster(auraUrl);
             __SHEET_URL_BY_KEY.set(auraTexKey, auraUrlBusted);
@@ -1232,8 +1310,8 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
                 scene,
                 auraTexKey,
                 auraUrlBusted,
-                sheet.frameW | 0,
-                sheet.frameH | 0
+                auraSize.frameW | 0,
+                auraSize.frameH | 0
             );
 
             if (DEBUG_TILES) {
@@ -1252,6 +1330,43 @@ export function preloadTileSheets(scene: Phaser.Scene): void {
 
     // Queue composite aura mask bins (binary) for fast collision masks.
     preloadAuraMaskBins(scene);
+}
+
+export type ExternalTileSheetDef = {
+    textureKey: string;
+    url: string;
+    cols?: number;
+    rows?: number;
+    frameW: number;
+    frameH: number;
+    requireAura?: boolean;
+};
+
+export function registerExternalTileSheet(def: ExternalTileSheetDef): void {
+    const textureKey = String(def?.textureKey || "").trim();
+    const url = String(def?.url || "").trim();
+    const frameW = def?.frameW | 0;
+    const frameH = def?.frameH | 0;
+    const cols = def?.cols == null ? 1 : (def?.cols | 0);
+    const rows = def?.rows == null ? 1 : (def?.rows | 0);
+    if (!textureKey || !url || frameW <= 0 || frameH <= 0) return;
+
+    const entry: TileSheetDef = {
+        textureKey,
+        url,
+        cols: cols > 0 ? cols : 1,
+        rows: rows > 0 ? rows : 1,
+        frameW,
+        frameH,
+        requireAura: def?.requireAura === true,
+    };
+
+    const existingIndex = TILE_SHEETS.findIndex((s) => s.textureKey === textureKey);
+    if (existingIndex >= 0) {
+        TILE_SHEETS[existingIndex] = entry;
+        return;
+    }
+    TILE_SHEETS.push(entry);
 }
 
 
@@ -1282,14 +1397,14 @@ function _computeSheetInfoFromLoadedTexture(
         const rows = h > 0 ? Math.floor(h / fh) : (fallbackRows | 0);
 
         if ((cols | 0) > 0 && (rows | 0) > 0) {
-            return { textureKey: texKey, cols: cols | 0, rows: rows | 0, tileSize: fw };
+            return { textureKey: texKey, cols: cols | 0, rows: rows | 0, frameW: fw, frameH: fh, tileSize: fw };
         }
     } catch {
         // ignore; fall through
     }
 
     if ((fallbackCols | 0) > 0 && (fallbackRows | 0) > 0) {
-        return { textureKey: texKey, cols: fallbackCols | 0, rows: fallbackRows | 0, tileSize: fw };
+        return { textureKey: texKey, cols: fallbackCols | 0, rows: fallbackRows | 0, frameW: fw, frameH: fh, tileSize: fw };
     }
     return null;
 }
@@ -1305,11 +1420,12 @@ function _registerAuraSheetInfos(
             const texExists = !!((scene as any)?.textures?.exists?.(auraTexKey));
             if (!texExists) continue;
 
+            const auraSize = _auraFrameSize(sh.frameW | 0, sh.frameH | 0, radius | 0);
             const info = _computeSheetInfoFromLoadedTexture(
                 scene,
                 auraTexKey,
-                sh.frameW | 0,
-                sh.frameH | 0,
+                auraSize.frameW | 0,
+                auraSize.frameH | 0,
                 sh.cols | 0,
                 sh.rows | 0
             );
@@ -1369,14 +1485,28 @@ export function buildTileAtlas(scene: Phaser.Scene): TileAtlas {
             const rows = h > 0 ? Math.floor(h / fh) : (fallbackRows | 0);
 
             if ((cols | 0) > 0 && (rows | 0) > 0) {
-                return { textureKey: texKey, cols: cols | 0, rows: rows | 0, tileSize: fw };
+                return {
+                    textureKey: texKey,
+                    cols: cols | 0,
+                    rows: rows | 0,
+                    frameW: fw,
+                    frameH: fh,
+                    tileSize: fw
+                };
             }
         } catch {
             // ignore; fall through
         }
 
         if ((fallbackCols | 0) > 0 && (fallbackRows | 0) > 0) {
-            return { textureKey: texKey, cols: fallbackCols | 0, rows: fallbackRows | 0, tileSize: fw };
+            return {
+                textureKey: texKey,
+                cols: fallbackCols | 0,
+                rows: fallbackRows | 0,
+                frameW: fw,
+                frameH: fh,
+                tileSize: fw
+            };
         }
         return null;
     };

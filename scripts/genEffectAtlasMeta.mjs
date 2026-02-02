@@ -25,6 +25,9 @@ const EFFECT_PALETTE_SAMPLE_TARGET = 20000;
 const EFFECT_PALETTE_SAMPLE_MAX_STRIDE = 8;
 const EFFECT_SIZE_OVERRIDES = {
   "sword arcs": { frameW: 125, frameH: 150 },
+  "swordarcs3": { frameW: 126, frameH: 150 },
+  "comet": { frameW: 198, frameH: 198 },
+  "squarecomet": { frameW: 198, frameH: 198 },
 };
 const EFFECT_REMAINDER_ALLOWANCES = {
   "sword arcs": { remW: 6 },

@@ -87,7 +87,10 @@ const EFFECT_YIELD_EVERY_MS = 12;
 const EFFECT_SIZE_OVERRIDES: Record<string, { frameW: number; frameH: number }> = {
     // Sword arcs sheet is authored as 12x10 on a 1500x1500 image.
     // Despite the filename "150x125", the correct slice is 125x150.
-    "sword arcs": { frameW: 125, frameH: 150 }
+    "sword arcs": { frameW: 125, frameH: 150 },
+    "swordarcs3": { frameW: 126, frameH: 150 },
+    "comet": { frameW: 198, frameH: 198 },
+    "squarecomet": { frameW: 198, frameH: 198 }
 };
 const EFFECT_REMAINDER_ALLOWANCES: Record<string, { remW?: number; remH?: number }> = {
     // Sword arcs has 6px of horizontal padding in the current sheet.
@@ -96,7 +99,8 @@ const EFFECT_REMAINDER_ALLOWANCES: Record<string, { remW?: number; remH?: number
 const EFFECT_FRAME_ORDER_OVERRIDES: Record<string, { mode: "column-major-blocks"; coreCols: number; blockRows: number }> = {
     // Strength arc sheet is authored in vertical color blocks. We want numeric
     // frame increments to walk down rows first: 0,6,12,18,...
-    "sword arcs": { mode: "column-major-blocks", coreCols: 6, blockRows: 5 }
+    "sword arcs": { mode: "column-major-blocks", coreCols: 6, blockRows: 5 },
+    "swordarcs3": { mode: "column-major-blocks", coreCols: 6, blockRows: 5 }
 };
 const EFFECT_TEX_PREFIX = "effects.";
 const EFFECT_ANIM_PREFIXES = ["effect_", "dbg_str_arc_core_"];
@@ -174,6 +178,12 @@ function parseSizeFromName(name: string): {
     if (override) {
         frameW = override.frameW | 0;
         frameH = override.frameH | 0;
+    }
+    const auraMatch = /_aura_r(\d+)/i.exec(suffixLower);
+    const auraRadius = auraMatch ? (parseInt(auraMatch[1], 10) | 0) : 0;
+    if (auraRadius > 0) {
+        frameW = (frameW + auraRadius * 2) | 0;
+        frameH = (frameH + auraRadius * 2) | 0;
     }
     if (frameW <= 0 || frameH <= 0) return null;
     return { id, frameW, frameH, baseLower, suffixLower, declaredW, declaredH };

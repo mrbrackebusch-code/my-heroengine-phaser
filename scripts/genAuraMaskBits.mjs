@@ -105,16 +105,22 @@ function textureKeyForAura(kind, baseName) {
   return baseName;
 }
 
-function frameSizeForAura(kind, baseName) {
-  if (kind === "tiles") return { frameW: 32, frameH: 32 };
-  if (kind === "hero") {
-    if (String(baseName || "").includes("_192")) return { frameW: 192, frameH: 192 };
-    return { frameW: 64, frameH: 64 };
+function frameSizeForAura(kind, baseName, radius) {
+  let size = null;
+  if (kind === "tiles") size = { frameW: 32, frameH: 32 };
+  else if (kind === "hero") {
+    if (String(baseName || "").includes("_192")) size = { frameW: 192, frameH: 192 };
+    else size = { frameW: 64, frameH: 64 };
+  } else if (kind === "weapons") {
+    size = parseWeaponSizeFromName(baseName) || parseSizeFromName(baseName);
+  } else {
+    size = parseSizeFromName(baseName);
   }
-  if (kind === "weapons") {
-    return parseWeaponSizeFromName(baseName) || parseSizeFromName(baseName);
+  if (!size) return null;
+  const r = (radius | 0) || 0;
+  if (r > 0) {
+    return { frameW: (size.frameW + r * 2) | 0, frameH: (size.frameH + r * 2) | 0 };
   }
-  const size = parseSizeFromName(baseName);
   return size;
 }
 
@@ -273,7 +279,7 @@ async function main() {
       if (radii.length && !radii.includes(radius)) continue;
 
       const kind = kindFromRel(rel);
-      const size = frameSizeForAura(kind, baseName);
+      const size = frameSizeForAura(kind, baseName, radius);
       if (!size) {
         console.error(`[aura-masks][ERROR] missing WxH in filename: ${rel}`);
         errors++;
@@ -336,7 +342,7 @@ async function main() {
 
       for (const info of list) {
         const ex = (!forceRebuild && existingEntries) ? existingEntries[info.texKey] : null;
-        if (ex) {
+        if (ex && ((ex.w | 0) === (info.size.frameW | 0)) && ((ex.h | 0) === (info.size.frameH | 0))) {
           compactEntries[info.texKey] = ex;
           entries[info.texKey] = {
             bin: binRel,

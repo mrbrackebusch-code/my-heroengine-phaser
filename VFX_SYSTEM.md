@@ -125,7 +125,59 @@ hardcoding effect spawns in gameplay code.
 Enable `DEBUG_VFX_GALLERY` (and related flags) to show a grid of effect sheets
 in a fixed overlay. This is intended for quick inspection of existing assets.
 
-## 10) Future Direction (planned)
+## 10) Screen Visual Debug Pipeline (snapshot + expected)
+
+Use this to answer: "what pixels are actually on-screen here?" and
+"what *should* have been there based on sprite positions, masks, and depth?"
+
+### How it works
+- A **snapshot pump** queues many pixel sample requests but executes **one** `snapshotArea` per frame.
+- Each request can include **sample points** and optional **expected** analysis.
+- Expected analysis uses current sprite/mask positions + alpha testing to infer
+  which sprites *should* cover a pixel, then ranks them by depth.
+
+### Quick usage (effects hall)
+- Ensure `DEBUG_EFFECTS_HALL_TRACE` and `DEBUG_DEBUG_DUMP` are true.
+- Start the hall, press any key to begin trace.
+- Logs show `[VFX][HALL][TRACE] started` and `[VFX][HALL][TRACE] completed samples=N`.
+- The trace dump includes:
+  - `effectsHallTraceLive` (per-sample logs)
+  - `screenSample` entries (observed RGBA + expected contributors)
+  - `screenSnapResults` (last few raw snapshot batches)
+
+### Manual sampling (global)
+Call in console:
+
+```js
+__heQueueScreenSamples({
+  label: "custom-probe",
+  includeExpected: true,
+  expectedAlphaMin: 0.05,
+  samples: [
+    { label: "center", worldX: 320, worldY: 180 },
+    { label: "offset", worldX: 360, worldY: 200 }
+  ]
+});
+```
+
+Notes:
+- `samples` can use `worldX/worldY` or `screenX/screenY`.
+- `includeExpected: true` attaches a ranked list of expected contributors
+  (depth, alpha, mask alpha, effective alpha).
+
+### Interpreting results
+- **Observed RGBA** comes from the snapshot (ground truth).
+- **Expected candidates** are the "what should be here" list derived from:
+  - sprite positions
+  - alpha tested against sprite/mask pixels
+  - depth ordering
+- If observed alpha is low but expected shows a strong topmost candidate,
+  the mask or fill is likely incorrect.
+
+This pipeline is the intended long-term "pixel truth" debugger. Extend it as
+new systems (tilemaps, particles, post-FX) need to be covered.
+
+## 11) Future Direction (planned)
 
 - Expand preset library as assets are approved.
 - Provide optional tooling helpers for authoring/paging in the gallery.

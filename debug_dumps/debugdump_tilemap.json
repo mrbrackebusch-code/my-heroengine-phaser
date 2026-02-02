@@ -1,0 +1,746 @@
+{
+  "type": "heDebugDumpV1",
+  "createdAt": 1769978488899,
+  "runtimeMs": 5213,
+  "reason": "tilemap-audit",
+  "host": true,
+  "floor": {
+    "index": 0,
+    "kind": "hall",
+    "baseFamily": "sand_water",
+    "wallFamily": "water_chasm",
+    "palette": "desert_oasis",
+    "objectiveDone": true,
+    "combatWavesActive": false,
+    "combatWavesComplete": false,
+    "doorState": "",
+    "padPowered": true,
+    "safe": true
+  },
+  "teleport": {
+    "runeActive": 1,
+    "runeName": "teleport_rune",
+    "commitAtMs": 0,
+    "runeSpinSinceMs": 0,
+    "allReadySinceMs": 0,
+    "doorAllReadySinceMs": 0
+  },
+  "bossIntro": {
+    "floorIndex": -1,
+    "queued": 0,
+    "shadowX": 0,
+    "shadowY": 0,
+    "shadowUntilMs": 0
+  },
+  "world": {
+    "worldRev": 2,
+    "decorRev": 12,
+    "tileSize": 32,
+    "rows": 34,
+    "cols": 60
+  },
+  "tilemapAudit": {
+    "latest": "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+    "history": [
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33",
+      "floor=0 kind=hall rows=34 cols=60 map=r0=W0-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-0,G1-58,W59-59|r5=W0-0,G1-58,W59-59|r6=W0-0,G1-58,W59-59|r7=W0-0,G1-58,W59-59|r8=W0-0,G1-58,W59-59|r9=W0-0,G1-58,W59-59|r10=W0-0,G1-58,W59-59|r11=W0-0,G1-58,W59-59|r12=W0-0,G1-58,W59-59|r13=W0-0,G1-58,W59-59|r14=W0-0,G1-58,W59-59|r15=W0-0,G1-58,W59-59|r16=W0-0,G1-58,W59-59|r17=W0-0,G1-58,W59-59|r18=W0-0,G1-58,W59-59|r19=W0-0,G1-58,W59-59|r20=W0-0,G1-58,W59-59|r21=W0-0,G1-58,W59-59|r22=W0-0,G1-58,W59-59|r23=W0-0,G1-58,W59-59|r24=W0-0,G1-58,W59-59|r25=W0-0,G1-58,W59-59|r26=W0-0,G1-58,W59-59|r27=W0-0,G1-58,W59-59|r28=W0-0,G1-58,W59-59|r29=W0-0,G1-58,W59-59|r30=W0-0,G1-58,W59-59|r31=W0-0,G1-58,W59-59|r32=W0-0,G1-58,W59-59|r33=W0-59 props=teleport_rune@17,30|book_stump@20,32|stairs_statue@16,30|shrine@12,22|book_stump@20,32|book_stump@20,33|book_stump@19,32|book_stump@19,33"
+    ],
+    "map": {
+      "floor": {
+        "index": 0,
+        "kind": "hall"
+      },
+      "rows": 34,
+      "cols": 60,
+      "rowRle": [
+        "r0=W0-59",
+        "r1=W0-0,G1-58,W59-59",
+        "r2=W0-0,G1-58,W59-59",
+        "r3=W0-0,G1-58,W59-59",
+        "r4=W0-0,G1-58,W59-59",
+        "r5=W0-0,G1-58,W59-59",
+        "r6=W0-0,G1-58,W59-59",
+        "r7=W0-0,G1-58,W59-59",
+        "r8=W0-0,G1-58,W59-59",
+        "r9=W0-0,G1-58,W59-59",
+        "r10=W0-0,G1-58,W59-59",
+        "r11=W0-0,G1-58,W59-59",
+        "r12=W0-0,G1-58,W59-59",
+        "r13=W0-0,G1-58,W59-59",
+        "r14=W0-0,G1-58,W59-59",
+        "r15=W0-0,G1-58,W59-59",
+        "r16=W0-0,G1-58,W59-59",
+        "r17=W0-0,G1-58,W59-59",
+        "r18=W0-0,G1-58,W59-59",
+        "r19=W0-0,G1-58,W59-59",
+        "r20=W0-0,G1-58,W59-59",
+        "r21=W0-0,G1-58,W59-59",
+        "r22=W0-0,G1-58,W59-59",
+        "r23=W0-0,G1-58,W59-59",
+        "r24=W0-0,G1-58,W59-59",
+        "r25=W0-0,G1-58,W59-59",
+        "r26=W0-0,G1-58,W59-59",
+        "r27=W0-0,G1-58,W59-59",
+        "r28=W0-0,G1-58,W59-59",
+        "r29=W0-0,G1-58,W59-59",
+        "r30=W0-0,G1-58,W59-59",
+        "r31=W0-0,G1-58,W59-59",
+        "r32=W0-0,G1-58,W59-59",
+        "r33=W0-59"
+      ],
+      "decor": [
+        {
+          "kind": "solid",
+          "name": "stairs_statue",
+          "base": "stairs_statue",
+          "r": 16,
+          "c": 30,
+          "offX": 0,
+          "offY": 0,
+          "x": 976,
+          "y": 528,
+          "left": 960,
+          "top": 512,
+          "w": 32,
+          "h": 32,
+          "nativeOutline": null
+        },
+        {
+          "kind": "solid",
+          "name": "shrine",
+          "base": "shrine",
+          "r": 12,
+          "c": 22,
+          "offX": 0,
+          "offY": 0,
+          "x": 720,
+          "y": 400,
+          "left": 704,
+          "top": 384,
+          "w": 32,
+          "h": 32,
+          "nativeOutline": null
+        },
+        {
+          "kind": "solid",
+          "name": "book_stump",
+          "base": "book_stump",
+          "r": 20,
+          "c": 32,
+          "offX": 0,
+          "offY": 0,
+          "x": 1051,
+          "y": 650,
+          "left": 1039,
+          "top": 640,
+          "w": 25,
+          "h": 20,
+          "nativeOutline": null
+        },
+        {
+          "kind": "solid",
+          "name": "book_stump",
+          "base": "book_stump",
+          "r": 20,
+          "c": 33,
+          "offX": 0,
+          "offY": 0,
+          "x": 1076,
+          "y": 649,
+          "left": 1064,
+          "top": 640,
+          "w": 25,
+          "h": 19,
+          "nativeOutline": null
+        },
+        {
+          "kind": "solid",
+          "name": "book_stump",
+          "base": "book_stump",
+          "r": 19,
+          "c": 32,
+          "offX": 0,
+          "offY": 0,
+          "x": 1056,
+          "y": 629,
+          "left": 1048,
+          "top": 619,
+          "w": 16,
+          "h": 21,
+          "nativeOutline": null
+        },
+        {
+          "kind": "solid",
+          "name": "book_stump",
+          "base": "book_stump",
+          "r": 19,
+          "c": 33,
+          "offX": 0,
+          "offY": 0,
+          "x": 1073,
+          "y": 629,
+          "left": 1064,
+          "top": 619,
+          "w": 18,
+          "h": 21,
+          "nativeOutline": null
+        },
+        {
+          "kind": "trigger",
+          "name": "teleport_rune",
+          "base": "teleport_rune",
+          "r": 17,
+          "c": 30,
+          "offX": 0,
+          "offY": 0,
+          "x": 976,
+          "y": 560,
+          "left": 944,
+          "top": 528,
+          "w": 64,
+          "h": 64,
+          "nativeOutline": null
+        },
+        {
+          "kind": "trigger",
+          "name": "book_stump",
+          "base": "book_stump",
+          "r": 20,
+          "c": 32,
+          "offX": 0,
+          "offY": 0,
+          "x": 1040,
+          "y": 656,
+          "left": 1024,
+          "top": 640,
+          "w": 32,
+          "h": 32,
+          "nativeOutline": null
+        }
+      ],
+      "interactables": [
+        {
+          "name": "shrine",
+          "base": "shrine",
+          "r": 12,
+          "c": 22,
+          "offX": 0,
+          "offY": 0,
+          "x": 720,
+          "y": 400,
+          "left": 719,
+          "top": 399,
+          "w": 1,
+          "h": 1,
+          "nativeOutline": null
+        }
+      ]
+    }
+  },
+  "tilemapVisual": null,
+  "tilemapFocus": {
+    "interact": {
+      "active": 0,
+      "r": -1,
+      "c": -1,
+      "name": ""
+    },
+    "props": []
+  },
+  "tilemapTimeline": {
+    "intervalMs": 250,
+    "samples": [
+      {
+        "t": 884,
+        "events": [
+          {
+            "type": "appear",
+            "key": "prop:shrine:12,22:anims.Shrine 32x64:shrine:base",
+            "data": {
+              "kind": "propBase",
+              "x": 720,
+              "y": 384,
+              "depth": 38400,
+              "tex": "anims.Shrine 32x64",
+              "frame": 0,
+              "vis": true,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:shrine:12,22:anims.Shrine 32x64:shrine:aura",
+            "data": {
+              "kind": "aura",
+              "x": 720,
+              "y": 384,
+              "depth": 0,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:shrine:12,22:anims.Shrine 32x64:shrine:auraKid:0",
+            "data": {
+              "kind": "auraKid",
+              "x": 720,
+              "y": 384,
+              "depth": 0,
+              "tex": "anims.Shrine 32x64_aura_r1",
+              "frame": 0,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:stairs_statue:16,30:tiles.terrain_atlas:stairs_statue:base",
+            "data": {
+              "kind": "propBase",
+              "x": 976,
+              "y": 464,
+              "depth": 52800,
+              "tex": "tiles.terrain_atlas",
+              "frame": 499,
+              "vis": true,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:stairs_statue:16,30:tiles.terrain_atlas:stairs_statue:aura",
+            "data": {
+              "kind": "aura",
+              "x": 976,
+              "y": 496,
+              "depth": 0,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:stairs_statue:16,30:tiles.terrain_atlas:stairs_statue:auraKid:0",
+            "data": {
+              "kind": "auraKid",
+              "x": 976,
+              "y": 464,
+              "depth": 0,
+              "tex": "tiles.terrain_atlas_aura_r1",
+              "frame": 499,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:stairs_statue:16,30:tiles.terrain_atlas:stairs_statue:auraKid:1",
+            "data": {
+              "kind": "auraKid",
+              "x": 976,
+              "y": 496,
+              "depth": 0,
+              "tex": "tiles.terrain_atlas_aura_r1",
+              "frame": 531,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:stairs_statue:16,30:tiles.terrain_atlas:stairs_statue:auraKid:2",
+            "data": {
+              "kind": "auraKid",
+              "x": 976,
+              "y": 528,
+              "depth": 0,
+              "tex": "tiles.terrain_atlas_aura_r1",
+              "frame": 563,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "focus:interact",
+            "data": {
+              "kind": "focus",
+              "active": 0,
+              "r": -1,
+              "c": -1,
+              "name": ""
+            }
+          },
+          {
+            "type": "layer",
+            "key": "layer:ground",
+            "hash": 151400056,
+            "prev": 0
+          },
+          {
+            "type": "layer",
+            "key": "layer:chasm",
+            "hash": -1692862394,
+            "prev": 0
+          },
+          {
+            "type": "layer",
+            "key": "layer:chasmOverlay",
+            "hash": 5381,
+            "prev": 0
+          },
+          {
+            "type": "layer",
+            "key": "layer:decals",
+            "hash": 658679518,
+            "prev": 0
+          },
+          {
+            "type": "layer",
+            "key": "layer:props",
+            "hash": 5381,
+            "prev": 0
+          }
+        ]
+      },
+      {
+        "t": 2072,
+        "events": [
+          {
+            "type": "appear",
+            "key": "prop:teleport_rune:17,30:anims.teleportrune 64x64:teleport_rune:base",
+            "data": {
+              "kind": "propBase",
+              "x": 976,
+              "y": 572,
+              "depth": 57200,
+              "tex": "anims.teleportrune 64x64",
+              "frame": 0,
+              "vis": true,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:teleport_rune:17,30:anims.teleportrune 64x64:teleport_rune:aura",
+            "data": {
+              "kind": "aura",
+              "x": 976,
+              "y": 572,
+              "depth": 0,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:teleport_rune:17,30:anims.teleportrune 64x64:teleport_rune:auraKid:0",
+            "data": {
+              "kind": "auraKid",
+              "x": 976,
+              "y": 572,
+              "depth": 0,
+              "tex": "__auraPad__anims.teleportrune 64x64_aura_r1::0::p4::f::rb::rt",
+              "frame": "__BASE",
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:book_stump:20,32:tiles.terrain_atlas:book_stump:base",
+            "data": {
+              "kind": "propBase",
+              "x": 1048,
+              "y": 624,
+              "depth": 65600,
+              "tex": "tiles.terrain_atlas",
+              "frame": 396,
+              "vis": true,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:book_stump:20,32:tiles.terrain_atlas:book_stump:aura",
+            "data": {
+              "kind": "aura",
+              "x": 1064,
+              "y": 640,
+              "depth": 0,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:book_stump:20,32:tiles.terrain_atlas:book_stump:auraKid:0",
+            "data": {
+              "kind": "auraKid",
+              "x": 1048,
+              "y": 624,
+              "depth": 0,
+              "tex": "__auraPad__tiles.terrain_atlas_aura_r1::396::p4::f::rb::rt",
+              "frame": "__BASE",
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:book_stump:20,32:tiles.terrain_atlas:book_stump:auraKid:1",
+            "data": {
+              "kind": "auraKid",
+              "x": 1080,
+              "y": 624,
+              "depth": 0,
+              "tex": "__auraPad__tiles.terrain_atlas_aura_r1::397::p4::f::rb::rt",
+              "frame": "__BASE",
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:book_stump:20,32:tiles.terrain_atlas:book_stump:auraKid:2",
+            "data": {
+              "kind": "auraKid",
+              "x": 1048,
+              "y": 656,
+              "depth": 0,
+              "tex": "__auraPad__tiles.terrain_atlas_aura_r1::428::p4::f::rb::rt",
+              "frame": "__BASE",
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:book_stump:20,32:tiles.terrain_atlas:book_stump:auraKid:3",
+            "data": {
+              "kind": "auraKid",
+              "x": 1080,
+              "y": 656,
+              "depth": 0,
+              "tex": "__auraPad__tiles.terrain_atlas_aura_r1::429::p4::f::rb::rt",
+              "frame": "__BASE",
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tilemapPixelProbe": null,
+  "save": {
+    "pendingSaveFromFile": false,
+    "pendingSaveName": null,
+    "loadedProfiles": [],
+    "pendingWorldSnapshot": false,
+    "pendingDecor": false,
+    "savedHeroProfiles": 0,
+    "savedNpcKeys": 0,
+    "tilemap": {
+      "rev": 5,
+      "rows": 34,
+      "cols": 60,
+      "tileSize": 32,
+      "worldRev": 2,
+      "floorIndex": -1,
+      "floorKind": "hall",
+      "baseFamily": "sand_water",
+      "wallFamily": "water_chasm",
+      "decorRev": 12,
+      "baseSig": 590020324,
+      "decorSig": 274923208,
+      "worldSig": 1385684068
+    }
+  },
+  "heroes": [
+    {
+      "hi": 0,
+      "pid": 1,
+      "profile": "LongBlond",
+      "name": "LongBlond",
+      "family": "",
+      "x": 1004,
+      "y": 420,
+      "hp": 1000,
+      "maxHp": 1000,
+      "mana": 1000,
+      "maxMana": 1000,
+      "isNpc": 0,
+      "isDead": 0,
+      "deadGhost": 0,
+      "ghostFlag": 0,
+      "destroyed": 0,
+      "teleMode": 0,
+      "inputLocked": 0
+    }
+  ],
+  "enemies": [],
+  "npcs": [],
+  "effects": null,
+  "effectsHallTrace": null,
+  "effectsHallTraceLive": {
+    "active": false,
+    "inFlight": false,
+    "startMs": 0,
+    "endMs": 0,
+    "nextMs": 0,
+    "samples": []
+  },
+  "screenSnapResults": [],
+  "screenSnapDiag": {
+    "renderer": {
+      "type": "",
+      "isWebGL": false,
+      "isCanvas": false,
+      "hasGL": false,
+      "resolution": 1,
+      "width": 0,
+      "height": 0
+    },
+    "pump": {
+      "frame": 0,
+      "queueLen": 0,
+      "inFlightId": null,
+      "inFlightRect": null,
+      "inFlightAgeMs": 0,
+      "inFlightAgeFrames": 0
+    },
+    "counters": {
+      "enqueued": 0,
+      "scheduled": 0,
+      "callbacks": 0,
+      "completed": 0,
+      "timeouts": 0,
+      "errors": 0
+    },
+    "last": {
+      "scheduledAtMs": null,
+      "scheduledFrame": null,
+      "callbackAtMs": null,
+      "callbackFrame": null,
+      "completedAtMs": null
+    },
+    "guard": {
+      "detectedExternalSnapshotCalls": 0,
+      "lastExternalCaller": null
+    }
+  },
+  "vfxTweak": {
+    "enabled": false,
+    "alphaMult": 1,
+    "maskAlphaMult": 1,
+    "puffAlphaMult": 1,
+    "forceAlpha": null,
+    "forceOpaqueMask": false,
+    "forceOpaqueFill": false,
+    "fpsMult": 1,
+    "tintOverride": null,
+    "paletteDarkenPct": 2,
+    "disablePaletteMap": false,
+    "paletteGeometry": true,
+    "hideGeometry": false,
+    "borderAlphaMin": null,
+    "borderAlpha": null,
+    "borderPadOutPx": null,
+    "smokeAnim": "alive"
+  },
+  "trace": []
+}

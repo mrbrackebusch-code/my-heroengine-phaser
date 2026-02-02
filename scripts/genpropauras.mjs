@@ -148,16 +148,18 @@ function buildAuraSheetForGrid(srcPng, frameW, frameH, radius) {
   if (cols <= 0 || rows <= 0) {
     return { ok: false, reason: `size ${srcW}x${srcH} too small for ${frameW}x${frameH}` };
   }
-  const outW = (cols * frameW) | 0;
-  const outH = (rows * frameH) | 0;
-  const cropped = (outW !== srcW || outH !== srcH);
+  const outFrameW = (radius > 0) ? ((frameW + radius * 2) | 0) : (frameW | 0);
+  const outFrameH = (radius > 0) ? ((frameH + radius * 2) | 0) : (frameH | 0);
+  const outW = (cols * outFrameW) | 0;
+  const outH = (rows * outFrameH) | 0;
+  const cropped = ((cols * frameW) !== srcW || (rows * frameH) !== srcH);
   let croppedHasOpaque = false;
   if (cropped) {
     const alphaIdx = 3;
     const maxX = srcW | 0;
     const maxY = srcH | 0;
-    const cutX = outW | 0;
-    const cutY = outH | 0;
+    const cutX = (cols * frameW) | 0;
+    const cutY = (rows * frameH) | 0;
     // Bottom strip (rows cutY..maxY-1), full width.
     if (cutY < maxY) {
       for (let y = cutY; y < maxY && !croppedHasOpaque; y++) {
@@ -187,11 +189,13 @@ function buildAuraSheetForGrid(srcPng, frameW, frameH, radius) {
 
   for (let fr = 0; fr < rows; fr++) {
     for (let fc = 0; fc < cols; fc++) {
-      const ox = fc * frameW;
-      const oy = fr * frameH;
+      const srcOx = fc * frameW;
+      const srcOy = fr * frameH;
+      const dstOx = fc * outFrameW;
+      const dstOy = fr * outFrameH;
       const mask = new Uint8Array(frameW * frameH);
       for (let y = 0; y < frameH; y++) {
-        const srcRow = ((oy + y) * srcW + ox) * 4;
+        const srcRow = ((srcOy + y) * srcW + srcOx) * 4;
         const dstRow = y * frameW;
         for (let x = 0; x < frameW; x++) {
           const a = srcData[srcRow + x * 4 + 3] | 0;
@@ -199,12 +203,38 @@ function buildAuraSheetForGrid(srcPng, frameW, frameH, radius) {
         }
       }
 
-      const dm = buildDilatedMaskBits(mask, frameW, frameH, radius);
+      if (radius <= 0) {
+        for (let y = 0; y < frameH; y++) {
+          for (let x = 0; x < frameW; x++) {
+            const bi = y * frameW + x;
+            if (!mask[bi]) continue;
+            const oi = ((dstOy + y) * outW + (dstOx + x)) * 4;
+            out.data[oi + 0] = 255;
+            out.data[oi + 1] = 255;
+            out.data[oi + 2] = 255;
+            out.data[oi + 3] = 255;
+          }
+        }
+        continue;
+      }
+
+      const expW = outFrameW | 0;
+      const expH = outFrameH | 0;
+      const expanded = new Uint8Array(expW * expH);
       for (let y = 0; y < frameH; y++) {
+        const row = (y + radius) * expW;
+        const srcRow = y * frameW;
         for (let x = 0; x < frameW; x++) {
-          const bi = y * frameW + x;
-          if (!dm[bi]) continue;
-          const oi = ((oy + y) * outW + (ox + x)) * 4;
+          if (mask[srcRow + x]) expanded[row + (x + radius)] = 1;
+        }
+      }
+
+      const dm = buildDilatedMaskBits(expanded, expW, expH, radius);
+      for (let y = 0; y < expH; y++) {
+        for (let x = 0; x < expW; x++) {
+          const bi = y * expW + x;
+          if (!dm[bi] || expanded[bi]) continue; // ring only
+          const oi = ((dstOy + y) * outW + (dstOx + x)) * 4;
           out.data[oi + 0] = 255;
           out.data[oi + 1] = 255;
           out.data[oi + 2] = 255;
@@ -246,7 +276,6 @@ async function main() {
   let wantTiles = true;
   let wantProps = true;
   let verbose = false;
-
   const radii = parseRadii(args);
 
   for (let i = 0; i < args.length; i++) {

@@ -21,6 +21,9 @@ import { WorldTileRenderer } from "./tileMapGlue";
 import { preloadEffectSheets, buildEffectAtlas } from "./effectAtlas";
 import { preloadHookshotThrustSheet } from "./hookshotWeaponAtlas";
 import { AURA_RADII } from "./auraConfig";
+import { preloadStudentAssets } from "./studentAssets";
+import { initStudentSystems } from "./studentSystems";
+import "./studentAutoLoad";
 
 
 //import { prewarmHeroAuraOutlinesAsync } from "./heroAnimGlue";
@@ -1704,6 +1707,8 @@ class HeroScene extends Phaser.Scene {
         logMain(">>> [HeroScene.preload] loading effect sheets");
         preloadEffectSheets(this);
 
+        preloadStudentAssets(this);
+
     }
 
 
@@ -1756,6 +1761,11 @@ async create() {
     // 8) Network init (all clients)
     _uiLoadingSet(82, "Initializing network…");
     this.initNetwork(compatMod);
+    initStudentSystems({
+      scene: this,
+      isHost: _isHostClient,
+      getGlobals: () => (globalThis as any),
+    });
     _tryPruneUnconnectedHeroes("scene-create");
 
     // 9) Keyboard -> controller wiring (all clients)
@@ -1931,6 +1941,13 @@ private _installCameraZoomControls(): void {
         kb.on("keydown", (ev: KeyboardEvent) => {
             if (this._shouldIgnoreKeyEvent(ev)) return;
             if (ev.ctrlKey || ev.metaKey) return;
+
+            try {
+                const g: any = globalThis as any;
+                if (g && typeof g.__heNotifyFirstInput === "function") {
+                    g.__heNotifyFirstInput();
+                }
+            } catch { }
 
             const key = ev.key;
             if (key === "=" || key === "+" || key === "]") {
@@ -4457,6 +4474,10 @@ function _mapDecalIdToKey(id: number): string {
   if (v === 120) return "stairs_statue_top";
   if (v === 121) return "stairs_statue_mid";
   if (v === 122) return "stairs_statue_bot";
+  if (v === 3160) return "shop_platform_center_a";
+  if (v === 3161) return "shop_platform_center_b";
+  if (v === 3162) return "shop_platform_center_c";
+  if (v === 3163) return "shop_platform_center_d";
 
   // Trial arena decals (magecity.png)
   if (v === 3000) return "trial_floor_corner_nw";

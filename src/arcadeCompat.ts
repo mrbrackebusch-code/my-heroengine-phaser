@@ -248,6 +248,11 @@ import { getPropSpec, propBaseNameFromKey } from "./propSpecs";
 
 const DECOR_DATA_TILE_R = "decorTileR";
 const DECOR_DATA_TILE_C = "decorTileC";
+const DECOR_DATA_ANCHOR_R = "decorAnchorR";
+const DECOR_DATA_ANCHOR_C = "decorAnchorC";
+const DECOR_DATA_HAS_ANCHOR = "decorHasAnchor";
+const DECOR_SOLID_FRAME_INDEX_KEY = "decorSolidFrameIndex";
+const DECOR_SOLID_TEX_KEY = "decorSolidTexKey";
 const DECOR_SOLID_BASE_PX_KEY = "decorSolidBasePx";
 const DECOR_SOLID_USE_AURA_KEY = "decorSolidUseAura";
 const DECOR_SOLID_AABB_LOCAL_X_KEY = "decorSolidAabbLocalX";
@@ -671,12 +676,63 @@ function decor_applyTightOpaqueAabbToSolids(args: {
         // so the opaque-AABB sampling hits the correct sheet.
         let info: { textureKey: string; frameIndex: number } | null = null;
 
-        try {
-            if (typeof (renderer as any).tryGetPropTileInfoAt === "function") {
-                info = (renderer as any).tryGetPropTileInfoAt(r, c);
+        const solidTexKey = (sprites.readDataString(s, DECOR_SOLID_TEX_KEY) || "");
+        const solidFrameRaw = (sprites.readDataNumber(s, DECOR_SOLID_FRAME_INDEX_KEY) | 0);
+        if (solidTexKey && (solidFrameRaw | 0) >= 0) {
+            info = { textureKey: solidTexKey, frameIndex: (solidFrameRaw | 0) };
+        }
+
+        if (!info) {
+            try {
+                if (typeof (renderer as any).tryGetPropTileInfoAt === "function") {
+                    info = (renderer as any).tryGetPropTileInfoAt(r, c);
+                }
+            } catch {
+                info = null;
             }
-        } catch {
-            info = null;
+        }
+
+        const baseName = propBaseNameFromKey(name);
+        const vis: any = baseName ? (PROP_VISUALS_BY_NAME as any)[baseName] : null;
+
+        // If the renderer has no prop tile info, try to derive it from the anchor (shop_platform).
+        if (!info) {
+            const hasAnchor = (sprites.readDataNumber(s, DECOR_DATA_HAS_ANCHOR) | 0) !== 0;
+            if (hasAnchor && vis && vis.ref) {
+                const anchorR = (sprites.readDataNumber(s, DECOR_DATA_ANCHOR_R) | 0);
+                const anchorC = (sprites.readDataNumber(s, DECOR_DATA_ANCHOR_C) | 0);
+                const wTiles = Math.max(1, (vis.wTiles ?? 1) | 0);
+                const hTiles = Math.max(1, (vis.hTiles ?? 1) | 0);
+                const baseR = ((anchorR - (hTiles - 1)) | 0);
+                const baseC = (anchorC | 0);
+                const localR = ((r - baseR) | 0);
+                const localC = ((c - baseC) | 0);
+
+                if (localR >= 0 && localR < hTiles && localC >= 0 && localC < wTiles) {
+                    let textureKey = "";
+                    try {
+                        const atlas = renderer && (renderer as any).atlas;
+                        if (atlas && typeof atlas.resolveAtlasTextureKey === "function") {
+                            textureKey = String(atlas.resolveAtlasTextureKey(String(vis.atlas || "")) || "");
+                        }
+                    } catch { /* ignore */ }
+                    if (!textureKey && vis?.atlas) textureKey = "tiles." + String(vis.atlas);
+
+                    const atlas = renderer && (renderer as any).atlas;
+                    const sheetInfo = atlas && typeof atlas.getSheetInfo === "function"
+                        ? atlas.getSheetInfo(textureKey)
+                        : null;
+                    const cols = (sheetInfo?.cols ?? 0) | 0;
+                    if (textureKey && (cols | 0) > 0) {
+                        const baseRefRow = (vis.ref.row ?? 0) | 0;
+                        const baseRefCol = (vis.ref.col ?? 0) | 0;
+                        const atlasRow = ((baseRefRow - (hTiles - 1) + localR) | 0);
+                        const atlasCol = ((baseRefCol + localC) | 0);
+                        const frameIndex = ((atlasRow * cols + atlasCol) | 0);
+                        info = { textureKey, frameIndex };
+                    }
+                }
+            }
         }
 
         // Back-compat fallback (single-sheet): use tile index directly on the primary sheet
@@ -693,9 +749,7 @@ function decor_applyTightOpaqueAabbToSolids(args: {
             continue;
         }
 
-        const baseName = propBaseNameFromKey(name);
         const spec = baseName ? getPropSpec(baseName) : null;
-        const vis: any = baseName ? (PROP_VISUALS_BY_NAME as any)[baseName] : null;
         const instOffX = (sprites.readDataNumber(s, "decorOffX") | 0);
         const instOffY = (sprites.readDataNumber(s, "decorOffY") | 0);
 
@@ -1184,6 +1238,7 @@ function decor_maybeSyncFromEngineInternals(): void {
                     const base = propBaseNameFromKey(key);
                     if (base && (
                         base.indexOf("boss_rock_") === 0 ||
+                        base === "shop_platform" ||
                         base === "book_stump" ||
                         base.indexOf("stone_door") === 0
                     )) continue;
@@ -1215,6 +1270,7 @@ function decor_maybeSyncFromEngineInternals(): void {
                     const base = propBaseNameFromKey(key);
                     if (base && (
                         base.indexOf("boss_rock_") === 0 ||
+                        base === "shop_platform" ||
                         base.indexOf("stone_door") === 0
                     )) continue;
                 }
@@ -1904,6 +1960,8 @@ const EFFECT_MASK_INVERT_DATA_KEY = "effectMaskInvert";
 const EFFECT_MASK_RADIUS_DATA_KEY = "effectMaskRadius";
 const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
 const EFFECT_MASK_PAD_OUT_PX_DATA_KEY = "effectMaskPadOutPx";
+const EFFECT_MASK_USE_NATIVE_DATA_KEY = "effectMaskUseNative";
+const EFFECT_FORCE_VISIBLE_DATA_KEY = "effectForceVisible";
 const EFFECT_MASK_SPRITE_REF_DATA_KEY = "effectMaskSpriteRef";
 const EFFECT_HERO_REF_DATA_KEY = "effectHeroRef";
 const EFFECT_FRAME_WINDOW_START_DATA_KEY = "effectFrameWindowStart";
@@ -13043,25 +13101,30 @@ function _effectEnsureHeroOutlineMask(nativeAny: any, heroNative: any): boolean 
 function _effectEnsureSpriteMask(nativeAny: any, maskNative: any): boolean {
     if (!nativeAny || !maskNative) return false;
     if (typeof (maskNative as any).createBitmapMask !== "function") {
+        nativeAny.__effectMaskFailReason = "mask-no-createBitmapMask";
         _effectClearPaintMask(nativeAny);
         return false;
     }
     if ((maskNative as any).destroyed || !(maskNative as any).scene) {
+        nativeAny.__effectMaskFailReason = "mask-destroyed-or-no-scene";
         _effectClearPaintMask(nativeAny);
         return false;
     }
     const frame = (maskNative as any).frame;
     const tex = frame?.texture || (maskNative as any).texture;
     if (!frame || !tex) {
+        nativeAny.__effectMaskFailReason = "mask-no-frame-or-tex";
         _effectClearPaintMask(nativeAny);
         return false;
     }
     if ((tex as any).destroyed) {
+        nativeAny.__effectMaskFailReason = "mask-tex-destroyed";
         _effectClearPaintMask(nativeAny);
         return false;
     }
     const scene = (maskNative as any).scene || (globalThis as any).__phaserScene;
     if (!scene) {
+        nativeAny.__effectMaskFailReason = "mask-no-scene-global";
         _effectClearPaintMask(nativeAny);
         return false;
     }
@@ -13069,16 +13132,19 @@ function _effectEnsureSpriteMask(nativeAny: any, maskNative: any): boolean {
     const texKey = String((tex as any).key || "");
     const frameName = (frame && frame.name !== undefined) ? frame.name : undefined;
     if (!texKey || frameName === undefined) {
+        nativeAny.__effectMaskFailReason = "mask-no-texkey-or-frame";
         _effectClearPaintMask(nativeAny);
         return false;
     }
     if (!scene.textures || !scene.textures.exists(texKey)) {
+        nativeAny.__effectMaskFailReason = "mask-tex-missing";
         _effectClearPaintMask(nativeAny);
         return false;
     }
     const texEntry = scene.textures.get(texKey);
     const texFrame = texEntry?.get(frameName as any);
     if (!texEntry || !texFrame) {
+        nativeAny.__effectMaskFailReason = "mask-texframe-missing";
         _effectClearPaintMask(nativeAny);
         return false;
     }
@@ -13087,6 +13153,7 @@ function _effectEnsureSpriteMask(nativeAny: any, maskNative: any): boolean {
         try { (texEntry as any).refresh(); } catch { /* ignore */ }
     }
     if (texSrc && !texSrc.glTexture) {
+        nativeAny.__effectMaskFailReason = "mask-gltexture-missing";
         if (DEBUG_EFFECT_MASKS) {
             try {
                 const key = "maskTexMissing:" + texKey + ":" + String(frameName);
@@ -13183,6 +13250,7 @@ function _effectEnsureSpriteMask(nativeAny: any, maskNative: any): boolean {
     const lastMask = nativeAny.__effectPaintMaskSpriteId;
     if (lastType === "sprite" && lastMask === maskId && nativeAny.__effectPaintMask) {
         try { nativeAny.setMask?.(nativeAny.__effectPaintMask); } catch { }
+        nativeAny.__effectMaskFailReason = "";
         return true;
     }
 
@@ -13194,8 +13262,10 @@ function _effectEnsureSpriteMask(nativeAny: any, maskNative: any): boolean {
         nativeAny.__effectPaintMask = mask;
         nativeAny.__effectPaintMaskType = "sprite";
         nativeAny.__effectPaintMaskSpriteId = maskId;
+        nativeAny.__effectMaskFailReason = "";
         return true;
     } catch {
+        nativeAny.__effectMaskFailReason = "mask-createBitmapMask-failed";
         _effectClearPaintMask(nativeAny);
         return false;
     }
@@ -13282,6 +13352,7 @@ function _syncEffectPath(
     const hasBlend = Object.prototype.hasOwnProperty.call(data, EFFECT_BLEND_DATA_KEY);
     const hasRot = Object.prototype.hasOwnProperty.call(data, EFFECT_ROT_DATA_KEY);
     const hasForceTop = Object.prototype.hasOwnProperty.call(data, EFFECT_FORCE_TOP_DATA_KEY);
+    const hasForceVisible = Object.prototype.hasOwnProperty.call(data, EFFECT_FORCE_VISIBLE_DATA_KEY);
     const hasFrameWindowMs = Object.prototype.hasOwnProperty.call(data, EFFECT_FRAME_WINDOW_MS_DATA_KEY);
     const hasFrameWindowStart = Object.prototype.hasOwnProperty.call(data, EFFECT_FRAME_WINDOW_START_DATA_KEY);
     const hasFps = Object.prototype.hasOwnProperty.call(data, EFFECT_FPS_DATA_KEY);
@@ -13308,9 +13379,11 @@ function _syncEffectPath(
     const hasMaskRadius = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_RADIUS_DATA_KEY);
     const hasMaskRadiusPx = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_RADIUS_PX_DATA_KEY);
     const hasMaskPadOut = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_PAD_OUT_PX_DATA_KEY);
+    const hasMaskUseNative = Object.prototype.hasOwnProperty.call(data, EFFECT_MASK_USE_NATIVE_DATA_KEY);
     const alpha = hasAlpha ? sprites.readDataNumber(s, EFFECT_ALPHA_DATA_KEY) : 0;
     const blend = hasBlend ? (sprites.readDataString(s, EFFECT_BLEND_DATA_KEY) || "") : "";
     const forceTopRaw = hasForceTop ? sprites.readDataNumber(s, EFFECT_FORCE_TOP_DATA_KEY) : 0;
+    const forceVisibleRaw = hasForceVisible ? sprites.readDataNumber(s, EFFECT_FORCE_VISIBLE_DATA_KEY) : 0;
     const forceTop = (forceTopRaw | 0) !== 0;
     const frameWindowMs = hasFrameWindowMs ? sprites.readDataNumber(s, EFFECT_FRAME_WINDOW_MS_DATA_KEY) : 0;
     const frameWindowStart = hasFrameWindowStart ? sprites.readDataNumber(s, EFFECT_FRAME_WINDOW_START_DATA_KEY) : 0;
@@ -13335,6 +13408,7 @@ function _syncEffectPath(
     const maskRadiusRaw = hasMaskRadius ? sprites.readDataNumber(s, EFFECT_MASK_RADIUS_DATA_KEY) : 0;
     const maskRadiusPxRaw = hasMaskRadiusPx ? sprites.readDataNumber(s, EFFECT_MASK_RADIUS_PX_DATA_KEY) : 0;
     const maskPadOutRaw = hasMaskPadOut ? sprites.readDataNumber(s, EFFECT_MASK_PAD_OUT_PX_DATA_KEY) : 0;
+    const maskUseNativeRaw = hasMaskUseNative ? sprites.readDataNumber(s, EFFECT_MASK_USE_NATIVE_DATA_KEY) : 0;
     const rot = hasRot ? sprites.readDataNumber(s, EFFECT_ROT_DATA_KEY) : 0;
     const frameIndex = hasFrameIndex ? sprites.readDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY) : 0;
     const frameList = hasFrameList ? (sprites.readDataString(s, EFFECT_FRAME_LIST_DATA_KEY) || "") : "";
@@ -13355,6 +13429,7 @@ function _syncEffectPath(
     if (hasBlend) data[EFFECT_BLEND_DATA_KEY] = blend;
     if (hasRot) data[EFFECT_ROT_DATA_KEY] = rot;
     if (hasForceTop) data[EFFECT_FORCE_TOP_DATA_KEY] = forceTopRaw;
+    if (hasForceVisible) data[EFFECT_FORCE_VISIBLE_DATA_KEY] = forceVisibleRaw;
     if (hasFrameWindowMs) data[EFFECT_FRAME_WINDOW_MS_DATA_KEY] = frameWindowMs;
     if (hasFrameWindowStart) data[EFFECT_FRAME_WINDOW_START_DATA_KEY] = frameWindowStart;
     if (hasFps) data[EFFECT_FPS_DATA_KEY] = fps;
@@ -13382,6 +13457,7 @@ function _syncEffectPath(
     if (hasMaskRadius) data[EFFECT_MASK_RADIUS_DATA_KEY] = maskRadiusRaw;
     if (hasMaskRadiusPx) data[EFFECT_MASK_RADIUS_PX_DATA_KEY] = maskRadiusPxRaw;
     if (hasMaskPadOut) data[EFFECT_MASK_PAD_OUT_PX_DATA_KEY] = maskPadOutRaw;
+    if (hasMaskUseNative) data[EFFECT_MASK_USE_NATIVE_DATA_KEY] = maskUseNativeRaw;
 
     const nativeAny: any = s.native;
     if (!nativeAny || typeof nativeAny.setData !== "function") {
@@ -13410,6 +13486,7 @@ function _syncEffectPath(
     if (hasBlend) nativeAny.setData(EFFECT_BLEND_DATA_KEY, blend);
     if (hasRot) nativeAny.setData(EFFECT_ROT_DATA_KEY, rot);
     if (hasForceTop) nativeAny.setData(EFFECT_FORCE_TOP_DATA_KEY, forceTopRaw);
+    if (hasForceVisible) nativeAny.setData(EFFECT_FORCE_VISIBLE_DATA_KEY, forceVisibleRaw);
     if (hasFrameWindowMs) nativeAny.setData(EFFECT_FRAME_WINDOW_MS_DATA_KEY, frameWindowMs);
     if (hasFrameWindowStart) nativeAny.setData(EFFECT_FRAME_WINDOW_START_DATA_KEY, frameWindowStart);
     if (hasFps) nativeAny.setData(EFFECT_FPS_DATA_KEY, fps);
@@ -13437,6 +13514,7 @@ function _syncEffectPath(
     if (hasMaskRadius) nativeAny.setData(EFFECT_MASK_RADIUS_DATA_KEY, maskRadiusRaw);
     if (hasMaskRadiusPx) nativeAny.setData(EFFECT_MASK_RADIUS_PX_DATA_KEY, maskRadiusPxRaw);
     if (hasMaskPadOut) nativeAny.setData(EFFECT_MASK_PAD_OUT_PX_DATA_KEY, maskPadOutRaw);
+    if (hasMaskUseNative) nativeAny.setData(EFFECT_MASK_USE_NATIVE_DATA_KEY, maskUseNativeRaw);
 
     if (offX || offY) {
         nativeAny.x = (s.x as number) + (offX || 0);
@@ -13482,16 +13560,24 @@ function _syncEffectPath(
     } else if (nativeAny.__effectMaskPadOutPx == null) {
         nativeAny.__effectMaskPadOutPx = 0;
     }
+    if (hasMaskUseNative) {
+        nativeAny.__effectMaskUseNative = (maskUseNativeRaw | 0) !== 0;
+    } else if (nativeAny.__effectMaskUseNative == null) {
+        nativeAny.__effectMaskUseNative = false;
+    }
     nativeAny.__effectMaskPadDir = dir || "";
 
     const hasHeroIndexKey = Object.prototype.hasOwnProperty.call(data, PROJ_HERO_INDEX_KEY);
     const heroIndexForDebug = hasHeroIndexKey ? sprites.readDataNumber(s, PROJ_HERO_INDEX_KEY) : -1;
     const heroRefForMask = sprites.readDataSprite(s, EFFECT_HERO_REF_DATA_KEY);
     const maskSpriteRef = sprites.readDataSprite(s, EFFECT_MASK_SPRITE_REF_DATA_KEY);
+    const maskOverride = maskSpriteRef ? (maskSpriteRef as any).__heMaskNativeOverride : null;
     const maskSpriteNative =
-        (maskSpriteRef && !(maskSpriteRef.flags & SpriteFlag.Destroyed) && (maskSpriteRef as any).native)
-            ? (maskSpriteRef as any).native
-            : null;
+        (maskOverride && (maskOverride as any).scene)
+            ? maskOverride
+            : ((maskSpriteRef && !(maskSpriteRef.flags & SpriteFlag.Destroyed) && (maskSpriteRef as any).native)
+                ? (maskSpriteRef as any).native
+                : null);
 
     const wantsProjectileMask =
         modeRaw === "projectile" ||
@@ -13539,7 +13625,9 @@ function _syncEffectPath(
         let maskType = "none";
         if (wantsProjectileMask) {
             try {
-                if (maskSpriteNative && _effectEnsureSpriteMask(nativeAny, maskSpriteNative)) {
+                if (!maskSpriteNative) {
+                    nativeAny.__effectMaskFailReason = "mask-sprite-native-missing";
+                } else if (_effectEnsureSpriteMask(nativeAny, maskSpriteNative)) {
                     usedHeroMask = true;
                     maskType = "sprite";
                     if (typeof maskSpriteNative.originX === "number" && typeof maskSpriteNative.originY === "number") {
@@ -13856,6 +13944,7 @@ function _syncVisibilityAndDebugTail(
     const dataKeys = Object.keys(dataAny || {});
     const role = _classifySpriteRole((s.kind as any) | 0, dataKeys);
     const forceTop = (role === "EFFECT") && (((dataAny[EFFECT_FORCE_TOP_DATA_KEY] as any) | 0) !== 0);
+    const forceVisible = (role === "EFFECT") && (((dataAny[EFFECT_FORCE_VISIBLE_DATA_KEY] as any) | 0) !== 0);
     const nativeAny: any = native as any;
     const isHeroNative = !!(nativeAny && nativeAny.getData && nativeAny.getData("isHeroNative"));
 
@@ -14008,7 +14097,7 @@ function _syncVisibilityAndDebugTail(
     // ------------------------------------------------------------
     // Normal visibility path (existing behavior)
     // ------------------------------------------------------------
-    const shouldBeVisible = !hasInvisibleFlag && !autoHideByPixels && !hideBase;
+    const shouldBeVisible = forceVisible ? true : (!hasInvisibleFlag && !autoHideByPixels && !hideBase);
     native.visible = shouldBeVisible;
     native.alpha = shouldBeVisible ? (hasEffectAlpha ? effectAlphaNum : 1) : 0;
 
@@ -15369,6 +15458,15 @@ function _syncFocusOutlineForNative(
     const radius = _readDataNumber0(s, FOCUS_OUTLINE_RADIUS_KEY, 2) | 0;
     const depthBias = _readDataNumber0(s, FOCUS_OUTLINE_DEPTH_BIAS_KEY, 1) | 0;
 
+    const syncFocusLayers = (targetNative: any): void => {
+        if (!targetNative) return;
+        const baseBias = (depthBias | 0);
+        // Standard focus aura layers for all sprites: r1 white, r2 black, r3 white.
+        heroAnimGlue.syncOutlineForNative(targetNative, active !== 0, 1, 1, baseBias + 2, "r1");
+        heroAnimGlue.syncOutlineForNative(targetNative, active !== 0, 0, 2, baseBias + 1, "r2");
+        heroAnimGlue.syncOutlineForNative(targetNative, active !== 0, 1, 3, baseBias + 0, "r3");
+    };
+
     // Decor props: target the prop display object and use true outline from pre-baked aura sheets.
     try {
         const decorName = (sprites.readDataString(s, DECOR_DATA_NAME) || "");
@@ -15417,7 +15515,7 @@ function _syncFocusOutlineForNative(
                     for (let i = 0; i < propObjs.length; i++) {
                         const obj = propObjs[i];
                         if (!obj) continue;
-                        heroAnimGlue.syncOutlineForNative(obj, active !== 0, color, radius, depthBias);
+                        syncFocusLayers(obj);
                     }
                     return;
                 }
@@ -15429,7 +15527,7 @@ function _syncFocusOutlineForNative(
     if (native.getData && native.getData("uiManaged")) return;
 
     // Everything else: fallback to heroAnimGlue outline.
-    heroAnimGlue.syncOutlineForNative(native, active !== 0, color, radius, depthBias);
+    syncFocusLayers(native);
 }
 
 

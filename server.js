@@ -31,7 +31,7 @@ const PORT = Number(process.env.GAME_WS_PORT || 8080);
 const HOST = process.env.GAME_HOST || "0.0.0.0";
 const SAVE_DIR = path.resolve("saves");
 const DEBUG_DUMP_DIR = path.resolve("debug_dumps");
-const DEBUG_DUMP_MAX_BYTES = 2 * 1024 * 1024;
+const DEBUG_DUMP_MAX_BYTES = 20 * 1024 * 1024;
 const HERO_ASSETS_DIR = path.resolve("assets", "heroes");
 const PROFILE_UPLOAD_MAX_BYTES = 8 * 1024 * 1024;
 
@@ -1110,7 +1110,15 @@ function handleDebugDumpMessage(ws, info, msg) {
     return;
   }
 
-  const fname = "debugdump_latest.json";
+  const reason = (msg && typeof msg.reason === "string") ? msg.reason : "";
+  const isTilemap = (typeof reason === "string") && reason.indexOf("tilemap") >= 0;
+  const isTilemapFocus = isTilemap && reason.indexOf("tilemap-focus") >= 0;
+  const isTraceProof = (typeof reason === "string") && (reason.indexOf("trace-proof") >= 0 || reason.indexOf("effects-hall-trace") >= 0);
+  const fname = isTraceProof
+    ? "debugdump_traceproof.json"
+    : (isTilemapFocus
+      ? "debugdump_tilemap_focus.json"
+      : (isTilemap ? "debugdump_tilemap.json" : "debugdump_latest.json"));
   const full = path.join(DEBUG_DUMP_DIR, fname);
   if (!full.startsWith(DEBUG_DUMP_DIR)) {
     sendJson(ws, { type: "debugDumpResult", requestId, ok: false, reason: "invalid-path" });

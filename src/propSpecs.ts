@@ -119,6 +119,44 @@ export const PROP_SPECS_BY_NAME: Record<string, PropSpec> = {
       floorKinds: ["entrance"],
     },
   },
+  shop_platform: {
+    name: "shop_platform",
+    collision: {
+      mode: "base",
+      baseHeightPx: 8,
+      useAura: true,
+    },
+  },
+  entrance_wall: {
+    name: "entrance_wall",
+    collision: {
+      mode: "aura",
+      useAura: true,
+    },
+    interact: {
+      interactable: false,
+      focusable: false,
+      action: "",
+    },
+    placement: {
+      floorKinds: ["entrance"],
+    },
+  },
+  entrance_gate: {
+    name: "entrance_gate",
+    collision: {
+      mode: "aura",
+      useAura: true,
+    },
+    interact: {
+      interactable: false,
+      focusable: false,
+      action: "",
+    },
+    placement: {
+      floorKinds: ["entrance"],
+    },
+  },
   headstone: {
     name: "headstone",
     collision: {
@@ -185,6 +223,19 @@ const BOSS_ROCK_SPEC: PropSpec = {
     action: "",
   },
 };
+
+export function registerPropSpec(spec: PropSpec): PropSpec | null {
+  const name = String(spec?.name || "").trim();
+  if (!name) return null;
+
+  const next: PropSpec = { ...spec, name };
+  if (next.collision && next.collision.mode && next.collision.mode !== "none") {
+    next.collision.useAura = true;
+  }
+
+  PROP_SPECS_BY_NAME[name] = next;
+  return next;
+}
 
 export function propBaseNameFromKey(name: string): string {
   const s = (name || "").trim();

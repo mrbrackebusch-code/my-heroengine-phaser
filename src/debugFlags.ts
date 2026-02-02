@@ -33,8 +33,8 @@ export const DEBUG_HERO_ANIM_FRAMES_STRENGTH_ONLY = false;
 export const DEBUG_HERO_ANIM_FRAMES_ONLY_CHANGES = false;
 export const DEBUG_HERO_ANIM_FRAMES_THROTTLE_MS = 0;
 export const DEBUG_HERO_ANIM_STRENGTH_TRACE = false;
-export const DEBUG_STR_PROJECTILE_METRICS = true;
-export const DEBUG_STR_PROJECTILE_FRAMES = true;
+export const DEBUG_STR_PROJECTILE_METRICS = false;
+export const DEBUG_STR_PROJECTILE_FRAMES = false;
 export const DEBUG_STR_PROJECTILE_FRAMES_THROTTLE_MS = 0;
 
 // Agility/integrator debug
@@ -58,12 +58,15 @@ export const DEBUG_AGI_HOOKSHOT_SLOW_MULT = 1;
 export const DEBUG_AGI_COMET_LOGS = false;
 export const DEBUG_AGI_COMET_LOG_THROTTLE_MS = 120;
 export const DEBUG_AGI_COMET_LOG_VERBOSE = false;
-export const DEBUG_AGI_SQUARE_COMET_LOGS = true;
+export const DEBUG_AGI_SQUARE_COMET_LOGS = false;
 export const DEBUG_AGI_SQUARE_COMET_LOG_THROTTLE_MS = 200;
-export const DEBUG_AGI_SQUARE_COMET_LOG_VERBOSE = true;
-export const DEBUG_AGI_COMET_ALIGN_LOGS = true;
+export const DEBUG_AGI_SQUARE_COMET_LOG_VERBOSE = false;
+export const DEBUG_AGI_COMET_ALIGN_LOGS = false;
 export const DEBUG_AGI_COMET_ALIGN_LOG_THROTTLE_MS = 160;
-export const DEBUG_AGI_COMET_ALIGN_LOG_VERBOSE = true;
+export const DEBUG_AGI_COMET_ALIGN_LOG_VERBOSE = false;
+export const DEBUG_AGI_COMET_ALIGN_VIS = false; // Draw weapon bounds + tip for comet alignment debugging.
+export const DEBUG_AGI_COMET_ALIGN_VIS_HERO_INDEX = -1; // -1 = all heroes
+export const DEBUG_AGI_COMET_ALIGN_VIS_TIP_R = 6;
 
 // Move pipeline debug
 export const DEBUG_MOVE_PIPE = false;
@@ -103,13 +106,21 @@ export const DEBUG_STATUE_STAMP = false;
 export const DEBUG_STATUE_PEDESTAL = false;
 
 // Dungeon/shop/relic/UI logs (HeroEngineInPhaser.ts)
-export const DEBUG_DUNGEON_LOGS = true;
-export const DEBUG_BOSS_INTRO = true; // Boss intro/jump/pad sink lifecycle logs.
-export const DEBUG_PAD_SINK_PROP_LOGS = true; // [PAD][PILLAR] summarize prop offset ranges during pad sink.
+export const DEBUG_DUNGEON_LOGS = false;
+export const DEBUG_BOSS_INTRO = false; // Boss intro/jump/pad sink lifecycle logs.
+export const DEBUG_PAD_SINK_PROP_LOGS = false; // [PAD][PILLAR] summarize prop offset ranges during pad sink.
 export const DEBUG_BOSS_PAD_DUST_PERSIST = false; // Keep boss pad dust alive (skip destroy) for visibility.
 export const DEBUG_FORCE_HALL_OF_ENEMIES = false; // Force hall floor kind for enemy showcase/debug.
-export const DEBUG_EFFECTS_HALL_ON_START = true; // Start run in effects hall (debug VFX layout).
+export const DEBUG_EFFECTS_HALL_ON_START = false; // Start run in effects hall (debug VFX layout).
 export const DEBUG_EFFECTS_HALL_LOGS = false; // Log effects hall texture frames (debug).
+export const DEBUG_EFFECTS_HALL_TRACE = false; // Auto-capture effects hall trace samples to file.
+export const DEBUG_EFFECTS_HALL_ONLY_ROWS = false; // Only spawn the 10-row test lanes (suppress other hall effects).
+export const DEBUG_EFFECTS_HALL_ONLY_POISON = false; // Only spawn poison clouds in effects hall (skip dust).
+export const DEBUG_EFFECTS_HALL_ONLY_DUST = false; // Only spawn dust clouds in effects hall (skip poison).
+export const DEBUG_EFFECTS_HALL_FREEZE_WORLD = false; // Pause non-hall dungeon ticks while trace is active.
+export const DEBUG_EFFECTS_HALL_TRACE_LITE = false; // Set true to reduce trace payload/cost (skip heavy bounds/mask work).
+export const DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE = 0; // >0 to override trace interval (ms).
+export const DEBUG_EFFECTS_HALL_TRACE_DURATION_MS_OVERRIDE = 0; // >0 to override trace duration (ms).
 export const DEBUG_FOCUS_LOGS = false;
 export const DEBUG_INTERACT_LOGS = false; // General interact pipeline (props/NPC).
 export const DEBUG_INTERACT_TICK_LOGS = false; // Tick-level spam; keep off unless needed.
@@ -143,18 +154,18 @@ export const DEBUG_INT_DET_FORCE_VISIBLE_IMAGE = false;
 export const DEBUG_ENEMY_NAV_LOG = false;
 export const DEBUG_ENEMY_STUCK_LOG = false;
 export const DEBUG_ENEMY_NAV_COLLISION = false;
-export const DEBUG_DISABLE_ENEMY_WALL_COLLISIONS = true; // Allow enemies to ignore wall collision resolution.
-export const DEBUG_ENEMY_APPROACH_ONLY = true; // Disable AI behaviors except "move into range".
+export const DEBUG_DISABLE_ENEMY_WALL_COLLISIONS = false; // Allow enemies to ignore wall collision resolution.
+export const DEBUG_ENEMY_APPROACH_ONLY = false; // Disable AI behaviors except "move into range".
 export const DEBUG_ENEMY_SPEED_MULT = 5; // 1 = normal speed. Debug-only global enemy speed multiplier.
 export const DEBUG_ENEMY_AI_DECISIONS = false;
-export const DEBUG_ENEMY_AI_DECISIONS_ONLY_CHANGES = true;
+export const DEBUG_ENEMY_AI_DECISIONS_ONLY_CHANGES = false;
 export const DEBUG_ENEMY_AI_DECISIONS_THROTTLE_MS = 400;
 
 // ------------------------------------------------------------
 // Arcade compat / Phaser wrapper (arcadeCompat.ts + arcadeCompat.net.ts)
 // ------------------------------------------------------------
 export const DEBUG_INT_HERO_VIS = false;
-export const DEBUG_INT_HERO_NAME_FILTER = "Jason"; // empty string logs all
+export const DEBUG_INT_HERO_NAME_FILTER = "LongBlond"; // empty string logs all
 export const DEBUG_SETFLAG = false;
 export const DEBUG_WRAP_TEX = false;
 export const DEBUG_INPUT_EDGE_LOGS = false; // Log all local press/release edges (keyboard/gamepad)
@@ -185,12 +196,12 @@ export const DEBUG_DRAW_HERO_WALL_COLLIDERS = false; // Hero wall footprint
 export const DEBUG_DRAW_HERO_NAV_FOOTPRINT = false; // Hero nav footprint (same as wall for now)
 export const DEBUG_DRAW_DECOR_COLLIDERS = true; // Decor prop collider bounds (triggers + solids)
 export const DEBUG_DRAW_DECOR_AURA_MASK = true; // Decor prop aura-mask outline (uses precomputed mask bits)
-export const DEBUG_EFFECT_ANIMS = true; // Effect anim application logs (effects.*)
+export const DEBUG_EFFECT_ANIMS = false; // Effect anim application logs (effects.*)
 export const DEBUG_EFFECT_MASKS = true; // Effect mask debug logs (silhouette / mask attach)
 export const DEBUG_AURA_MASK_BIN_LOGS = true; // Aura mask binary loader logs (errors/diagnostics)
-export const DEBUG_EFFECT_ATLAS = true; // Effect atlas load summary (frames/cols/rows)
+export const DEBUG_EFFECT_ATLAS = false; // Effect atlas load summary (frames/cols/rows)
 export const DEBUG_EFFECT_FORCE_RELOAD = false; // Force reload effects.* textures even when URL matches (hot-reload only).
-export const DEBUG_EFFECT_PURGE_CACHES = false; // Purge effects.* textures/anims on preload (hot-reload only).
+export const DEBUG_EFFECT_PURGE_CACHES = true; // Purge effects.* textures/anims on preload (hot-reload only).
 export const DEBUG_EFFECT_AURA_PRIORITY_ENABLED = false; // Load only selected aura radii during preload.
 export const DEBUG_EFFECT_AURA_PRIORITY_RADII = "1,2,3,4"; // Aura radii to preload when priority mode is enabled.
 export const DEBUG_EFFECT_AURA_STREAM_REST = false; // After preload, stream remaining aura radii in the background.
@@ -203,7 +214,7 @@ export const DEBUG_EFFECTS_DUMP_SAMPLE_STRIDE = 4; // Pixel stride for sampling 
 export const DEBUG_EFFECTS_DUMP_ON_HALL = true; // Auto-write a debug dump when effects hall spawns.
 export const DEBUG_EFFECTS_DUMP_AFTER_N_APPLIES = 0; // Auto-dump after N applyEffectToSprite calls (0 = off).
 export const DEBUG_STR_ARC_GALLERY = false; // Strength arc frame gallery overlay (arc/fill/aura sheets)
-export const DEBUG_STR_ARC_GALLERY_SKIN = "Sword Arcs";
+export const DEBUG_STR_ARC_GALLERY_SKIN = "SwordArcs3";
 export const DEBUG_STR_ARC_GALLERY_FILL_SKIN = "torrentacle texture";
 export const DEBUG_STR_ARC_GALLERY_AURA_RADIUS = 2;
 export const DEBUG_STR_ARC_GALLERY_CORE_COLS = 6;
@@ -225,7 +236,7 @@ export const DEBUG_VFX_GALLERY_ANIM_FPS = 12; // Animation fps for gallery.
 export const DEBUG_VFX_GALLERY_HIDE_AURAS = true; // Hide *_aura_rN entries by default.
 export const DEBUG_VFX_GALLERY_YOYO = false; // Enable yoyo for gallery anims.
 export const DEBUG_STR_ARC_CAPTURE = false; // Dump arc source frames to a PNG download for comparison.
-export const DEBUG_STR_ARC_CAPTURE_SKIN = "Sword Arcs";
+export const DEBUG_STR_ARC_CAPTURE_SKIN = "SwordArcs3";
 export const DEBUG_STR_ARC_CAPTURE_FILL_SKIN = "torrentacle texture";
 export const DEBUG_STR_ARC_CAPTURE_AURA_RADIUS = 2;
 export const DEBUG_STR_ARC_CAPTURE_CORE_COLS = 6;
@@ -308,14 +319,14 @@ export const DEBUG_TURN_SHOULD_PROVE_ON = false;
 // ------------------------------------------------------------
 // Tilemap / tiles (main.ts, tileAtlas.ts, tileMapGlue.ts)
 // ------------------------------------------------------------
-export const DEBUG_TILEMAP_MAIN = true;
+export const DEBUG_TILEMAP_MAIN = false;
 export const DEBUG_TILEMAP_APPLY_NET = false;
 export const DEBUG_PROP_SYNC = false; // [net.decor.apply]/[net.decor.capture] logs.
-export const DEBUG_TILE_ATLAS_GLOBAL = true; // was DEBUG_TILES_GLOBAL in tileAtlas.ts
-export const DEBUG_TILES = true;
-export const DEBUG_TILEMAP_GLUE = true; // [tileMapGlue] base render done, etc.
-export const DEBUG_TILEMAP_AUDIT = true; // [TILEMAP][AUDIT] consolidated decor/prop/tilemap checks.
-export const DEBUG_TILEMAP_AUDIT_DUMP = true; // [TILEMAP][AUDIT][DUMP] floor map + props summary on entry.
+export const DEBUG_TILE_ATLAS_GLOBAL = false; // was DEBUG_TILES_GLOBAL in tileAtlas.ts
+export const DEBUG_TILES = false;
+export const DEBUG_TILEMAP_GLUE = false; // [tileMapGlue] base render done, etc.
+export const DEBUG_TILEMAP_AUDIT = false; // [TILEMAP][AUDIT] consolidated decor/prop/tilemap checks.
+export const DEBUG_TILEMAP_AUDIT_DUMP = false; // [TILEMAP][AUDIT][DUMP] floor map + props summary on entry.
 export const WORLD_SYNC_HASH_WARN_THRESHOLD_MS = 8000; // warn if host/follower hashes mismatch longer than this (0 disables)
 
 // Prop focus aura (tileMapGlue.ts)
@@ -370,7 +381,7 @@ export const DEBUG_WPN_DROP_SIM_FLOOR_START = 1;
 export const DEBUG_WPN_DROP_SIM_FLOOR_STEP_PER_ACTION = 1;
 export const DEBUG_WPN_DROP_SIM_TRAIT_PCT = 20; // Approx % of theoretical mana budget used for trait rolls.
 export const DEBUG_WPN_AURA_ALWAYS_SHOW = false; // Always render weapon aura masks on the hero (visual overlay).
-export const DEBUG_WPN_AURA_TRACE = true; // [WPNTRACE] weapon aura/debug traces
+export const DEBUG_WPN_AURA_TRACE = false; // [WPNTRACE] weapon aura/debug traces
 export const DEBUG_WPN_AURA_TRACE_VERBOSE = false;
 export const DEBUG_WPN_AURA_TRACE_INTERVAL_MS = 120;
 export const ENABLE_WEAPON_AUDIT_ON_START = false;

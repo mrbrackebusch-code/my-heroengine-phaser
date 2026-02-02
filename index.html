@@ -295,6 +295,15 @@
         pointer-events: auto;
       }
 
+      #dialog-layer.he-float {
+        top: 0;
+        bottom: 0;
+      }
+
+      #dialog-layer.he-float #dialog-box {
+        position: absolute;
+      }
+
       #dialog-box {
         background: rgba(18, 18, 22, 0.92);
         border: 2px solid #000;
@@ -613,6 +622,68 @@
       #shop-hint {
         font-size: 12px;
         opacity: 0.75;
+      }
+
+      /* -----------------------------
+        Shop focus tooltip (DOM)
+        ----------------------------- */
+      #shop-focus-layer {
+        position: absolute;
+        inset: 0;
+        display: none;
+        pointer-events: none;
+        z-index: 12; /* above dialog + shop */
+      }
+
+      #shop-focus-layer.he-show {
+        display: block;
+      }
+
+      #shop-focus-box {
+        position: absolute;
+        min-width: 200px;
+        max-width: 260px;
+        background: rgba(18, 16, 12, 0.96);
+        border: 2px solid #000;
+        border-radius: 12px;
+        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.45);
+        color: rgba(255, 255, 255, 0.95);
+        padding: 10px 12px;
+        display: flex;
+        flex-direction: column;
+        gap: 4px;
+      }
+
+      .shop-focus-name {
+        font-weight: 900;
+        letter-spacing: 0.2px;
+      }
+
+      .shop-focus-rarity {
+        font-size: 11px;
+        font-weight: 800;
+        letter-spacing: 0.4px;
+      }
+      .shop-focus-rarity.rarity-common { color: #ffffff; }
+      .shop-focus-rarity.rarity-uncommon { color: #67ff90; }
+      .shop-focus-rarity.rarity-rare { color: #5db8ff; }
+      .shop-focus-rarity.rarity-epic { color: #b48bff; }
+      .shop-focus-rarity.rarity-legendary { color: #ffd65a; text-shadow: 0 0 10px rgba(255, 214, 90, 0.6); }
+
+      .shop-focus-desc {
+        font-size: 12px;
+        opacity: 0.9;
+      }
+
+      .shop-focus-price {
+        margin-top: 4px;
+        font-weight: 800;
+        font-variant-numeric: tabular-nums;
+      }
+
+      .shop-focus-hint {
+        font-size: 11px;
+        opacity: 0.7;
       }
 
       /* -----------------------------
@@ -1526,6 +1597,57 @@
         width: 100%;
       }
 
+      #buffs-panel .weapon-item {
+        width: calc(100% - 4px);
+        display: flex;
+        flex-direction: column;
+        align-items: center;
+        gap: 2px;
+        padding: 4px 2px;
+        border: 1px solid rgba(255, 255, 255, 0.12);
+        border-radius: 8px;
+        background: rgba(24, 24, 30, 0.65);
+        box-sizing: border-box;
+      }
+
+      #buffs-panel .weapon-item:hover {
+        border-color: rgba(255, 255, 255, 0.35);
+        background: rgba(32, 32, 40, 0.8);
+      }
+
+      #buffs-panel .weapon-icon {
+        width: 32px;
+        height: 32px;
+        border-radius: 6px;
+        background-color: rgba(0, 0, 0, 0.35);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+        background-repeat: no-repeat;
+        image-rendering: pixelated;
+      }
+
+      #buffs-panel .weapon-icon.weapon-empty {
+        opacity: 0.4;
+        filter: grayscale(1);
+      }
+
+      #buffs-panel .weapon-slot {
+        font-size: 7px;
+        font-weight: 800;
+        letter-spacing: 0.3px;
+        text-transform: uppercase;
+        opacity: 0.8;
+      }
+
+      #buffs-panel .weapon-name {
+        font-size: 7px;
+        font-weight: 700;
+        text-align: center;
+        width: 100%;
+        white-space: nowrap;
+        overflow: hidden;
+        text-overflow: ellipsis;
+      }
+
       #buffs-panel .buffs-sep {
         width: 100%;
         height: 1px;
@@ -1715,6 +1837,63 @@
   opacity: 0.7;
   font-style: italic;
   margin-top: 4px;
+}
+
+/* Weapon tooltip (sidebar hover) */
+#weapon-tooltip {
+  position: absolute;
+  z-index: 20;
+  display: none;
+  pointer-events: none;
+  max-width: 220px;
+  padding: 8px 10px;
+  border-radius: 10px;
+  border: 1px solid rgba(255, 255, 255, 0.18);
+  background: rgba(16, 16, 20, 0.96);
+  color: rgba(255, 255, 255, 0.92);
+  box-shadow: 0 6px 18px rgba(0, 0, 0, 0.35);
+  font-size: 12px;
+  line-height: 1.2;
+}
+
+#weapon-tooltip.he-show {
+  display: block;
+}
+
+#weapon-tooltip .weapon-tip-name {
+  font-weight: 800;
+  letter-spacing: 0.2px;
+  margin-bottom: 2px;
+}
+
+#weapon-tooltip .weapon-tip-rarity {
+  font-size: 10px;
+  font-weight: 800;
+  letter-spacing: 0.3px;
+  text-transform: uppercase;
+}
+
+#weapon-tooltip .weapon-tip-rarity.rarity-common { color: #ffffff; }
+#weapon-tooltip .weapon-tip-rarity.rarity-uncommon { color: #67ff90; }
+#weapon-tooltip .weapon-tip-rarity.rarity-rare { color: #5db8ff; }
+#weapon-tooltip .weapon-tip-rarity.rarity-epic { color: #b48bff; }
+#weapon-tooltip .weapon-tip-rarity.rarity-legendary { color: #ffd65a; text-shadow: 0 0 10px rgba(255, 214, 90, 0.6); }
+
+#weapon-tooltip .weapon-tip-slot {
+  font-size: 10px;
+  opacity: 0.7;
+  margin-top: 2px;
+}
+
+#weapon-tooltip .weapon-tip-desc {
+  font-size: 11px;
+  margin-top: 4px;
+}
+
+#weapon-tooltip .weapon-tip-bonus {
+  font-size: 10px;
+  opacity: 0.8;
+  margin-top: 2px;
 }
 
 /* =========================================================
@@ -2142,7 +2321,7 @@
           </div>
           <div id="app"></div>
           <div id="buffs-panel" aria-hidden="true">
-            <div class="buffs-title">Buffs</div>
+            <div class="buffs-title">Weapons</div>
             <div class="buffs-box" id="buffs-box"></div>
             <div class="buffs-sep"></div>
             <div class="zoom-panel" id="zoom-panel">
@@ -2160,6 +2339,7 @@
             <div class="xp-relics-box relic-bar-box" id="xp-relics-box"></div>
           </div>
           <div id="relic-tooltip" aria-hidden="true"></div>
+          <div id="weapon-tooltip" aria-hidden="true"></div>
           <!-- Level Up overlay (DOM) -->
           <div id="levelup-layer" aria-hidden="true">
             <div id="levelup-box">
@@ -2175,7 +2355,7 @@
             <div id="shop-box">
               <div id="shop-title">Shop</div>
               <div id="shop-items"></div>
-              <div id="shop-hint">Q: Buy  W: Close</div>
+              <div id="shop-hint">Interact: Buy  Esc: Close</div>
             </div>
           </div>
           <div id="relic-offer-layer" aria-hidden="true">
@@ -2184,6 +2364,15 @@
               <div id="relic-offer-flavor"></div>
               <div id="relic-offer-items"></div>
               <div id="relic-offer-hint">Q: Choose  W: Close</div>
+            </div>
+          </div>
+          <div id="shop-focus-layer" aria-hidden="true">
+            <div id="shop-focus-box">
+              <div id="shop-focus-name" class="shop-focus-name">Weapon</div>
+              <div id="shop-focus-rarity" class="shop-focus-rarity"></div>
+              <div id="shop-focus-desc" class="shop-focus-desc"></div>
+              <div id="shop-focus-price" class="shop-focus-price"></div>
+              <div id="shop-focus-hint" class="shop-focus-hint"></div>
             </div>
           </div>
 
@@ -2579,10 +2768,19 @@
           lvlLayer: document.getElementById("levelup-layer"),
           lvlPoints: document.getElementById("lvlui-points"),
           relicTip: document.getElementById("relic-tooltip"),
+          weaponsBox: document.getElementById("buffs-box"),
+          weaponTip: document.getElementById("weapon-tooltip"),
           shopLayer: document.getElementById("shop-layer"),
           shopTitle: document.getElementById("shop-title"),
           shopItems: document.getElementById("shop-items"),
           shopHint: document.getElementById("shop-hint"),
+          shopFocusLayer: document.getElementById("shop-focus-layer"),
+          shopFocusBox: document.getElementById("shop-focus-box"),
+          shopFocusName: document.getElementById("shop-focus-name"),
+          shopFocusRarity: document.getElementById("shop-focus-rarity"),
+          shopFocusDesc: document.getElementById("shop-focus-desc"),
+          shopFocusPrice: document.getElementById("shop-focus-price"),
+          shopFocusHint: document.getElementById("shop-focus-hint"),
           relicOfferLayer: document.getElementById("relic-offer-layer"),
           relicOfferBox: document.getElementById("relic-offer-box"),
           relicOfferTitle: document.getElementById("relic-offer-title"),
@@ -4587,6 +4785,95 @@ function _readTeamCoins(pid, hero, spritesNS) {
           });
         }
 
+        const _weaponTip = {
+          inited: false,
+          activeEl: null,
+        };
+
+        function _weaponTip_setShown(show) {
+          if (!R.weaponTip) return;
+          const want = !!show;
+          const has = R.weaponTip.classList.contains("he-show");
+          if (want === has) return;
+
+          if (want) {
+            R.weaponTip.classList.add("he-show");
+            R.weaponTip.setAttribute("aria-hidden", "false");
+          } else {
+            R.weaponTip.classList.remove("he-show");
+            R.weaponTip.setAttribute("aria-hidden", "true");
+          }
+        }
+
+        function _weaponTip_setContent(name, rarity, slot, desc, bonus) {
+          if (!R.weaponTip) return;
+          const n = String(name || "");
+          const r = String(rarity || "");
+          const s = String(slot || "");
+          const d = String(desc || "");
+          const b = String(bonus || "");
+          const rCls = r ? `rarity-${r.toLowerCase()}` : "";
+          R.weaponTip.innerHTML = `
+            <div class="weapon-tip-name">${_hud_escapeAttr(n)}</div>
+            ${r ? `<div class="weapon-tip-rarity ${rCls}">${_hud_escapeAttr(_hud_properCase(r))}</div>` : ""}
+            ${s ? `<div class="weapon-tip-slot">${_hud_escapeAttr(s)}</div>` : ""}
+            ${d ? `<div class="weapon-tip-desc">${_hud_escapeAttr(d)}</div>` : ""}
+            ${b ? `<div class="weapon-tip-bonus">${_hud_escapeAttr(b)}</div>` : ""}
+          `;
+        }
+
+        function _weaponTip_position(evt) {
+          if (!R.weaponTip) return;
+          const tip = R.weaponTip;
+          const vp = document.getElementById("viewport");
+          if (!vp) return;
+          const rect = vp.getBoundingClientRect();
+          const pad = 10;
+          let x = (evt.clientX - rect.left) + pad;
+          let y = (evt.clientY - rect.top) + pad;
+          const w = tip.offsetWidth || 0;
+          const h = tip.offsetHeight || 0;
+          if (x + w > rect.width) x = Math.max(0, rect.width - w - pad);
+          if (y + h > rect.height) y = Math.max(0, rect.height - h - pad);
+          tip.style.left = `${x}px`;
+          tip.style.top = `${y}px`;
+        }
+
+        function _weaponTip_initOnce() {
+          if (_weaponTip.inited) return;
+          _weaponTip.inited = true;
+          const box = R.weaponsBox;
+          if (!box) return;
+
+          box.addEventListener("mousemove", (e) => {
+            const target = e.target && e.target.closest ? e.target.closest(".weapon-item") : null;
+            if (!target) {
+              _weaponTip.activeEl = null;
+              _weaponTip_setShown(false);
+              return;
+            }
+
+            if (_weaponTip.activeEl !== target) {
+              _weaponTip.activeEl = target;
+              _weaponTip_setContent(
+                target.getAttribute("data-name"),
+                target.getAttribute("data-rarity"),
+                target.getAttribute("data-slot"),
+                target.getAttribute("data-desc"),
+                target.getAttribute("data-bonus")
+              );
+              _weaponTip_setShown(true);
+            }
+
+            _weaponTip_position(e);
+          });
+
+          box.addEventListener("mouseleave", () => {
+            _weaponTip.activeEl = null;
+            _weaponTip_setShown(false);
+          });
+        }
+
         function getPid() {
           const net = window.__net;
           const pid = net && typeof net.playerId === "number" ? (net.playerId | 0) : 0;
@@ -5158,6 +5445,13 @@ function _readTeamCoins(pid, hero, spritesNS) {
             .replace(/"/g, "&quot;");
         }
 
+        function _hud_properCase(s) {
+          const raw = String(s || "").trim();
+          if (!raw) return "";
+          const low = raw.toLowerCase();
+          return low.charAt(0).toUpperCase() + low.slice(1);
+        }
+
         function _hud_buildGlyphHtml(glyphText, litMask) {
           const txt = String(glyphText || "");
           const m = (litMask | 0) >>> 0;
@@ -5237,6 +5531,101 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
         }
 
+        let _hud_weaponRenderKey = "";
+
+        function _hud_weaponIconStyle(icon, sizePx) {
+          if (!icon || !icon.url) return "";
+          const frameW = Math.max(1, icon.frameW | 0);
+          const frameH = Math.max(1, icon.frameH | 0);
+          const sheetW = Math.max(1, icon.sheetW | 0);
+          const sheetH = Math.max(1, icon.sheetH | 0);
+          const atlasW = Math.max(1, (icon.atlasW | 0) || sheetW);
+          const atlasH = Math.max(1, (icon.atlasH | 0) || sheetH);
+          const size = Math.max(1, sizePx | 0);
+          const zoom = (typeof icon.zoom === "number" && isFinite(icon.zoom) && icon.zoom > 0) ? icon.zoom : 1;
+          const baseScale = Math.min(1, size / frameW, size / frameH);
+          const scale = Math.max(0.01, Math.min(3, baseScale * zoom));
+          const bgW = Math.max(1, Math.round(atlasW * scale));
+          const bgH = Math.max(1, Math.round(atlasH * scale));
+          const col = (icon.frameCol != null) ? (icon.frameCol | 0) : 0;
+          const row = (icon.frameRow != null) ? (icon.frameRow | 0) : 0;
+          const focusX = (typeof icon.focusX === "number") ? icon.focusX : 0.5;
+          const focusY = (typeof icon.focusY === "number") ? icon.focusY : 0.5;
+          const sheetX = (icon.sheetX | 0) || 0;
+          const sheetY = (icon.sheetY | 0) || 0;
+          const frameStartX = sheetX + (col * frameW);
+          const frameStartY = sheetY + (row * frameH);
+          const viewW = size / scale;
+          const viewH = size / scale;
+          let viewX = frameStartX;
+          let viewY = frameStartY;
+          if (viewW < frameW || viewH < frameH) {
+            const focusPxX = frameStartX + (focusX * frameW);
+            const focusPxY = frameStartY + (focusY * frameH);
+            const minX = frameStartX;
+            const minY = frameStartY;
+            const maxX = frameStartX + frameW - viewW;
+            const maxY = frameStartY + frameH - viewH;
+            viewX = Math.min(Math.max(focusPxX - (viewW / 2), minX), maxX);
+            viewY = Math.min(Math.max(focusPxY - (viewH / 2), minY), maxY);
+          }
+          const offX = Math.round(-viewX * scale);
+          const offY = Math.round(-viewY * scale);
+          const url = String(icon.url || "");
+          return `background-image:url('${url}'); background-size:${bgW}px ${bgH}px; background-position:${offX}px ${offY}px;`;
+        }
+
+        function _hud_renderWeapons(boxEl, snap) {
+          if (!boxEl) return;
+          const list = snap && Array.isArray(snap.weapons) ? snap.weapons : null;
+          if (!list || list.length === 0) {
+            if (boxEl.innerHTML !== "") boxEl.innerHTML = "";
+            _hud_weaponRenderKey = "";
+            _weaponTip_setShown(false);
+            return;
+          }
+
+          const key = list.map(w => {
+            const slot = String(w.slot || "");
+            const wid = String(w.weaponId || "");
+            const r = String(w.rarity || "");
+            const v = String(w.variant || "");
+            return `${slot}|${wid}|${r}|${v}|${w.t1|0}|${w.t2|0}|${w.t3|0}|${w.t4|0}`;
+          }).join("||");
+          if (key === _hud_weaponRenderKey) return;
+          _hud_weaponRenderKey = key;
+
+          let html = "";
+          const iconSize = 32;
+          for (const w of list) {
+            const name = String(w.name || w.weaponId || "Weapon");
+            const slotShort = String(w.slotShort || w.slotLabel || w.slot || "");
+            const slotLong = String(w.slotLabel || w.slot || "");
+            const desc = String(w.desc || "");
+            const bonus = String(w.bonusDesc || "");
+            const rarity = String(w.rarity || "");
+            const showBonus = bonus && bonus !== desc;
+            const style = _hud_weaponIconStyle(w.icon || null, iconSize);
+            const iconCls = style ? "" : "weapon-empty";
+            const nameEsc = _hud_escapeAttr(name);
+            const slotEsc = _hud_escapeAttr(slotShort);
+            const slotLongEsc = _hud_escapeAttr(slotLong);
+            const descEsc = _hud_escapeAttr(desc);
+            const bonusEsc = _hud_escapeAttr(showBonus ? bonus : "");
+            const rarityEsc = _hud_escapeAttr(rarity);
+
+            html += `
+              <div class="weapon-item" data-name="${nameEsc}" data-desc="${descEsc}" data-bonus="${bonusEsc}" data-rarity="${rarityEsc}" data-slot="${slotLongEsc}">
+                <div class="weapon-icon ${iconCls}" style="${style}"></div>
+                <div class="weapon-slot">${slotEsc}</div>
+                <div class="weapon-name">${nameEsc}</div>
+              </div>
+            `;
+          }
+
+          boxEl.innerHTML = html;
+        }
+
 
         function tick() {
           _zoom_updateUi();
@@ -5263,6 +5652,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             _xp_resetUi();
             _minimap_draw(null);
             _hud_clearWisdomOverlay();
+            _hud_renderWeapons(R.weaponsBox, null);
             return;
           }
 
@@ -5289,6 +5679,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             _xp_resetUi();
             _minimap_draw(null);
             _hud_clearWisdomOverlay();
+            _hud_renderWeapons(R.weaponsBox, null);
             return;
           }
 
@@ -5354,6 +5745,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
 
           _hud_renderRelics(document.getElementById("xp-relics-box"), snap);
+          _hud_renderWeapons(R.weaponsBox, snap);
           _minimap_draw(hero);
 
           const wpnModsByFamily = (snap && snap.wpnModsByFamily) ? snap.wpnModsByFamily : null;
@@ -5364,6 +5756,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           _relicoffer_initOnce();
           _relicoffer_applySnapshot(snap);
           _relicTip_initOnce();
+          _weaponTip_initOnce();
 
           const lvlBonuses = (snap && snap.lvlBonuses) ? snap.lvlBonuses : null;
           const fmt = (v) => `+${(v | 0)}`;
@@ -5405,6 +5798,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
     <script>
       (function () {
         const layer = document.getElementById("dialog-layer");
+        const box = document.getElementById("dialog-box");
+        const viewport = document.getElementById("viewport");
         const speakerEl = document.getElementById("dialog-speaker");
         const textEl = document.getElementById("dialog-text");
         const hintEl = document.getElementById("dialog-hint");
@@ -5431,6 +5826,58 @@ function _readTeamCoins(pid, hero, spritesNS) {
           if (!el) return;
           const s = String(txt ?? "");
           if (el.textContent !== s) el.textContent = s;
+        }
+
+        function _properCase(s) {
+          const raw = String(s || "").trim();
+          if (!raw) return "";
+          const low = raw.toLowerCase();
+          return low.charAt(0).toUpperCase() + low.slice(1);
+        }
+
+        function _setFloating(on) {
+          if (!layer) return;
+          if (on) layer.classList.add("he-float");
+          else layer.classList.remove("he-float");
+        }
+
+        function _clearPlacement() {
+          if (!box) return;
+          box.style.left = "";
+          box.style.top = "";
+          box.style.position = "";
+        }
+
+        function _placeAt(pos) {
+          if (!layer || !box || !pos) return;
+          const vp = viewport || document.body;
+          const vw = vp ? (vp.clientWidth | 0) : (window.innerWidth | 0);
+          const vh = vp ? (vp.clientHeight | 0) : (window.innerHeight | 0);
+          const bw = box.offsetWidth | 0;
+          const bh = box.offsetHeight | 0;
+          const pad = 8;
+          const x = (pos.x | 0);
+          const y = (pos.y | 0);
+          const anchor = String(pos.anchor || "c");
+          let left = x;
+          let top = y;
+
+          if (anchor === "tl") { /* no-op */ }
+          else if (anchor === "tr") { left = x - bw; }
+          else if (anchor === "bl") { top = y - bh; }
+          else if (anchor === "br") { left = x - bw; top = y - bh; }
+          else if (anchor === "t") { left = x - Math.floor(bw / 2); }
+          else if (anchor === "b") { left = x - Math.floor(bw / 2); top = y - bh; }
+          else if (anchor === "l") { top = y - Math.floor(bh / 2); }
+          else if (anchor === "r") { left = x - bw; top = y - Math.floor(bh / 2); }
+          else { left = x - Math.floor(bw / 2); top = y - Math.floor(bh / 2); }
+
+          if (vw > 0) left = Math.max(pad, Math.min(vw - bw - pad, left));
+          if (vh > 0) top = Math.max(pad, Math.min(vh - bh - pad, top));
+
+          box.style.left = `${left}px`;
+          box.style.top = `${top}px`;
+          box.style.position = "absolute";
         }
 
         function _readNum(val, fallback) {
@@ -5693,6 +6140,14 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
           layer.classList.add("he-show");
           layer.setAttribute("aria-hidden", "false");
+          const pos = (o && typeof o.pos === "object") ? o.pos : null;
+          if (pos && typeof pos.x === "number" && typeof pos.y === "number") {
+            _setFloating(true);
+            _placeAt(pos);
+          } else {
+            _setFloating(false);
+            _clearPlacement();
+          }
 
           window.dispatchEvent(
             new CustomEvent("he:dialogShow", {
@@ -5706,6 +6161,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
           _clearAutoAdvance();
           layer.classList.remove("he-show");
           layer.setAttribute("aria-hidden", "true");
+          _setFloating(false);
+          _clearPlacement();
           _clearChoices();
           hasChoices = false;
           dialogOwner = "";
@@ -5784,6 +6241,98 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
         // Global API Phaser can call
         window.__heDialog = { show, hide, isOpen, advance, choose, __heOwner: dialogOwner };
+      })();
+    </script>
+    <script>
+      (function () {
+        const layer = document.getElementById("shop-focus-layer");
+        const box = document.getElementById("shop-focus-box");
+        const nameEl = document.getElementById("shop-focus-name");
+        const rarityEl = document.getElementById("shop-focus-rarity");
+        const descEl = document.getElementById("shop-focus-desc");
+        const priceEl = document.getElementById("shop-focus-price");
+        const hintEl = document.getElementById("shop-focus-hint");
+        const viewport = document.getElementById("viewport");
+
+        function _setText(el, txt) {
+          if (!el) return;
+          const s = String(txt ?? "");
+          if (el.textContent !== s) el.textContent = s;
+        }
+
+        function isOpen() {
+          return !!layer && layer.classList.contains("he-show");
+        }
+
+        function _applyRarityClass(rarity) {
+          if (!rarityEl) return;
+          const base = "shop-focus-rarity";
+          rarityEl.className = base;
+          const r = String(rarity || "").toLowerCase();
+          if (r) rarityEl.classList.add(`rarity-${r}`);
+        }
+
+        function _placeAt(pos) {
+          if (!layer || !box || !pos) return;
+          const vp = viewport || document.body;
+          const vw = vp ? (vp.clientWidth | 0) : (window.innerWidth | 0);
+          const vh = vp ? (vp.clientHeight | 0) : (window.innerHeight | 0);
+          const bw = box.offsetWidth | 0;
+          const bh = box.offsetHeight | 0;
+          const pad = 6;
+          const x = (pos.x | 0);
+          const y = (pos.y | 0);
+          const anchor = String(pos.anchor || "c");
+          let left = x;
+          let top = y;
+
+          if (anchor === "tl") { /* no-op */ }
+          else if (anchor === "tr") { left = x - bw; }
+          else if (anchor === "bl") { top = y - bh; }
+          else if (anchor === "br") { left = x - bw; top = y - bh; }
+          else if (anchor === "t") { left = x - Math.floor(bw / 2); }
+          else if (anchor === "b") { left = x - Math.floor(bw / 2); top = y - bh; }
+          else if (anchor === "l") { top = y - Math.floor(bh / 2); }
+          else if (anchor === "r") { left = x - bw; top = y - Math.floor(bh / 2); }
+          else { left = x - Math.floor(bw / 2); top = y - Math.floor(bh / 2); }
+
+          if (vw > 0) left = Math.max(pad, Math.min(vw - bw - pad, left));
+          if (vh > 0) top = Math.max(pad, Math.min(vh - bh - pad, top));
+
+          box.style.left = `${left}px`;
+          box.style.top = `${top}px`;
+        }
+
+        function show(opts) {
+          if (!layer || !box) return;
+          const o = opts || {};
+          _setText(nameEl, o.name || "Weapon");
+          _setText(descEl, o.desc || "");
+          const rarity = String(o.rarity || "");
+          _setText(rarityEl, rarity ? _properCase(rarity) : "");
+          _applyRarityClass(rarity);
+          const price = (o.price | 0);
+          _setText(priceEl, (price <= 0) ? "FREE" : `\u{1F4B0} ${price}`);
+          _setText(hintEl, o.hint || "");
+          layer.classList.add("he-show");
+          layer.setAttribute("aria-hidden", "false");
+          _placeAt(o.pos || null);
+        }
+
+        function move(pos) {
+          if (!layer || !box) return;
+          if (!isOpen()) return;
+          if (!pos) return;
+          _placeAt(pos);
+        }
+
+        function hide() {
+          if (!layer) return;
+          layer.classList.remove("he-show");
+          layer.setAttribute("aria-hidden", "true");
+        }
+
+        window.__heShopFocus = { show, hide, isOpen, move };
       })();
     </script>
   </body>

@@ -13,6 +13,9 @@ const OUT_DIR = path.join(EFFECTS_DIR, "auras");
 const DEFAULT_RADII = [1, 2, 3];
 const EFFECT_SIZE_OVERRIDES = {
   "sword arcs": { frameW: 125, frameH: 150 },
+  "swordarcs3": { frameW: 126, frameH: 150 },
+  "comet": { frameW: 198, frameH: 198 },
+  "squarecomet": { frameW: 198, frameH: 198 },
 };
 
 function usage() {
@@ -143,17 +146,21 @@ function buildAuraSheetForGrid(srcPng, frameW, frameH, radius) {
   if (cols <= 0 || rows <= 0) {
     return { ok: false, reason: `size ${srcW}x${srcH} too small for ${frameW}x${frameH}` };
   }
-  const outW = (cols * frameW) | 0;
-  const outH = (rows * frameH) | 0;
+  const outFrameW = (radius > 0) ? ((frameW + radius * 2) | 0) : (frameW | 0);
+  const outFrameH = (radius > 0) ? ((frameH + radius * 2) | 0) : (frameH | 0);
+  const outW = (cols * outFrameW) | 0;
+  const outH = (rows * outFrameH) | 0;
   const out = new PNG({ width: outW, height: outH, colorType: 6 });
 
   for (let fr = 0; fr < rows; fr++) {
     for (let fc = 0; fc < cols; fc++) {
-      const ox = fc * frameW;
-      const oy = fr * frameH;
+      const srcOx = fc * frameW;
+      const srcOy = fr * frameH;
+      const dstOx = fc * outFrameW;
+      const dstOy = fr * outFrameH;
       const mask = new Uint8Array(frameW * frameH);
       for (let y = 0; y < frameH; y++) {
-        const srcRow = ((oy + y) * srcW + ox) * 4;
+        const srcRow = ((srcOy + y) * srcW + srcOx) * 4;
         const dstRow = y * frameW;
         for (let x = 0; x < frameW; x++) {
           const a = srcData[srcRow + x * 4 + 3] | 0;
@@ -161,12 +168,38 @@ function buildAuraSheetForGrid(srcPng, frameW, frameH, radius) {
         }
       }
 
-      const dm = buildDilatedMaskBits(mask, frameW, frameH, radius);
+      if (radius <= 0) {
+        for (let y = 0; y < frameH; y++) {
+          for (let x = 0; x < frameW; x++) {
+            const bi = y * frameW + x;
+            if (!mask[bi]) continue;
+            const oi = ((dstOy + y) * outW + (dstOx + x)) * 4;
+            out.data[oi + 0] = 255;
+            out.data[oi + 1] = 255;
+            out.data[oi + 2] = 255;
+            out.data[oi + 3] = 255;
+          }
+        }
+        continue;
+      }
+
+      const expW = outFrameW | 0;
+      const expH = outFrameH | 0;
+      const expanded = new Uint8Array(expW * expH);
       for (let y = 0; y < frameH; y++) {
+        const row = (y + radius) * expW;
+        const srcRow = y * frameW;
         for (let x = 0; x < frameW; x++) {
-          const bi = y * frameW + x;
-          if (!dm[bi]) continue;
-          const oi = ((oy + y) * outW + (ox + x)) * 4;
+          if (mask[srcRow + x]) expanded[row + (x + radius)] = 1;
+        }
+      }
+
+      const dm = buildDilatedMaskBits(expanded, expW, expH, radius);
+      for (let y = 0; y < expH; y++) {
+        for (let x = 0; x < expW; x++) {
+          const bi = y * expW + x;
+          if (!dm[bi] || expanded[bi]) continue;
+          const oi = ((dstOy + y) * outW + (dstOx + x)) * 4;
           out.data[oi + 0] = 255;
           out.data[oi + 1] = 255;
           out.data[oi + 2] = 255;

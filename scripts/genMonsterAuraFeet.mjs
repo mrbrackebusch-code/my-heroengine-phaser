@@ -268,10 +268,15 @@ function findFoot(baseName, filePath, meta) {
   const sizeMatch = baseName.match(/(\d+)x(\d+)/i);
   const declaredW = sizeMatch ? parseInt(sizeMatch[1], 10) : null;
   const declaredH = sizeMatch ? parseInt(sizeMatch[2], 10) : null;
+  const auraR = (meta && typeof meta.radius === "number") ? (meta.radius | 0) : 0;
 
   const { w: sheetW, h: sheetH, rows } = parsePng(filePath);
-  const frameW = declaredW && declaredW > 0 ? declaredW : sheetW;
-  const frameH = declaredH && declaredH > 0 ? declaredH : sheetH;
+  let frameW = declaredW && declaredW > 0 ? declaredW : sheetW;
+  let frameH = declaredH && declaredH > 0 ? declaredH : sheetH;
+  if (auraR > 0) {
+    frameW = (frameW + auraR * 2) | 0;
+    frameH = (frameH + auraR * 2) | 0;
+  }
   const cols = Math.max(1, Math.floor(sheetW / frameW));
   const rowsCount = Math.max(1, Math.floor(sheetH / frameH));
 

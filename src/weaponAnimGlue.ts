@@ -1710,7 +1710,8 @@ export function syncWeaponLayersToHero(args: {
   if (useAimRotate) {
     const baseRad = _dirBaseRad(baseDir);
     const targetRad = (aimAngleMdeg !== 0)
-      ? ((aimAngleMdeg * Math.PI) / 180000)
+      // aimAngleMdeg uses math coords (0 right, 90 up). Convert to screen coords (0 right, 90 down).
+      ? (-(aimAngleMdeg * Math.PI) / 180000)
       : Math.atan2(aimDy1000, aimDx1000);
     aimRot = _wrapRad(targetRad - baseRad);
     // NOTE: If we later add body lean, use the same aim angle in heroAnimGlue.

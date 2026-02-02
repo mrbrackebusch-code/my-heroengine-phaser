@@ -282,6 +282,12 @@ const HERO_OVERSIZE_SCALE = 3;
 const HERO_OVERSIZE_FRAME_W = HERO_FRAME_W * HERO_OVERSIZE_SCALE; // 192
 const HERO_OVERSIZE_FRAME_H = HERO_FRAME_H * HERO_OVERSIZE_SCALE; // 192;
 
+function _auraFrameSize(baseW: number, baseH: number, radius: number): { frameW: number; frameH: number } {
+    const r = Math.max(0, radius | 0);
+    if (r <= 0) return { frameW: baseW | 0, frameH: baseH | 0 };
+    return { frameW: ((baseW + r * 2) | 0), frameH: ((baseH + r * 2) | 0) };
+}
+
 /**
  * Parse a filename like "JasonHeroStrength" into
  *   heroName = "Jason"
@@ -455,12 +461,13 @@ export function preloadHeroSheets(scene: Phaser.Scene): void {
                 );
             }
 
+            const auraSize64 = _auraFrameSize(HERO_FRAME_W, HERO_FRAME_H, radius);
             queueSpritesheetOnce(
                 scene,
                 auraKey(sheet.textureKey, radius),
                 auraUrl64,
-                HERO_FRAME_W,
-                HERO_FRAME_H
+                auraSize64.frameW,
+                auraSize64.frameH
             );
 
             // --------------------------
@@ -470,12 +477,13 @@ export function preloadHeroSheets(scene: Phaser.Scene): void {
             const auraBase192 = `${sheet.id}_192${auraSuffix(radius)}`;
             const auraUrl192 = auraUrlById.get(auraBase192);
             if (auraUrl192) {
+                const auraSize192 = _auraFrameSize(HERO_OVERSIZE_FRAME_W, HERO_OVERSIZE_FRAME_H, radius);
                 queueSpritesheetOnce(
                     scene,
                     auraKey(`${sheet.textureKey}_192`, radius),
                     auraUrl192,
-                    HERO_OVERSIZE_FRAME_W,
-                    HERO_OVERSIZE_FRAME_H
+                    auraSize192.frameW,
+                    auraSize192.frameH
                 );
             }
         }

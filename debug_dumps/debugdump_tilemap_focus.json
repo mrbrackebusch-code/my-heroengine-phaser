@@ -1,0 +1,533 @@
+{
+  "type": "heDebugDumpV1",
+  "createdAt": 1769958982620,
+  "runtimeMs": 18985,
+  "reason": "tilemap-focus-change",
+  "host": true,
+  "floor": {
+    "index": 0,
+    "kind": "hall",
+    "baseFamily": "ground_black",
+    "wallFamily": "chasm_black"
+  },
+  "world": {
+    "worldRev": 2,
+    "decorRev": 12,
+    "tileSize": 32,
+    "rows": 34,
+    "cols": 60
+  },
+  "tilemapFocus": {
+    "interact": {
+      "active": 0,
+      "r": -1,
+      "c": -1,
+      "name": ""
+    },
+    "props": [
+      {
+        "baseName": "stairs_statue",
+        "anchor": {
+          "r": 16,
+          "c": 30
+        },
+        "basePos": {
+          "x": 976,
+          "y": 464
+        },
+        "auraPos": {
+          "x": 976,
+          "y": 496
+        },
+        "auraVis": 0,
+        "auraAlpha": 1,
+        "delta": {
+          "dx": 0,
+          "dy": 32
+        },
+        "overlays": []
+      },
+      {
+        "baseName": "teleport_rune",
+        "anchor": {
+          "r": 17,
+          "c": 30
+        },
+        "basePos": {
+          "x": 976,
+          "y": 572
+        },
+        "auraPos": {
+          "x": 976,
+          "y": 572
+        },
+        "auraVis": 0,
+        "auraAlpha": 1,
+        "delta": {
+          "dx": 0,
+          "dy": 0
+        },
+        "overlays": []
+      },
+      {
+        "baseName": "book_stump",
+        "anchor": {
+          "r": 20,
+          "c": 32
+        },
+        "basePos": {
+          "x": 1048,
+          "y": 624
+        },
+        "auraPos": {
+          "x": 1064,
+          "y": 640
+        },
+        "auraVis": 0,
+        "auraAlpha": 1,
+        "delta": {
+          "dx": 16,
+          "dy": 16
+        },
+        "overlays": []
+      },
+      {
+        "baseName": "shrine",
+        "anchor": {
+          "r": 8,
+          "c": 34
+        },
+        "basePos": {
+          "x": 1104,
+          "y": 256
+        },
+        "auraPos": {
+          "x": 1104,
+          "y": 256
+        },
+        "auraVis": 0,
+        "auraAlpha": 1,
+        "delta": {
+          "dx": 0,
+          "dy": 0
+        },
+        "overlays": []
+      }
+    ]
+  },
+  "tilemapVisual": {
+    "rows": 34,
+    "cols": 60,
+    "tileSize": 32,
+    "props": []
+  },
+  "tilemapTimeline": {
+    "intervalMs": 250,
+    "samples": [
+      {
+        "t": 838,
+        "events": [
+          {
+            "type": "appear",
+            "key": "prop:stairs_statue:16,30:tiles.terrain_atlas:stairs_statue:base",
+            "data": {
+              "kind": "propBase",
+              "x": 976,
+              "y": 464,
+              "depth": 52800,
+              "tex": "tiles.terrain_atlas",
+              "frame": 499,
+              "vis": true,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:stairs_statue:16,30:tiles.terrain_atlas:stairs_statue:aura",
+            "data": {
+              "kind": "aura",
+              "x": 976,
+              "y": 496,
+              "depth": 0,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:stairs_statue:16,30:tiles.terrain_atlas:stairs_statue:auraKid:0",
+            "data": {
+              "kind": "auraKid",
+              "x": 976,
+              "y": 464,
+              "depth": 0,
+              "tex": "tiles.terrain_atlas_aura_r1",
+              "frame": 499,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:stairs_statue:16,30:tiles.terrain_atlas:stairs_statue:auraKid:1",
+            "data": {
+              "kind": "auraKid",
+              "x": 976,
+              "y": 496,
+              "depth": 0,
+              "tex": "tiles.terrain_atlas_aura_r1",
+              "frame": 531,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:stairs_statue:16,30:tiles.terrain_atlas:stairs_statue:auraKid:2",
+            "data": {
+              "kind": "auraKid",
+              "x": 976,
+              "y": 528,
+              "depth": 0,
+              "tex": "tiles.terrain_atlas_aura_r1",
+              "frame": 563,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:shrine:8,34:anims.Shrine 32x64:shrine:base",
+            "data": {
+              "kind": "propBase",
+              "x": 1104,
+              "y": 256,
+              "depth": 25600,
+              "tex": "anims.Shrine 32x64",
+              "frame": 0,
+              "vis": true,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:shrine:8,34:anims.Shrine 32x64:shrine:aura",
+            "data": {
+              "kind": "aura",
+              "x": 1104,
+              "y": 256,
+              "depth": 0,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:shrine:8,34:anims.Shrine 32x64:shrine:auraKid:0",
+            "data": {
+              "kind": "auraKid",
+              "x": 1104,
+              "y": 256,
+              "depth": 0,
+              "tex": "anims.Shrine 32x64_aura_r1",
+              "frame": 0,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "focus:interact",
+            "data": {
+              "kind": "focus",
+              "active": 0,
+              "r": -1,
+              "c": -1,
+              "name": ""
+            }
+          },
+          {
+            "type": "layer",
+            "key": "layer:ground",
+            "hash": 708814416,
+            "prev": 0
+          },
+          {
+            "type": "layer",
+            "key": "layer:chasm",
+            "hash": 1352083690,
+            "prev": 0
+          },
+          {
+            "type": "layer",
+            "key": "layer:chasmOverlay",
+            "hash": 5381,
+            "prev": 0
+          },
+          {
+            "type": "layer",
+            "key": "layer:decals",
+            "hash": 658679518,
+            "prev": 0
+          },
+          {
+            "type": "layer",
+            "key": "layer:props",
+            "hash": 5381,
+            "prev": 0
+          }
+        ]
+      },
+      {
+        "t": 1913,
+        "events": [
+          {
+            "type": "appear",
+            "key": "prop:teleport_rune:17,30:anims.teleportrune 64x64:teleport_rune:base",
+            "data": {
+              "kind": "propBase",
+              "x": 976,
+              "y": 572,
+              "depth": 57200,
+              "tex": "anims.teleportrune 64x64",
+              "frame": 0,
+              "vis": true,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:teleport_rune:17,30:anims.teleportrune 64x64:teleport_rune:aura",
+            "data": {
+              "kind": "aura",
+              "x": 976,
+              "y": 572,
+              "depth": 0,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:teleport_rune:17,30:anims.teleportrune 64x64:teleport_rune:auraKid:0",
+            "data": {
+              "kind": "auraKid",
+              "x": 976,
+              "y": 572,
+              "depth": 0,
+              "tex": "__auraPad__anims.teleportrune 64x64_aura_r1::0::p4::f::rb::rt",
+              "frame": "__BASE",
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:book_stump:20,32:tiles.terrain_atlas:book_stump:base",
+            "data": {
+              "kind": "propBase",
+              "x": 1048,
+              "y": 624,
+              "depth": 65600,
+              "tex": "tiles.terrain_atlas",
+              "frame": 396,
+              "vis": true,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:book_stump:20,32:tiles.terrain_atlas:book_stump:aura",
+            "data": {
+              "kind": "aura",
+              "x": 1064,
+              "y": 640,
+              "depth": 0,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:book_stump:20,32:tiles.terrain_atlas:book_stump:auraKid:0",
+            "data": {
+              "kind": "auraKid",
+              "x": 1048,
+              "y": 624,
+              "depth": 0,
+              "tex": "__auraPad__tiles.terrain_atlas_aura_r1::396::p4::f::rb::rt",
+              "frame": "__BASE",
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:book_stump:20,32:tiles.terrain_atlas:book_stump:auraKid:1",
+            "data": {
+              "kind": "auraKid",
+              "x": 1080,
+              "y": 624,
+              "depth": 0,
+              "tex": "__auraPad__tiles.terrain_atlas_aura_r1::397::p4::f::rb::rt",
+              "frame": "__BASE",
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:book_stump:20,32:tiles.terrain_atlas:book_stump:auraKid:2",
+            "data": {
+              "kind": "auraKid",
+              "x": 1048,
+              "y": 656,
+              "depth": 0,
+              "tex": "__auraPad__tiles.terrain_atlas_aura_r1::428::p4::f::rb::rt",
+              "frame": "__BASE",
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:book_stump:20,32:tiles.terrain_atlas:book_stump:auraKid:3",
+            "data": {
+              "kind": "auraKid",
+              "x": 1080,
+              "y": 656,
+              "depth": 0,
+              "tex": "__auraPad__tiles.terrain_atlas_aura_r1::429::p4::f::rb::rt",
+              "frame": "__BASE",
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          }
+        ]
+      },
+      {
+        "t": 18311,
+        "events": [
+          {
+            "type": "change",
+            "key": "prop:shrine:8,34:anims.Shrine 32x64:shrine:aura",
+            "changes": {
+              "depth": {
+                "from": 0,
+                "to": 25599
+              },
+              "vis": {
+                "from": false,
+                "to": true
+              }
+            }
+          },
+          {
+            "type": "change",
+            "key": "prop:shrine:8,34:anims.Shrine 32x64:shrine:auraKid:0",
+            "changes": {
+              "depth": {
+                "from": 0,
+                "to": 25599
+              },
+              "vis": {
+                "from": false,
+                "to": true
+              }
+            }
+          }
+        ]
+      },
+      {
+        "t": 18561,
+        "events": [
+          {
+            "type": "change",
+            "key": "prop:shrine:8,34:anims.Shrine 32x64:shrine:aura",
+            "changes": {
+              "vis": {
+                "from": true,
+                "to": false
+              }
+            }
+          },
+          {
+            "type": "change",
+            "key": "prop:shrine:8,34:anims.Shrine 32x64:shrine:auraKid:0",
+            "changes": {
+              "vis": {
+                "from": true,
+                "to": false
+              }
+            }
+          }
+        ]
+      }
+    ]
+  },
+  "tilemapPixelProbe": null
+}

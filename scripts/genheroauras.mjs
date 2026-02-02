@@ -66,20 +66,19 @@ function setBit(bits, i) {
   bits[i >>> 5] |= (1 << (i & 31));
 }
 
-function buildDilatedMaskBits(frameRgba, w, h, r) {
+function buildBaseMaskBitsFromRgba(frameRgba, w, h) {
   const n = w * h;
   const base = allocBits(n);
-
-  // alpha>0 base mask
   for (let i = 0; i < n; i++) {
     const a = frameRgba[i * 4 + 3];
     if (a !== 0) setBit(base, i);
   }
+  return base;
+}
 
+function dilateMaskBits(base, w, h, r) {
   if (r <= 0) return base;
-
-  // square dilation
-  const out = allocBits(n);
+  const out = allocBits(w * h);
   for (let y = 0; y < h; y++) {
     for (let x = 0; x < w; x++) {
       const i = y * w + x;
@@ -133,18 +132,24 @@ function buildAuraSheetForGrid(src, frameW, frameH, expectedColsOrNull, radius) 
     // Not fatal; just warning for 64-grid
   }
 
-  const out = new PNG({ width: src.width, height: src.height });
+  const outFrameW = (radius > 0) ? ((frameW + radius * 2) | 0) : (frameW | 0);
+  const outFrameH = (radius > 0) ? ((frameH + radius * 2) | 0) : (frameH | 0);
+  const outW = (cols * outFrameW) | 0;
+  const outH = (rows * outFrameH) | 0;
+  const out = new PNG({ width: outW, height: outH });
 
   for (let fr = 0; fr < rows; fr++) {
     for (let fc = 0; fc < cols; fc++) {
-      const ox = fc * frameW;
-      const oy = fr * frameH;
+      const srcOx = fc * frameW;
+      const srcOy = fr * frameH;
+      const dstOx = fc * outFrameW;
+      const dstOy = fr * outFrameH;
 
       // extract frame RGBA
       const frame = Buffer.alloc(frameW * frameH * 4);
       for (let y = 0; y < frameH; y++) {
         for (let x = 0; x < frameW; x++) {
-          const si = ((oy + y) * src.width + (ox + x)) * 4;
+          const si = ((srcOy + y) * src.width + (srcOx + x)) * 4;
           const di = (y * frameW + x) * 4;
           frame[di + 0] = src.data[si + 0];
           frame[di + 1] = src.data[si + 1];
@@ -153,15 +158,43 @@ function buildAuraSheetForGrid(src, frameW, frameH, expectedColsOrNull, radius) 
         }
       }
 
-      const bits = buildDilatedMaskBits(frame, frameW, frameH, radius);
+      const baseBits = buildBaseMaskBitsFromRgba(frame, frameW, frameH);
 
-      // write frame into out png (white pixels where bit=1)
+      // r0 = full base mask (no expansion)
+      if (radius <= 0) {
+        for (let y = 0; y < frameH; y++) {
+          for (let x = 0; x < frameW; x++) {
+            const bi = y * frameW + x;
+            if (!getBit(baseBits, bi)) continue;
+            const oi = ((dstOy + y) * out.width + (dstOx + x)) * 4;
+            out.data[oi + 0] = 255;
+            out.data[oi + 1] = 255;
+            out.data[oi + 2] = 255;
+            out.data[oi + 3] = 255;
+          }
+        }
+        continue;
+      }
+
+      const expW = outFrameW | 0;
+      const expH = outFrameH | 0;
+      const expanded = allocBits(expW * expH);
       for (let y = 0; y < frameH; y++) {
         for (let x = 0; x < frameW; x++) {
           const bi = y * frameW + x;
-          if (!getBit(bits, bi)) continue;
+          if (!getBit(baseBits, bi)) continue;
+          const ti = ((y + radius) * expW + (x + radius)) | 0;
+          setBit(expanded, ti);
+        }
+      }
 
-          const oi = ((oy + y) * out.width + (ox + x)) * 4;
+      const dm = dilateMaskBits(expanded, expW, expH, radius);
+      for (let y = 0; y < expH; y++) {
+        for (let x = 0; x < expW; x++) {
+          const bi = y * expW + x;
+          if (!getBit(dm, bi)) continue;
+          if (getBit(expanded, bi)) continue;
+          const oi = ((dstOy + y) * out.width + (dstOx + x)) * 4;
           out.data[oi + 0] = 255;
           out.data[oi + 1] = 255;
           out.data[oi + 2] = 255;

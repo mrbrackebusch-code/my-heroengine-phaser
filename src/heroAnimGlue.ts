@@ -1931,6 +1931,12 @@ function _playDefaultAnimPath(
                 const partDur = Number((req as any).phasePartDurationMs) | 0;
                 if (partDur > 0) desiredMs = partDur;
             }
+        } else if (req.phase === "thrust") {
+            const part = String((req as any).phasePartName || "").trim().toLowerCase();
+            if (part) {
+                const partDur = Number((req as any).phasePartDurationMs) | 0;
+                if (partDur > 0) desiredMs = partDur;
+            }
         }
 
         // Phaser uses timeScale where 1.0 = normal speed.
@@ -2062,6 +2068,7 @@ function applyHeroAnimationForSpriteInternal(
     // ------------------------------------------------------------
     // Part-aware phase selection
     // - Cast: uses PhasePartName (existing behavior)
+    // - Thrust: uses PhasePartName (windup/forward/landing)
     // - Strength swing: uses STR_SEG_NAME addon channel (NEW, non-breaking)
     // ------------------------------------------------------------
     const castPartName =
@@ -2077,6 +2084,8 @@ function applyHeroAnimationForSpriteInternal(
     let requestedPhaseForLookup: any = req.phase;
 
     if (req.phase === "cast" && castPartName) {
+        requestedPhaseForLookup = `${req.phase}_${castPartName}`;
+    } else if (req.phase === "thrust" && castPartName) {
         requestedPhaseForLookup = `${req.phase}_${castPartName}`;
     } else if (!STR_CUSTOM_TIMELINE_ENABLE && req.actionKind === "strength_swing" && req.phase === "slash" && strengthSegName) {
         // This only affects atlas lookup; engine PhasePartName stays "swing".
@@ -2330,6 +2339,12 @@ function _tryAnimHold(
         if (req.actionKind === "strength_charge") {
             const part = String((req as any).phasePartName || "").trim().toLowerCase();
             if (part === "preparetocharge") {
+                const partDur = Number((req as any).phasePartDurationMs) | 0;
+                if (partDur > 0) desiredMs = partDur;
+            }
+        } else if (req.phase === "thrust") {
+            const part = String((req as any).phasePartName || "").trim().toLowerCase();
+            if (part) {
                 const partDur = Number((req as any).phasePartDurationMs) | 0;
                 if (partDur > 0) desiredMs = partDur;
             }
@@ -2693,6 +2708,17 @@ const __arcadePaletteTint: number[] = [
 function __tintForArcadeColorIndex(idx: number): number {
     idx = (idx | 0) & 0xf;
     return __arcadePaletteTint[idx] ?? 0xffffff;
+}
+
+function __applyAuraTint(img: any, colorIndex: number): void {
+    if (!img || typeof img.setTint !== "function") return;
+    const idx = colorIndex | 0;
+    if (idx < 0) {
+        if (typeof img.clearTint === "function") img.clearTint();
+        return;
+    }
+    const tintHex = __tintForArcadeColorIndex(idx);
+    img.setTint(tintHex);
 }
 
 function __outlineKeyForFrame(textureKey: string, frameName: string | number, radius: number): string {
@@ -4401,9 +4427,7 @@ export function syncHeroAuraForNative(
 
         // Tint
         if (typeof auraImg.setTint === "function") {
-            const tintHex = __tintForArcadeColorIndex(auraColorIndex | 0);
-            if (tintHex !== 0) auraImg.setTint(tintHex);
-            else auraImg.clearTint();
+            __applyAuraTint(auraImg, auraColorIndex | 0);
         }
     } catch (e) {
         // Preserve your existing “fail loudly” behavior for missing textures,
@@ -4418,7 +4442,8 @@ export function syncOutlineForNative(
     active: boolean,
     colorIndex: number,
     radius: number,
-    depthBias: number
+    depthBias: number,
+    layerKey?: string
 ): void {
     try {
         if (!native) return;
@@ -4426,7 +4451,8 @@ export function syncOutlineForNative(
         const scene: Phaser.Scene | undefined = (globalThis as any).__phaserScene;
         if (!scene) return;
 
-          const outlineAny: any = (native as any).__focusOutlineImage;
+          const outlineProp = layerKey ? (`__focusOutlineImage_${String(layerKey)}`) : "__focusOutlineImage";
+          const outlineAny: any = (native as any)[outlineProp];
           const forceOutlineBuild = !!(native as any).__forceOutlineBuild;
           const restoreSwap = () => {
               const origKey = (native as any).__outlineSwapOrigKey;
@@ -4656,7 +4682,10 @@ export function syncOutlineForNative(
           const forceRecreate = canUseAuraSheet;
           if (forceRecreate && outlineAny && (outlineAny as any).scene) {
               try { outlineAny.destroy?.(); } catch { /* ignore */ }
-              (native as any).__focusOutlineImage = null;
+              (native as any)[outlineProp] = null;
+              if (layerKey === "r1") {
+                  (native as any).__focusOutlineImage = null;
+              }
           }
 
           if (!outlineAny || !(outlineAny as any).scene || forceRecreate) {
@@ -4668,7 +4697,10 @@ export function syncOutlineForNative(
                   useFrameName ? (frameName as any) : baseFrameName
               );
               outlineImg = newObj as any;
-              (native as any).__focusOutlineImage = outlineImg;
+              (native as any)[outlineProp] = outlineImg;
+              if (layerKey === "r1") {
+                  (native as any).__focusOutlineImage = outlineImg;
+              }
 
               if (typeof native.originX === "number" && typeof native.originY === "number") {
                   outlineImg.setOrigin(native.originX, native.originY);
@@ -4788,9 +4820,7 @@ export function syncOutlineForNative(
         }
 
           if (typeof outlineImg.setTint === "function") {
-              const tintHex = __tintForArcadeColorIndex(colorIndex | 0);
-              if (tintHex !== 0) outlineImg.setTint(tintHex);
-              else outlineImg.clearTint();
+              __applyAuraTint(outlineImg, colorIndex | 0);
               if (isRingTex) outlineImg.setTint(0xff00ff);
               if (forceOutlineBuild) outlineImg.setTint(0xffffff);
               if (DEBUG_PROP_OUTLINE_EXAGGERATE && canUseAuraSheet && !forceOutlineBuild) {

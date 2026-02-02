@@ -4,9 +4,13 @@ import { Grid as PFGrid, AStarFinder as PFAStarFinder, DiagonalMovement as PFDia
 import { MONSTER_AURA_FEET } from "./generated/monsterAuraFeet";
 import { auraKey } from "./auraConfig";
 import { getAuraMaskFrameView } from "./auraMaskBits";
+import { listWeaponSheetsForModel, listWeaponVariants } from "./weaponAtlas";
+import { WEAPON_ATLAS_DATA } from "./generated/weaponAtlasMeta";
+import { WEAPON_MASTER_FRAMES, WEAPON_MASTER_SHEET } from "./generated/weaponMasterMeta";
 import { tryRunBlocklyHeroLogic } from "./blocklyHeroLogicRuntime";
 import { createVfxRegistry } from "./vfxRegistry";
 import type { VfxHelpers, VfxRegistry } from "./vfxRegistry";
+import { applyStudentRelicDefinitions, applyStudentVfxPresets } from "./studentHooks";
 import { ENEMY_EFFECT_DARKEN_PCT_DEFAULT, ENEMY_EFFECT_PALETTES } from "./vfxPalettes";
 import { ENEMY_EFFECT_PALETTES_BY_DARKEN_PCT } from "./vfxEnemyPalettes";
 import {
@@ -37,6 +41,9 @@ import {
     DEBUG_AGI_COMET_ALIGN_LOGS,
     DEBUG_AGI_COMET_ALIGN_LOG_THROTTLE_MS,
     DEBUG_AGI_COMET_ALIGN_LOG_VERBOSE,
+    DEBUG_AGI_COMET_ALIGN_VIS,
+    DEBUG_AGI_COMET_ALIGN_VIS_HERO_INDEX,
+    DEBUG_AGI_COMET_ALIGN_VIS_TIP_R,
     DEBUG_AGI_COMBO,
     DEBUG_AGI_COMBO_BUILD,
     DEBUG_AGI_COMBO_EXIT,
@@ -68,6 +75,14 @@ import {
     DEBUG_DUNGEON_LOGS,
     DEBUG_EFFECTS_HALL_ON_START,
     DEBUG_EFFECTS_HALL_LOGS,
+    DEBUG_EFFECTS_HALL_TRACE,
+    DEBUG_EFFECTS_HALL_TRACE_LITE,
+    DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE,
+    DEBUG_EFFECTS_HALL_TRACE_DURATION_MS_OVERRIDE,
+    DEBUG_EFFECTS_HALL_FREEZE_WORLD,
+    DEBUG_EFFECTS_HALL_ONLY_ROWS,
+    DEBUG_EFFECTS_HALL_ONLY_POISON,
+    DEBUG_EFFECTS_HALL_ONLY_DUST,
     DEBUG_EFFECTS_DUMP,
     DEBUG_EFFECTS_DUMP_PIXELS,
     DEBUG_EFFECTS_DUMP_MAX,
@@ -3229,7 +3244,7 @@ function _ensureAgilityCometFx(
         repeat: -1,
         tint: tint || undefined
     };
-    applyEffectToSprite(fx, STR_ARC_SKIN_ID, opts);
+    applyEffectToSprite(fx, AGI_SQUARE_COMET_SKIN_ID, opts);
     sprites.setDataString(fx, EFFECT_FRAME_LIST_DATA_KEY, "");
     sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, 0);
     sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY, 0);
@@ -3270,7 +3285,7 @@ function _ensureAgilitySquareCometFx(
         blend: "normal",
         repeat: -1
     };
-    applyEffectToSprite(fx, STR_ARC_SKIN_ID, opts);
+    applyEffectToSprite(fx, AGI_SQUARE_COMET_SKIN_ID, opts);
     sprites.setDataString(fx, EFFECT_FRAME_LIST_DATA_KEY, "");
     sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, 0);
     sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY, 0);
@@ -3338,14 +3353,36 @@ function _agiCometPickRawFrame(
         return _strengthArcPickFromSequence(AGI_COMET_PRE_RAW, t, 1, false);
     }
     if (reel > 0) {
-        return _strengthArcPickFromSequence(AGI_ARC_SEQ_COMET_RAW, reel, 1, true);
+        return _strengthArcPickFromSequence(AGI_COMET_REEL_RAW, reel, 1, false);
     }
     const growNorm = Math.max(0, Math.min(1, growthT / Math.max(0.0001, AGI_COMET_GROW_END_T)));
     const growEase = Math.pow(growNorm, AGI_COMET_GROW_EXP);
     if (growthT < AGI_COMET_GROW_END_T) {
-        return _strengthArcPickFromSequence(AGI_ARC_SEQ_COMET_RAW, growEase, 1, false);
+        return _strengthArcPickFromSequence(AGI_COMET_GROW_RAW, growEase, 1, false);
     }
     return (AGI_COMET_HOLD_RAW && AGI_COMET_HOLD_RAW.length) ? (AGI_COMET_HOLD_RAW[0] | 0) : 0;
+}
+
+function _agiHookCometPickRawFrame(
+    preActive: boolean,
+    preT: number,
+    growthT: number,
+    reelT: number
+): number {
+    const reel = Math.max(0, Math.min(1, reelT));
+    if (preActive) {
+        const t = Math.max(0, Math.min(1, preT));
+        return _strengthArcPickFromSequence(AGI_HOOK_COMET_GROW_RAW, t, 1, false);
+    }
+    if (reel > 0) {
+        return _strengthArcPickFromSequence(AGI_HOOK_COMET_REEL_RAW, reel, 1, false);
+    }
+    const growNorm = Math.max(0, Math.min(1, growthT / Math.max(0.0001, AGI_COMET_GROW_END_T)));
+    const growEase = Math.pow(growNorm, AGI_COMET_GROW_EXP);
+    if (growthT < AGI_COMET_GROW_END_T) {
+        return _strengthArcPickFromSequence(AGI_HOOK_COMET_GROW_RAW, growEase, 1, false);
+    }
+    return (AGI_HOOK_COMET_HOLD_RAW && AGI_HOOK_COMET_HOLD_RAW.length) ? (AGI_HOOK_COMET_HOLD_RAW[0] | 0) : 0;
 }
 
 function _agiSquareCometPickRawFrame(
@@ -3357,18 +3394,18 @@ function _agiSquareCometPickRawFrame(
     const reel = Math.max(0, Math.min(1, reelT));
     if (preActive) {
         const t = Math.max(0, Math.min(1, preT));
-        return _strengthArcPickFromSequence(AGI_COMET_PRE_RAW, t, 1, false);
+        return _strengthArcPickFromSequence(AGI_SQUARE_COMET_GROW_RAW, t, 1, false);
     }
     if (reel > 0) {
-        return _strengthArcPickFromSequence(AGI_ARC_SEQ_STREAK_SOLID_RAW, reel, 1, true);
+        return _strengthArcPickFromSequence(AGI_SQUARE_COMET_REEL_RAW, reel, 1, false);
     }
     const growNorm = Math.max(0, Math.min(1, growthT / Math.max(0.0001, AGI_COMET_GROW_END_T)));
     const growEase = Math.pow(growNorm, AGI_COMET_GROW_EXP);
     if (growthT < AGI_COMET_GROW_END_T) {
-        return _strengthArcPickFromSequence(AGI_ARC_SEQ_STREAK_SOLID_RAW, growEase, 1, false);
+        return _strengthArcPickFromSequence(AGI_SQUARE_COMET_GROW_RAW, growEase, 1, false);
     }
-    return (AGI_ARC_SEQ_STREAK_SOLID_RAW && AGI_ARC_SEQ_STREAK_SOLID_RAW.length)
-        ? (AGI_ARC_SEQ_STREAK_SOLID_RAW[AGI_ARC_SEQ_STREAK_SOLID_RAW.length - 1] | 0)
+    return (AGI_SQUARE_COMET_HOLD_RAW && AGI_SQUARE_COMET_HOLD_RAW.length)
+        ? (AGI_SQUARE_COMET_HOLD_RAW[0] | 0)
         : 0;
 }
 
@@ -3392,7 +3429,13 @@ function _agiCometFrameMetrics(skinId: string, rawFrame: number): EffectFrameMet
 function _agiCometTipOffsetForRaw(skinId: string, rawFrame: number): { dx: number; dy: number } | null {
     const metrics = _agiCometFrameMetrics(skinId, rawFrame | 0);
     if (!metrics) return null;
-    return { dx: metrics.tipDx | 0, dy: metrics.tipDy | 0 };
+    let dx = metrics.tipDx | 0;
+    let dy = metrics.tipDy | 0;
+    if (skinId === AGI_SQUARE_COMET_SKIN_ID) {
+        const off = AGI_SQUARE_COMET_RAW_OFFSET_DY[rawFrame | 0] | 0;
+        if (off) dy += off;
+    }
+    return { dx, dy };
 }
 
 function _agiCometAxisScaleForTipOffset(tipOffset?: { dx: number; dy: number } | null): { sx: number; sy: number } {
@@ -3422,6 +3465,42 @@ function _agiCometAxisScaleForWeaponLen(
     let s = len / dominant;
     if (!Number.isFinite(s)) return null;
     s = Math.max(AGI_COMET_ALIGN_LEN_MIN, Math.min(AGI_COMET_ALIGN_LEN_MAX, s));
+    if (ax >= ay) return { sx: s, sy: 1 };
+    return { sx: 1, sy: s };
+}
+
+function _agiCometAxisScaleForArtAxis(
+    tipOffset: { dx: number; dy: number } | null,
+    desiredLen: number
+): { sx: number; sy: number } | null {
+    if (!tipOffset) return null;
+    const dx = tipOffset.dx || 0;
+    const dy = tipOffset.dy || 0;
+    const baseLen = Math.hypot(dx, dy);
+    if (!(baseLen > 0)) return null;
+    let target = desiredLen;
+    if (!(target > 0)) return null;
+    let s = target / baseLen;
+    if (!Number.isFinite(s)) return null;
+    s = Math.max(AGI_COMET_ALIGN_LEN_MIN, Math.min(AGI_COMET_ALIGN_LEN_MAX, s));
+    const ax = Math.abs(dx);
+    const ay = Math.abs(dy);
+    if (ax >= ay) return { sx: s, sy: 1 };
+    return { sx: 1, sy: s };
+}
+
+function _agiCometAxisScaleForWeaponDir(
+    nx: number,
+    ny: number,
+    baseLen: number,
+    desiredLen: number
+): { sx: number; sy: number } | null {
+    if (!(baseLen > 0) || !(desiredLen > 0)) return null;
+    let s = desiredLen / baseLen;
+    if (!Number.isFinite(s)) return null;
+    s = Math.max(AGI_COMET_ALIGN_LEN_MIN, Math.min(AGI_COMET_ALIGN_LEN_MAX, s));
+    const ax = Math.abs(nx);
+    const ay = Math.abs(ny);
     if (ax >= ay) return { sx: s, sy: 1 };
     return { sx: 1, sy: s };
 }
@@ -3614,6 +3693,9 @@ function _agiCometAlignLogLine(payload: {
     axisScaleX: number;
     axisScaleY: number;
     rawFrame: number;
+    weaponBoxW?: number;
+    weaponBoxH?: number;
+    cometLen?: number;
 }): void {
     if (!DEBUG_AGI_COMET_ALIGN_LOGS) return;
     const dx = payload.cometTipX - payload.weaponTipX;
@@ -3633,6 +3715,12 @@ function _agiCometAlignLogLine(payload: {
         " scale=" + payload.scale.toFixed(3) +
         " axis=" + payload.axisScaleX.toFixed(3) + "," + payload.axisScaleY.toFixed(3) +
         " raw=" + (payload.rawFrame | 0);
+    if (Number.isFinite(payload.weaponBoxW) && Number.isFinite(payload.weaponBoxH)) {
+        line += " wBox=" + (payload.weaponBoxW || 0).toFixed(1) + "x" + (payload.weaponBoxH || 0).toFixed(1);
+    }
+    if (Number.isFinite(payload.cometLen)) {
+        line += " cLen=" + (payload.cometLen || 0).toFixed(1);
+    }
     if (DEBUG_AGI_COMET_ALIGN_LOG_VERBOSE) {
         line += " t=" + (game.runtime() | 0);
     }
@@ -3696,8 +3784,8 @@ function _updateAgilityCometFx(
     }
 
     const rawFrame = _agiCometPickRawFrame(preActive, preT, growthT, reelT, nowMs, startMs);
-    const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, rawFrame | 0);
-    const tipOffset = _agiCometTipOffsetForRaw(STR_ARC_SKIN_ID, rawFrame | 0);
+    const frameIdx = _strengthArcFrameIndexFromRaw(AGI_SQUARE_COMET_SKIN_ID, rawFrame | 0);
+    const tipOffset = _agiCometTipOffsetForRaw(AGI_SQUARE_COMET_SKIN_ID, rawFrame | 0);
     const fallbackOffset = _agiCometDirOffset(nx, ny);
     const vis = getHeroVisualInfoForStrength(hero, nx, ny);
     let wTipX = (vis[2] || 0);
@@ -3768,6 +3856,38 @@ function _updateAgilityCometFx(
     fx.setFlag(SpriteFlag.Invisible, false);
 
     if (_agiCometAlignShouldLog(fx, nowMs | 0)) {
+        let weaponBoxW = 0;
+        let weaponBoxH = 0;
+        const info = _getHeroWeaponFgInfo(hero);
+        if (info && info.frameRef) {
+            const ref: any = info.frameRef as any;
+            const frameW =
+                (typeof ref.width === "number" ? ref.width : undefined) ??
+                (typeof ref.realWidth === "number" ? ref.realWidth : undefined) ??
+                (typeof ref.cutWidth === "number" ? ref.cutWidth : undefined) ??
+                (typeof ref.sourceSizeW === "number" ? ref.sourceSizeW : undefined) ??
+                0;
+            const frameH =
+                (typeof ref.height === "number" ? ref.height : undefined) ??
+                (typeof ref.realHeight === "number" ? ref.realHeight : undefined) ??
+                (typeof ref.cutHeight === "number" ? ref.cutHeight : undefined) ??
+                (typeof ref.sourceSizeH === "number" ? ref.sourceSizeH : undefined) ??
+                0;
+            if (frameW > 0 && frameH > 0) {
+                const sx = Math.abs(info.scaleX || 1);
+                const sy = Math.abs(info.scaleY || 1);
+                weaponBoxW = frameW * sx;
+                weaponBoxH = frameH * sy;
+            }
+        }
+        let cometLen = 0;
+        if (tipOffset) {
+            const ax = Math.abs(tipOffset.dx || 0);
+            const ay = Math.abs(tipOffset.dy || 0);
+            const dominant = Math.max(ax, ay);
+            const axisS = (ax >= ay) ? (axisScale.sx || 1) : (axisScale.sy || 1);
+            cometLen = dominant * 2 * scale * axisS;
+        }
         const vis = getHeroVisualInfoForStrength(hero, nx, ny);
         const wTipX = (vis[2] || 0);
         const wTipY = (vis[3] || 0);
@@ -3791,7 +3911,10 @@ function _updateAgilityCometFx(
             scale,
             axisScaleX: axisScale.sx || 1,
             axisScaleY: axisScale.sy || 1,
-            rawFrame: rawFrame | 0
+            rawFrame: rawFrame | 0,
+            weaponBoxW,
+            weaponBoxH,
+            cometLen
         });
     }
 
@@ -3853,9 +3976,11 @@ function _updateAgilityCometFx(
             preActive,
             growthT,
             reelT,
-            skinId: STR_ARC_SKIN_ID
+            skinId: AGI_SQUARE_COMET_SKIN_ID
         });
     }
+
+    _updateWeaponTipDebugForHero(heroIndex | 0, hero, nx, ny);
 }
 
 function _updateAgilitySquareCometFx(
@@ -3928,9 +4053,28 @@ function _updateAgilitySquareCometFx(
         return;
     }
 
-    const rawFrame = _agiSquareCometPickRawFrame(preActive, preT, growthT, reelT);
-    const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, rawFrame | 0);
-    const tipOffset = _agiCometTipOffsetForRaw(STR_ARC_SKIN_ID, rawFrame | 0);
+    const partRaw = (sprites.readDataString(hero, HERO_DATA.PhasePartName) || "").trim().toLowerCase();
+    const partProgRaw = sprites.readDataNumber(hero, HERO_DATA.PhasePartProgress) | 0;
+    const partT = (partProgRaw > 0) ? Math.max(0, Math.min(1, (partProgRaw | 0) / PHASE_PROGRESS_MAX)) : 0;
+    const pick = (seq: number[], t: number): number => _strengthArcPickFromSequence(seq, t, 1, false);
+
+    let rawFrame = 0;
+    if (preActive || partRaw === "windup") {
+        const t = (partRaw === "windup" && partProgRaw > 0) ? partT : Math.max(0, Math.min(1, preT));
+        rawFrame = pick(AGI_SQUARE_COMET_GROW_RAW, t);
+    } else if (partRaw === "forward") {
+        const t = (partProgRaw > 0) ? partT : Math.max(0, Math.min(1, growthT));
+        rawFrame = pick([3, 4], t);
+    } else if (partRaw === "landing") {
+        const t = (partProgRaw > 0) ? partT : Math.max(0, Math.min(1, reelT));
+        rawFrame = pick(AGI_SQUARE_COMET_REEL_RAW, t);
+    } else {
+        if (reelT > 0) rawFrame = pick(AGI_SQUARE_COMET_REEL_RAW, Math.max(0, Math.min(1, reelT)));
+        else rawFrame = pick(AGI_SQUARE_COMET_GROW_RAW, Math.max(0, Math.min(1, growthT)));
+    }
+
+    const frameIdx = _strengthArcFrameIndexFromRaw(AGI_SQUARE_COMET_SKIN_ID, rawFrame | 0);
+    const tipOffset = _agiCometTipOffsetForRaw(AGI_SQUARE_COMET_SKIN_ID, rawFrame | 0);
     const fallbackOffset = _agiCometDirOffset(nx, ny);
     const vis = getHeroVisualInfoForStrength(hero, nx, ny);
     let wTipX = (vis[2] || 0);
@@ -4052,9 +4196,11 @@ function _updateAgilitySquareCometFx(
             preActive,
             growthT,
             reelT,
-            skinId: STR_ARC_SKIN_ID
+            skinId: AGI_SQUARE_COMET_SKIN_ID
         });
     }
+
+    _updateWeaponTipDebugForHero(heroIndex | 0, hero, nx, ny);
 }
 
 function _updateAgilityTrailFxSegments(
@@ -4255,6 +4401,8 @@ const EFFECT_MASK_RADIUS_DATA_KEY = "effectMaskRadius";
 const EFFECT_MASK_RADIUS_PX_DATA_KEY = "effectMaskRadiusPx";
 const EFFECT_MASK_PAD_OUT_PX_DATA_KEY = "effectMaskPadOutPx";
 const EFFECT_MASK_SPRITE_REF_DATA_KEY = "effectMaskSpriteRef";
+const EFFECT_FORCE_VISIBLE_DATA_KEY = "effectForceVisible";
+const EFFECT_MASK_USE_NATIVE_DATA_KEY = "effectMaskUseNative";
 const EFFECT_HERO_REF_DATA_KEY = "effectHeroRef";
 const EFFECT_FLIP_X_DATA_KEY = "effectFlipX";
 const EFFECT_FLIP_Y_DATA_KEY = "effectFlipY";
@@ -4361,11 +4509,27 @@ const STR_LAND_MS_KEY = "SS_LAND_MS";
 const STR_SWING_SKIP_WINDUP_KEY = "SS_SKIP_WINDUP";
 const STR_SWING_START_COL_KEY = "SS_START_COL";
 const STR_USE_ARC_SPRITE_PROJECTILES = true;
-const STR_ARC_SKIN_ID = "Sword Arcs";
+const STR_ARC_SKIN_ID = "SwordArcs3";
 const STR_ARC_SHEET_COLS = 6;
 const STR_ARC_SHEET_ROWS = 20;
 const STR_ARC_CORE_COLS = 6;
 const STR_ARC_CORE_ROWS = 5;
+// Legacy mapping from old sheet raw indices -> SwordArcs3 raw indices.
+// Kept for reference / rollback if needed.
+const STR_ARC_RAW_REMAP_LEGACY: number[] = [
+    30, 35, 100, 105, 110, 116, 31, 36, 101, 106, 25, 116,
+    32, 37, 102, 107, 112, 118, 33, 38, 103, 108, 113, 119,
+    34, 39, 104, 109, 25, 29, 113, 113, 113, 113, 113, 113,
+    60, 65, 10, 105, 110, 116, 61, 6, 11, 106, 25, 116,
+    62, 67, 102, 107, 112, 58, 63, 8, 103, 108, 113, 119,
+    64, 9, 104, 109, 25, 59, 113, 113, 113, 113, 113, 113,
+    90, 95, 100, 105, 110, 116, 91, 96, 101, 106, 115, 116,
+    92, 97, 102, 107, 112, 118, 93, 98, 103, 108, 113, 116,
+    94, 99, 104, 109, 25, 119, 113, 113, 113, 113, 113, 113,
+    0, 5, 10, 15, 110, 26, 1, 6, 11, 106, 25, 116,
+    2, 7, 102, 107, 112, 58, 3, 8, 103, 108, 113, 119,
+    4, 9, 14, 109, 109, 29
+];
 const STR_ARC_END_SCALE = 0.25;
 const STR_ARC_SLASH_SCALE = 0.6;
 const STR_ARC_SLASH_SCALE_CAP_PCT = 0.2;
@@ -4373,9 +4537,9 @@ const STR_ARC_SLASH_SCALE_CAP_PCT = 0.2;
 const STR_ARC_OPAQUE_CAP_PX = 50;
 // Allow tiny upscale toward the cap when the arc is smaller than the target.
 const STR_ARC_OPAQUE_CAP_UPSCALE_PCT = 0.02;
-// 125x150 -> gcd=25 -> 1/25=0.04 keeps integer pixel sizes for both axes.
-const STR_ARC_SCALE_STEP = 1 / 25;
-const STR_ARC_FRAME_W_PX = 125;
+// 126x150 -> gcd=6 -> 1/6 keeps integer pixel sizes for both axes.
+const STR_ARC_SCALE_STEP = 1 / 6;
+const STR_ARC_FRAME_W_PX = 126;
 const STR_ARC_FRAME_H_PX = 150;
 const STR_ARC_FILL_ELLIPSE_MIN_R = 50;
 const STR_ARC_FILL_INNER_EXPAND_PCT_CAP = 0.2;
@@ -4386,16 +4550,16 @@ const STR_ARC_INTRO_HOLD_FRAC = 0;
 const STR_ARC_INTRO_TRAVEL_FRAC = 0;
 const STR_ARC_MIN_TRAVEL_PX = 10;
 // Raw sheet-frame sequences (these match the on-screen "#N" debug labels).
-const STR_ARC_SEQ_WISPY_RAW = [21, 15, 9, 3, 20, 14];
-const STR_ARC_SEQ_MEDIUM_RAW = [2, 7, 13, 19];
-const STR_ARC_SEQ_CLIMAX_RAW = [12, 18, 0, 6];
+const STR_ARC_SEQ_WISPY_RAW = [108, 107, 106, 105, 103, 102];
+const STR_ARC_SEQ_MEDIUM_RAW = [100, 36, 37, 38];
+const STR_ARC_SEQ_CLIMAX_RAW = [32, 33, 30, 31];
 // Agility sword-arc raw-frame notes (all authored pointing SW; rotate to aim).
 // Hole streak: 22 -> 16 -> 21 -> 29 -> 23 -> 17 -> 11
 // Solid streak: 22 -> 16 -> 21 -> 28 -> 5
 // Comet: 22 -> 16 -> 27 -> 10 -> 4
-const AGI_ARC_SEQ_STREAK_HOLE_RAW = [22, 16, 21, 29, 23, 17, 11];
-const AGI_ARC_SEQ_STREAK_SOLID_RAW = [22, 16, 21, 28, 5];
-const AGI_ARC_SEQ_COMET_RAW = [22, 16, 27, 10, 4];
+const AGI_ARC_SEQ_STREAK_HOLE_RAW = [113, 112, 108, 29, 119, 118, 116];
+const AGI_ARC_SEQ_STREAK_SOLID_RAW = [113, 112, 108, 25, 116];
+const AGI_ARC_SEQ_COMET_RAW = [48, 49, 50];
 // Phase splits for the reset sweep (t in [0,1]).
 const STR_ARC_MEDIUM_END_T = 0.22;
 const STR_ARC_FADE_START_T = 0.86;
@@ -4555,13 +4719,14 @@ const AGI_COMET_PREACTIVE_ALPHA = 0.28;
 const AGI_COMET_SCALE = 0.95;
 const AGI_SQUARE_COMET_SCALE = 0.95;
 const AGI_COMET_END_SCALE = 0.3;
-const AGI_COMET_SW_BASE_ANGLE = (3 * Math.PI) / 4; // authored pointing SW
+const AGI_COMET_SW_BASE_ANGLE = Math.PI; // authored pointing left
 const AGI_COMET_BASE_DIR_X = -1;
-const AGI_COMET_BASE_DIR_Y = 1;
+const AGI_COMET_BASE_DIR_Y = 0;
 const AGI_COMET_GROW_END_T = 0.52;
 const AGI_COMET_GROW_EXP = 0.6;
 const AGI_COMET_TIP_BACK_PX = 2;
 const AGI_COMET_TIP_ALIGN_FWD_PX = 4;
+const AGI_HOOKSHOT_COMET_TIP_FWD_PX = 10;
 const AGI_COMET_LENGTH_SCALE = 1.15;
 const AGI_COMET_PRE_MS = 120;
 const AGI_COMET_REEL_MS = 200;
@@ -4580,19 +4745,35 @@ const AGI_SQUARE_COMET_FLIP_X = 0;
 const AGI_SQUARE_COMET_FLIP_Y = 0;
 const AGI_SQUARE_COMET_ROT_OFFSET = 0;
 const AGI_COMET_ALIGN_DIR_OFFSETS: { [key: string]: { dx: number; dy: number } } = {
-    up: { dx: 4, dy: 0 },
-    down: { dx: -4, dy: 0 },
-    left: { dx: 0, dy: 4 },
-    right: { dx: 0, dy: 4 }
+    up: { dx: 0, dy: 0 },
+    down: { dx: 0, dy: 0 },
+    left: { dx: 0, dy: 0 },
+    right: { dx: 0, dy: 0 }
 };
 const AGI_SQUARE_COMET_ALIGN_DIR_OFFSETS: { [key: string]: { dx: number; dy: number } } = {
-    up: { dx: 12, dy: 0 },
-    down: { dx: -4, dy: 0 },
-    left: { dx: 0, dy: 12 },
-    right: { dx: 0, dy: 12 }
+    up: { dx: 0, dy: 0 },
+    down: { dx: 0, dy: 0 },
+    left: { dx: 0, dy: 0 },
+    right: { dx: 0, dy: 0 }
 };
-const AGI_COMET_PRE_RAW = [22, 16, 21];
-const AGI_COMET_HOLD_RAW = [10, 4];
+// SwordArcs3 (6 cols): row 8 -> frames 48..53
+// Aim indicator: col 4 row 8 (frame 52)
+// Launch: col 0..2 row 8 (frames 48,49,50)
+// Fade out: col 3..5 row 8 (frames 51,52,53)
+const AGI_COMET_PRE_RAW = [52];
+const AGI_COMET_HOLD_RAW = [50];
+const AGI_COMET_GROW_RAW = [48, 49, 50];
+const AGI_COMET_REEL_RAW = [51, 52, 53];
+const AGI_HOOK_COMET_SKIN_ID = "Comet";
+const AGI_HOOK_COMET_GROW_RAW = [0, 1, 2];
+const AGI_HOOK_COMET_FORWARD_RAW = [3, 4, 5];
+const AGI_HOOK_COMET_HOLD_RAW = [5];
+const AGI_HOOK_COMET_REEL_RAW = [2, 1, 6];
+const AGI_SQUARE_COMET_SKIN_ID = "SquareComet";
+const AGI_SQUARE_COMET_GROW_RAW = [0, 1, 7, 2];
+const AGI_SQUARE_COMET_HOLD_RAW = [4];
+const AGI_SQUARE_COMET_REEL_RAW = [5, 6];
+const AGI_SQUARE_COMET_RAW_OFFSET_DY: { [raw: number]: number } = {};
 const AGI_COMET_BLEND_FX_KEY = "agiCometBlendFx";
 const AGI_COMET_AURA_R1_FX_KEY = "agiCometAuraR1Fx";
 const AGI_COMET_AURA_R2_FX_KEY = "agiCometAuraR2Fx";
@@ -4652,6 +4833,7 @@ const WPN_DOWN_FRONT_CLIP_EPS = 0;
 const WPN_DOWN_FORCE_SIDE_SIGN = -1;
 const WPN_AURA_DEBUG_COLORS = [2, 7, 9, 14]; // r0..r3 overlay colors
 const WPN_AURA_DEBUG_Z_BOOST = 5000;
+const WPN_TIP_DEBUG_MIN_SIZE = 256;
 const HERO_AURA_SIDE_PAD_PX = 2;
 const HERO_AURA_SIDE_RADIUS_PAD = 1;
 const WPN_TRACE_ID_KEY = "__wpnTraceId";
@@ -4770,22 +4952,22 @@ type StrengthArcCompassDir = "N" | "NE" | "E" | "SE" | "S" | "SW" | "W" | "NW";
 
 // Canonical raw-frame spine directions (based on your on-screen #N references).
 const __strengthArcSpineByRaw: Record<number, StrengthArcCompassDir> = {
-    0: "S",
-    1: "SW",
-    2: "E",
-    3: "SE",
-    6: "E",
-    7: "NW",
-    8: "NE",
-    9: "SE",
-    12: "NE",
-    13: "SW",
-    14: "SE",
-    15: "SE",
-    18: "NW",
-    19: "S",
-    20: "SE",
-    21: "SE"
+    30: "S",
+    35: "SW",
+    100: "E",
+    105: "SE",
+    31: "E",
+    36: "NW",
+    101: "NE",
+    106: "SE",
+    32: "NE",
+    37: "SW",
+    102: "SE",
+    107: "SE",
+    33: "NW",
+    38: "S",
+    103: "SE",
+    108: "SE"
 };
 
 function _strengthArcCompassAngle(dir: StrengthArcCompassDir): number {
@@ -5872,6 +6054,7 @@ const HERO_DATA: Record<string, string> = {
     STR_CHARGE_FX_SPR: "strChgFx",     // sprite (charge trail visual)
     STR_CHARGE_HELD: "strChgHeld",     // boolean (true once hold phase starts)
     WPN_AURA_DEBUG_SPR: "wpnAuraDbg",  // sprite (weapon aura debug overlay)
+    WPN_TIP_DEBUG_SPR: "wpnTipDbg",    // sprite (weapon tip/bounds debug overlay)
 
 
 
@@ -6221,6 +6404,8 @@ const ENEMY_DATA = {
     HOME_Y: "HOMEY",
 
     RETURNING_HOME: "returningHome",
+    PREV_X: "prevX",
+    PREV_Y: "prevY",
 
 
 
@@ -10198,6 +10383,12 @@ const DECAL_DUN_STAIRS_STATUE_MID = 121
 
 const DECAL_DUN_STAIRS_STATUE_BOT = 122
 
+// Shop platform center fill (shopPlatform.png)
+const DECAL_SHOP_PLATFORM_CENTER_A = 3160
+const DECAL_SHOP_PLATFORM_CENTER_B = 3161
+const DECAL_SHOP_PLATFORM_CENTER_C = 3162
+const DECAL_SHOP_PLATFORM_CENTER_D = 3163
+
 
 
 
@@ -10221,6 +10412,8 @@ const DECOR_DATA = {
 
 } as const
 
+const DECOR_SOLID_FRAME_INDEX_KEY = "decorSolidFrameIndex"
+const DECOR_SOLID_TEX_KEY = "decorSolidTexKey"
 const DECOR_SOLID_AABB_LOCAL_X_KEY = "decorSolidAabbLocalX"
 const DECOR_SOLID_AABB_LOCAL_Y_KEY = "decorSolidAabbLocalY"
 const DECOR_SOLID_AABB_RAW_X_KEY = "decorSolidAabbRawX"
@@ -10716,12 +10909,12 @@ const FOCUS_OUTLINE_DEPTH_BIAS_DEFAULT = 1
 const OBJECTIVE_OUTLINE_COLOR = 7
 const OBJECTIVE_OUTLINE_RADIUS = 2
 const OBJECTIVE_OUTLINE_DEPTH_BIAS = 1
-const SHOPKEEPER_OUTLINE_COLOR = 1
+const SHOPKEEPER_OUTLINE_COLOR = 11
 const SHOPKEEPER_OUTLINE_RADIUS = 2
-const SHOPKEEPER_OUTLINE_DEPTH_BIAS = -2
-const SHOP_STATUE_OUTLINE_COLOR = 1
+const SHOPKEEPER_OUTLINE_DEPTH_BIAS = -20
+const SHOP_STATUE_OUTLINE_COLOR = 11
 const SHOP_STATUE_OUTLINE_RADIUS = 2
-const SHOP_STATUE_OUTLINE_DEPTH_BIAS = -2
+const SHOP_STATUE_OUTLINE_DEPTH_BIAS = -20
 
 let _dunStairsStatueFocusActive = -1
 
@@ -11898,6 +12091,10 @@ function _dunUpdateWorldAmbience(nowMs: number): void {
         _dunResetAmbientRuntime()
         return
     }
+    if (DEBUG_EFFECTS_HALL_ON_START && DEBUG_EFFECTS_HALL_ONLY_ROWS && (_dunFloorKind || "") === DUNGEON_KIND_HALL) {
+        _dunResetAmbientRuntime()
+        return
+    }
     const now = nowMs | 0
 
     _ambientUpdateList(_dunAmbientMotes, now | 0, AMBIENT_MOTE_ALPHA, AMBIENT_MOTE_ALPHA_MIN)
@@ -12328,6 +12525,8 @@ type EffectApplyOpts = {
     yoyo?: boolean
     maskSprite?: Sprite | null
     maskPadOutPx?: number
+    maskUseNative?: boolean
+    forceVisible?: boolean
     flipX?: boolean
     flipY?: boolean
 }
@@ -12348,6 +12547,11 @@ function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts):
     if (typeof opts?.blend === "string") sprites.setDataString(s, EFFECT_BLEND_DATA_KEY, opts.blend)
     else sprites.setDataString(s, EFFECT_BLEND_DATA_KEY, "")
     sprites.setDataNumber(s, EFFECT_FORCE_TOP_DATA_KEY, opts?.forceTop ? 1 : 0)
+    if (typeof opts?.forceVisible === "boolean") {
+        sprites.setDataNumber(s, EFFECT_FORCE_VISIBLE_DATA_KEY, opts.forceVisible ? 1 : 0)
+    } else {
+        sprites.setDataNumber(s, EFFECT_FORCE_VISIBLE_DATA_KEY, 0)
+    }
     if (typeof opts?.flipX === "boolean") sprites.setDataNumber(s, EFFECT_FLIP_X_DATA_KEY, opts.flipX ? 1 : 0)
     if (typeof opts?.flipY === "boolean") sprites.setDataNumber(s, EFFECT_FLIP_Y_DATA_KEY, opts.flipY ? 1 : 0)
     if (typeof opts?.frameWindowMs === "number") {
@@ -12383,6 +12587,11 @@ function applyEffectToSprite(s: Sprite, skinId: string, opts?: EffectApplyOpts):
         sprites.setDataNumber(s, EFFECT_MASK_PAD_OUT_PX_DATA_KEY, opts.maskPadOutPx | 0)
     } else {
         sprites.setDataNumber(s, EFFECT_MASK_PAD_OUT_PX_DATA_KEY, 0)
+    }
+    if (typeof opts?.maskUseNative === "boolean") {
+        sprites.setDataNumber(s, EFFECT_MASK_USE_NATIVE_DATA_KEY, opts.maskUseNative ? 1 : 0)
+    } else {
+        sprites.setDataNumber(s, EFFECT_MASK_USE_NATIVE_DATA_KEY, 0)
     }
     if (opts && Object.prototype.hasOwnProperty.call(opts, "maskSprite")) {
         const maskSprite = opts.maskSprite || null;
@@ -12452,8 +12661,7 @@ let __vfxRegistry: VfxRegistry | null = null
 let __vfxHelpers: VfxHelpers | null = null
 
 function _registerVfxPresets(registry: VfxRegistry, helpers: VfxHelpers): void {
-    void registry
-    void helpers
+    applyStudentVfxPresets(registry, helpers)
     // Presets will live here (see VFX_SYSTEM.md). Keep empty until assets are chosen.
 }
 
@@ -13525,14 +13733,32 @@ const BOSS_PAD_SINK_DUST_MASK_ALPHA_SCALE = 0.6
 const BOSS_PAD_SINK_DUST_LAYER_ALPHA = 0.82
 const BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA = 0.35
 const BOSS_PAD_SINK_DUST_FADE_MS = 3000
-const CLOUD_GEOMETRY_SKIN_ID = "smoke grayscale 128x128"
+const CLOUD_GEOMETRY_SKIN_ID = "smokeSoftenedTransitioned grayscale 128x128"
+const CLOUD_AURA_BASE_SKIN_ID = "smoke 128x128"
 const BOSS_PAD_SINK_DUST_TEX_ID = "waves1 texture grayscale 256x256"
 const BOSS_PAD_SINK_DUST_TEX_FPS = 16
 const BOSS_PAD_SINK_DUST_SMOKE_ANIM = "alive"
-const SMOKE_ANIM_ALIVE_FRAMES = "0,1,2,3,4,5,6,7"
+const SMOKE_ANIM_ALIVE_FRAME_COUNT = 40
+const SMOKE_ANIM_HOLD_FRAME_COUNT = 33
+const SMOKE_ANIM_ALIVE_SLOW_FRAMES = "0,0,1,1,2,2,3,3,4,4,5,5,6,6,7,7"
 const SMOKE_ANIM_FADE_FRAMES = "8,9,10,11,12,13,14"
+const SMOKE_ANIM_DUST_FADE_FRAMES = "33,34,35,36,37,38,39"
 const SMOKE_ANIM_ALIVE_FPS = 12
+const SMOKE_ANIM_ALIVE_SLOW_FPS = 4.8
 const SMOKE_ANIM_FADE_FPS = 10
+let _smokeAliveFramesCache: number[] | null = null
+let _smokeAliveSlowFramesCache: number[] | null = null
+let _smokeAliveHoldFramesCache: number[] | null = null
+const HALL_DUST_MASK_ALPHA_MIN = 0.85
+const HALL_DUST_BORDER_ALPHA_MIN = 0.02
+
+function _buildSmokePingPongFrames(frameCount: number): number[] {
+    const count = Math.max(1, frameCount | 0)
+    const out: number[] = []
+    for (let i = 0; i < count; i++) out.push(i | 0)
+    for (let i = count - 2; i >= 1; i--) out.push(i | 0)
+    return out
+}
 const BOSS_PAD_SINK_DUST_TILE_PX = 96
 const BOSS_PAD_SINK_DUST_TILE_STEP_PCT = 0.6
 const BOSS_PAD_SINK_DUST_COUNT = 50
@@ -13540,7 +13766,7 @@ const BOSS_PAD_SINK_DUST_RISE_PX = 32
 const BOSS_PAD_SINK_DUST_RISE_PORTION = 1
 const BOSS_PAD_SINK_DUST_SPREAD_X_PX = 56
 const BOSS_PAD_SINK_DUST_SPREAD_Y_PX = 32
-const HALL_DUST_TEX_ID = "waves1 texture grayscale 256x256"
+const HALL_DUST_TEX_ID = "waves3 texture grayscale 256x256"
 const HALL_POISON_TEX_ID = "waves2 texture grayscale 256x256"
 const HALL_SHOWCASE_TEX_ID = "waves1 texture grayscale 256x256"
 const HALL_DUST_TILE_PX = 256
@@ -13550,14 +13776,17 @@ const HALL_POISON_TILE_STEP_PCT = 0.85
 const HALL_SHOWCASE_TILE_PX = 256
 const HALL_SHOWCASE_TILE_STEP_PCT = 0.85
 const HALL_DUST_ALPHA = 1
-const HALL_POISON_ALPHA = 0.6
+const HALL_POISON_ALPHA = 0.9
 const HALL_SHOWCASE_ALPHA = 1
 const HALL_DUST_MASK_ALPHA = 0.2
 const HALL_POISON_MASK_ALPHA = 0.12
 const HALL_SHOWCASE_MASK_ALPHA = 0.25
 const HALL_ALPHA_ROW_COUNT = 10
+const HALL_ROWS_BASE_ROW = 8
 const HALL_ALPHA_ROW_MIN_SCALE = 1
 const HALL_ALPHA_ROW_MAX_SCALE = 2.5
+const HALL_BORDER_ROW_MIN_ALPHA = 0.7
+const HALL_BORDER_ROW_MAX_ALPHA = 1
 const HALL_CLOUD_WIDTH_PX = 260
 const HALL_CLOUD_HEIGHT_PX = 140
 const HALL_CLOUD_PUFF_COUNT = 18
@@ -13570,6 +13799,26 @@ const HALL_EFFECTS_LIFESPAN_MS = 0
 const HALL_DEMO_INTRO_MS = 0
 const HALL_DEMO_HOLD_MS = 0
 const HALL_DEMO_FADE_MS = 0
+const HALL_MASK_DENSITY_K = 16
+const HALL_MASK_DENSITY_GAMMA = 0.85
+const HALL_MASK_OUTLINE_ALPHA_MIN = 0
+const HALL_MASK_UNION_UPDATE_MIN_MS = 60
+const HALL_MASK_UNION_ROT_EPS_RAD = 0.005
+const HALL_MASK_UNION_OUTLINE_EVERY = 2
+const HALL_MASK_UNION_PAD_PX = 6
+const HALL_POISON_MASK_FPS_MULT = 2.17
+const HALL_POISON_MASK2_FPS_MULT = 1.85
+const HALL_DUST_MASK_FPS_MIN = 1.5
+const HALL_DUST_MASK_FPS_MAX = 4.5
+const HALL_DUST_MASK_FPS_DEFAULT = 3.2
+const HALL_DUST_MASK2_FPS_DEFAULT = 2.7
+const HALL_DUST_RISE_START_SCALE_X = 2.8
+const HALL_DUST_RISE_START_SCALE_Y = 0.12
+const HALL_DUST_RISE_MS = 2500
+const HALL_DUST_RISE_LOOP_MS = HALL_DUST_RISE_MS * 2
+const HALL_DUST_RISE_END_SCALE_X = 1.1
+const HALL_DUST_RISE_END_SCALE_Y = 0.5
+const HALL_DUST_FILL_FPS = 28
 
 
 
@@ -14011,6 +14260,21 @@ function _dunDecor_spawnAtTile(args: {
 }): Sprite {
 
     const tileSize = WORLD_TILE_SIZE | 0
+    const boundsOfNative = (o: any): any => {
+        if (!o) return null
+        try {
+            if (typeof o.getBounds === "function") {
+                const b = o.getBounds()
+                if (b) return { x: (b.x ?? 0) | 0, y: (b.y ?? 0) | 0, w: (b.width ?? 0) | 0, h: (b.height ?? 0) | 0 }
+            }
+        } catch { /* ignore */ }
+        const w = (o.displayWidth ?? o.width ?? 0) | 0
+        const h = (o.displayHeight ?? o.height ?? 0) | 0
+        const x = ((o.x ?? 0) - (w >> 1)) | 0
+        const y = ((o.y ?? 0) - (h >> 1)) | 0
+        if ((w | 0) <= 0 && (h | 0) <= 0) return null
+        return { x, y, w, h }
+    }
 
     const r = args.tileR | 0
 
@@ -14347,12 +14611,7 @@ function _dunSpawnInteractableProp(args: {
     const decorOffY = sprites.readDataNumber(decor, "decorOffY") | 0
     sprites.setDataNumber(it, "decorOffX", decorOffX | 0)
     sprites.setDataNumber(it, "decorOffY", decorOffY | 0)
-    if ((decor as any).left != null || (decor as any).top != null) {
-        if ((decor as any).left != null) (it as any).left = ((decor as any).left | 0)
-        if ((decor as any).top != null) (it as any).top = ((decor as any).top | 0)
-    } else {
-        it.setPosition(decor.x | 0, decor.y | 0)
-    }
+    it.setPosition(decor.x | 0, decor.y | 0)
 
     const action = (args.action && String(args.action).trim())
         ? String(args.action).trim()
@@ -14870,6 +15129,7 @@ function _dunHasPendingChestObjectives(): boolean {
 let _dunInteractFocusActive = 0
 let _dunInteractFocusR = -1
 let _dunInteractFocusC = -1
+let _dunInteractFocusName = ""
 let _dunObjectivePropAuraActive = 0
 let _dunObjectivePropAuraR = -1
 let _dunObjectivePropAuraC = -1
@@ -17603,6 +17863,15 @@ function _dunEnterFloor_spawnCoordsAroundPad(padX: number, padY: number): number
         }
     }
 
+    if (_dunFloorKind === DUNGEON_KIND_HALL && DEBUG_EFFECTS_HALL_ON_START) {
+        // Center the hero near the effects hall debug rows for easier visual inspection.
+        if (DEBUG_EFFECTS_HALL_ONLY_ROWS) {
+            const hallBaseY = _dunRowToY(HALL_ROWS_BASE_ROW) | 0
+            baseY = (hallBaseY + 120) | 0
+        }
+        spawnYOffsetPx = 0
+    }
+
     const baseY2 = (baseY + spawnYOffsetPx) | 0
 
     const offset = (_dunFloorKind === DUNGEON_KIND_ENTRANCE) ? 16 : 28
@@ -19496,6 +19765,10 @@ function _dunEnterFloor_setupHallFloor(nowMs: number): void {
     _dunSetPadPowered(true)
 
     if (DEBUG_EFFECTS_HALL_ON_START) {
+        const g: any = globalThis as any
+        if (g && typeof g.__heSetZoom === "function") {
+            g.__heSetZoom(0.5)
+        }
         _dunEnterFloor_spawnEffectsHall(nowMs | 0)
         return
     }
@@ -19510,179 +19783,511 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
     if ((_dunPadTileR | 0) < 0 || (_dunPadTileC | 0) < 0) return
     const baseX = _dunColToX(_dunPadTileC | 0) | 0
     const baseY = _dunRowToY(_dunPadTileR | 0) | 0
+    const hallBaseY = DEBUG_EFFECTS_HALL_ONLY_ROWS
+        ? (_dunRowToY(HALL_ROWS_BASE_ROW) | 0)
+        : baseY
     const leftX = (baseX - 140) | 0
     const rightX = (baseX + 140) | 0
     const leftOpaqueX = (leftX - 400) | 0
     const rightOpaqueX = (rightX + 400) | 0
-    const y = (baseY + 40) | 0
-    const yDemo = (baseY + 160) | 0
-    const yShow = (baseY + 280) | 0
-    const yStatic = (baseY + 420) | 0
+    const y = (hallBaseY + 40) | 0
+    const yDemo = (hallBaseY + 160) | 0
+    const yShow = (hallBaseY + 280) | 0
+    const yStatic = (hallBaseY + 420) | 0
 
-    _dunSpawnDebugCloud(leftX, y, {
-        texId: HALL_DUST_TEX_ID,
-        tint: _pickEnemyPaletteMid("earth"),
-        tilePx: HALL_DUST_TILE_PX | 0,
-        stepPct: HALL_DUST_TILE_STEP_PCT,
-        alpha: HALL_DUST_ALPHA,
-        maskAlpha: HALL_DUST_MASK_ALPHA,
-        puffAlpha: HALL_CLOUD_PUFF_ALPHA,
-        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-        tag: "hall/dust/normal",
-        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
-        paletteKey: "earth",
-        smokeAnim: "alive"
-    })
+    const onlyPoison = !!DEBUG_EFFECTS_HALL_ONLY_POISON
+    const onlyDust = !!DEBUG_EFFECTS_HALL_ONLY_DUST
 
-    _dunSpawnDebugCloud(rightX, y, {
-        texId: HALL_POISON_TEX_ID,
-        tint: _pickEnemyPaletteMid("poison"),
-        tilePx: HALL_POISON_TILE_PX | 0,
-        stepPct: HALL_POISON_TILE_STEP_PCT,
-        alpha: HALL_POISON_ALPHA,
-        maskAlpha: HALL_POISON_MASK_ALPHA,
-        puffAlpha: HALL_CLOUD_PUFF_ALPHA_POISON,
-        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-        tag: "hall/poison/normal",
-        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
-        paletteKey: "poison",
-        smokeAnim: "alive"
-    })
+    if (!DEBUG_EFFECTS_HALL_ONLY_ROWS) {
+        if (!onlyPoison) _dunSpawnDebugCloud(leftX, y, {
+            texId: HALL_DUST_TEX_ID,
+            tint: _pickEnemyPaletteMid("dust"),
+            tilePx: HALL_DUST_TILE_PX | 0,
+            stepPct: HALL_DUST_TILE_STEP_PCT,
+            alpha: HALL_DUST_ALPHA,
+            maskAlpha: HALL_DUST_MASK_ALPHA,
+            puffAlpha: HALL_CLOUD_PUFF_ALPHA,
+            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+            tag: "hall/dust/normal",
+            lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+            paletteKey: "dust",
+            dustRise: true,
+            dustRiseMs: 2500,
+            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
+            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
+            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
+            dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y,
+            borderPerMask: true,
+            borderAlpha: 1,
+            borderOutlinePx: 1,
+            borderOutlineAlphaMin: 0.5,
+            doubleMask: true,
+            maskRotateSpeedRadPerMs: 0.00005,
+            mask2RotateSpeedRadPerMs: -0.000035,
+            maskFpsMult: HALL_DUST_MASK_FPS_DEFAULT,
+            mask2FpsMult: HALL_DUST_MASK2_FPS_DEFAULT,
+            maskFpsWobbleAmp: 0.0000001,
+            maskFpsWobblePeriodMs: 7000,
+            mask2FpsWobbleAmp: 0.00000008,
+            mask2FpsWobblePeriodMs: 9000,
+            fillFps: HALL_DUST_FILL_FPS,
+            smokeAnim: "alive"
+        })
 
-    _dunSpawnDebugCloud(leftOpaqueX, y, {
-        texId: HALL_DUST_TEX_ID,
-        tint: _pickEnemyPaletteMid("earth"),
-        tilePx: HALL_DUST_TILE_PX | 0,
-        stepPct: HALL_DUST_TILE_STEP_PCT,
-        alpha: 1,
-        maskAlpha: 1,
-        puffAlpha: 1,
-        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-        tag: "hall/dust/opaque",
-        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
-        paletteKey: "earth",
-        smokeAnim: "alive",
-        forceOpaqueMask: true,
-        forceOpaqueFill: true
-    })
+        if (!onlyDust) _dunSpawnDebugCloud(rightX, y, {
+            texId: HALL_POISON_TEX_ID,
+            tint: _pickEnemyPaletteMid("poison"),
+            tilePx: HALL_POISON_TILE_PX | 0,
+            stepPct: HALL_POISON_TILE_STEP_PCT,
+            alpha: HALL_POISON_ALPHA,
+            maskAlpha: HALL_POISON_MASK_ALPHA,
+            puffAlpha: HALL_CLOUD_PUFF_ALPHA_POISON,
+            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+            tag: "hall/poison/normal",
+            lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+            paletteKey: "poison",
+            borderUseFillColors: true,
+            borderOutlineFromFill: false,
+            borderAlpha: 1,
+            borderPadOutPx: 0,
+            borderOutlinePx: 1,
+            borderOutlineAlphaMin: 0.5,
+            doubleMask: true,
+            maskRotateSpeedRadPerMs: 0.00005,
+            mask2RotateSpeedRadPerMs: -0.000035,
+            maskFpsMult: HALL_POISON_MASK_FPS_MULT,
+            mask2FpsMult: HALL_POISON_MASK2_FPS_MULT,
+            maskFpsWobbleAmp: 0.0000001,
+            maskFpsWobblePeriodMs: 7000,
+            mask2FpsWobbleAmp: 0.00000008,
+            mask2FpsWobblePeriodMs: 9000,
+            smokeAnim: "alive"
+        })
 
-    _dunSpawnDebugCloud(rightOpaqueX, y, {
-        texId: HALL_POISON_TEX_ID,
-        tint: _pickEnemyPaletteMid("poison"),
-        tilePx: HALL_POISON_TILE_PX | 0,
-        stepPct: HALL_POISON_TILE_STEP_PCT,
-        alpha: 1,
-        maskAlpha: 1,
-        puffAlpha: 1,
-        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-        tag: "hall/poison/opaque",
-        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
-        paletteKey: "poison",
-        smokeAnim: "alive",
-        forceOpaqueMask: true,
-        forceOpaqueFill: true
-    })
+        if (!onlyPoison) _dunSpawnDebugCloud(leftOpaqueX, y, {
+            texId: HALL_DUST_TEX_ID,
+            tint: _pickEnemyPaletteMid("dust"),
+            tilePx: HALL_DUST_TILE_PX | 0,
+            stepPct: HALL_DUST_TILE_STEP_PCT,
+            alpha: 1,
+            maskAlpha: 1,
+            puffAlpha: 1,
+            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+            tag: "hall/dust/opaque",
+            lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+            paletteKey: "dust",
+            smokeAnim: "alive",
+            dustRise: true,
+            dustRiseMs: 2500,
+            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
+            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
+            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
+            dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y,
+            borderPerMask: true,
+            borderAlpha: 1,
+            borderOutlinePx: 1,
+            borderOutlineAlphaMin: 0.5,
+            doubleMask: true,
+            maskRotateSpeedRadPerMs: 0.00005,
+            mask2RotateSpeedRadPerMs: -0.000035,
+            maskFpsMult: HALL_DUST_MASK_FPS_DEFAULT,
+            mask2FpsMult: HALL_DUST_MASK2_FPS_DEFAULT,
+            maskFpsWobbleAmp: 0.0000001,
+            maskFpsWobblePeriodMs: 7000,
+            mask2FpsWobbleAmp: 0.00000008,
+            mask2FpsWobblePeriodMs: 9000,
+            forceOpaqueMask: true,
+            forceOpaqueFill: true,
+            fillFps: HALL_DUST_FILL_FPS
+        })
 
-    _dunSpawnDebugCloud(leftX, yDemo, {
-        texId: HALL_DUST_TEX_ID,
-        tint: _pickEnemyPaletteMid("earth"),
-        tilePx: HALL_DUST_TILE_PX | 0,
-        stepPct: HALL_DUST_TILE_STEP_PCT,
-        alpha: HALL_DUST_ALPHA,
-        maskAlpha: HALL_DUST_MASK_ALPHA,
-        puffAlpha: HALL_CLOUD_PUFF_ALPHA,
-        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-        tag: "hall/dust/demo",
-        demoIntroMs: HALL_DEMO_INTRO_MS | 0,
-        demoHoldMs: HALL_DEMO_HOLD_MS | 0,
-        demoFadeMs: HALL_DEMO_FADE_MS | 0,
-        paletteKey: "earth",
-        smokeAnim: "alive"
-    })
+        if (!onlyDust) _dunSpawnDebugCloud(rightOpaqueX, y, {
+            texId: HALL_POISON_TEX_ID,
+            tint: _pickEnemyPaletteMid("poison"),
+            tilePx: HALL_POISON_TILE_PX | 0,
+            stepPct: HALL_POISON_TILE_STEP_PCT,
+            alpha: 1,
+            maskAlpha: 1,
+            puffAlpha: 1,
+            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+            tag: "hall/poison/opaque",
+            lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+            paletteKey: "poison",
+            borderUseFillColors: true,
+            borderOutlineFromFill: false,
+            borderAlpha: 1,
+            borderPadOutPx: 0,
+            borderOutlinePx: 1,
+            borderOutlineAlphaMin: 0.5,
+            smokeAnim: "alive",
+            doubleMask: true,
+            maskRotateSpeedRadPerMs: 0.00005,
+            mask2RotateSpeedRadPerMs: -0.000035,
+            maskFpsMult: HALL_POISON_MASK_FPS_MULT,
+            mask2FpsMult: HALL_POISON_MASK2_FPS_MULT,
+            maskFpsWobbleAmp: 0.0000001,
+            maskFpsWobblePeriodMs: 7000,
+            mask2FpsWobbleAmp: 0.00000008,
+            mask2FpsWobblePeriodMs: 9000,
+            forceOpaqueMask: true,
+            forceOpaqueFill: true
+        })
 
-    _dunSpawnDebugCloud(rightX, yDemo, {
-        texId: HALL_POISON_TEX_ID,
-        tint: _pickEnemyPaletteMid("poison"),
-        tilePx: HALL_POISON_TILE_PX | 0,
-        stepPct: HALL_POISON_TILE_STEP_PCT,
-        alpha: HALL_POISON_ALPHA,
-        maskAlpha: HALL_POISON_MASK_ALPHA,
-        puffAlpha: HALL_CLOUD_PUFF_ALPHA_POISON,
-        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-        tag: "hall/poison/demo",
-        demoIntroMs: HALL_DEMO_INTRO_MS | 0,
-        demoHoldMs: HALL_DEMO_HOLD_MS | 0,
-        demoFadeMs: HALL_DEMO_FADE_MS | 0,
-        paletteKey: "poison",
-        smokeAnim: "alive"
-    })
+        if (!onlyPoison) _dunSpawnDebugCloud(leftX, yDemo, {
+            texId: HALL_DUST_TEX_ID,
+            tint: _pickEnemyPaletteMid("dust"),
+            tilePx: HALL_DUST_TILE_PX | 0,
+            stepPct: HALL_DUST_TILE_STEP_PCT,
+            alpha: HALL_DUST_ALPHA,
+            maskAlpha: HALL_DUST_MASK_ALPHA,
+            puffAlpha: HALL_CLOUD_PUFF_ALPHA,
+            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+            tag: "hall/dust/demo",
+            demoIntroMs: HALL_DEMO_INTRO_MS | 0,
+            demoHoldMs: HALL_DEMO_HOLD_MS | 0,
+            demoFadeMs: HALL_DEMO_FADE_MS | 0,
+            paletteKey: "dust",
+            dustRise: true,
+            dustRiseMs: 2500,
+            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
+            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
+            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
+            dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y,
+            borderPerMask: true,
+            borderAlpha: 1,
+            borderOutlinePx: 1,
+            borderOutlineAlphaMin: 0.5,
+            doubleMask: true,
+            maskRotateSpeedRadPerMs: 0.00005,
+            mask2RotateSpeedRadPerMs: -0.000035,
+            maskFpsMult: HALL_DUST_MASK_FPS_DEFAULT,
+            mask2FpsMult: HALL_DUST_MASK2_FPS_DEFAULT,
+            maskFpsWobbleAmp: 0.0000001,
+            maskFpsWobblePeriodMs: 7000,
+            mask2FpsWobbleAmp: 0.00000008,
+            mask2FpsWobblePeriodMs: 9000,
+            fillFps: HALL_DUST_FILL_FPS,
+            smokeAnim: "alive"
+        })
 
-    _dunSpawnDebugCloud(baseX, yShow, {
-        texId: HALL_SHOWCASE_TEX_ID,
-        tint: 0xffffff,
-        tilePx: HALL_SHOWCASE_TILE_PX | 0,
-        stepPct: HALL_SHOWCASE_TILE_STEP_PCT,
-        alpha: HALL_SHOWCASE_ALPHA,
-        maskAlpha: 1,
-        puffAlpha: 1,
-        puffCount: 1,
-        tag: "hall/showcase",
-        lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
-        smokeAnim: "alive"
-    })
+        if (!onlyDust) _dunSpawnDebugCloud(rightX, yDemo, {
+            texId: HALL_POISON_TEX_ID,
+            tint: _pickEnemyPaletteMid("poison"),
+            tilePx: HALL_POISON_TILE_PX | 0,
+            stepPct: HALL_POISON_TILE_STEP_PCT,
+            alpha: HALL_POISON_ALPHA,
+            maskAlpha: HALL_POISON_MASK_ALPHA,
+            puffAlpha: HALL_CLOUD_PUFF_ALPHA_POISON,
+            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+            tag: "hall/poison/demo",
+            demoIntroMs: HALL_DEMO_INTRO_MS | 0,
+            demoHoldMs: HALL_DEMO_HOLD_MS | 0,
+            demoFadeMs: HALL_DEMO_FADE_MS | 0,
+            paletteKey: "poison",
+            borderUseFillColors: true,
+            borderOutlineFromFill: false,
+            borderAlpha: 1,
+            borderPadOutPx: 0,
+            borderOutlinePx: 1,
+            borderOutlineAlphaMin: 0.5,
+            doubleMask: true,
+            maskRotateSpeedRadPerMs: 0.00005,
+            mask2RotateSpeedRadPerMs: -0.000035,
+            maskFpsMult: HALL_POISON_MASK_FPS_MULT,
+            mask2FpsMult: HALL_POISON_MASK2_FPS_MULT,
+            maskFpsWobbleAmp: 0.0000001,
+            maskFpsWobblePeriodMs: 7000,
+            mask2FpsWobbleAmp: 0.00000008,
+            mask2FpsWobblePeriodMs: 9000,
+            smokeAnim: "alive"
+        })
 
-    _dunSpawnDebugCloud(baseX, yStatic, {
-        texId: HALL_DUST_TEX_ID,
-        tint: _pickEnemyPaletteMid("earth"),
-        tilePx: HALL_DUST_TILE_PX | 0,
-        stepPct: HALL_DUST_TILE_STEP_PCT,
-        alpha: HALL_DUST_ALPHA,
-        maskAlpha: HALL_DUST_MASK_ALPHA,
-        puffAlpha: HALL_CLOUD_PUFF_ALPHA,
-        puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-        tag: "hall/dust/static",
-        lifespanMs: 0,
-        paletteKey: "earth",
-        noDemo: true,
-        smokeAnim: "alive"
-    })
+        if (!onlyPoison) _dunSpawnDebugCloud(baseX, yShow, {
+            texId: HALL_SHOWCASE_TEX_ID,
+            tint: 0xffffff,
+            tilePx: HALL_SHOWCASE_TILE_PX | 0,
+            stepPct: HALL_SHOWCASE_TILE_STEP_PCT,
+            alpha: HALL_SHOWCASE_ALPHA,
+            maskAlpha: 1,
+            puffAlpha: 1,
+            puffCount: 1,
+            tag: "hall/showcase",
+            lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+            smokeAnim: "alive"
+        })
+
+        if (!onlyPoison) _dunSpawnDebugCloud(baseX, yStatic, {
+            texId: HALL_DUST_TEX_ID,
+            tint: _pickEnemyPaletteMid("dust"),
+            tilePx: HALL_DUST_TILE_PX | 0,
+            stepPct: HALL_DUST_TILE_STEP_PCT,
+            alpha: HALL_DUST_ALPHA,
+            maskAlpha: HALL_DUST_MASK_ALPHA,
+            puffAlpha: HALL_CLOUD_PUFF_ALPHA,
+            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+            tag: "hall/dust/static",
+            lifespanMs: 0,
+            dustFade: false,
+            paletteKey: "dust",
+            noDemo: true,
+            doubleMask: true,
+            dustRise: true,
+            dustRiseMs: 2500,
+            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
+            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
+            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
+            dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y,
+            borderPerMask: true,
+            borderAlpha: 1,
+            borderOutlinePx: 1,
+            borderOutlineAlphaMin: 0.5,
+            maskRotateSpeedRadPerMs: 0.00005,
+            mask2RotateSpeedRadPerMs: -0.000035,
+            maskFpsMult: HALL_DUST_MASK_FPS_DEFAULT,
+            mask2FpsMult: HALL_DUST_MASK2_FPS_DEFAULT,
+            maskFpsWobbleAmp: 1.8,
+            maskFpsWobblePeriodMs: 7000,
+            mask2FpsWobbleAmp: 1.4,
+            mask2FpsWobblePeriodMs: 9000,
+            fillFps: HALL_DUST_FILL_FPS,
+            smokeAnim: "alive"
+        })
+    }
 
     const worldCols = (_engineWorldTileMap && _engineWorldTileMap[0]) ? (_engineWorldTileMap[0].length | 0) : 0
-    if (worldCols >= HALL_ALPHA_ROW_COUNT) {
-        const row = 1
-        const yTop = _dunRowToY(Math.max(1, row | 0))
+    if (worldCols >= (HALL_ALPHA_ROW_COUNT | 0)) {
+        const isHallRows = !!DEBUG_EFFECTS_HALL_ONLY_ROWS
         const minCol = 1
         const maxCol = Math.max(minCol + 1, (worldCols - 2) | 0)
-        const steps = Math.max(1, HALL_ALPHA_ROW_COUNT | 0)
+        const steps = Math.max(1, (HALL_ALPHA_ROW_COUNT | 0))
+        const yTop = isHallRows ? ((hallBaseY - 40) | 0) : ((_dunRowToY(1) + 60) | 0)
+        const yTop2 = isHallRows ? ((hallBaseY + 80) | 0) : ((_dunRowToY(2) + 250) | 0)
+        const yLabel1 = (yTop - 66) | 0
+        const yLabel2 = (yTop2 - 66) | 0
+        const rowXs = null
+        const rowScales = null
+        if (!onlyPoison) {
+            const clusterY = (yTop2 + 40) | 0
+            const clusterX = (baseX | 0)
+            const dustRiseStart = (nowMs | 0)
+            const frontTag = "hall/dust/cluster/3|mask"
+            const clusterCfg = [
+                // Center (largest): steady rise/fall, no stagger.
+                { dxFrac: 0, dyFrac: 0.22, regionScale: 1.0, riseMs: 3000, riseOffsetMs: 0, endY: 0.7, endX: 1.2, riseSteps: [1], riseEasePow: 1, rotDeg: 0, fillOffset: 0, maskScaleMult: 1, maskFpsMult: 3.5, maskFrameOffset: 0, maskFlipX: false, maskFlipY: false },
+                // Left (larger) explodes early, then eases.
+                { dxFrac: -0.35, dyFrac: 0.10, regionScale: 0.7, riseMs: 3200, riseOffsetMs: 120, endY: 0.7, endX: 1.2, riseSteps: [50, 10, 20, 20], riseEasePow: 3, rotDeg: 0, fillOffset: 7, maskScaleMult: 1, maskFpsMult: 3.0, maskFrameOffset: 8, maskFlipX: false, maskFlipY: false },
+                // Right (medium) explodes later, with a top burst.
+                { dxFrac: 0.30, dyFrac: 0.14, regionScale: 0.55, riseMs: 3400, riseOffsetMs: 520, endY: 0.7, endX: 1.2, riseSteps: [18, 14, 40, 28], riseEasePow: 3, rotDeg: 0, fillOffset: 13, maskScaleMult: 1, maskFpsMult: 2.6, maskFrameOffset: 16, maskFlipX: false, maskFlipY: false },
+                // Front small (top) pops last.
+                { dxFrac: 0.20, dyFrac: 0.30, regionScale: 0.35, riseMs: 3600, riseOffsetMs: 900, endY: 0.7, endX: 1.2, riseSteps: [16, 16, 28, 40], riseEasePow: 3, rotDeg: 0, fillOffset: 19, maskScaleMult: 1.0, maskFpsMult: 2.2, maskFrameOffset: 24, maskFlipX: false, maskFlipY: false },
+            ]
+            for (let i = 0; i < clusterCfg.length; i++) {
+                const c = clusterCfg[i]
+                const sizeX = (HALL_CLOUD_WIDTH_PX | 0) * c.regionScale
+                const sizeY = (HALL_CLOUD_HEIGHT_PX | 0) * c.regionScale
+                const dx = Math.round(sizeX * c.dxFrac)
+                const dy = Math.round(sizeY * c.dyFrac)
+                const rotRad = (Number(c.rotDeg) * Math.PI) / 180
+                _dunSpawnDebugCloud((clusterX + (dx | 0)) | 0, (clusterY + (dy | 0)) | 0, {
+                    texId: HALL_DUST_TEX_ID,
+                    tint: _pickEnemyPaletteMid("dust"),
+                    tilePx: HALL_DUST_TILE_PX | 0,
+                    stepPct: HALL_DUST_TILE_STEP_PCT,
+                    alpha: HALL_DUST_ALPHA,
+                    maskAlpha: HALL_DUST_MASK_ALPHA,
+                    puffAlpha: 0,
+                    puffCount: 0,
+                    tag: `hall/dust/cluster/${i}`,
+                    paletteKey: "dust",
+                    noDemo: true,
+                    hideGeometry: false,
+                    dustRise: true,
+                    dustFade: false,
+                    dustRiseStartMs: (dustRiseStart + (c as any).riseOffsetMs) | 0,
+                    dustRiseMs: c.riseMs,
+                    dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
+                    dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
+                    dustRiseEndScaleX: c.endX,
+                    dustRiseEndScaleY: c.endY,
+                    dustRiseSteps: (c as any).riseSteps,
+                    dustRiseEasePow: (c as any).riseEasePow,
+                    dustCenterX: clusterX,
+                    dustCenterY: clusterY,
+                    dustOffsetX: dx,
+                    dustOffsetY: dy,
+                    borderPerMask: true,
+                    borderAlpha: 1,
+                    borderOutlinePx: 1,
+                    borderOutlineAlphaMin: HALL_DUST_BORDER_ALPHA_MIN,
+                    maskRotateSpeedRadPerMs: 0,
+                    maskRotateBaseRad: rotRad,
+                    doubleMask: false,
+                    maskFpsMult: Number.isFinite(c.maskFpsMult as any) ? Number(c.maskFpsMult) : HALL_DUST_MASK_FPS_DEFAULT,
+                    mask2FpsMult: 0,
+                    maskFpsWobbleAmp: 0,
+                    maskFpsWobblePeriodMs: 0,
+                    mask2FpsWobbleAmp: 0,
+                    mask2FpsWobblePeriodMs: 0,
+                    fillAlphaSplit: 0.5,
+                    fillFps: HALL_DUST_FILL_FPS,
+                    regionScale: c.regionScale,
+                    regionMinW: 64,
+                    regionMinH: 64,
+                    maskScaleMult: c.maskScaleMult,
+                    fillFrameOffset: c.fillOffset,
+                    maskFrameOffset: (c as any).maskFrameOffset,
+                    maskFlipX: !!(c as any).maskFlipX,
+                    maskFlipY: !!(c as any).maskFlipY,
+                    maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_MIN
+                })
+            }
+            // Ensure back layers are occluded by the front (small) layer, including outlines.
+            const frontMask = _dunEffectsHallFx.find((fx) => {
+                const tag = sprites.readDataString(fx, "__hallTag") || ""
+                return tag === frontTag
+            })
+            let frontOcclude: Sprite | null = null
+            if (frontMask) {
+                const existing = sprites.readDataSprite(frontMask, "__hallOccludeMask")
+                if (existing && !(existing.flags & sprites.Flag.Destroyed)) {
+                    frontOcclude = existing as any
+                } else {
+                    const baseSkin = (sprites.readDataString(frontMask, "effectSkin") || "").trim() || CLOUD_GEOMETRY_SKIN_ID
+                    const occludeSkin = _ensureMaskAlphaFloorSkin(baseSkin, 1, 1)
+                    const occluder = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+                    occluder.setFlag(SpriteFlag.Ghost, true)
+                    occluder.setFlag(SpriteFlag.Invisible, true)
+                    sprites.setDataString(occluder, "__hallTag", "hall/dust/cluster/occlude")
+                    sprites.setDataNumber(occluder, "__hallFollowMaskId", (frontMask.id | 0))
+                    occluder.x = frontMask.x
+                    occluder.y = frontMask.y
+                    occluder.z = 1005
+                    const fpsRaw = sprites.readDataNumber(frontMask, EFFECT_FPS_DATA_KEY)
+                    const occludeOpts: EffectApplyOpts = {
+                        alpha: 1,
+                        scale: 1,
+                        blend: "normal",
+                        forceTop: true,
+                        repeat: -1,
+                        fps: _vfxTweakFps(Number.isFinite(fpsRaw) && fpsRaw > 0 ? Number(fpsRaw) : 8),
+                        mode: "full"
+                    }
+                    applyEffectToSprite(occluder, occludeSkin, occludeOpts)
+                    _dunEffectsHallFx.push(occluder)
+                    sprites.setDataSprite(frontMask, "__hallOccludeMask", occluder as any)
+                    frontOcclude = occluder
+                }
+                for (let i = 0; i < _dunEffectsHallFx.length; i++) {
+                    const fx = _dunEffectsHallFx[i]
+                    if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+                    const tag = sprites.readDataString(fx, "__hallTag") || ""
+                    if (!tag.startsWith("hall/dust/cluster/")) continue
+                    if (tag.startsWith("hall/dust/cluster/3")) continue
+                    // Only occlude outlines; fills must keep their own masks for correct cropping.
+                    if (tag.indexOf("|mask-outline") < 0 && tag.indexOf("|mask2-outline") < 0) continue
+                    sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, (frontOcclude || frontMask) as any)
+                    sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 1)
+                    const native: any = (fx as any).native
+                    if (native) {
+                        try { native.__effectMaskInvert = true } catch { }
+                        try { native.setData?.(EFFECT_MASK_INVERT_DATA_KEY, 1) } catch { }
+                    }
+                }
+            }
+        }
+        const skipAlphaRow = (!!DEBUG_EFFECTS_HALL_ONLY_ROWS && !!DEBUG_EFFECTS_HALL_ONLY_DUST)
         for (let i = 0; i < steps; i++) {
             const t = (steps <= 1) ? 0 : (i / (steps - 1))
-            const maskScale = HALL_ALPHA_ROW_MIN_SCALE + ((HALL_ALPHA_ROW_MAX_SCALE - HALL_ALPHA_ROW_MIN_SCALE) * t)
-            const col = Math.round(minCol + ((maxCol - minCol) * t))
-            const x = _dunColToX(col | 0)
+            const maskScale = rowScales ? rowScales[i] : (HALL_ALPHA_ROW_MIN_SCALE + ((HALL_ALPHA_ROW_MAX_SCALE - HALL_ALPHA_ROW_MIN_SCALE) * t))
+            const x = rowXs ? (rowXs[i] | 0) : _dunColToX(Math.round(minCol + ((maxCol - minCol) * t)) | 0)
             const isOpaque = i === (steps - 1)
-            _dunSpawnDebugCloud(x | 0, yTop | 0, {
+            const alphaScaleDust = 1
+            const alphaScalePoison = 1
+            const speedScaleDust = HALL_DUST_MASK_FPS_MIN + ((HALL_DUST_MASK_FPS_MAX - HALL_DUST_MASK_FPS_MIN) * t)
+            const speedScalePoison = HALL_POISON_MASK_FPS_MULT
+            const borderAlpha = HALL_BORDER_ROW_MIN_ALPHA + ((HALL_BORDER_ROW_MAX_ALPHA - HALL_BORDER_ROW_MIN_ALPHA) * t)
+            const alphaDust = HALL_DUST_ALPHA * alphaScaleDust
+            const alphaPoison = HALL_POISON_ALPHA * alphaScalePoison
+            const labelDust = "a" + Number(alphaDust).toFixed(2) + " f" + Number(speedScaleDust).toFixed(2)
+            const labelPoison = "a" + Number(alphaPoison).toFixed(2) + " f" + Number(speedScalePoison).toFixed(2)
+            if (!onlyPoison && !skipAlphaRow) _dunSpawnDebugCloud(x | 0, yTop | 0, {
                 texId: HALL_DUST_TEX_ID,
-                tint: _pickEnemyPaletteMid("earth"),
+                tint: _pickEnemyPaletteMid("dust"),
                 tilePx: HALL_DUST_TILE_PX | 0,
                 stepPct: HALL_DUST_TILE_STEP_PCT,
-                alpha: HALL_DUST_ALPHA,
+                alpha: alphaDust,
                 maskAlpha: HALL_DUST_MASK_ALPHA,
                 puffAlpha: 0,
                 puffCount: 0,
-                tag: `hall/alpha/${i}`,
-                paletteKey: "earth",
+                tag: `hall/alpha/dust/${i}`,
+                paletteKey: "dust",
                 noDemo: true,
-                hideGeometry: true,
+                hideGeometry: false,
+                dustRise: true,
+                dustFade: false,
+                dustRiseStartMs: nowMs | 0,
+                dustRiseMs: Math.round(2500 + ((1 - t) * 2500)),
+                dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
+                dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
+                dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X + (t * 0.2),
+                dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y + (t * 0.15),
+                borderPerMask: true,
+                borderAlpha: borderAlpha,
+                borderOutlinePx: 1,
+                borderOutlineAlphaMin: 0.5,
+                maskRotateSpeedRadPerMs: 0,
+                maskRotateBaseRad: 0,
+                doubleMask: false,
+                maskFpsMult: speedScaleDust,
+                mask2FpsMult: 0,
+                maskFpsWobbleAmp: 0,
+                maskFpsWobblePeriodMs: 0,
+                mask2FpsWobbleAmp: 0,
+                mask2FpsWobblePeriodMs: 0,
+                fillAlphaSplit: 0.5,
+                fillFps: HALL_DUST_FILL_FPS,
                 maskAlphaScale: isOpaque ? undefined : maskScale,
                 forceOpaqueMask: isOpaque ? true : undefined,
                 probeKey: isOpaque ? "maskOpaque" : "maskAlphaScale",
                 probeValue: isOpaque ? 1 : maskScale,
-                smokeAnim: "alive"
+                smokeAnim: "aliveSlow"
             })
+            if (!onlyPoison && !skipAlphaRow) _dunSpawnHallAlphaLabel(x | 0, yLabel1 | 0, labelDust)
+            if (!onlyDust) _dunSpawnDebugCloud(x | 0, yTop2 | 0, {
+                texId: HALL_POISON_TEX_ID,
+                tint: _pickEnemyPaletteMid("poison"),
+                tilePx: HALL_POISON_TILE_PX | 0,
+                stepPct: HALL_POISON_TILE_STEP_PCT,
+                alpha: alphaPoison,
+                maskAlpha: HALL_POISON_MASK_ALPHA,
+                puffAlpha: 0,
+                puffCount: 0,
+                tag: `hall/alpha/poison/${i}`,
+                paletteKey: "poison",
+                noDemo: true,
+                hideGeometry: false,
+                maskRotateSpeedRadPerMs: 0.00005,
+                doubleMask: true,
+                mask2RotateSpeedRadPerMs: -0.000035,
+                maskFpsMult: speedScalePoison,
+                mask2FpsMult: Math.max(0.2, speedScalePoison * 0.85),
+                maskFpsWobbleAmp: 0.0000001,
+                maskFpsWobblePeriodMs: 7000,
+                mask2FpsWobbleAmp: 0.00000008,
+                mask2FpsWobblePeriodMs: 9000,
+                fillAlphaSplit: 0.5,
+                maskAlphaScale: isOpaque ? undefined : maskScale,
+                forceOpaqueMask: isOpaque ? true : undefined,
+                probeKey: isOpaque ? "maskOpaque" : "maskAlphaScale",
+                probeValue: isOpaque ? 1 : maskScale,
+                smokeAnim: "aliveSlow"
+            })
+            if (!onlyDust) _dunSpawnHallAlphaLabel(x | 0, yLabel2 | 0, labelPoison)
         }
     }
 
     if (DEBUG_EFFECTS_DUMP_ON_HALL) _heQueueEffectsDump("effects-hall", 1200)
+    if (DEBUG_EFFECTS_HALL_TRACE) _heStartEffectsHallTrace(game.runtime() | 0)
 
 }
 
@@ -19708,6 +20313,17 @@ function _dunClearEffectsHall(): void {
     }
 }
 
+function _dunSpawnHallAlphaLabel(x: number, y: number, text: string): void {
+    if (!text) return
+    const txt = textsprite.create(String(text || ""), 0, 1)
+    txt.setMaxFontHeight(7)
+    txt.setOutline(1, 15)
+    txt.setPosition(x | 0, y | 0)
+    txt.z = 1100
+    txt.setFlag(SpriteFlag.Ghost, true)
+    _dunEffectsHallFx.push(txt as any)
+}
+
 function _dunClearHallEffectSpritesAll(): number {
     if ((_dunFloorKind || "") !== DUNGEON_KIND_HALL) return 0
     let killed = 0
@@ -19725,10 +20341,173 @@ function _dunClearHallEffectSpritesAll(): number {
     return killed | 0
 }
 
-function _pickEnemyPaletteMid(key: "earth" | "poison"): number {
-    const palette = (ENEMY_EFFECT_PALETTES as any)?.[key] as number[] | undefined
+const _dustPaletteCache: Record<string, number[]> = {}
+
+function _blendPaletteColor(a: number, b: number, aWeight: number): number {
+    const ar = (a >> 16) & 0xff
+    const ag = (a >> 8) & 0xff
+    const ab = a & 0xff
+    const br = (b >> 16) & 0xff
+    const bg = (b >> 8) & 0xff
+    const bb = b & 0xff
+    const w = Math.max(0, Math.min(1, aWeight))
+    const rw = Math.round((ar * w) + (br * (1 - w)))
+    const gw = Math.round((ag * w) + (bg * (1 - w)))
+    const bw = Math.round((ab * w) + (bb * (1 - w)))
+    return ((rw & 0xff) << 16) | ((gw & 0xff) << 8) | (bw & 0xff)
+}
+
+function _resolveEnemyPalette(key: string, paletteSet: any): number[] | null {
+    if (!paletteSet || !key) return null
+    if (key !== "dust") {
+        const palette = paletteSet[key] as number[] | undefined
+        return palette && palette.length ? palette : null
+    }
+    const earth = paletteSet.earth as number[] | undefined
+    const air = paletteSet.air as number[] | undefined
+    if (!earth || !earth.length) return null
+    const base = (air && air.length) ? air : earth
+    const count = Math.min(earth.length, base.length)
+    const cacheKey = `${key}|${count}|${earth[0] | 0}|${base[0] | 0}`
+    const cached = _dustPaletteCache[cacheKey]
+    if (cached && cached.length === count) return cached
+    const mix: number[] = []
+    const earthWeight = 0.4
+    for (let i = 0; i < count; i++) {
+        mix.push(_blendPaletteColor(earth[i] | 0, base[i] | 0, earthWeight))
+    }
+    _dustPaletteCache[cacheKey] = mix
+    return mix
+}
+
+function _pickEnemyPaletteMid(key: "earth" | "poison" | "dust"): number {
+    const palette = _resolveEnemyPalette(key, ENEMY_EFFECT_PALETTES as any)
     if (!palette || !palette.length) return 0
     return palette[Math.idiv(Math.max(0, palette.length - 1), 2) | 0] | 0
+}
+
+function _pickEnemyPaletteBright(key: "earth" | "poison" | "dust"): number {
+    const palette = _resolveEnemyPalette(key, ENEMY_EFFECT_PALETTES as any)
+    if (!palette || !palette.length) return 0
+    return palette[Math.max(0, palette.length - 1) | 0] | 0
+}
+
+function _getAuraMaskSkinId(r: 1 | 2 | 3): string {
+    const rr = (r === 1 || r === 2 || r === 3) ? r : 1
+    return `${CLOUD_AURA_BASE_SKIN_ID}_aura_r${rr}`
+}
+
+function _ensureAuraOutlineSkin(outerR: 1 | 2 | 3, innerR: 1 | 2 | 3): string {
+    const outerSkin = _getAuraMaskSkinId(outerR)
+    const innerSkin = _getAuraMaskSkinId(innerR)
+    if (outerSkin === innerSkin) return outerSkin
+    const cacheKey = `${outerSkin}|${innerSkin}`
+    if (_auraOutlineCache[cacheKey]) return _auraOutlineCache[cacheKey]
+
+    const atlas = _getEffectAtlasAny()
+    if (!atlas) return outerSkin
+    const outer = _resolveEffectEntry(atlas, outerSkin, "")
+    const inner = _resolveEffectEntry(atlas, innerSkin, "")
+    if (!outer || !inner) return outerSkin
+    const fw = outer.frameW | 0
+    const fh = outer.frameH | 0
+    if (fw <= 0 || fh <= 0) return outerSkin
+    const outerFrames = outer.frameIndices && outer.frameIndices.length ? outer.frameIndices.slice() : []
+    const innerFrames = inner.frameIndices && inner.frameIndices.length ? inner.frameIndices.slice() : []
+    if (!outerFrames.length || !innerFrames.length) return outerSkin
+
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    if (!sc || !sc.textures || !sc.textures.exists(outer.textureKey) || !sc.textures.exists(inner.textureKey)) {
+        return outerSkin
+    }
+
+    const outKey = `effects.auraoutline.${outerSkin.replace(/\\s+/g, "_").toLowerCase()}_${innerSkin.replace(/\\s+/g, "_").toLowerCase()}.v${_auraOutlineVersion}`
+    const maxTex = (sc.renderer && Number.isFinite((sc.renderer as any).maxTextureSize))
+        ? Math.max(256, ((sc.renderer as any).maxTextureSize | 0))
+        : 4096
+    const cols = Math.max(1, Math.min(outerFrames.length, Math.floor(maxTex / Math.max(1, fw))))
+    const rows = Math.max(1, Math.ceil(outerFrames.length / cols))
+    const canvasW = Math.max(1, cols * fw)
+    const canvasH = Math.max(1, rows * fh)
+    if (canvasW > maxTex || canvasH > maxTex) return outerSkin
+    const canvasTex = sc.textures.createCanvas(outKey, canvasW, canvasH)
+    if (!canvasTex) return outerSkin
+    const ctx = canvasTex.getContext()
+    if (!ctx) return outerSkin
+
+    const outerTex = sc.textures.get(outer.textureKey)
+    const innerTex = sc.textures.get(inner.textureKey)
+    const srcOuter = document.createElement("canvas")
+    const srcInner = document.createElement("canvas")
+    srcOuter.width = fw
+    srcOuter.height = fh
+    srcInner.width = fw
+    srcInner.height = fh
+    const outerCtx = srcOuter.getContext("2d", { willReadFrequently: true } as any)
+    const innerCtx = srcInner.getContext("2d", { willReadFrequently: true } as any)
+    if (!outerCtx || !innerCtx) return outerSkin
+
+    for (let i = 0; i < outerFrames.length; i++) {
+        const outerFrame = outerFrames[i] | 0
+        const innerFrame = innerFrames[i % innerFrames.length] | 0
+        const fOuter = outerTex.get(outerFrame)
+        const fInner = innerTex.get(innerFrame)
+        if (!fOuter || !fOuter.source || !fOuter.source.image) continue
+        if (!fInner || !fInner.source || !fInner.source.image) continue
+        const imgOuter = fOuter.source.image as HTMLImageElement | HTMLCanvasElement
+        const imgInner = fInner.source.image as HTMLImageElement | HTMLCanvasElement
+        const sxO = (fOuter.cutX | 0)
+        const syO = (fOuter.cutY | 0)
+        const sxI = (fInner.cutX | 0)
+        const syI = (fInner.cutY | 0)
+        outerCtx.clearRect(0, 0, fw, fh)
+        innerCtx.clearRect(0, 0, fw, fh)
+        try { outerCtx.drawImage(imgOuter, sxO, syO, fw, fh, 0, 0, fw, fh) } catch { }
+        try { innerCtx.drawImage(imgInner, sxI, syI, fw, fh, 0, 0, fw, fh) } catch { }
+        const dataOuter = outerCtx.getImageData(0, 0, fw, fh)
+        const dataInner = innerCtx.getImageData(0, 0, fw, fh)
+        const out = dataOuter.data
+        const inn = dataInner.data
+        for (let p = 0; p < out.length; p += 4) {
+            const a = out[p + 3] | 0
+            const b = inn[p + 3] | 0
+            const na = Math.max(0, a - b)
+            out[p] = 255
+            out[p + 1] = 255
+            out[p + 2] = 255
+            out[p + 3] = na
+        }
+        outerCtx.putImageData(dataOuter, 0, 0)
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        ctx.drawImage(srcOuter, col * fw, row * fh)
+    }
+
+    canvasTex.refresh()
+    const seq: number[] = []
+    for (let i = 0; i < outerFrames.length; i++) {
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        try { canvasTex.add(i, 0, col * fw, row * fh, fw, fh) } catch { }
+        seq.push(i | 0)
+    }
+
+    const newId = `${outerSkin}__outline_${innerSkin.replace(/\\s+/g, "_").toLowerCase()}`
+    ;(atlas as any)[newId] = {
+        id: newId,
+        textureKey: outKey,
+        url: "",
+        frameIndices: seq,
+        frameRate: outer.frameRate,
+        repeat: outer.repeat,
+        frameW: fw,
+        frameH: fh,
+        palette: outer.palette,
+        collisionBounds: outer.collisionBounds
+    }
+    _auraOutlineCache[cacheKey] = newId
+    return newId
 }
 
 type DebugCloudConfig = {
@@ -19742,19 +20521,69 @@ type DebugCloudConfig = {
     puffCount: number
     tag?: string
     hideGeometry?: boolean
+    borderAura?: 1 | 2 | 3
+    borderInnerAura?: 1 | 2 | 3
+    borderUseFillColors?: boolean
+    borderOutlineFromFill?: boolean
+    borderPadOutPx?: number
+    borderAlphaMin?: number
+    borderAlpha?: number
+    borderTint?: number
+    borderForceOpaqueMask?: boolean
+    borderOutlinePx?: number
+    borderOutlineAlphaMin?: number
+    borderPerMask?: boolean
     lifespanMs?: number
     demoIntroMs?: number
     demoHoldMs?: number
     demoFadeMs?: number
-    paletteKey?: "earth" | "poison"
+    paletteKey?: "earth" | "poison" | "dust"
     enforcePaletteOnGeometry?: boolean
     maskAlphaScale?: number
+    maskAlphaMinClamp?: number
     probeKey?: string
     probeValue?: number
     noDemo?: boolean
-    smokeAnim?: "alive" | "fade" | "static"
+    smokeAnim?: "alive" | "aliveSlow" | "fade" | "static"
     forceOpaqueMask?: boolean
     forceOpaqueFill?: boolean
+    maskAlphaMinClamp?: number
+    maskRotateSpeedRadPerMs?: number
+    maskRotateBaseRad?: number
+    maskFpsMult?: number
+    maskFpsWobbleAmp?: number
+    maskFpsWobblePeriodMs?: number
+    doubleMask?: boolean
+    mask2RotateSpeedRadPerMs?: number
+    mask2RotateBaseRad?: number
+    mask2FpsMult?: number
+    mask2FpsWobbleAmp?: number
+    mask2FpsWobblePeriodMs?: number
+    dustRise?: boolean
+    dustFade?: boolean
+    dustRiseSteps?: number[]
+    dustRiseEasePow?: number
+    dustRiseMs?: number
+    dustRiseStartMs?: number
+    dustRiseStartScaleX?: number
+    dustRiseStartScaleY?: number
+    dustRiseEndScaleX?: number
+    dustRiseEndScaleY?: number
+    dustRiseScaleMult?: number
+    fillFrameOffset?: number
+    regionMinW?: number
+    regionMinH?: number
+    dustCenterX?: number
+    dustCenterY?: number
+    dustOffsetX?: number
+    dustOffsetY?: number
+    fillAlphaSplit?: number
+    fillFps?: number
+    regionScale?: number
+    maskScaleMult?: number
+    maskFrameOffset?: number
+    maskFlipX?: boolean
+    maskFlipY?: boolean
 }
 
 type VfxTweakState = {
@@ -19771,7 +20600,10 @@ type VfxTweakState = {
     disablePaletteMap?: boolean
     paletteGeometry?: boolean
     hideGeometry?: boolean
-    smokeAnim?: "alive" | "fade" | "static"
+    borderAlphaMin?: number
+    borderAlpha?: number
+    borderPadOutPx?: number
+    smokeAnim?: "alive" | "aliveSlow" | "fade" | "static"
 }
 
 const _vfxTweakDefaults: VfxTweakState = {
@@ -19788,6 +20620,9 @@ const _vfxTweakDefaults: VfxTweakState = {
     disablePaletteMap: false,
     paletteGeometry: true,
     hideGeometry: false,
+    borderAlphaMin: NaN,
+    borderAlpha: NaN,
+    borderPadOutPx: NaN,
     smokeAnim: "alive"
 }
 
@@ -19809,6 +20644,9 @@ function _getVfxTweak(): VfxTweakState {
         disablePaletteMap: !!raw.disablePaletteMap,
         paletteGeometry: (raw.paletteGeometry ?? _vfxTweakDefaults.paletteGeometry) ? true : false,
         hideGeometry: (raw.hideGeometry ?? _vfxTweakDefaults.hideGeometry) ? true : false,
+        borderAlphaMin: Number.isFinite(raw.borderAlphaMin) ? Number(raw.borderAlphaMin) : _vfxTweakDefaults.borderAlphaMin,
+        borderAlpha: Number.isFinite(raw.borderAlpha) ? Number(raw.borderAlpha) : _vfxTweakDefaults.borderAlpha,
+        borderPadOutPx: Number.isFinite(raw.borderPadOutPx) ? Number(raw.borderPadOutPx) : _vfxTweakDefaults.borderPadOutPx,
         smokeAnim: (raw.smokeAnim || _vfxTweakDefaults.smokeAnim) as any
     }
 }
@@ -19829,10 +20667,11 @@ function _vfxTweakFps(baseFps: number): number {
     return Math.max(1, Math.round((baseFps | 0) * m))
 }
 
-function _applySmokeAnim(opts: EffectApplyOpts, mode: "alive" | "fade" | "static"): void {
+function _applySmokeAnim(opts: EffectApplyOpts, mode: "alive" | "aliveSlow" | "fade" | "static"): void {
     if (!opts) return
     const tweak = _getVfxTweak()
-    const m = ((tweak.enabled && tweak.smokeAnim) ? tweak.smokeAnim : mode) as string
+    const mRaw = ((tweak.enabled && tweak.smokeAnim) ? tweak.smokeAnim : mode) as string
+    const m = String(mRaw || "").toLowerCase()
     if (m === "static") {
         opts.frameIndex = 0
         opts.frameIndexIsRaw = true
@@ -19848,10 +20687,24 @@ function _applySmokeAnim(opts: EffectApplyOpts, mode: "alive" | "fade" | "static
         opts.fps = _vfxTweakFps(SMOKE_ANIM_FADE_FPS | 0)
         return
     }
-    opts.frameList = SMOKE_ANIM_ALIVE_FRAMES
+    if (m === "aliveslow") {
+        if (!_smokeAliveSlowFramesCache) {
+            _smokeAliveSlowFramesCache = _buildSmokePingPongFrames(SMOKE_ANIM_ALIVE_FRAME_COUNT | 0)
+        }
+        opts.frameList = _smokeAliveSlowFramesCache
+        opts.frameListIsRaw = true
+        opts.repeat = -1
+        opts.yoyo = false
+        opts.fps = _vfxTweakFps(SMOKE_ANIM_ALIVE_SLOW_FPS | 0)
+        return
+    }
+    if (!_smokeAliveFramesCache) {
+        _smokeAliveFramesCache = _buildSmokePingPongFrames(SMOKE_ANIM_ALIVE_FRAME_COUNT | 0)
+    }
+    opts.frameList = _smokeAliveFramesCache
     opts.frameListIsRaw = true
     opts.repeat = -1
-    opts.yoyo = true
+    opts.yoyo = false
     opts.fps = _vfxTweakFps(SMOKE_ANIM_ALIVE_FPS | 0)
 }
 
@@ -19883,45 +20736,358 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
             forceOpaqueFill: useOpaqueMask
         } as DebugCloudConfig)
     }
-    if (!useOpaqueMask && Number.isFinite(cfg.maskAlphaScale) && Math.abs((cfg.maskAlphaScale as number) - 1) > 0.01) {
+    const maskAlphaScale = Number.isFinite(cfg.maskAlphaScale) ? Number(cfg.maskAlphaScale) : 1
+    const maskAlphaMinClamp = Number.isFinite(cfg.maskAlphaMinClamp) ? Number(cfg.maskAlphaMinClamp) : 0
+    if (!useOpaqueMask && maskAlphaMinClamp > 0) {
+        maskSkin = _ensureMaskAlphaFloorSkin(maskSkin, maskAlphaMinClamp, maskAlphaScale)
+    } else if (!useOpaqueMask && Number.isFinite(cfg.maskAlphaScale) && Math.abs((cfg.maskAlphaScale as number) - 1) > 0.01) {
         maskSkin = _ensureMaskAlphaSkin(maskSkin, Number(cfg.maskAlphaScale))
     }
     const cloudTint = (tweak.enabled && Number.isFinite(tweak.tintOverride))
         ? ((tweak.tintOverride as number) | 0)
         : ((cfg.tint | 0) || 0)
-    const regionW = Math.max(80, HALL_CLOUD_WIDTH_PX | 0) | 0
-    const regionH = Math.max(60, HALL_CLOUD_HEIGHT_PX | 0) | 0
+    const regionScale = Number.isFinite(cfg.regionScale) ? Math.max(0.2, Number(cfg.regionScale)) : 1
+    const minW = Number.isFinite(cfg.regionMinW) ? Math.max(1, Number(cfg.regionMinW)) : 80
+    const minH = Number.isFinite(cfg.regionMinH) ? Math.max(1, Number(cfg.regionMinH)) : 60
+    const regionW = Math.max(minW, Math.round((HALL_CLOUD_WIDTH_PX | 0) * regionScale)) | 0
+    const regionH = Math.max(minH, Math.round((HALL_CLOUD_HEIGHT_PX | 0) * regionScale)) | 0
     const regionMinX = (cx - Math.idiv(regionW, 2)) | 0
     const regionMaxX = (cx + Math.idiv(regionW, 2)) | 0
     const regionMinY = (cy - Math.idiv(regionH, 2)) | 0
     const regionMaxY = (cy + Math.idiv(regionH, 2)) | 0
     const tilePx = Math.max(32, cfg.tilePx | 0) | 0
     const maskRadius = Math.max(Math.idiv(regionW, 2) | 0, Math.idiv(regionH, 2) | 0) + 18
-    const maskScale = _effectPickScaleForRadius(CLOUD_GEOMETRY_SKIN_ID, "", maskRadius | 0)
+    const maskScaleRaw = _effectPickScaleForRadius(CLOUD_GEOMETRY_SKIN_ID, "", maskRadius | 0)
+    const maskScaleMult = Number.isFinite(cfg.maskScaleMult) ? Math.max(0.2, Number(cfg.maskScaleMult)) : 1
+    const maskScale = maskScaleRaw * maskScaleMult
 
-    const maskFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
-    maskFx.setFlag(SpriteFlag.Ghost, true)
-    if (cfg.tag) sprites.setDataString(maskFx, "__hallTag", `${cfg.tag}|mask`)
     const hideGeom = (typeof cfg.hideGeometry === "boolean") ? cfg.hideGeometry : (tweak.enabled && tweak.hideGeometry)
-    if (hideGeom) maskFx.setFlag(SpriteFlag.Invisible, true)
-    maskFx.x = cx | 0
-    maskFx.y = cy | 0
-    maskFx.z = 1000
-    if ((cfg.lifespanMs | 0) > 0) maskFx.lifespan = cfg.lifespanMs | 0
-    const maskOpts: EffectApplyOpts = {
-        alpha: _vfxTweakAlpha(Math.max(0.05, Math.min(1, cfg.maskAlpha)), tweak.maskAlphaMult),
-        scale: maskScale,
-        blend: "normal",
-        forceTop: true,
-        repeat: -1,
-        fps: _vfxTweakFps(8),
-        mode: "full"
+
+    const makeMask = (tagSuffix: string, rotSpeed?: number, rotBase?: number, fpsMult?: number, wobbleAmp?: number, wobblePeriod?: number): Sprite => {
+        const mfx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+        mfx.setFlag(SpriteFlag.Ghost, true)
+        if (cfg.tag) sprites.setDataString(mfx, "__hallTag", `${cfg.tag}|${tagSuffix}`)
+        sprites.setDataNumber(mfx, "__hallSpawnX", cx | 0)
+        sprites.setDataNumber(mfx, "__hallSpawnY", cy | 0)
+        if (Number.isFinite(rotSpeed)) {
+            sprites.setDataNumber(mfx, "__hallRotSpeed", Number(rotSpeed))
+            if (Number.isFinite(rotBase)) sprites.setDataNumber(mfx, "__hallRotBase", Number(rotBase))
+        } else if (Number.isFinite(rotBase)) {
+            sprites.setDataNumber(mfx, "__hallRotSpeed", 0)
+            sprites.setDataNumber(mfx, "__hallRotBase", Number(rotBase))
+        }
+        if (Number.isFinite(fpsMult)) sprites.setDataNumber(mfx, "__hallFpsMult", Number(fpsMult))
+        if (Number.isFinite(wobbleAmp)) sprites.setDataNumber(mfx, "__hallFpsWobbleAmp", Number(wobbleAmp))
+        if (Number.isFinite(wobblePeriod)) sprites.setDataNumber(mfx, "__hallFpsWobblePeriod", Number(wobblePeriod))
+        if (Number.isFinite(cfg.maskFrameOffset)) sprites.setDataNumber(mfx, "__hallMaskFrameOffset", Number(cfg.maskFrameOffset))
+        mfx.x = cx | 0
+        mfx.y = cy | 0
+        mfx.z = 1000
+        if ((cfg.lifespanMs | 0) > 0) mfx.lifespan = cfg.lifespanMs | 0
+        const maskOpts: EffectApplyOpts = {
+            alpha: _vfxTweakAlpha(Math.max(0.05, Math.min(1, cfg.maskAlpha)), tweak.maskAlphaMult),
+            scale: maskScale,
+            blend: "normal",
+            forceTop: true,
+            repeat: -1,
+            fps: _vfxTweakFps(8),
+            mode: "full"
+        }
+        if (hideGeom) {
+            maskOpts.alpha = 0
+            maskOpts.forceVisible = true
+        }
+        _applySmokeAnim(maskOpts, (cfg.smokeAnim || "alive") as any)
+        if (cloudTint) maskOpts.tint = cloudTint | 0
+        applyEffectToSprite(mfx, maskSkin, maskOpts)
+        if (Number.isFinite(cfg.maskFrameOffset)) {
+            const atlas = _getEffectAtlasAny()
+            const resolved = atlas ? _resolveEffectEntry(atlas, maskSkin, "") : null
+            const frames = resolved && resolved.frameIndices ? resolved.frameIndices : null
+            if (frames && frames.length > 1) {
+                const len = frames.length | 0
+                let off = (cfg.maskFrameOffset as number) | 0
+                off = ((off % len) + len) % len
+                if (off !== 0) {
+                    const list: number[] = []
+                    for (let i = 0; i < len; i++) list.push((i + off) % len)
+                    sprites.setDataString(mfx, EFFECT_FRAME_LIST_DATA_KEY, list.join(","))
+                    sprites.setDataNumber(mfx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, 0)
+                }
+            }
+        }
+        if (cfg.maskFlipX) sprites.setDataNumber(mfx, EFFECT_FLIP_X_DATA_KEY, 1)
+        if (cfg.maskFlipY) sprites.setDataNumber(mfx, EFFECT_FLIP_Y_DATA_KEY, 1)
+        if (Number.isFinite(rotBase) && (!Number.isFinite(rotSpeed) || rotSpeed === 0)) {
+            sprites.setDataNumber(mfx, EFFECT_ROT_DATA_KEY, Number(rotBase))
+        }
+        if (!cfg.noDemo) _hallDemoTag(mfx, cfg.maskAlpha, cfg)
+        _dunEffectsHallFx.push(mfx)
+        return mfx
     }
-    _applySmokeAnim(maskOpts, (cfg.smokeAnim || "alive") as any)
-    if (cloudTint) maskOpts.tint = cloudTint | 0
-    applyEffectToSprite(maskFx, maskSkin, maskOpts)
-    if (!cfg.noDemo) _hallDemoTag(maskFx, cfg.maskAlpha, cfg)
-    _dunEffectsHallFx.push(maskFx)
+
+    const maskFx = makeMask("mask", cfg.maskRotateSpeedRadPerMs, cfg.maskRotateBaseRad, cfg.maskFpsMult, cfg.maskFpsWobbleAmp, cfg.maskFpsWobblePeriodMs)
+    const maskFx2 = cfg.doubleMask
+        ? makeMask("mask2", cfg.mask2RotateSpeedRadPerMs, cfg.mask2RotateBaseRad, cfg.mask2FpsMult, cfg.mask2FpsWobbleAmp, cfg.mask2FpsWobblePeriodMs)
+        : null
+    if (cfg.dustRise && maskFx) {
+        const dcx = Number.isFinite(cfg.dustCenterX) ? Number(cfg.dustCenterX) : (cx | 0)
+        const dcy = Number.isFinite(cfg.dustCenterY) ? Number(cfg.dustCenterY) : (cy | 0)
+        const dox = Number.isFinite(cfg.dustOffsetX) ? Number(cfg.dustOffsetX) : 0
+        const doy = Number.isFinite(cfg.dustOffsetY) ? Number(cfg.dustOffsetY) : 0
+        const riseMult = Number.isFinite(cfg.dustRiseScaleMult)
+            ? Math.max(0.05, Number(cfg.dustRiseScaleMult))
+            : 1
+        sprites.setDataNumber(maskFx, "__hallDustRise", 1)
+        const allowFade = (cfg.dustFade === true) || ((cfg.dustFade !== false) && ((cfg.lifespanMs | 0) > 0))
+        sprites.setDataNumber(maskFx, "__hallDustAllowFade", allowFade ? 1 : 0)
+        if (Array.isArray(cfg.dustRiseSteps) && cfg.dustRiseSteps.length >= 2) {
+            const list = cfg.dustRiseSteps.map((v) => Math.max(1, (v | 0))).join(",")
+            sprites.setDataString(maskFx, "__hallDustRiseSteps", list)
+        }
+        if (Number.isFinite(cfg.dustRiseStartMs)) sprites.setDataNumber(maskFx, "__hallDustRiseStart", Number(cfg.dustRiseStartMs))
+        if (Number.isFinite(cfg.dustRiseMs)) sprites.setDataNumber(maskFx, "__hallDustRiseMs", Number(cfg.dustRiseMs))
+        sprites.setDataNumber(maskFx, "__hallDustRiseScaleMult", riseMult)
+        if (Number.isFinite(cfg.dustRiseStartScaleX)) sprites.setDataNumber(maskFx, "__hallDustRiseStartScaleX", Number(cfg.dustRiseStartScaleX))
+        if (Number.isFinite(cfg.dustRiseStartScaleY)) sprites.setDataNumber(maskFx, "__hallDustRiseStartScaleY", Number(cfg.dustRiseStartScaleY))
+        if (Number.isFinite(cfg.dustRiseEndScaleX)) sprites.setDataNumber(maskFx, "__hallDustRiseEndScaleX", Number(cfg.dustRiseEndScaleX))
+        if (Number.isFinite(cfg.dustRiseEndScaleY)) sprites.setDataNumber(maskFx, "__hallDustRiseEndScaleY", Number(cfg.dustRiseEndScaleY))
+        if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(maskFx, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
+        sprites.setDataNumber(maskFx, "__hallDustCenterX", dcx)
+        sprites.setDataNumber(maskFx, "__hallDustCenterY", dcy)
+        sprites.setDataNumber(maskFx, "__hallDustOffsetX", dox)
+        sprites.setDataNumber(maskFx, "__hallDustOffsetY", doy)
+    }
+    if (cfg.dustRise && maskFx2) {
+        const dcx = Number.isFinite(cfg.dustCenterX) ? Number(cfg.dustCenterX) : (cx | 0)
+        const dcy = Number.isFinite(cfg.dustCenterY) ? Number(cfg.dustCenterY) : (cy | 0)
+        const dox = Number.isFinite(cfg.dustOffsetX) ? Number(cfg.dustOffsetX) : 0
+        const doy = Number.isFinite(cfg.dustOffsetY) ? Number(cfg.dustOffsetY) : 0
+        const riseMult = Number.isFinite(cfg.dustRiseScaleMult)
+            ? Math.max(0.05, Number(cfg.dustRiseScaleMult))
+            : 1
+        sprites.setDataNumber(maskFx2, "__hallDustRise", 1)
+        const allowFade2 = (cfg.dustFade === true) || ((cfg.dustFade !== false) && ((cfg.lifespanMs | 0) > 0))
+        sprites.setDataNumber(maskFx2, "__hallDustAllowFade", allowFade2 ? 1 : 0)
+        if (Array.isArray(cfg.dustRiseSteps) && cfg.dustRiseSteps.length >= 2) {
+            const list = cfg.dustRiseSteps.map((v) => Math.max(1, (v | 0))).join(",")
+            sprites.setDataString(maskFx2, "__hallDustRiseSteps", list)
+        }
+        if (Number.isFinite(cfg.dustRiseStartMs)) sprites.setDataNumber(maskFx2, "__hallDustRiseStart", Number(cfg.dustRiseStartMs))
+        if (Number.isFinite(cfg.dustRiseMs)) sprites.setDataNumber(maskFx2, "__hallDustRiseMs", Number(cfg.dustRiseMs))
+        sprites.setDataNumber(maskFx2, "__hallDustRiseScaleMult", riseMult)
+        if (Number.isFinite(cfg.dustRiseStartScaleX)) sprites.setDataNumber(maskFx2, "__hallDustRiseStartScaleX", Number(cfg.dustRiseStartScaleX))
+        if (Number.isFinite(cfg.dustRiseStartScaleY)) sprites.setDataNumber(maskFx2, "__hallDustRiseStartScaleY", Number(cfg.dustRiseStartScaleY))
+        if (Number.isFinite(cfg.dustRiseEndScaleX)) sprites.setDataNumber(maskFx2, "__hallDustRiseEndScaleX", Number(cfg.dustRiseEndScaleX))
+        if (Number.isFinite(cfg.dustRiseEndScaleY)) sprites.setDataNumber(maskFx2, "__hallDustRiseEndScaleY", Number(cfg.dustRiseEndScaleY))
+        if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(maskFx2, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
+        sprites.setDataNumber(maskFx2, "__hallDustCenterX", dcx)
+        sprites.setDataNumber(maskFx2, "__hallDustCenterY", dcy)
+        sprites.setDataNumber(maskFx2, "__hallDustOffsetX", dox)
+        sprites.setDataNumber(maskFx2, "__hallDustOffsetY", doy)
+    }
+
+    if (cfg.borderPerMask) {
+        const borderAlpha = Number.isFinite(cfg.borderAlpha) ? (cfg.borderAlpha as number) : 1
+        const borderTint = Number.isFinite(cfg.borderTint)
+            ? (cfg.borderTint as number)
+            : _pickEnemyPaletteBright(cfg.paletteKey || "earth")
+        const outlinePx = Math.max(1, (cfg.borderOutlinePx | 0) || 1)
+        const outlineMin = Number.isFinite(cfg.borderOutlineAlphaMin) ? (cfg.borderOutlineAlphaMin as number) : 0
+        const outlineSkin = _ensureOutlineMaskSkin(CLOUD_GEOMETRY_SKIN_ID, outlinePx, outlineMin)
+        const makeOutline = (tagSuffix: string, followMask: Sprite | null, rotSpeed?: number, rotBase?: number, fpsMult?: number, wobbleAmp?: number, wobblePeriod?: number): void => {
+            const ofx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+            ofx.setFlag(SpriteFlag.Ghost, true)
+            if (cfg.tag) sprites.setDataString(ofx, "__hallTag", `${cfg.tag}|${tagSuffix}`)
+            sprites.setDataNumber(ofx, "__hallSpawnX", cx | 0)
+            sprites.setDataNumber(ofx, "__hallSpawnY", cy | 0)
+            if (followMask) sprites.setDataNumber(ofx, "__hallFollowMaskId", (followMask.id | 0))
+            ofx.x = cx | 0
+            ofx.y = cy | 0
+            ofx.z = 1100
+            if ((cfg.lifespanMs | 0) > 0) ofx.lifespan = cfg.lifespanMs | 0
+            if (Number.isFinite(rotSpeed)) {
+                sprites.setDataNumber(ofx, "__hallRotSpeed", Number(rotSpeed))
+                if (Number.isFinite(rotBase)) sprites.setDataNumber(ofx, "__hallRotBase", Number(rotBase))
+            } else if (Number.isFinite(rotBase)) {
+                sprites.setDataNumber(ofx, "__hallRotSpeed", 0)
+                sprites.setDataNumber(ofx, "__hallRotBase", Number(rotBase))
+            }
+            if (Number.isFinite(fpsMult)) sprites.setDataNumber(ofx, "__hallFpsMult", Number(fpsMult))
+            if (Number.isFinite(wobbleAmp)) sprites.setDataNumber(ofx, "__hallFpsWobbleAmp", Number(wobbleAmp))
+            if (Number.isFinite(wobblePeriod)) sprites.setDataNumber(ofx, "__hallFpsWobblePeriod", Number(wobblePeriod))
+            if (Number.isFinite(cfg.maskFrameOffset)) sprites.setDataNumber(ofx, "__hallMaskFrameOffset", Number(cfg.maskFrameOffset))
+            if (cfg.dustRise) {
+                const riseMult = Number.isFinite(cfg.dustRiseScaleMult)
+                    ? Math.max(0.05, Number(cfg.dustRiseScaleMult))
+                    : 1
+                sprites.setDataNumber(ofx, "__hallDustRise", 1)
+                if (Number.isFinite(cfg.dustRiseStartMs)) sprites.setDataNumber(ofx, "__hallDustRiseStart", Number(cfg.dustRiseStartMs))
+                if (Number.isFinite(cfg.dustRiseMs)) sprites.setDataNumber(ofx, "__hallDustRiseMs", Number(cfg.dustRiseMs))
+                sprites.setDataNumber(ofx, "__hallDustRiseScaleMult", riseMult)
+                if (Number.isFinite(cfg.dustRiseStartScaleX)) sprites.setDataNumber(ofx, "__hallDustRiseStartScaleX", Number(cfg.dustRiseStartScaleX))
+                if (Number.isFinite(cfg.dustRiseStartScaleY)) sprites.setDataNumber(ofx, "__hallDustRiseStartScaleY", Number(cfg.dustRiseStartScaleY))
+                if (Number.isFinite(cfg.dustRiseEndScaleX)) sprites.setDataNumber(ofx, "__hallDustRiseEndScaleX", Number(cfg.dustRiseEndScaleX))
+                if (Number.isFinite(cfg.dustRiseEndScaleY)) sprites.setDataNumber(ofx, "__hallDustRiseEndScaleY", Number(cfg.dustRiseEndScaleY))
+                if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(ofx, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
+                if (Number.isFinite(cfg.dustCenterX)) sprites.setDataNumber(ofx, "__hallDustCenterX", Number(cfg.dustCenterX))
+                if (Number.isFinite(cfg.dustCenterY)) sprites.setDataNumber(ofx, "__hallDustCenterY", Number(cfg.dustCenterY))
+                if (Number.isFinite(cfg.dustOffsetX)) sprites.setDataNumber(ofx, "__hallDustOffsetX", Number(cfg.dustOffsetX))
+                if (Number.isFinite(cfg.dustOffsetY)) sprites.setDataNumber(ofx, "__hallDustOffsetY", Number(cfg.dustOffsetY))
+            }
+            const opts: EffectApplyOpts = {
+                alpha: Math.max(0, Math.min(1, borderAlpha)),
+                scale: maskScale,
+                blend: "normal",
+                forceTop: true,
+                repeat: -1,
+                fps: _vfxTweakFps(8),
+                mode: "outline"
+            }
+            _applySmokeAnim(opts, (cfg.smokeAnim || "alive") as any)
+            if (borderTint) opts.tint = borderTint | 0
+            applyEffectToSprite(ofx, outlineSkin, opts)
+            if (Number.isFinite(cfg.maskFrameOffset)) {
+                const atlas = _getEffectAtlasAny()
+                const resolved = atlas ? _resolveEffectEntry(atlas, outlineSkin, "") : null
+                const frames = resolved && resolved.frameIndices ? resolved.frameIndices : null
+                if (frames && frames.length > 1) {
+                    const len = frames.length | 0
+                    let off = (cfg.maskFrameOffset as number) | 0
+                    off = ((off % len) + len) % len
+                    if (off !== 0) {
+                        const list: number[] = []
+                        for (let i = 0; i < len; i++) list.push((i + off) % len)
+                        sprites.setDataString(ofx, EFFECT_FRAME_LIST_DATA_KEY, list.join(","))
+                        sprites.setDataNumber(ofx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, 0)
+                    }
+                }
+            }
+            if (cfg.maskFlipX) sprites.setDataNumber(ofx, EFFECT_FLIP_X_DATA_KEY, 1)
+            if (cfg.maskFlipY) sprites.setDataNumber(ofx, EFFECT_FLIP_Y_DATA_KEY, 1)
+            if (Number.isFinite(rotBase) && (!Number.isFinite(rotSpeed) || rotSpeed === 0)) {
+                sprites.setDataNumber(ofx, EFFECT_ROT_DATA_KEY, Number(rotBase))
+            }
+            _dunEffectsHallFx.push(ofx)
+        }
+        makeOutline("mask-outline", maskFx, cfg.maskRotateSpeedRadPerMs, cfg.maskRotateBaseRad, cfg.maskFpsMult, cfg.maskFpsWobbleAmp, cfg.maskFpsWobblePeriodMs)
+        if (maskFx2) {
+            makeOutline("mask2-outline", maskFx2, cfg.mask2RotateSpeedRadPerMs, cfg.mask2RotateBaseRad, cfg.mask2FpsMult, cfg.mask2FpsWobbleAmp, cfg.mask2FpsWobblePeriodMs)
+        }
+    }
+
+    if (cfg.doubleMask && maskFx2 && !cfg.borderPerMask) {
+        const g: any = globalThis as any
+        const sc: any = g ? g.__phaserScene : null
+        const atlas = _getEffectAtlasAny()
+        const native1 = (maskFx as any).native
+        const frame1 = native1 && native1.frame
+        let frameW = frame1 ? ((frame1.cutWidth ?? frame1.width) | 0) : 0
+        let frameH = frame1 ? ((frame1.cutHeight ?? frame1.height) | 0) : 0
+        if (atlas) {
+            const skin = (sprites.readDataString(maskFx, "effectSkin") || "").trim()
+            const dir = (sprites.readDataString(maskFx, "effectDir") || "").trim()
+            const resolved = skin ? _resolveEffectEntry(atlas, skin, dir || "") : null
+            if (resolved && resolved.frameW && resolved.frameH) {
+                frameW = resolved.frameW | 0
+                frameH = resolved.frameH | 0
+            }
+        }
+        if (sc && sc.textures && frameW > 0 && frameH > 0) {
+            const outKey = `effects.hallmaskunion.${maskFx.id | 0}.${frameW}x${frameH}`
+            const outlineKey = `${outKey}.outline`
+            const canvasTex = sc.textures.exists(outKey)
+                ? sc.textures.get(outKey)
+                : sc.textures.createCanvas(outKey, frameW, frameH)
+            const outlineTex = sc.textures.exists(outlineKey)
+                ? sc.textures.get(outlineKey)
+                : sc.textures.createCanvas(outlineKey, frameW, frameH)
+            if (canvasTex) {
+                const ctx = canvasTex.getContext()
+                const outlineCtx = outlineTex ? outlineTex.getContext() : null
+                const tmp1 = document.createElement("canvas")
+                tmp1.width = frameW
+                tmp1.height = frameH
+                const tmp2 = document.createElement("canvas")
+                tmp2.width = frameW
+                tmp2.height = frameH
+                const tctx1 = tmp1.getContext("2d", { willReadFrequently: true } as any)
+                const tctx2 = tmp2.getContext("2d", { willReadFrequently: true } as any)
+                if (ctx && tctx1 && tctx2) {
+                    try { ctx.clearRect(0, 0, frameW, frameH) } catch { }
+                    canvasTex.refresh()
+                    if (outlineCtx) {
+                        try { outlineCtx.clearRect(0, 0, frameW, frameH) } catch { }
+                        outlineTex.refresh()
+                    }
+                    const maskImage = sc.add.image(maskFx.x, maskFx.y, canvasTex.key)
+                    maskImage.setVisible(false)
+                    maskImage.setOrigin(0.5, 0.5)
+                    let outlineImage: any = null
+                    if (outlineTex) {
+                        outlineImage = sc.add.image(maskFx.x, maskFx.y, outlineTex.key)
+                        outlineImage.setOrigin(0.5, 0.5)
+                        const borderTint = Number.isFinite(cfg.borderTint)
+                            ? (cfg.borderTint as number)
+                            : _pickEnemyPaletteBright(cfg.paletteKey || "earth")
+                        if (borderTint) outlineImage.setTint(borderTint | 0)
+                        outlineImage.setAlpha(Number.isFinite(cfg.borderAlpha) ? (cfg.borderAlpha as number) : 1)
+                        outlineImage.setDepth(1100)
+                    }
+                    ;(maskFx as any).__hallMaskUnion = {
+                        canvasTex,
+                        ctx,
+                        outlineTex,
+                        outlineCtx,
+                        outlineImage,
+                        tmp1,
+                        tmp2,
+                        tctx1,
+                        tctx2,
+                        frameW,
+                        frameH,
+                        src1: maskFx,
+                        src2: maskFx2,
+                        maskImage
+                    }
+                    ;(maskFx as any).__hallMaskUnionActive = 1
+                    if (outlineImage) {
+                        ;(maskFx as any).__hallMaskUnionOutline = outlineImage
+                    }
+                    // Use the composite canvas as the mask source (density curve).
+                    ;(maskFx as any).__heMaskNativeOverride = maskImage
+                }
+            }
+        }
+    }
+
+    if (cfg.borderAura) {
+        const borderFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+        borderFx.setFlag(SpriteFlag.Ghost, true)
+        if (cfg.tag) sprites.setDataString(borderFx, "__hallTag", `${cfg.tag}|border`)
+        borderFx.x = cx | 0
+        borderFx.y = cy | 0
+        borderFx.z = 999
+        if ((cfg.lifespanMs | 0) > 0) borderFx.lifespan = cfg.lifespanMs | 0
+        const borderTint = Number.isFinite(cfg.borderTint) ? (cfg.borderTint as number) : _pickEnemyPaletteBright(cfg.paletteKey || "earth")
+        const borderOpts: EffectApplyOpts = {
+            alpha: Math.max(0, Math.min(1, Number.isFinite(cfg.borderAlpha) ? (cfg.borderAlpha as number) : 1)),
+            scale: maskScale,
+            blend: "normal",
+            forceTop: true,
+            repeat: -1,
+            fps: _vfxTweakFps(8),
+            mode: "full"
+        }
+        _applySmokeAnim(borderOpts, (cfg.smokeAnim || "alive") as any)
+        if (borderTint) borderOpts.tint = borderTint | 0
+        const borderSkin = cfg.borderInnerAura
+            ? _ensureAuraOutlineSkin(cfg.borderAura, cfg.borderInnerAura)
+            : _getAuraMaskSkinId(cfg.borderAura)
+        applyEffectToSprite(borderFx, borderSkin, borderOpts)
+        if (!cfg.noDemo) _hallDemoTag(borderFx, borderOpts.alpha || 0, cfg)
+        _dunEffectsHallFx.push(borderFx)
+    }
 
     _dunSpawnHallEffectFill(cx | 0, cy | 0, regionW | 0, regionH | 0, cfg, maskFx)
 
@@ -19966,38 +21132,147 @@ function _dunSpawnHallEffectFill(
     regionW: number,
     regionH: number,
     cfg: DebugCloudConfig,
-    maskFx: Sprite
-): void {
+    maskFx: Sprite | null
+): Sprite {
     const tweak = _getVfxTweak()
     const skinId = _hallEnsurePaletteEffect(cfg)
+    const fitRadius = Math.max(regionW | 0, regionH | 0) >> 1
+    const useTint = (skinId === cfg.texId)
+        ? ((tweak.enabled && Number.isFinite(tweak.tintOverride)) ? (tweak.tintOverride as number) : (cfg.tint | 0))
+        : 0
+    const unionOutline = !!(cfg.doubleMask && maskFx && (maskFx as any).__hallMaskUnionOutline)
+
+    if (cfg.borderUseFillColors && !unionOutline) {
+        const padOutRaw =
+            (tweak.enabled && Number.isFinite(tweak.borderPadOutPx)) ? Number(tweak.borderPadOutPx)
+                : (Number.isFinite(cfg.borderPadOutPx) ? (cfg.borderPadOutPx as number) : 6)
+        const padOut = Math.max(0, padOutRaw)
+        const borderFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+        borderFx.setFlag(SpriteFlag.Ghost, true)
+        if (cfg.tag) sprites.setDataString(borderFx, "__hallTag", `${cfg.tag}|border`)
+        borderFx.x = cx | 0
+        borderFx.y = cy | 0
+        borderFx.z = 1000
+        if ((cfg.lifespanMs | 0) > 0) borderFx.lifespan = cfg.lifespanMs | 0
+        const borderAlphaRaw =
+            (tweak.enabled && Number.isFinite(tweak.borderAlpha)) ? Number(tweak.borderAlpha)
+                : (Number.isFinite(cfg.borderAlpha) ? (cfg.borderAlpha as number) : cfg.alpha)
+        const borderAlphaMin =
+            (tweak.enabled && Number.isFinite(tweak.borderAlphaMin)) ? Number(tweak.borderAlphaMin)
+                : (Number.isFinite(cfg.borderAlphaMin) ? (cfg.borderAlphaMin as number) : 0)
+        const borderAlpha = Math.max(borderAlphaMin, borderAlphaRaw)
+        const borderOpts: EffectApplyOpts = {
+            alpha: _vfxTweakAlpha(Math.max(0.02, Math.min(1, borderAlpha)), tweak.alphaMult),
+            fitRadiusPx: Math.max(16, fitRadius | 0),
+            blend: "normal",
+            forceTop: true,
+            repeat: -1,
+            fps: _vfxTweakFps(Number.isFinite(cfg.fillFps) ? (cfg.fillFps as number) : (BOSS_PAD_SINK_DUST_TEX_FPS | 0)),
+            mode: "projectile",
+            maskSprite: maskFx,
+            maskPadOutPx: padOut | 0
+        }
+        if (useTint) borderOpts.tint = useTint | 0
+        let borderSkinId = skinId
+        if (cfg.borderOutlineFromFill && cfg.borderOutlinePx && (cfg.borderOutlinePx | 0) > 0) {
+            borderSkinId = _ensureMaskedOutlineSkin(
+                skinId,
+                CLOUD_GEOMETRY_SKIN_ID,
+                cfg.borderOutlinePx | 0,
+                Number.isFinite(cfg.borderOutlineAlphaMin) ? (cfg.borderOutlineAlphaMin as number) : 0
+            )
+        }
+        if ((cfg.borderForceOpaqueMask || (cfg.borderOutlinePx && (cfg.borderOutlinePx | 0) > 0)) && !cfg.borderOutlineFromFill) {
+            borderOpts.maskSprite = null
+            const borderMask = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+            borderMask.setFlag(SpriteFlag.Ghost, true)
+            borderMask.setFlag(SpriteFlag.Invisible, true)
+            if (cfg.tag) sprites.setDataString(borderMask, "__hallTag", `${cfg.tag}|border-mask`)
+            borderMask.x = cx | 0
+            borderMask.y = cy | 0
+            borderMask.z = 999
+            if ((cfg.lifespanMs | 0) > 0) borderMask.lifespan = cfg.lifespanMs | 0
+            const borderMaskSkin = (cfg.borderOutlinePx && (cfg.borderOutlinePx | 0) > 0)
+                ? _ensureOutlineMaskSkin(
+                    CLOUD_GEOMETRY_SKIN_ID,
+                    cfg.borderOutlinePx | 0,
+                    Number.isFinite(cfg.borderOutlineAlphaMin) ? (cfg.borderOutlineAlphaMin as number) : 0
+                )
+                : _ensureOpaqueMaskSkin(CLOUD_GEOMETRY_SKIN_ID)
+            const baseScaleRaw = maskFx ? sprites.readDataNumber(maskFx, EFFECT_SCALE_DATA_KEY) : NaN
+            const baseScale = Number.isFinite(baseScaleRaw) && baseScaleRaw > 0
+                ? Number(baseScaleRaw)
+                : _effectPickScaleForRadius(CLOUD_GEOMETRY_SKIN_ID, "", fitRadius | 0)
+            const scaleBoost = (cfg.borderOutlinePx && (cfg.borderOutlinePx | 0) > 0)
+                ? 0
+                : ((fitRadius > 0) ? (padOut / Math.max(1, fitRadius)) : 0)
+            const borderMaskScale = baseScale * (1 + Math.max(0, scaleBoost))
+            const borderMaskOpts: EffectApplyOpts = {
+                alpha: 1,
+                scale: borderMaskScale,
+                blend: "normal",
+                forceTop: true,
+                repeat: -1,
+                fps: _vfxTweakFps(8),
+                mode: "full"
+            }
+            applyEffectToSprite(borderMask, borderMaskSkin, borderMaskOpts)
+            _dunEffectsHallFx.push(borderMask)
+            borderOpts.maskSprite = borderMask
+            borderOpts.maskPadOutPx = 0
+        }
+        applyEffectToSprite(borderFx, borderSkinId, borderOpts)
+        if (!cfg.noDemo) _hallDemoTag(borderFx, borderAlpha, cfg)
+        _dunEffectsHallFx.push(borderFx)
+    }
     const fillFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
     fillFx.setFlag(SpriteFlag.Ghost, true)
     if (cfg.tag) sprites.setDataString(fillFx, "__hallTag", `${cfg.tag}|fill`)
+    sprites.setDataNumber(fillFx, "__hallSpawnX", cx | 0)
+    sprites.setDataNumber(fillFx, "__hallSpawnY", cy | 0)
     fillFx.x = cx | 0
     fillFx.y = cy | 0
     fillFx.z = 1001
     if ((cfg.lifespanMs | 0) > 0) fillFx.lifespan = cfg.lifespanMs | 0
-    const fitRadius = Math.max(regionW | 0, regionH | 0) >> 1
     if (cfg.probeKey) {
         sprites.setDataString(fillFx, "__hallProbeKey", String(cfg.probeKey || ""))
         sprites.setDataNumber(fillFx, "__hallProbeValue", Number.isFinite(cfg.probeValue as any) ? Number(cfg.probeValue) : 0)
         sprites.setDataNumber(fillFx, "__hallProbeRadius", Math.max(16, fitRadius | 0))
     }
-    const useTint = (skinId === cfg.texId)
-        ? ((tweak.enabled && Number.isFinite(tweak.tintOverride)) ? (tweak.tintOverride as number) : (cfg.tint | 0))
-        : 0
     const fillOpts: EffectApplyOpts = {
         alpha: _vfxTweakAlpha(Math.max(0.02, Math.min(1, cfg.alpha)), tweak.alphaMult),
         fitRadiusPx: Math.max(16, fitRadius | 0),
         blend: "normal",
         forceTop: true,
         repeat: -1,
-        fps: _vfxTweakFps(BOSS_PAD_SINK_DUST_TEX_FPS | 0),
+        fps: _vfxTweakFps(Number.isFinite(cfg.fillFps) ? (cfg.fillFps as number) : (BOSS_PAD_SINK_DUST_TEX_FPS | 0)),
         mode: "projectile",
-        maskSprite: maskFx
+        maskSprite: maskFx,
+        rot: 0
     }
     if (useTint) fillOpts.tint = useTint | 0
     applyEffectToSprite(fillFx, skinId, fillOpts)
+    if (Number.isFinite(cfg.fillFrameOffset)) {
+        const atlas = _getEffectAtlasAny()
+        const resolved = atlas ? _resolveEffectEntry(atlas, skinId, "") : null
+        const frames = resolved && resolved.frameIndices ? resolved.frameIndices : null
+        if (frames && frames.length > 1) {
+            const len = frames.length | 0
+            let off = (cfg.fillFrameOffset as number) | 0
+            off = ((off % len) + len) % len
+            if (off !== 0) {
+                const list: number[] = []
+                for (let i = 0; i < len; i++) {
+                    list.push((i + off) % len)
+                }
+                sprites.setDataString(fillFx, EFFECT_FRAME_LIST_DATA_KEY, list.join(","))
+                sprites.setDataNumber(fillFx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, 0)
+            }
+        }
+    }
+    if (maskFx) {
+        sprites.setDataNumber(fillFx, "__hallFollowMaskId", (maskFx.id | 0))
+    }
     if (!cfg.noDemo) _hallDemoTag(fillFx, cfg.alpha, cfg)
     _dunEffectsHallFx.push(fillFx)
     if (DEBUG_EFFECTS_HALL_LOGS) {
@@ -20011,19 +21286,31 @@ function _dunSpawnHallEffectFill(
             " tint=0x" + ((cfg.tint | 0) >>> 0).toString(16).padStart(6, "0")
         )
     }
+    return fillFx
 }
 
 const _hallPaletteCache: Record<string, string> = Object.create(null)
 const _opaqueMaskCache: Record<string, string> = Object.create(null)
 const _maskAlphaCache: Record<string, string> = Object.create(null)
+const _maskAlphaFloorCache: Record<string, string> = Object.create(null)
+const _auraOutlineCache: Record<string, string> = Object.create(null)
+const _maskOutlineCache: Record<string, string> = Object.create(null)
+const _maskedOutlineCache: Record<string, string> = Object.create(null)
 let _hallPaletteVersion = 1
 let _opaqueMaskVersion = 1
 let _maskAlphaVersion = 1
+let _maskAlphaFloorVersion = 1
+let _auraOutlineVersion = 1
+let _maskOutlineVersion = 1
 
 function _vfxClearHallPaletteCaches(): void {
     for (const k of Object.keys(_hallPaletteCache)) delete _hallPaletteCache[k]
     for (const k of Object.keys(_opaqueMaskCache)) delete _opaqueMaskCache[k]
     for (const k of Object.keys(_maskAlphaCache)) delete _maskAlphaCache[k]
+    for (const k of Object.keys(_maskAlphaFloorCache)) delete _maskAlphaFloorCache[k]
+    for (const k of Object.keys(_auraOutlineCache)) delete _auraOutlineCache[k]
+    for (const k of Object.keys(_maskedOutlineCache)) delete _maskedOutlineCache[k]
+    for (const k of Object.keys(_maskOutlineCache)) delete _maskOutlineCache[k]
 }
 
 function _vfxClearHallPaletteTextures(): void {
@@ -20209,6 +21496,357 @@ function _ensureMaskAlphaSkin(baseSkin: string, alphaMult: number): string {
     return newId
 }
 
+function _ensureMaskAlphaFloorSkin(baseSkin: string, alphaFloor: number, alphaMult: number): string {
+    const skin = String(baseSkin || "").trim()
+    if (!skin) return skin
+    if (!Number.isFinite(alphaFloor) || alphaFloor <= 0) return skin
+    const floorPct = Math.max(1, Math.min(255, Math.round(Number(alphaFloor) * 255))) | 0
+    const mult = Number.isFinite(alphaMult) ? Math.max(0, Math.min(4, Number(alphaMult))) : 1
+    const multPct = Math.max(0, Math.min(400, Math.round(mult * 100))) | 0
+    const cacheKey = `${skin}|f${floorPct}|m${multPct}`
+    if (_maskAlphaFloorCache[cacheKey]) return _maskAlphaFloorCache[cacheKey]
+
+    const atlas = _getEffectAtlasAny()
+    if (!atlas) return skin
+    const resolved = _resolveEffectEntry(atlas, skin, "")
+    if (!resolved) return skin
+    const fw = resolved.frameW | 0
+    const fh = resolved.frameH | 0
+    const frames = resolved.frameIndices && resolved.frameIndices.length ? resolved.frameIndices.slice() : []
+    if (!frames.length || fw <= 0 || fh <= 0) return skin
+
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    if (!sc || !sc.textures || !sc.textures.exists(resolved.textureKey)) return skin
+
+    const outKey = `effects.alpha.floor.${skin.replace(/\\s+/g, "_").toLowerCase()}.f${floorPct}.m${multPct}.v${_maskAlphaFloorVersion}`
+    const maxTex = (sc.renderer && Number.isFinite((sc.renderer as any).maxTextureSize))
+        ? Math.max(256, ((sc.renderer as any).maxTextureSize | 0))
+        : 4096
+    const cols = Math.max(1, Math.min(frames.length, Math.floor(maxTex / Math.max(1, fw))))
+    const rows = Math.max(1, Math.ceil(frames.length / cols))
+    const canvasW = Math.max(1, cols * fw)
+    const canvasH = Math.max(1, rows * fh)
+    if (canvasW > maxTex || canvasH > maxTex) return skin
+    const canvasTex = sc.textures.createCanvas(outKey, canvasW, canvasH)
+    if (!canvasTex) return skin
+    const ctx = canvasTex.getContext()
+    if (!ctx) return skin
+
+    const tex = sc.textures.get(resolved.textureKey)
+    const srcCanvas = document.createElement("canvas")
+    srcCanvas.width = fw
+    srcCanvas.height = fh
+    const srcCtx = srcCanvas.getContext("2d", { willReadFrequently: true } as any)
+    if (!srcCtx) return skin
+
+    for (let i = 0; i < frames.length; i++) {
+        const frameId = frames[i] | 0
+        const f = tex.get(frameId)
+        if (!f || !f.source || !f.source.image) continue
+        const img = f.source.image as HTMLImageElement | HTMLCanvasElement
+        const sx = (f.cutX | 0)
+        const sy = (f.cutY | 0)
+        srcCtx.clearRect(0, 0, fw, fh)
+        try { srcCtx.drawImage(img, sx, sy, fw, fh, 0, 0, fw, fh) } catch { }
+        const imgData = srcCtx.getImageData(0, 0, fw, fh)
+        const data = imgData.data
+        for (let p = 0; p < data.length; p += 4) {
+            const a = data[p + 3]
+            if (a === 0) continue
+            const boosted = Math.max(0, Math.min(255, Math.round(a * mult)))
+            const clamped = Math.max(boosted, floorPct)
+            data[p + 3] = clamped
+        }
+        srcCtx.putImageData(imgData, 0, 0)
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        ctx.drawImage(srcCanvas, col * fw, row * fh)
+    }
+
+    canvasTex.refresh()
+    const seq: number[] = []
+    for (let i = 0; i < frames.length; i++) {
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        try { canvasTex.add(i, 0, col * fw, row * fh, fw, fh) } catch { }
+        seq.push(i | 0)
+    }
+
+    const newId = `${skin}__alpha_floor_f${floorPct}_m${multPct}`
+    ;(atlas as any)[newId] = {
+        id: newId,
+        textureKey: outKey,
+        url: "",
+        frameIndices: seq,
+        frameRate: resolved.frameRate,
+        repeat: resolved.repeat,
+        frameW: fw,
+        frameH: fh,
+        palette: resolved.palette,
+        collisionBounds: resolved.collisionBounds
+    }
+    _maskAlphaFloorCache[cacheKey] = newId
+    return newId
+}
+
+function _ensureOutlineMaskSkin(baseSkin: string, thicknessPx: number, alphaMin: number): string {
+    const skin = String(baseSkin || "").trim()
+    if (!skin) return skin
+    const t = Math.max(1, Math.min(6, (thicknessPx | 0) || 1))
+    const aMin = Math.max(0, Math.min(255, Math.round((Number.isFinite(alphaMin) ? alphaMin : 0) * 255)))
+    const cacheKey = `${skin}|t${t}|a${aMin}`
+    if (_maskOutlineCache[cacheKey]) return _maskOutlineCache[cacheKey]
+
+    const atlas = _getEffectAtlasAny()
+    if (!atlas) return skin
+    const resolved = _resolveEffectEntry(atlas, skin, "")
+    if (!resolved) return skin
+    const fw = resolved.frameW | 0
+    const fh = resolved.frameH | 0
+    const frames = resolved.frameIndices && resolved.frameIndices.length ? resolved.frameIndices.slice() : []
+    if (!frames.length || fw <= 0 || fh <= 0) return skin
+
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    if (!sc || !sc.textures || !sc.textures.exists(resolved.textureKey)) return skin
+
+    const outKey = `effects.outline.${skin.replace(/\\s+/g, "_").toLowerCase()}.t${t}.a${aMin}.v${_maskOutlineVersion}`
+    const maxTex = (sc.renderer && Number.isFinite((sc.renderer as any).maxTextureSize))
+        ? Math.max(256, ((sc.renderer as any).maxTextureSize | 0))
+        : 4096
+    const cols = Math.max(1, Math.min(frames.length, Math.floor(maxTex / Math.max(1, fw))))
+    const rows = Math.max(1, Math.ceil(frames.length / cols))
+    const canvasW = Math.max(1, cols * fw)
+    const canvasH = Math.max(1, rows * fh)
+    if (canvasW > maxTex || canvasH > maxTex) return skin
+    const canvasTex = sc.textures.createCanvas(outKey, canvasW, canvasH)
+    if (!canvasTex) return skin
+    const ctx = canvasTex.getContext()
+    if (!ctx) return skin
+
+    const tex = sc.textures.get(resolved.textureKey)
+    const srcCanvas = document.createElement("canvas")
+    srcCanvas.width = fw
+    srcCanvas.height = fh
+    const srcCtx = srcCanvas.getContext("2d", { willReadFrequently: true } as any)
+    if (!srcCtx) return skin
+
+    for (let i = 0; i < frames.length; i++) {
+        const frameId = frames[i] | 0
+        const f = tex.get(frameId)
+        if (!f || !f.source || !f.source.image) continue
+        const img = f.source.image as HTMLImageElement | HTMLCanvasElement
+        const sx = (f.cutX | 0)
+        const sy = (f.cutY | 0)
+        srcCtx.clearRect(0, 0, fw, fh)
+        try { srcCtx.drawImage(img, sx, sy, fw, fh, 0, 0, fw, fh) } catch { }
+        const imgData = srcCtx.getImageData(0, 0, fw, fh)
+        const data = imgData.data
+        const out = new Uint8ClampedArray(data.length)
+        for (let y = 0; y < fh; y++) {
+            for (let x = 0; x < fw; x++) {
+                const idx = ((y * fw + x) << 2)
+                const a = data[idx + 3] | 0
+                if (a < aMin) continue
+                let edge = false
+                for (let dy = -t; dy <= t && !edge; dy++) {
+                    const yy = y + dy
+                    if (yy < 0 || yy >= fh) { edge = true; break }
+                    for (let dx = -t; dx <= t; dx++) {
+                        if (dx === 0 && dy === 0) continue
+                        const xx = x + dx
+                        if (xx < 0 || xx >= fw) { edge = true; break }
+                        const a2 = data[((yy * fw + xx) << 2) + 3] | 0
+                        if (a2 < aMin) { edge = true; break }
+                    }
+                }
+                if (!edge) continue
+                out[idx] = 255
+                out[idx + 1] = 255
+                out[idx + 2] = 255
+                out[idx + 3] = 255
+            }
+        }
+        for (let p = 0; p < out.length; p += 4) {
+            data[p] = out[p]
+            data[p + 1] = out[p + 1]
+            data[p + 2] = out[p + 2]
+            data[p + 3] = out[p + 3]
+        }
+        srcCtx.putImageData(imgData, 0, 0)
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        ctx.drawImage(srcCanvas, col * fw, row * fh)
+    }
+
+    canvasTex.refresh()
+    const seq: number[] = []
+    for (let i = 0; i < frames.length; i++) {
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        try { canvasTex.add(i, 0, col * fw, row * fh, fw, fh) } catch { }
+        seq.push(i | 0)
+    }
+
+    const newId = `${skin}__outline_t${t}`
+    ;(atlas as any)[newId] = {
+        id: newId,
+        textureKey: outKey,
+        url: "",
+        frameIndices: seq,
+        frameRate: resolved.frameRate,
+        repeat: resolved.repeat,
+        frameW: fw,
+        frameH: fh,
+        palette: resolved.palette,
+        collisionBounds: resolved.collisionBounds
+    }
+    _maskOutlineCache[cacheKey] = newId
+    return newId
+}
+
+function _ensureMaskedOutlineSkin(baseSkin: string, maskSkin: string, thicknessPx: number, alphaMin: number): string {
+    const skin = String(baseSkin || "").trim()
+    const mask = String(maskSkin || "").trim()
+    if (!skin || !mask) return skin || mask
+    const t = Math.max(1, Math.min(6, (thicknessPx | 0) || 1))
+    const aMin = Math.max(0, Math.min(255, Math.round((Number.isFinite(alphaMin) ? alphaMin : 0) * 255)))
+    const cacheKey = `${skin}|${mask}|t${t}|a${aMin}`
+    if (_maskedOutlineCache[cacheKey]) return _maskedOutlineCache[cacheKey]
+
+    const atlas = _getEffectAtlasAny()
+    if (!atlas) return skin
+    const resolved = _resolveEffectEntry(atlas, skin, "")
+    const resolvedMask = _resolveEffectEntry(atlas, mask, "")
+    if (!resolved || !resolvedMask) return skin
+    const fw = resolved.frameW | 0
+    const fh = resolved.frameH | 0
+    const frames = resolved.frameIndices && resolved.frameIndices.length ? resolved.frameIndices.slice() : []
+    const maskFrames = resolvedMask.frameIndices && resolvedMask.frameIndices.length ? resolvedMask.frameIndices.slice() : []
+    if (!frames.length || !maskFrames.length || fw <= 0 || fh <= 0) return skin
+
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    if (!sc || !sc.textures || !sc.textures.exists(resolved.textureKey) || !sc.textures.exists(resolvedMask.textureKey)) {
+        return skin
+    }
+
+    const outKey = `effects.maskedoutline.${skin.replace(/\\s+/g, "_").toLowerCase()}_${mask.replace(/\\s+/g, "_").toLowerCase()}.t${t}.a${aMin}.v${_maskOutlineVersion}`
+    const maxTex = (sc.renderer && Number.isFinite((sc.renderer as any).maxTextureSize))
+        ? Math.max(256, ((sc.renderer as any).maxTextureSize | 0))
+        : 4096
+    const cols = Math.max(1, Math.min(frames.length, Math.floor(maxTex / Math.max(1, fw))))
+    const rows = Math.max(1, Math.ceil(frames.length / cols))
+    const canvasW = Math.max(1, cols * fw)
+    const canvasH = Math.max(1, rows * fh)
+    if (canvasW > maxTex || canvasH > maxTex) return skin
+    const canvasTex = sc.textures.createCanvas(outKey, canvasW, canvasH)
+    if (!canvasTex) return skin
+    const ctx = canvasTex.getContext()
+    if (!ctx) return skin
+
+    const tex = sc.textures.get(resolved.textureKey)
+    const maskTex = sc.textures.get(resolvedMask.textureKey)
+    const srcCanvas = document.createElement("canvas")
+    const maskCanvas = document.createElement("canvas")
+    srcCanvas.width = fw
+    srcCanvas.height = fh
+    maskCanvas.width = fw
+    maskCanvas.height = fh
+    const srcCtx = srcCanvas.getContext("2d", { willReadFrequently: true } as any)
+    const maskCtx = maskCanvas.getContext("2d", { willReadFrequently: true } as any)
+    if (!srcCtx || !maskCtx) return skin
+
+    for (let i = 0; i < frames.length; i++) {
+        const frameId = frames[i] | 0
+        const maskFrameId = maskFrames[i % maskFrames.length] | 0
+        const f = tex.get(frameId)
+        const fm = maskTex.get(maskFrameId)
+        if (!f || !f.source || !f.source.image) continue
+        if (!fm || !fm.source || !fm.source.image) continue
+        const img = f.source.image as HTMLImageElement | HTMLCanvasElement
+        const imgMask = fm.source.image as HTMLImageElement | HTMLCanvasElement
+        const sx = (f.cutX | 0)
+        const sy = (f.cutY | 0)
+        const sxm = (fm.cutX | 0)
+        const sym = (fm.cutY | 0)
+        srcCtx.clearRect(0, 0, fw, fh)
+        maskCtx.clearRect(0, 0, fw, fh)
+        try { srcCtx.drawImage(img, sx, sy, fw, fh, 0, 0, fw, fh) } catch { }
+        try { maskCtx.drawImage(imgMask, sxm, sym, fw, fh, 0, 0, fw, fh) } catch { }
+        const imgData = srcCtx.getImageData(0, 0, fw, fh)
+        const maskData = maskCtx.getImageData(0, 0, fw, fh)
+        const data = imgData.data
+        const mdata = maskData.data
+        const out = new Uint8ClampedArray(data.length)
+        for (let y = 0; y < fh; y++) {
+            for (let x = 0; x < fw; x++) {
+                const idx = ((y * fw + x) << 2)
+                const a = data[idx + 3] | 0
+                const ma = mdata[idx + 3] | 0
+                const ca = Math.round((a * ma) / 255)
+                if (ca < aMin) continue
+                let edge = false
+                for (let dy = -t; dy <= t && !edge; dy++) {
+                    const yy = y + dy
+                    if (yy < 0 || yy >= fh) { edge = true; break }
+                    for (let dx = -t; dx <= t; dx++) {
+                        if (dx === 0 && dy === 0) continue
+                        const xx = x + dx
+                        if (xx < 0 || xx >= fw) { edge = true; break }
+                        const nidx = ((yy * fw + xx) << 2)
+                        const na = data[nidx + 3] | 0
+                        const nma = mdata[nidx + 3] | 0
+                        const nca = Math.round((na * nma) / 255)
+                        if (nca < aMin) { edge = true; break }
+                    }
+                }
+                if (!edge) continue
+                out[idx] = 255
+                out[idx + 1] = 255
+                out[idx + 2] = 255
+                out[idx + 3] = 255
+            }
+        }
+        for (let p = 0; p < out.length; p += 4) {
+            data[p] = out[p]
+            data[p + 1] = out[p + 1]
+            data[p + 2] = out[p + 2]
+            data[p + 3] = out[p + 3]
+        }
+        srcCtx.putImageData(imgData, 0, 0)
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        ctx.drawImage(srcCanvas, col * fw, row * fh)
+    }
+
+    canvasTex.refresh()
+    const seq: number[] = []
+    for (let i = 0; i < frames.length; i++) {
+        const col = i % cols
+        const row = Math.idiv(i, cols)
+        try { canvasTex.add(i, 0, col * fw, row * fh, fw, fh) } catch { }
+        seq.push(i | 0)
+    }
+
+    const newId = `${skin}__outline_t${t}_masked_${mask.replace(/\\s+/g, "_").toLowerCase()}`
+    ;(atlas as any)[newId] = {
+        id: newId,
+        textureKey: outKey,
+        url: "",
+        frameIndices: seq,
+        frameRate: resolved.frameRate,
+        repeat: resolved.repeat,
+        frameW: fw,
+        frameH: fh,
+        palette: resolved.palette,
+        collisionBounds: resolved.collisionBounds
+    }
+    _maskedOutlineCache[cacheKey] = newId
+    return newId
+}
+
 function _hallEnsurePaletteEffect(cfg: DebugCloudConfig): string {
     const baseId = String(cfg.texId || "").trim()
     if (!baseId) return baseId
@@ -20228,7 +21866,7 @@ function _hallEnsurePaletteEffect(cfg: DebugCloudConfig): string {
     const resolved = _resolveEffectEntry(atlas, baseId, "")
     if (!resolved) return baseId
     const paletteSet = ENEMY_EFFECT_PALETTES_BY_DARKEN_PCT[pct] || ENEMY_EFFECT_PALETTES
-    const palette = (paletteSet as any)?.[paletteKey] as number[] | undefined
+    const palette = _resolveEnemyPalette(paletteKey, paletteSet as any)
     if (!palette || !palette.length) return baseId
     const ramp = _buildPaletteRamp256(palette)
 
@@ -20390,6 +22028,7 @@ function _dunSpawnHallTiledLayer(
     if ((cfg.tint | 0) === 0) tileSprite.setTint(0xffffff)
     else tileSprite.setTint(cfg.tint | 0)
     tileSprite.setDepth(1001)
+    ;(tileSprite as any).__heHallTag = cfg.tag ? `${cfg.tag}|tile` : ""
     if (typeof tileSprite.setBlendMode === "function") tileSprite.setBlendMode(0)
     if (DEBUG_EFFECTS_HALL_LOGS) {
         const frameCount = resolved.frameIndices ? (resolved.frameIndices.length | 0) : 0
@@ -20424,6 +22063,8 @@ function _dunSpawnHallTiledLayer(
             tileSprite.setMask(mask)
         } catch { }
     }
+    ;(tileSprite as any).__heMaskSpriteId = (maskFx as any)?.id ? String((maskFx as any).id | 0) : ""
+    ;(tileSprite as any).__heMaskSpriteTag = sprites.readDataString(maskFx, "__hallTag") || ""
 
     let timer: any = null
     const fps = Math.max(1, BOSS_PAD_SINK_DUST_TEX_FPS | 0) | 0
@@ -21201,6 +22842,14 @@ function dungeonTick(nowMs: number): void {
 
     _dunTickPadSink(now)
     _dunTickEffectsHall(now)
+    if (
+        DEBUG_EFFECTS_HALL_FREEZE_WORLD &&
+        DEBUG_EFFECTS_HALL_TRACE &&
+        _heEffectsHallTraceActive &&
+        (_dunFloorKind || "") === DUNGEON_KIND_HALL
+    ) {
+        return
+    }
 
 
 
@@ -21239,7 +22888,14 @@ function dungeonTick(nowMs: number): void {
 function _dunTickEffectsHall(nowMs: number): void {
     if (!DEBUG_EFFECTS_HALL_ON_START) return
     if ((_dunFloorKind || "") !== DUNGEON_KIND_HALL) return
-    if (!_dunEffectsHallFx || !_dunEffectsHallFx.length) return
+    if (!_dunEffectsHallFx || !_dunEffectsHallFx.length) {
+        if (_heScreenSnapQueue.length || _heScreenSnapInFlight) {
+            const g: any = globalThis as any
+            const sc: any = g ? g.__phaserScene : null
+            if (sc) _heScreenSnapPumpTick(sc, nowMs | 0)
+        }
+        return
+    }
     const now = nowMs | 0
     let write = 0
     for (let i = 0; i < _dunEffectsHallFx.length; i++) {
@@ -21296,6 +22952,529 @@ function _dunTickEffectsHall(nowMs: number): void {
         _dunEffectsHallFx[write++] = fx
     }
     if (write < _dunEffectsHallFx.length) _dunEffectsHallFx.length = write
+    if (_heScreenSnapQueue.length || _heScreenSnapInFlight) {
+        const g: any = globalThis as any
+        const sc: any = g ? g.__phaserScene : null
+        if (sc) _heScreenSnapPumpTick(sc, now)
+    }
+    if (_heScreenSnapQueue.length || _heScreenSnapInFlight) {
+        const g: any = globalThis as any
+        const sc: any = g ? g.__phaserScene : null
+        if (sc) _heScreenSnapPumpTick(sc, now)
+    }
+    const hallFxById: Record<number, Sprite> = Object.create(null)
+    for (let i = 0; i < _dunEffectsHallFx.length; i++) {
+        const fx = _dunEffectsHallFx[i]
+        if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+        hallFxById[(fx.id | 0)] = fx
+    }
+    // Subtle rotation drift for smoke masks (outline only).
+    for (let i = 0; i < _dunEffectsHallFx.length; i++) {
+        const fx = _dunEffectsHallFx[i]
+        if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+        const tag = sprites.readDataString(fx, "__hallTag") || ""
+        if (!tag || tag.indexOf("|mask") < 0) continue
+        const speed = sprites.readDataNumber(fx, "__hallRotSpeed")
+        if (Number.isFinite(speed) && speed !== 0) {
+            const base = sprites.readDataNumber(fx, "__hallRotBase")
+            let start = sprites.readDataNumber(fx, "__hallRotStart")
+            if (!Number.isFinite(start) || start <= 0) {
+                start = now | 0
+                sprites.setDataNumber(fx, "__hallRotStart", start)
+            }
+            const rot = (Number.isFinite(base) ? base : 0) + ((now - start) * speed)
+            sprites.setDataNumber(fx, EFFECT_ROT_DATA_KEY, rot)
+            const fpsMult = sprites.readDataNumber(fx, "__hallFpsMult")
+            const wobbleAmp = sprites.readDataNumber(fx, "__hallFpsWobbleAmp")
+            const wobblePeriod = sprites.readDataNumber(fx, "__hallFpsWobblePeriod")
+            if (Number.isFinite(fpsMult) || Number.isFinite(wobbleAmp)) {
+                const baseFps = 8
+                const mult = Number.isFinite(fpsMult) && fpsMult > 0 ? Number(fpsMult) : 1
+                const amp = Number.isFinite(wobbleAmp) ? Number(wobbleAmp) : 0
+                const period = Number.isFinite(wobblePeriod) && wobblePeriod > 0 ? Number(wobblePeriod) : 6000
+                let phase0 = sprites.readDataNumber(fx, "__hallFpsPhase0")
+                if (!Number.isFinite(phase0)) {
+                    phase0 = Math.random() * Math.PI * 2
+                    sprites.setDataNumber(fx, "__hallFpsPhase0", phase0)
+                }
+                let phase1 = sprites.readDataNumber(fx, "__hallFpsPhase1")
+                if (!Number.isFinite(phase1)) {
+                    phase1 = Math.random() * Math.PI * 2
+                    sprites.setDataNumber(fx, "__hallFpsPhase1", phase1)
+                }
+                let period2 = sprites.readDataNumber(fx, "__hallFpsPeriod2")
+                if (!Number.isFinite(period2) || period2 <= 0) {
+                    period2 = period * (0.25 + (Math.random() * 0.55))
+                    sprites.setDataNumber(fx, "__hallFpsPeriod2", period2)
+                }
+                const t = (now - start)
+                const basePhase = (t / period) * Math.PI * 2
+                const warp = amp ? (1 + (0.05 * Math.sin((t / (period * 2.6)) * Math.PI * 2 + phase0))) : 1
+                const wobbleA = amp ? (Math.sin(basePhase * warp + phase0) * amp) : 0
+                const wobbleB = amp ? (Math.sin((t / period2) * Math.PI * 2 + phase1) * (amp * 0.5)) : 0
+                const globalWobble = amp ? (Math.sin((now / 6000) * Math.PI * 2) * (amp * 0.05)) : 0
+                const fps = Math.max(1, baseFps * mult + wobbleA + wobbleB + globalWobble)
+                const last = sprites.readDataNumber(fx, "__hallFpsLast")
+                let lastUpdate = sprites.readDataNumber(fx, "__hallFpsUpdateAt")
+                if (!Number.isFinite(lastUpdate)) lastUpdate = 0
+                if (!Number.isFinite(last) || Math.abs(last - fps) > 0.0001) {
+                    if ((now - (lastUpdate | 0)) > 500) {
+                        sprites.setDataNumber(fx, "__hallFpsLast", fps)
+                        sprites.setDataNumber(fx, EFFECT_FPS_DATA_KEY, fps)
+                        sprites.setDataNumber(fx, "__hallFpsUpdateAt", now | 0)
+                    }
+                }
+            }
+        }
+
+        // Dramatic dust rise: start wide + thin, expand upward to normal.
+        const dustRise = (sprites.readDataNumber(fx, "__hallDustRise") | 0) !== 0
+        if (dustRise && tag.indexOf("|mask") >= 0 && tag.indexOf("|mask-outline") < 0 && tag.indexOf("|mask2-outline") < 0) {
+            const startKey = "__hallDustRiseStart"
+            const startMs = sprites.readDataNumber(fx, startKey)
+            let baseBottom = sprites.readDataNumber(fx, "__hallDustBottomY")
+            if (!(startMs > 0)) {
+                sprites.setDataNumber(fx, startKey, now | 0)
+            }
+            const riseMsCfg = sprites.readDataNumber(fx, "__hallDustRiseMs")
+            const riseMs = Number.isFinite(riseMsCfg) && (riseMsCfg | 0) > 0 ? (riseMsCfg | 0) : (HALL_DUST_RISE_MS | 0)
+            const loopMs = Math.max(1, (riseMs | 0) * 2)
+            const elapsed = ((now - (startMs | 0)) % loopMs)
+            let tRaw = elapsed / riseMs
+            if (tRaw > 1) tRaw = 2 - tRaw
+            tRaw = Math.max(0, Math.min(1, tRaw))
+            const stepsRaw = sprites.readDataString(fx, "__hallDustRiseSteps") || ""
+            if (stepsRaw) {
+                const parts = stepsRaw.split(",")
+                const steps: number[] = []
+                for (let i = 0; i < parts.length; i++) {
+                    const v = (Number(parts[i]) | 0)
+                    if (v > 0) steps.push(v)
+                }
+                if (steps.length >= 2) {
+                    let total = 0
+                    for (let i = 0; i < steps.length; i++) total += steps[i]
+                    const stepCount = Math.max(1, total | 0)
+                    const pos = tRaw * stepCount
+                    const quant = Math.floor(pos) / stepCount
+                    tRaw = Math.max(0, Math.min(1, quant))
+                }
+            }
+            const easePowRaw = sprites.readDataNumber(fx, "__hallDustRiseEasePow")
+            const easePow = Number.isFinite(easePowRaw) && easePowRaw > 0 ? Number(easePowRaw) : 3
+            const t = 1 - Math.pow(1 - tRaw, easePow)
+            const startSxRaw = sprites.readDataNumber(fx, "__hallDustRiseStartScaleX")
+            const startSyRaw = sprites.readDataNumber(fx, "__hallDustRiseStartScaleY")
+            const endSxRaw = sprites.readDataNumber(fx, "__hallDustRiseEndScaleX")
+            const endSyRaw = sprites.readDataNumber(fx, "__hallDustRiseEndScaleY")
+            const riseMultRaw = sprites.readDataNumber(fx, "__hallDustRiseScaleMult")
+            const riseMult = Number.isFinite(riseMultRaw) && riseMultRaw > 0 ? Number(riseMultRaw) : 1
+            const startSx = (Number.isFinite(startSxRaw) ? Number(startSxRaw) : HALL_DUST_RISE_START_SCALE_X) * riseMult
+            const startSy = (Number.isFinite(startSyRaw) ? Number(startSyRaw) : HALL_DUST_RISE_START_SCALE_Y) * riseMult
+            const endSx = (Number.isFinite(endSxRaw) ? Number(endSxRaw) : HALL_DUST_RISE_END_SCALE_X) * riseMult
+            const endSy = (Number.isFinite(endSyRaw) ? Number(endSyRaw) : HALL_DUST_RISE_END_SCALE_Y) * riseMult
+            const sy = startSy + ((endSy - startSy) * t)
+            const sx = Math.max(0.01, endSy * 2)
+            sprites.setDataNumber(fx, EFFECT_SCALE_X_DATA_KEY, sx)
+            sprites.setDataNumber(fx, EFFECT_SCALE_Y_DATA_KEY, sy)
+            // Anchor the base using alignBottom, so the bottom stays fixed while scaling.
+            const spawnYRaw = sprites.readDataNumber(fx, "__hallSpawnY")
+            let baseBottomAnchor = sprites.readDataNumber(fx, "__hallDustBottomY")
+            if (!(baseBottomAnchor > 0)) {
+                const nfx: any = (fx as any).native
+                const frameH = (nfx && nfx.frame) ? ((nfx.frame.cutHeight ?? nfx.frame.height) | 0) : 0
+                const spawnY = Number.isFinite(spawnYRaw) ? Number(spawnYRaw) : fx.y
+                if (frameH > 0) {
+                    baseBottomAnchor = spawnY + ((frameH * startSy) * 0.5)
+                    sprites.setDataNumber(fx, "__hallDustBottomY", baseBottomAnchor)
+                    sprites.setDataNumber(fx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, baseBottomAnchor)
+                }
+            } else {
+                sprites.setDataNumber(fx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, baseBottomAnchor)
+            }
+
+            // Constrain smoke animation to stable frames, then fade after the scale cycle completes.
+            const allowFade = (sprites.readDataNumber(fx, "__hallDustAllowFade") | 0) !== 0
+            const fadeDone = (sprites.readDataNumber(fx, "__hallDustFade") | 0) !== 0
+            if (!fadeDone) {
+                if (!_smokeAliveHoldFramesCache) {
+                    _smokeAliveHoldFramesCache = _buildSmokePingPongFrames(SMOKE_ANIM_HOLD_FRAME_COUNT | 0)
+                }
+                let holdList = _smokeAliveHoldFramesCache
+                const offRaw = sprites.readDataNumber(fx, "__hallMaskFrameOffset")
+                if (Number.isFinite(offRaw) && (offRaw | 0) !== 0) {
+                    const count = Math.max(1, (SMOKE_ANIM_HOLD_FRAME_COUNT | 0))
+                    const off = ((offRaw | 0) % count + count) % count
+                    if (off !== 0) {
+                        const shifted: number[] = []
+                        for (let i = 0; i < holdList.length; i++) {
+                            shifted.push((holdList[i] + off) % count)
+                        }
+                        holdList = shifted
+                    }
+                }
+                const fpsMult = sprites.readDataNumber(fx, "__hallFpsMult")
+                const boost = Number.isFinite(fpsMult) && fpsMult > 0 ? Number(fpsMult) : 1
+                const holdFps = Math.max(1, Math.round(((holdList.length * 1000) / Math.max(1, loopMs)) * boost))
+                sprites.setDataString(fx, EFFECT_FRAME_LIST_DATA_KEY, holdList.join(","))
+                sprites.setDataNumber(fx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, 1)
+                sprites.setDataNumber(fx, EFFECT_REPEAT_DATA_KEY, -1)
+                sprites.setDataNumber(fx, EFFECT_YOYO_DATA_KEY, 0)
+                sprites.setDataNumber(fx, EFFECT_FPS_DATA_KEY, holdFps)
+                const cycleIndex = Math.floor((now - (startMs | 0)) / Math.max(1, loopMs))
+                if (allowFade && cycleIndex >= 1 && tRaw <= 0.02) {
+                    sprites.setDataString(fx, EFFECT_FRAME_LIST_DATA_KEY, SMOKE_ANIM_DUST_FADE_FRAMES)
+                    sprites.setDataNumber(fx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, 1)
+                    sprites.setDataNumber(fx, EFFECT_REPEAT_DATA_KEY, 0)
+                    sprites.setDataNumber(fx, EFFECT_YOYO_DATA_KEY, 0)
+                    sprites.setDataNumber(fx, EFFECT_FPS_DATA_KEY, _vfxTweakFps(SMOKE_ANIM_FADE_FPS | 0))
+                    sprites.setDataNumber(fx, "__hallDustFade", 1)
+                }
+            }
+            // Transform-only: do not move the cloud. Only scale changes over time.
+            // Keep any pre-set alignment data for debugging, but do not apply it here.
+        }
+
+        const union: any = (fx as any).__hallMaskUnion
+        if (union && union.ctx && union.tctx1 && union.tctx2 && union.src1 && union.src2 && union.frameW && union.frameH) {
+            const src1 = union.src1 as Sprite
+            const src2 = union.src2 as Sprite
+            const n1: any = src1 && (src1 as any).native
+            const n2: any = src2 && (src2 as any).native
+            const atlas = _getEffectAtlasAny()
+            const g2: any = globalThis as any
+            const sc = g2 ? g2.__phaserScene : null
+            if (atlas && sc && n1 && n2) {
+                try {
+                    const lastUnion = sprites.readDataNumber(fx, "__hallUnionUpdateAt") || 0
+                    const unionFps = sprites.readDataNumber(src1, EFFECT_FPS_DATA_KEY)
+                    const unionMs = (Number.isFinite(unionFps) && (unionFps as number) > 0)
+                        ? Math.max(HALL_MASK_UNION_UPDATE_MIN_MS, Math.round(1000 / Math.max(1, unionFps)))
+                        : HALL_MASK_UNION_UPDATE_MIN_MS
+                    if ((now - (lastUnion | 0)) < unionMs) continue
+                    sprites.setDataNumber(fx, "__hallUnionUpdateAt", now | 0)
+                    const resolveFrame = (s: Sprite, native: any): any => {
+                        const skin = (sprites.readDataString(s, "effectSkin") || "").trim()
+                        const dir = (sprites.readDataString(s, "effectDir") || "").trim()
+                        if (!skin) return null
+                        const resolved = _resolveEffectEntry(atlas, skin, dir || "")
+                        if (!resolved) return null
+                        const frameIndex = sprites.readDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY)
+                        const frameIndexRaw = sprites.readDataNumber(s, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY) | 0
+                        const nativeFrame = native && native.frame ? (native.frame.name ?? native.frame.index ?? null) : null
+                        const frameId = _heResolveFrameIdForTrace(resolved, nativeFrame, frameIndex, frameIndexRaw)
+                        if (frameId == null) return null
+                        const tex = sc.textures.get(resolved.textureKey)
+                        const f = tex ? tex.get(frameId | 0) : null
+                        if (!f || !f.source || !f.source.image) return null
+                        return { resolved, frame: f, img: f.source.image, frameId: frameId | 0 }
+                    }
+                    const r1 = resolveFrame(src1, n1)
+                    const r2 = resolveFrame(src2, n2)
+                    if (!r1 || !r2) continue
+                    const rot1 = Number(n1.rotation ?? 0)
+                    const rot2 = Number(n2.rotation ?? 0)
+                    const lastF1 = sprites.readDataNumber(fx, "__hallUnionFrame1")
+                    const lastF2 = sprites.readDataNumber(fx, "__hallUnionFrame2")
+                    const lastR1 = sprites.readDataNumber(fx, "__hallUnionRot1")
+                    const lastR2 = sprites.readDataNumber(fx, "__hallUnionRot2")
+                    const frameChanged = (!Number.isFinite(lastF1) || (lastF1 | 0) !== (r1.frameId | 0))
+                        || (!Number.isFinite(lastF2) || (lastF2 | 0) !== (r2.frameId | 0))
+                    const rotChanged = (!Number.isFinite(lastR1) || Math.abs(rot1 - Number(lastR1)) >= HALL_MASK_UNION_ROT_EPS_RAD)
+                        || (!Number.isFinite(lastR2) || Math.abs(rot2 - Number(lastR2)) >= HALL_MASK_UNION_ROT_EPS_RAD)
+                    if (!frameChanged && !rotChanged) continue
+                    const fw = (r1.resolved.frameW | 0) || (r1.frame.cutWidth | 0)
+                    const fh = (r1.resolved.frameH | 0) || (r1.frame.cutHeight | 0)
+                    if (fw <= 0 || fh <= 0) continue
+                    union.frameW = fw | 0
+                    union.frameH = fh | 0
+                    const pad = Math.max(0, HALL_MASK_UNION_PAD_PX | 0)
+                    const uw = fw + (pad * 2)
+                    const uh = fh + (pad * 2)
+                    const cx = uw / 2
+                    const cy = uh / 2
+                    const img1 = r1.img
+                    const img2 = r2.img
+                    const f1 = r1.frame
+                    const f2 = r2.frame
+                    const outlineEvery = Math.max(1, HALL_MASK_UNION_OUTLINE_EVERY | 0)
+                    let outlineTick = (union.outlineTick | 0) + 1
+                    union.outlineTick = outlineTick | 0
+                    const doOutline = (outlineEvery <= 1) || ((outlineTick % outlineEvery) === 0)
+                    const outOutline = (doOutline && union.outlineCtx && union.outlineTex) ? union.outlineCtx.createImageData(uw, uh) : null
+                    const raw = new Uint8Array(uw * uh)
+                    let rawCount = 0
+                    let outlineCount = 0
+                    let rawMinX = uw, rawMinY = uh, rawMaxX = -1, rawMaxY = -1
+                    let outMinX = uw, outMinY = uh, outMaxX = -1, outMaxY = -1
+                    if ((union.tctx1.canvas.width | 0) !== (uw | 0) || (union.tctx1.canvas.height | 0) !== (uh | 0)) {
+                        union.tctx1.canvas.width = uw | 0
+                        union.tctx1.canvas.height = uh | 0
+                    }
+                    if ((union.tctx2.canvas.width | 0) !== (uw | 0) || (union.tctx2.canvas.height | 0) !== (uh | 0)) {
+                        union.tctx2.canvas.width = uw | 0
+                        union.tctx2.canvas.height = uh | 0
+                    }
+                    union.tctx1.setTransform(1, 0, 0, 1, 0, 0)
+                    union.tctx1.clearRect(0, 0, uw, uh)
+                    union.tctx1.translate(cx, cy)
+                    union.tctx1.rotate(n1.rotation ?? 0)
+                    union.tctx1.drawImage(img1, f1.cutX, f1.cutY, f1.cutWidth, f1.cutHeight, -fw / 2, -fh / 2, fw, fh)
+                    union.tctx2.setTransform(1, 0, 0, 1, 0, 0)
+                    union.tctx2.clearRect(0, 0, uw, uh)
+                    union.tctx2.translate(cx, cy)
+                    union.tctx2.rotate(n2.rotation ?? 0)
+                    union.tctx2.drawImage(img2, f2.cutX, f2.cutY, f2.cutWidth, f2.cutHeight, -fw / 2, -fh / 2, fw, fh)
+                    if ((union.canvasTex && typeof union.canvasTex.resize === "function") && ((union.canvasTex.width | 0) !== (uw | 0) || (union.canvasTex.height | 0) !== (uh | 0))) {
+                        try { union.canvasTex.resize(uw | 0, uh | 0) } catch { }
+                    }
+                    if ((union.outlineTex && typeof union.outlineTex.resize === "function") && ((union.outlineTex.width | 0) !== (uw | 0) || (union.outlineTex.height | 0) !== (uh | 0))) {
+                        try { union.outlineTex.resize(uw | 0, uh | 0) } catch { }
+                    }
+                    const d1 = union.tctx1.getImageData(0, 0, uw, uh)
+                    const d2 = union.tctx2.getImageData(0, 0, uw, uh)
+                    const out = union.ctx.createImageData(uw, uh)
+                    const p1 = d1.data
+                    const p2 = d2.data
+                    const po = out.data
+                    for (let i = 0; i < p1.length; i += 4) {
+                        const a1 = p1[i + 3]
+                        const a2 = p2[i + 3]
+                        const dBase = (a1 + a2) / 255
+                        const d = Math.min(2, dBase * 2)
+                        const m0 = 1 - Math.exp(-HALL_MASK_DENSITY_K * d)
+                        const m = (HALL_MASK_DENSITY_GAMMA === 1)
+                            ? m0
+                            : Math.pow(Math.max(0, Math.min(1, m0)), HALL_MASK_DENSITY_GAMMA)
+                        const a = Math.max(0, Math.min(1, m))
+                        po[i] = 255
+                        po[i + 1] = 255
+                        po[i + 2] = 255
+                        po[i + 3] = Math.round(a * 255)
+                        if (raw) {
+                            const on = (a1 > HALL_MASK_OUTLINE_ALPHA_MIN || a2 > HALL_MASK_OUTLINE_ALPHA_MIN) ? 1 : 0
+                            raw[i >> 2] = on
+                            if (on) {
+                                rawCount++
+                                const idx = (i >> 2)
+                                const ry = Math.idiv(idx, uw)
+                                const rx = idx - (ry * uw)
+                                if (rx < rawMinX) rawMinX = rx
+                                if (ry < rawMinY) rawMinY = ry
+                                if (rx > rawMaxX) rawMaxX = rx
+                                if (ry > rawMaxY) rawMaxY = ry
+                            }
+                        }
+                    }
+                    union.ctx.putImageData(out, 0, 0)
+                    union.canvasTex.refresh()
+                    if (outOutline && union.outlineCtx) {
+                        const po2 = outOutline.data
+                        for (let y = 0; y < uh; y++) {
+                            for (let x = 0; x < uw; x++) {
+                                const idx = (y * uw + x)
+                                if (!raw[idx]) continue
+                                let edge = false
+                                for (let dy = -1; dy <= 1 && !edge; dy++) {
+                                    const yy = y + dy
+                                    if (yy < 0 || yy >= uh) { edge = true; break }
+                                    for (let dx = -1; dx <= 1; dx++) {
+                                        if (dx === 0 && dy === 0) continue
+                                        const xx = x + dx
+                                        if (xx < 0 || xx >= uw) { edge = true; break }
+                                        if (!raw[yy * uw + xx]) { edge = true; break }
+                                    }
+                                }
+                                if (!edge) continue
+                                const p = idx << 2
+                                po2[p] = 255
+                                po2[p + 1] = 255
+                                po2[p + 2] = 255
+                                po2[p + 3] = 255
+                                outlineCount++
+                                if (x < outMinX) outMinX = x
+                                if (y < outMinY) outMinY = y
+                                if (x > outMaxX) outMaxX = x
+                                if (y > outMaxY) outMaxY = y
+                            }
+                        }
+                        union.outlineCtx.putImageData(outOutline, 0, 0)
+                        union.outlineTex.refresh()
+                    }
+                    if (src1) {
+                        sprites.setDataNumber(src1, "__hallUnionFrame1", r1.frameId | 0)
+                        sprites.setDataNumber(src1, "__hallUnionFrame2", r2.frameId | 0)
+                        sprites.setDataNumber(src1, "__hallUnionRot1", rot1)
+                        sprites.setDataNumber(src1, "__hallUnionRot2", rot2)
+                        sprites.setDataNumber(src1, "__hallUnionCanvasW", (uw | 0))
+                        sprites.setDataNumber(src1, "__hallUnionCanvasH", (uh | 0))
+                        sprites.setDataNumber(src1, "__hallUnionImg1W", (img1 && (img1.width || 0)) | 0)
+                        sprites.setDataNumber(src1, "__hallUnionImg1H", (img1 && (img1.height || 0)) | 0)
+                        sprites.setDataNumber(src1, "__hallUnionImg2W", (img2 && (img2.width || 0)) | 0)
+                        sprites.setDataNumber(src1, "__hallUnionImg2H", (img2 && (img2.height || 0)) | 0)
+                        sprites.setDataNumber(src1, "__hallUnionFrameW", (fw | 0))
+                        sprites.setDataNumber(src1, "__hallUnionFrameH", (fh | 0))
+                    }
+                    union.rawCount = rawCount
+                    union.outlineCount = outlineCount
+                    union.rawBounds = (rawCount > 0) ? { minX: rawMinX, minY: rawMinY, maxX: rawMaxX, maxY: rawMaxY } : null
+                    union.outlineBounds = (outlineCount > 0) ? { minX: outMinX, minY: outMinY, maxX: outMaxX, maxY: outMaxY } : null
+                    if (src1) {
+                        sprites.setDataNumber(src1, "__hallUnionRawCount", rawCount)
+                        sprites.setDataNumber(src1, "__hallUnionOutlineCount", outlineCount)
+                        sprites.setDataNumber(src1, "__hallUnionRawMinX", rawCount > 0 ? rawMinX : -1)
+                        sprites.setDataNumber(src1, "__hallUnionRawMinY", rawCount > 0 ? rawMinY : -1)
+                        sprites.setDataNumber(src1, "__hallUnionRawMaxX", rawCount > 0 ? rawMaxX : -1)
+                        sprites.setDataNumber(src1, "__hallUnionRawMaxY", rawCount > 0 ? rawMaxY : -1)
+                        sprites.setDataNumber(src1, "__hallUnionOutMinX", outlineCount > 0 ? outMinX : -1)
+                        sprites.setDataNumber(src1, "__hallUnionOutMinY", outlineCount > 0 ? outMinY : -1)
+                        sprites.setDataNumber(src1, "__hallUnionOutMaxX", outlineCount > 0 ? outMaxX : -1)
+                        sprites.setDataNumber(src1, "__hallUnionOutMaxY", outlineCount > 0 ? outMaxY : -1)
+                    }
+                    if (union.maskImage) {
+                        union.maskImage.x = src1.x
+                        union.maskImage.y = src1.y
+                        union.maskImage.rotation = 0
+                        const sx = (Number(n1.scaleX ?? 1) * (fw / Math.max(1, uw)))
+                        const sy = (Number(n1.scaleY ?? 1) * (fh / Math.max(1, uh)))
+                        union.maskImage.setScale(sx, sy)
+                        union.maskImage.setAlpha(1)
+                    }
+                    if (union.outlineImage) {
+                        union.outlineImage.x = src1.x
+                        union.outlineImage.y = src1.y
+                        union.outlineImage.rotation = 0
+                        const sx = (Number(n1.scaleX ?? 1) * (fw / Math.max(1, uw)))
+                        const sy = (Number(n1.scaleY ?? 1) * (fh / Math.max(1, uh)))
+                        union.outlineImage.setScale(sx, sy)
+                        union.outlineImage.setAlpha(Number.isFinite(union.outlineImage.alpha) ? union.outlineImage.alpha : 1)
+                    }
+                } catch { }
+            }
+        }
+    }
+    for (let i = 0; i < _dunEffectsHallFx.length; i++) {
+        const fx = _dunEffectsHallFx[i]
+        if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+        const followId = sprites.readDataNumber(fx, "__hallFollowMaskId")
+        if (!Number.isFinite(followId) || (followId | 0) <= 0) continue
+        const target = hallFxById[followId | 0]
+        if (!target) continue
+        fx.x = target.x
+        fx.y = target.y
+        const tag = sprites.readDataString(fx, "__hallTag") || ""
+        if (tag.indexOf("|fill") >= 0 || tag.indexOf("|mask-outline") >= 0 || tag.indexOf("|mask2-outline") >= 0 || tag.indexOf("|occlude") >= 0) {
+            const isOutline = (tag.indexOf("|mask-outline") >= 0 || tag.indexOf("|mask2-outline") >= 0)
+            const isOcclude = (tag.indexOf("|occlude") >= 0)
+            let maskRef = sprites.readDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY)
+            if (!maskRef && !isOutline) {
+                sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, target as any)
+                maskRef = target as any
+            }
+            sprites.setDataNumber(fx, EFFECT_ROT_DATA_KEY, 0)
+            const alignSource = isOutline ? target : (maskRef || target)
+            const scaleSource = isOutline ? alignSource : (maskRef || alignSource)
+            const maskHasDustRise = (alignSource && (sprites.readDataNumber(alignSource, "__hallDustRise") | 0) !== 0)
+            if (alignSource && maskHasDustRise) {
+                const baseScale = sprites.readDataNumber(alignSource, EFFECT_SCALE_DATA_KEY)
+                const sx = scaleSource ? sprites.readDataNumber(scaleSource, EFFECT_SCALE_X_DATA_KEY) : NaN
+                const sy = scaleSource ? sprites.readDataNumber(scaleSource, EFFECT_SCALE_Y_DATA_KEY) : NaN
+                if (Number.isFinite(baseScale) && baseScale > 0) {
+                    sprites.setDataNumber(fx, EFFECT_SCALE_DATA_KEY, Number(baseScale))
+                }
+                if (Number.isFinite(sx) && sx > 0) sprites.setDataNumber(fx, EFFECT_SCALE_X_DATA_KEY, Number(sx))
+                if (Number.isFinite(sy) && sy > 0) sprites.setDataNumber(fx, EFFECT_SCALE_Y_DATA_KEY, Number(sy))
+                const bottom = sprites.readDataNumber(alignSource, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY)
+                if (Number.isFinite(bottom) && bottom > 0) {
+                    sprites.setDataNumber(fx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, Number(bottom))
+                    const atlas = _getEffectAtlasAny()
+                    const skin = (sprites.readDataString(alignSource, "effectSkin") || "").trim()
+                    const dir = (sprites.readDataString(alignSource, "effectDir") || "").trim()
+                    const resolved = (atlas && skin) ? _resolveEffectEntry(atlas, skin, dir || "") : null
+                    const frameH = resolved ? (resolved.frameH | 0) : 0
+                    const baseScale2 = Number.isFinite(baseScale) && baseScale > 0 ? Number(baseScale) : 1
+                    const axisY2 = (Number.isFinite(sy) && sy > 0) ? Number(sy) : 1
+                    const dispH = (frameH > 0) ? (frameH * baseScale2 * axisY2) : 0
+                    if (dispH > 0) {
+                        fx.y = Number(bottom) - (dispH * 0.5)
+                    }
+                }
+            }
+            if (isOutline) {
+                const frameList = sprites.readDataString(alignSource, EFFECT_FRAME_LIST_DATA_KEY) || ""
+                const frameListRaw = sprites.readDataNumber(alignSource, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY)
+                const frameIdx = sprites.readDataNumber(alignSource, EFFECT_FRAME_INDEX_DATA_KEY)
+                const frameIdxRaw = sprites.readDataNumber(alignSource, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY)
+                const fps = sprites.readDataNumber(alignSource, EFFECT_FPS_DATA_KEY)
+                const repeat = sprites.readDataNumber(alignSource, EFFECT_REPEAT_DATA_KEY)
+                const yoyo = sprites.readDataNumber(alignSource, EFFECT_YOYO_DATA_KEY)
+                if (frameList) sprites.setDataString(fx, EFFECT_FRAME_LIST_DATA_KEY, frameList)
+                if (Number.isFinite(frameListRaw)) sprites.setDataNumber(fx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, frameListRaw)
+                if (Number.isFinite(frameIdx)) sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, frameIdx | 0)
+                if (Number.isFinite(frameIdxRaw)) sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY, frameIdxRaw | 0)
+                if (Number.isFinite(fps) && fps > 0) sprites.setDataNumber(fx, EFFECT_FPS_DATA_KEY, Number(fps))
+                if (Number.isFinite(repeat)) sprites.setDataNumber(fx, EFFECT_REPEAT_DATA_KEY, repeat | 0)
+                if (Number.isFinite(yoyo)) sprites.setDataNumber(fx, EFFECT_YOYO_DATA_KEY, yoyo | 0)
+                const nativeOutline: any = (fx as any).native
+                if (nativeOutline) {
+                    const atlas = _getEffectAtlasAny()
+                    const skin = (sprites.readDataString(alignSource, "effectSkin") || "").trim()
+                    const dir = (sprites.readDataString(alignSource, "effectDir") || "").trim()
+                    const resolved = (atlas && skin) ? _resolveEffectEntry(atlas, skin, dir || "") : null
+                    const frameW = resolved ? (resolved.frameW | 0) : 0
+                    const frameH = resolved ? (resolved.frameH | 0) : 0
+                    const baseScale = sprites.readDataNumber(alignSource, EFFECT_SCALE_DATA_KEY)
+                    const srcScale = (Number.isFinite(baseScale) && baseScale > 0) ? Number(baseScale) : 1
+                    const srcScaleX = sprites.readDataNumber(alignSource, EFFECT_SCALE_X_DATA_KEY)
+                    const srcScaleY = sprites.readDataNumber(alignSource, EFFECT_SCALE_Y_DATA_KEY)
+                    const axisX = (Number.isFinite(srcScaleX) && srcScaleX > 0) ? Number(srcScaleX) : 1
+                    const axisY = (Number.isFinite(srcScaleY) && srcScaleY > 0) ? Number(srcScaleY) : 1
+                    const dw = (frameW > 0) ? (frameW * srcScale * axisX) : 0
+                    const dh = (frameH > 0) ? (frameH * srcScale * axisY) : 0
+                    const fw = nativeOutline.frame
+                        ? ((nativeOutline.frame.cutWidth ?? nativeOutline.frame.width) | 0)
+                        : 0
+                    const fh = nativeOutline.frame
+                        ? ((nativeOutline.frame.cutHeight ?? nativeOutline.frame.height) | 0)
+                        : 0
+                    if (fw > 0 && fh > 0 && Number.isFinite(dw) && Number.isFinite(dh) && dw > 0 && dh > 0) {
+                        const sx = dw / fw
+                        const sy = dh / fh
+                        sprites.setDataNumber(fx, EFFECT_SCALE_DATA_KEY, 1)
+                        sprites.setDataNumber(fx, EFFECT_SCALE_X_DATA_KEY, sx)
+                        sprites.setDataNumber(fx, EFFECT_SCALE_Y_DATA_KEY, sy)
+                        try {
+                            if (typeof nativeOutline.setDisplaySize === "function") {
+                                nativeOutline.setDisplaySize(dw, dh)
+                            } else {
+                                nativeOutline.displayWidth = dw
+                                nativeOutline.displayHeight = dh
+                            }
+                            const bottom = sprites.readDataNumber(alignSource, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY)
+                            if (Number.isFinite(bottom) && bottom > 0) {
+                                nativeOutline.y = (bottom | 0) - (dh * 0.5)
+                            }
+                        } catch { }
+                    }
+                }
+            }
+            const native: any = (fx as any).native
+            const maskNative: any = (target as any).native
+            if (native && maskNative && !native.__effectPaintMask && typeof maskNative.createBitmapMask === "function") {
+                try {
+                    const mask = maskNative.createBitmapMask()
+                    native.setMask(mask)
+                    native.__effectPaintMask = mask
+                    native.__effectPaintMaskType = "sprite"
+                    native.__effectPaintMaskSpriteId = (maskNative as any).__effectMaskSpriteId || (maskNative as any).name || maskNative
+                    native.__effectMaskFailReason = ""
+                } catch {
+                    try { native.__effectMaskFailReason = "mask-force-attach-failed" } catch { }
+                }
+            }
+        }
+    }
+    _heEffectsHallTraceTick(now | 0)
 }
 
 
@@ -24865,6 +27044,10 @@ const HERO_SHOP_FOCUS_PRICE_KEY = "shopFocusPrice"
 
 const HERO_SHOP_FOCUS_BONUS_KEY = "shopFocusBonus"
 
+const HERO_SHOP_FOCUS_RARITY_KEY = "shopFocusRarity"
+
+const HERO_SHOP_FOCUS_DESC_KEY = "shopFocusDesc"
+
 const HERO_SHOP_FOCUS_OWNED_BY_KEY = "shopFocusOwnedByPid"
 
 const HERO_SHOP_FOCUS_CAN_AFFORD_KEY = "shopFocusCanAfford"
@@ -24948,6 +27131,7 @@ const SHOP_PLATFORM_SHOP_COL = 4 // tiles, relative to platform origin (col 0 = 
 const SHOP_PLATFORM_SHOP_ROW = 3.5 // between tiles [4][3] and [4][4]
 const SHOP_PLATFORM_SHOP_OFFSET_X_PX = -16
 const SHOP_PLATFORM_SHOP_OFFSET_Y_PX = -64
+const SHOP_PLATFORM_EDGE_BASE_PX = 8
 
 function _isShopActor(hero: Sprite): boolean {
 
@@ -25000,6 +27184,35 @@ function _clearHeroManaBar(heroIndex: number): void {
 let _shopPlatformAnchor: Sprite = null
 let _shopPlatformStairs: Sprite = null
 let _shopPlatformSolids: Sprite[] = []
+
+function _shopPlatformCenterVariantId(r: number, c: number, baseR: number, baseC: number): number {
+    const rr = ((r | 0) - (baseR | 0)) & 1
+    const cc = ((c | 0) - (baseC | 0)) & 1
+    const idx = ((rr << 1) | cc) | 0
+    if (idx === 0) return DECAL_SHOP_PLATFORM_CENTER_A
+    if (idx === 1) return DECAL_SHOP_PLATFORM_CENTER_B
+    if (idx === 2) return DECAL_SHOP_PLATFORM_CENTER_C
+    return DECAL_SHOP_PLATFORM_CENTER_D
+}
+
+function _shopPlatformStampCenterFill(baseR: number, baseC: number): void {
+    if (!_engineDecalGrid || _engineDecalGrid.length <= 0) return
+    const rows = _engineDecalGrid.length | 0
+    const cols = (_engineDecalGrid[0]?.length ?? 0) | 0
+    if (rows <= 0 || cols <= 0) return
+
+    const innerTop = (baseR + 1) | 0
+    const innerLeft = (baseC + 1) | 0
+    const innerBottom = (baseR + SHOP_PLATFORM_SIZE_TILES - 2) | 0
+    const innerRight = (baseC + SHOP_PLATFORM_SIZE_TILES - 2) | 0
+
+    for (let r = innerTop; (r | 0) <= (innerBottom | 0); r++) {
+        for (let c = innerLeft; (c | 0) <= (innerRight | 0); c++) {
+            const id = _shopPlatformCenterVariantId(r | 0, c | 0, innerTop | 0, innerLeft | 0) | 0
+            _dunDecor_setDecalSafe(r | 0, c | 0, id | 0)
+        }
+    }
+}
 
 
 
@@ -25115,15 +27328,16 @@ let shopStatues: Sprite[] = [null, null, null, null]
 
 let shopPedestalSolids: Sprite[] = [null, null, null, null]
 
+let shopPriceTags: TextSprite[] = [null, null, null, null]
+
 
 
 const SHOP_STATUE_PROFILE_NAME = "Statue"
 
-// Depth bias so statues (1 tile above pedestals) still render above pedestal props.
-
 // NOTE: must match WORLD_DEPTH_Y_SCALE in arcadeCompat/tileMapGlue (100).
-
-const SHOP_STATUE_DEPTH_BIAS = (WORLD_TILE_SIZE * 100) + 1
+const WORLD_DEPTH_Y_SCALE = 100
+// Depth bias is computed per-statue from pedestal vs statue world Y (see _shopStatueRow_placeStatue).
+const SHOP_STATUE_DEPTH_BIAS = 0
 
 
 
@@ -25148,6 +27362,16 @@ const HERO_DATA_WEAPON_AGILITY_ID = "wAgi"
 const HERO_DATA_WEAPON_INTELLIGENCE_ID = "wInt"
 
 const HERO_DATA_WEAPON_SUPPORT_ID = "wSup"
+
+const HERO_DATA_WEAPON_STRENGTH_VARIANT = "wStrV"
+const HERO_DATA_WEAPON_AGILITY_VARIANT = "wAgiV"
+const HERO_DATA_WEAPON_INTELLIGENCE_VARIANT = "wIntV"
+const HERO_DATA_WEAPON_SUPPORT_VARIANT = "wSupV"
+
+const HERO_DATA_WEAPON_STRENGTH_RARITY = "wStrR"
+const HERO_DATA_WEAPON_AGILITY_RARITY = "wAgiR"
+const HERO_DATA_WEAPON_INTELLIGENCE_RARITY = "wIntR"
+const HERO_DATA_WEAPON_SUPPORT_RARITY = "wSupR"
 
 
 
@@ -25512,28 +27736,45 @@ function _shopPlatformPlace(baseR: number, baseC: number): void {
 
     const solids: Sprite[] = []
     const topR = (baseR + SHOP_PLATFORM_WALL_MIN) | 0
-    const bottomR = (baseR + SHOP_PLATFORM_FLOOR_MAX) | 0
+    const bottomR = (baseR + SHOP_PLATFORM_WALL_MAX) | 0
     const leftC = (baseC + SHOP_PLATFORM_WALL_MIN) | 0
     const rightC = (baseC + SHOP_PLATFORM_WALL_MAX) | 0
     const gapC = (baseC + SHOP_PLATFORM_SHOP_COL) | 0
 
     function addSolid(r: number, c: number): void {
         const s = _dunDecor_spawnAtTile({
-            name: "", // collision only; no prop visual
+            name: "shop_platform", // collision-only; skip prop grid render
             role: DECOR_ROLE.SOLID,
             tileR: r,
             tileC: c,
             pxW: tileSize,
             pxH: tileSize,
         })
+        if (s) sprites.setDataNumber(s, "decorCollider", 1)
+        if (s) {
+            sprites.setDataNumber(s, "decorAnchorR", anchorR | 0)
+            sprites.setDataNumber(s, "decorAnchorC", anchorC | 0)
+            sprites.setDataNumber(s, "decorHasAnchor", 1)
+        }
+        if (s) {
+            const localR = ((r - baseR) | 0)
+            const localC = ((c - baseC) | 0)
+            if (localR >= 0 && localR < (SHOP_PLATFORM_SIZE_TILES | 0) && localC >= 0 && localC < (SHOP_PLATFORM_SIZE_TILES | 0)) {
+                const frameIndex = ((localR * (SHOP_PLATFORM_SIZE_TILES | 0)) + localC) | 0
+                sprites.setDataNumber(s, DECOR_SOLID_FRAME_INDEX_KEY, frameIndex)
+                sprites.setDataString(s, DECOR_SOLID_TEX_KEY, "tiles.shopPlatform")
+            }
+        }
+        if (s) sprites.setDataNumber(s, DECOR_DATA.SOLID_BASE_PX, SHOP_PLATFORM_EDGE_BASE_PX | 0)
+        if (s) sprites.setDataNumber(s, DECOR_DATA.SOLID_USE_AURA, 1)
         if (s) solids.push(s)
     }
 
     // Top edge
     for (let c = leftC; c <= rightC; c++) addSolid(topR, c)
-    // Bottom edge (leave center gap for stairs)
+    // Bottom edge (leave center gap for stairs; 3 tiles wide)
     for (let c = leftC; c <= rightC; c++) {
-        if (c === gapC) continue
+        if (c >= (gapC - 1) && c <= (gapC + 1)) continue
         addSolid(bottomR, c)
     }
     // Vertical edges (skip corners already covered)
@@ -25543,6 +27784,9 @@ function _shopPlatformPlace(baseR: number, baseC: number): void {
     }
 
     _shopPlatformSolids = solids
+
+    // Replace platform center tiles with the 2x2 fill pattern from shopPlatform.png.
+    _shopPlatformStampCenterFill(baseR | 0, baseC | 0)
 
     // Stairs visual overlay (3 tiles wide, centered)
     const stairAnchorR = bottomR | 0
@@ -25555,6 +27799,14 @@ function _shopPlatformPlace(baseR: number, baseC: number): void {
         pxW: tileSize,
         pxH: tileSize,
     })
+
+    try {
+        const g: any = globalThis as any
+        const decor = g && g.__HeroEnginePhaserDecor
+        if (decor && typeof decor.forceResync === "function") {
+            decor.forceResync("shop_platform_place")
+        }
+    } catch { }
 }
 
 
@@ -26203,6 +28455,47 @@ function _dunStampEntranceTower(): void {
     }
     if (leftCavLeft >= 0 && leftCavRight < cols) stampCavity(leftCavLeft | 0)
     if (rightCavLeft >= 0 && rightCavRight < cols) stampCavity(rightCavLeft | 0)
+
+    // Entrance collisions: block castle walls; keep the doorway opening.
+    if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
+        const spawnWallCollider = (r: number, c: number, name: string): void => {
+            if (r < 0 || c < 0 || r >= rows || c >= cols) return
+            if (_dunFindDecorAtTile(r | 0, c | 0, "")) return
+            const s = _dunDecor_spawnAtTile({
+                name: name || "entrance_wall",
+                role: DECOR_ROLE.SOLID,
+                tileR: r | 0,
+                tileC: c | 0,
+                pxW: WORLD_TILE_SIZE | 0,
+                pxH: WORLD_TILE_SIZE | 0,
+            })
+            if (s && !(s.flags & sprites.Flag.Destroyed)) {
+                sprites.setDataNumber(s, DECOR_DATA.IS_COLLIDER, 1)
+                sprites.setDataNumber(s, DECOR_DATA.ROLE, DECOR_ROLE.SOLID)
+            }
+        }
+
+        const towerTop = topRow | 0
+        const towerBot = ((topRow + towerHeight - 1) | 0)
+        for (let r = towerTop | 0; (r | 0) <= (towerBot | 0); r++) {
+            const ro = ((r | 0) - (towerTop | 0)) | 0
+            for (let c = leftCol | 0; (c | 0) <= (rightCol | 0); c++) {
+                if ((c | 0) >= (doorLeft | 0) && (c | 0) <= (doorRight | 0)) continue
+                spawnWallCollider(r | 0, c | 0, `entrance_wall#r${ro | 0}`)
+            }
+        }
+
+        // Gate: block the full doorway area so you can't walk behind it.
+        for (let r = doorTop | 0; (r | 0) <= ((doorTop + 3) | 0); r++) {
+            const ro = ((r | 0) - (doorTop | 0)) | 0
+            for (let c = doorLeft | 0; (c | 0) <= (doorRight | 0); c++) {
+                const co = ((c | 0) - (doorLeft | 0)) | 0
+                // Skip the bottom-center tiles (shadow-only) so they don't block.
+                if ((ro | 0) === 3 && ((co | 0) === 1 || (co | 0) === 2)) continue
+                spawnWallCollider(r | 0, c | 0, `entrance_gate#r${ro | 0}c${co | 0}`)
+            }
+        }
+    }
 
     if (DEBUG_TILEMAP_AUDIT) {
         let count = 0
@@ -28933,6 +31226,14 @@ function _shopStatueRow_stampOfferMetadata(st: Sprite, si: number, ctx: any, wea
     sprites.setDataString(st, SH_ITEM_RENDER_SLOT, ctx.rdSlot)
 
     sprites.setDataString(st, SH_ITEM_WEAPON_ID, weaponId)
+    const prevMetaId = sprites.readDataString(st, "_shMetaWeaponId") || ""
+    if (prevMetaId !== weaponId) {
+        sprites.setDataString(st, "_shMetaWeaponId", weaponId)
+        sprites.setDataString(st, SH_ITEM_VARIANT, "")
+        sprites.setDataString(st, SH_ITEM_RARITY, "")
+    }
+    _shopEnsureOfferHasBonus(st)
+    _shopStampOfferPresentation(st, ctx.eqSlot, ctx.rdSlot, weaponId, si | 0)
 
 }
 
@@ -29129,6 +31430,45 @@ function _shopUpsertPedestalSolid(si: number, tileR: number, tileC: number, offX
 
 }
 
+function _shopEnsurePriceTag(si: number): TextSprite {
+    if (!shopPriceTags) shopPriceTags = []
+    while (shopPriceTags.length < 4) shopPriceTags.push(null)
+    while (shopPriceTags.length > 4) shopPriceTags.pop()
+    const idx = si | 0
+    if (idx < 0 || idx >= shopPriceTags.length) return null
+    let t = shopPriceTags[idx]
+    if (t && !(t.flags & sprites.Flag.Destroyed)) return t
+    t = textsprite.create("", 0, 1)
+    t.setMaxFontHeight(6)
+    t.setOutline(1, 15)
+    t.setBorder(1, 15, 1)
+    t.setFlag(SpriteFlag.Ghost, true)
+    t.setFlag(SpriteFlag.Invisible, true)
+    t.z = -20
+    shopPriceTags[idx] = t
+    return t
+}
+
+function _shopHidePriceTag(si: number): void {
+    if (!shopPriceTags || si < 0 || si >= shopPriceTags.length) return
+    const t = shopPriceTags[si]
+    if (!t || (t.flags & sprites.Flag.Destroyed)) return
+    t.setFlag(SpriteFlag.Invisible, true)
+}
+
+function _shopStatueRow_updatePriceTag(si: number, st: Sprite, pedX: number, pedY: number): void {
+    if (!st) { _shopHidePriceTag(si); return }
+    const tag = _shopEnsurePriceTag(si)
+    if (!tag) return
+    const price = sprites.readDataNumber(st, SH_ITEM_PRICE) | 0
+    const label = (price <= 0) ? "Free!" : ("$" + (price | 0))
+    ;(tag as any).setText(label)
+    tag.setPosition((pedX | 0), ((pedY | 0) + 12))
+    tag.setFlag(SpriteFlag.Invisible, false)
+    tag.setFlag(SpriteFlag.Ghost, true)
+    tag.z = -20
+}
+
 
 
 function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
@@ -29223,10 +31563,6 @@ function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
 
 
 
-    st.z = ((shopkeeperNpc.z | 0) + SHOP_STATUE_DEPTH_BIAS) | 0
-
-
-
     if (pedR >= 0 && pedC >= 0) {
 
         // Statues should sit ON the pedestal tile center (not the 2x2 slot center).
@@ -29246,6 +31582,9 @@ function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
         const off = STATUE_OFFSET[si] || { x: 0, y: 0 }
 
         st.setPosition((pedX + off.x) | 0, (stY + off.y) | 0)
+        // Attach depth to the pedestal base so statues sort like tall props.
+        const depthBias = ((((pedY | 0) - (st.y | 0)) * WORLD_DEPTH_Y_SCALE) - 1) | 0
+        st.z = depthBias
 
         const pedName =
             (si === 0) ? "pedestal_tl" :
@@ -29255,6 +31594,7 @@ function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
 
         // Pedestal stays tile-aligned; statue gets the visual offset.
         _shopUpsertPedestalSolid(si, pedR, pedC, 0, 0, pedName)
+        _shopStatueRow_updatePriceTag(si, st, pedX, pedY)
 
 
 
@@ -29317,6 +31657,8 @@ function _shopStatueRow_placeStatue(si: number, st: Sprite, layout: any): void {
 
         }
 
+    } else {
+        _shopHidePriceTag(si)
     }
 
 }
@@ -29508,6 +31850,520 @@ function _shopDefaultWeaponIdForSlot(slot: string): string {
 
 }
 
+function _shopIsBaseWeaponIdForSlot(weaponId: string, equipSlot: string): boolean {
+    const wid = _shopNormWeaponId(weaponId || "")
+    if (!wid) return false
+    const slot = (equipSlot || "").toLowerCase()
+    if (slot) {
+        const base = _shopNormWeaponId(_shopDefaultWeaponIdForSlot(slot))
+        return !!base && wid === base
+    }
+    const bases = [
+        DEFAULT_WEAPON_STRENGTH_ID,
+        DEFAULT_WEAPON_AGILITY_ID,
+        DEFAULT_WEAPON_INTELLIGENCE_ID,
+        DEFAULT_WEAPON_SUPPORT_ID,
+        DEFAULT_WEAPON_THRUST_ID,
+        DEFAULT_WEAPON_SLASH_ID,
+        DEFAULT_WEAPON_CAST_ID,
+    ]
+    for (let i = 0; i < bases.length; i++) {
+        const b = _shopNormWeaponId(bases[i] || "")
+        if (b && wid === b) return true
+    }
+    return false
+}
+
+function _shopBaseWeaponDescForSlot(equipSlot: string): string {
+    const s = (equipSlot || "").toLowerCase()
+    if (s === SHOP_EQUIP_SLOT_STRENGTH) return "It only enables using strength moves. A really sad excuse for a weapon."
+    if (s === SHOP_EQUIP_SLOT_AGILITY) return "It only enables using agility moves. A really sad excuse for a weapon."
+    if (s === SHOP_EQUIP_SLOT_INTELLIGENCE) return "It only enables using intelligence moves. A really sad excuse for a weapon."
+    if (s === SHOP_EQUIP_SLOT_SUPPORT) return "It only enables using support moves. A really sad excuse for a weapon."
+    return "It only enables basic moves. A really sad excuse for a weapon."
+}
+
+function _shopRarityForWeaponId(weaponId: string, equipSlot: string): string {
+    return _shopIsBaseWeaponIdForSlot(weaponId, equipSlot) ? "common" : "uncommon"
+}
+
+function _shopDescForWeaponId(weaponId: string, equipSlot: string, bonusDesc: string): string {
+    if (_shopIsBaseWeaponIdForSlot(weaponId, equipSlot)) return _shopBaseWeaponDescForSlot(equipSlot)
+    if (bonusDesc) return bonusDesc
+    return "A weapon with unknown properties."
+}
+
+const WEAPON_RARITY_WORDS: Record<string, string[]> = {
+    common: ["Basic", "Plain", "Simple", "Everyday", "Ordinary", "Common"],
+    uncommon: ["Unusual", "Odd", "Curious", "Strange", "Uncommon"],
+    rare: ["Rare", "Fine", "Exceptional", "Superior", "Exquisite"],
+    epic: ["Epic", "Heroic", "Mythic", "Grand", "Fabled"],
+    legendary: ["Legendary", "Godforged", "Ancient", "Mythic", "Peerless"],
+}
+
+const WEAPON_TRAIT_LABELS = ["Control", "Reach", "Time", "Status"]
+const WEAPON_TRAIT_KEYS = ["control", "reach", "time", "status"]
+const WEAPON_TRAIT_WORDS: Record<string, { adj: string[]; noun: string[] }> = {
+    control: {
+        adj: ["Reliable", "Steadfast", "Resolute", "Stalwart", "Disciplined", "Dauntless", "Unyielding"],
+        noun: ["Reliability", "Steadfastness", "Resolve", "Discipline", "Dauntlessness", "Normality", "Control"],
+    },
+    reach: {
+        adj: ["Farseeing", "Far-ranging", "Longreach", "Extended", "Wide-arc", "Farflung"],
+        noun: ["Farsight", "Farreach", "Distance", "Range", "Reach", "Longshot"],
+    },
+    time: {
+        adj: ["Temporal", "Clocked", "Timed", "Rhythmic", "Measured", "Metronomic"],
+        noun: ["Tempo", "Timing", "Rhythm", "Time", "Hourglass", "Chronos"],
+    },
+    status: {
+        adj: ["Afflicting", "Vexing", "Withering", "Toxic", "Stinging", "Blighting"],
+        noun: ["Affliction", "Venom", "Blight", "Dread", "Sting", "Malaise"],
+    },
+}
+
+const WEAPON_BASE_NAME_BY_ID: Record<string, string> = {
+    arming: "Arming Sword",
+    club: "Club",
+    flail: "Flail",
+    glowsword: "Glowsword",
+    katana: "Katana",
+    longsword: "Longsword",
+    mace: "Mace",
+    rapier: "Rapier",
+    saber: "Saber",
+    scimitar: "Scimitar",
+    scythe: "Scythe",
+    smash: "Smash",
+    waraxe: "Waraxe",
+    dragonspear: "Dragonspear",
+    halberd: "Halberd",
+    longspear: "Longspear",
+    spear: "Spear",
+    trident: "Trident",
+    whip: "Whip",
+    s: "Staff",
+    gnarled: "Gnarled Staff",
+    simple: "Simple Staff",
+    loop: "Loop Staff",
+    diamond: "Diamond Staff",
+}
+
+const WEAPON_STAFF_IDS = new Set(["s", "gnarled", "simple", "loop", "diamond"])
+const WEAPON_SMASH_VARIANT_NAME: Record<string, string> = {
+    axe: "Axe",
+    hammer: "Hammer",
+    pickaxe: "Pickaxe",
+}
+const WEAPON_VARIANT_MATERIAL: Record<string, string> = {
+    iron: "Iron",
+    steel: "Steel",
+    copper: "Copper",
+    bronze: "Bronze",
+    brass: "Brass",
+    silver: "Silver",
+    gold: "Gold",
+    ceramic: "Ceramic",
+}
+const WEAPON_VARIANT_TIER: Record<string, string> = {
+    base: "common",
+    brass: "common",
+    copper: "common",
+    bronze: "common",
+    iron: "uncommon",
+    green: "uncommon",
+    blue: "rare",
+    silver: "rare",
+    steel: "rare",
+    purple: "epic",
+    gold: "epic",
+    orange: "legendary",
+    red: "legendary",
+    dark: "legendary",
+    yellow: "legendary",
+    light: "legendary",
+    medium: "legendary",
+    ceramic: "rare",
+    axe: "unused",
+    hammer: "unused",
+    pickaxe: "unused",
+    hoe: "unused",
+    shovel: "unused",
+    watering: "unused",
+    cane: "unused",
+    whip: "unused",
+}
+const WEAPON_RARITY_TIER_POOL: Record<string, string[]> = {
+    common: ["common"],
+    uncommon: ["uncommon"],
+    rare: ["rare"],
+    epic: ["epic"],
+    legendary: ["legendary"],
+    unused: ["unused"],
+}
+const WEAPON_TRAIT_STYLE: "adj" | "of" | "mixed" = "mixed"
+
+function _weaponHash(s: string): number {
+    let h = 0
+    const str = String(s || "")
+    for (let i = 0; i < str.length; i++) {
+        h = ((h * 31) + str.charCodeAt(i)) >>> 0
+    }
+    return h >>> 0
+}
+
+function _weaponPickFrom(list: string[], seed: number, fallback: string = ""): string {
+    if (!list || list.length <= 0) return fallback
+    const idx = Math.abs(seed | 0) % list.length
+    return list[idx] || fallback
+}
+
+function _weaponDominantTraitIndex(t1: number, t2: number, t3: number, t4: number): number {
+    const vals = [t1 | 0, t2 | 0, t3 | 0, t4 | 0]
+    let bestIdx = -1
+    let bestAbs = 0
+    for (let i = 0; i < vals.length; i++) {
+        const a = Math.abs(vals[i] | 0)
+        if (a > bestAbs) {
+            bestAbs = a
+            bestIdx = i
+        }
+    }
+    return bestAbs > 0 ? bestIdx : -1
+}
+
+function _weaponBaseNameForId(weaponId: string, variant: string): string {
+    const wid = _shopNormWeaponId(weaponId || "")
+    if (!wid) return "Weapon"
+    if (wid === "smash") {
+        const v = String(variant || "").toLowerCase()
+        const smashName = WEAPON_SMASH_VARIANT_NAME[v]
+        if (smashName) return smashName
+    }
+    return WEAPON_BASE_NAME_BY_ID[wid] || wid
+}
+
+function _weaponMaterialForVariant(weaponId: string, variant: string): string {
+    const wid = _shopNormWeaponId(weaponId || "")
+    const v = String(variant || "").toLowerCase()
+    if (!WEAPON_STAFF_IDS.has(wid)) return ""
+    if (v === "base" || !v) return "Oak"
+    return WEAPON_VARIANT_MATERIAL[v] || v.charAt(0).toUpperCase() + v.slice(1)
+}
+
+function _weaponPickVariantForRarity(weaponId: string, rarity: string, seedKey: string): string {
+    const wid = _shopNormWeaponId(weaponId || "")
+    if (!wid) return "base"
+    const variants = listWeaponVariants(wid) || []
+    if (!variants || variants.length <= 0) return "base"
+    const r = String(rarity || "common").toLowerCase()
+    const tiers = WEAPON_RARITY_TIER_POOL[r] || WEAPON_RARITY_TIER_POOL.common
+    const pool = variants.filter((v) => {
+        const key = String(v || "").toLowerCase()
+        const tier = WEAPON_VARIANT_TIER[key] || "unused"
+        return tiers.indexOf(tier) >= 0
+    })
+    const list = (pool.length > 0) ? pool : variants
+    if (list.length <= 0) return "base"
+    if (list.indexOf("base") >= 0 && r === "common") return "base"
+    const idx = _weaponHash(seedKey || "") % list.length
+    return list[idx] || list[0] || "base"
+}
+
+function _weaponBuildName(weaponId: string, rarity: string, variant: string, t1: number, t2: number, t3: number, t4: number): string {
+    const wid = _shopNormWeaponId(weaponId || "")
+    if (!wid) return "Weapon"
+    const rarityKey = String(rarity || "common").toLowerCase()
+    const seed = _weaponHash(`${wid}|${rarityKey}|${t1|0}|${t2|0}|${t3|0}|${t4|0}|${variant||""}`)
+    const rarityWord = _weaponPickFrom(WEAPON_RARITY_WORDS[rarityKey] || WEAPON_RARITY_WORDS.common, seed, "Basic")
+    const traitIdx = _weaponDominantTraitIndex(t1, t2, t3, t4)
+    const traitKey = (traitIdx >= 0) ? WEAPON_TRAIT_KEYS[traitIdx] : ""
+    const traitWords = traitKey ? WEAPON_TRAIT_WORDS[traitKey] : null
+    const traitAdj = traitWords ? _weaponPickFrom(traitWords.adj, seed + 11, "") : ""
+    const traitNoun = traitWords ? _weaponPickFrom(traitWords.noun, seed + 23, "") : ""
+    const baseName = _weaponBaseNameForId(wid, variant)
+    const material = _weaponMaterialForVariant(wid, variant)
+    const materialSuffix = material ? ("of " + material) : ""
+
+    if (WEAPON_TRAIT_STYLE === "of" && traitNoun && !materialSuffix) {
+        return [rarityWord, baseName, "of " + traitNoun].filter((v) => !!v).join(" ")
+    }
+    if (WEAPON_TRAIT_STYLE === "mixed" && traitNoun && !materialSuffix) {
+        const useOf = (seed % 3) === 0
+        if (useOf) return [rarityWord, baseName, "of " + traitNoun].filter((v) => !!v).join(" ")
+    }
+    const parts = [rarityWord, traitAdj, baseName].filter((v) => !!v)
+    return materialSuffix ? (parts.join(" ") + " " + materialSuffix) : parts.join(" ")
+}
+
+function _shopLabelForWeaponId(weaponId: string, rarity: string, variant: string, t1: number, t2: number, t3: number, t4: number): string {
+    return _weaponBuildName(weaponId, rarity, variant, t1, t2, t3, t4)
+}
+
+const _weaponIconCache: Record<string, any> = Object.create(null)
+const WEAPON_MASTER_ICON_ZOOM = 2
+const _weaponMasterFrameByKey: Record<string, any> = Object.create(null)
+const _weaponMasterFramesByWeapon: Record<string, any[]> = Object.create(null)
+let _weaponMasterCacheReady = false
+
+const WEAPON_ICON_FRAME_OVERRIDES: Record<string, { frameRow?: number; frameCol?: number; focusX?: number; focusY?: number; variants?: Record<string, { frameRow?: number; frameCol?: number; focusX?: number; focusY?: number }> }> = {
+    arming: { frameRow: 2, frameCol: 2 }, // down row, frame 2
+    boomerang: { frameRow: 2, frameCol: 0 }, // down row, frame 0
+    flail: { frameRow: 2, frameCol: 2 }, // down row, frame 2
+    bow_normal: { frameRow: 1, frameCol: 4 }, // left row, frame 4
+    bow_recurve: { frameRow: 1, frameCol: 4 },
+    bow_great: { frameRow: 1, frameCol: 4 },
+    smash: {
+        variants: {
+            pickaxe: { frameRow: 2, frameCol: 3 }, // down row, frame 3
+        },
+    },
+}
+const WEAPON_ICON_SHEET_PREFS: Record<string, { animExact?: string; animIncludes?: string }> = {
+    arming: { animIncludes: "attack_slash" },
+}
+
+function _weaponIconOverrideFor(weaponId: string, variant: string): { frameRow?: number; frameCol?: number; focusX?: number; focusY?: number } | null {
+    const wid = _shopNormWeaponId(weaponId || "")
+    if (!wid) return null
+    const base = WEAPON_ICON_FRAME_OVERRIDES[wid]
+    if (!base) return null
+    const v = String(variant || "").toLowerCase()
+    if (v && base.variants && base.variants[v]) {
+        const byVar = base.variants[v]
+        return {
+            frameRow: (byVar.frameRow != null) ? byVar.frameRow : base.frameRow,
+            frameCol: (byVar.frameCol != null) ? byVar.frameCol : base.frameCol,
+            focusX: (byVar.focusX != null) ? byVar.focusX : base.focusX,
+            focusY: (byVar.focusY != null) ? byVar.focusY : base.focusY,
+        }
+    }
+    if (base.frameRow == null && base.frameCol == null && base.focusX == null && base.focusY == null) return null
+    return base
+}
+
+function _weaponMasterCacheEnsure(): void {
+    if (_weaponMasterCacheReady) return
+    _weaponMasterCacheReady = true
+    for (let i = 0; i < WEAPON_MASTER_FRAMES.length; i++) {
+        const f: any = WEAPON_MASTER_FRAMES[i]
+        if (!f) continue
+        const wid = String(f.weaponId || "").toLowerCase()
+        if (!wid) continue
+        const v = String(f.variant || "base").toLowerCase() || "base"
+        const key = `${wid}|${v}`
+        if (!_weaponMasterFrameByKey[key]) _weaponMasterFrameByKey[key] = f
+        if (!_weaponMasterFramesByWeapon[wid]) _weaponMasterFramesByWeapon[wid] = []
+        _weaponMasterFramesByWeapon[wid].push(f)
+    }
+}
+
+function _weaponMasterPickFrame(wid: string, variant: string): any {
+    _weaponMasterCacheEnsure()
+    const v = String(variant || "base").toLowerCase() || "base"
+    const key = `${wid}|${v}`
+    let f = _weaponMasterFrameByKey[key] || null
+    if (!f && v !== "base") f = _weaponMasterFrameByKey[`${wid}|base`] || null
+    if (!f) {
+        const list = _weaponMasterFramesByWeapon[wid]
+        if (list && list.length > 0) f = list[0]
+    }
+    return f
+}
+
+function _weaponIconMetaFromMaster(weaponId: string, variant: string): any {
+    const wid = _shopNormWeaponId(weaponId || "")
+    if (!wid) return null
+    const frame = _weaponMasterPickFrame(wid, variant)
+    if (!frame) return null
+
+    const sheet = WEAPON_MASTER_SHEET as any
+    const frameW = Math.max(1, sheet.frameW | 0)
+    const frameH = Math.max(1, sheet.frameH | 0)
+    const cols = Math.max(1, sheet.cols | 0)
+    const rows = Math.max(1, sheet.rows | 0)
+    const frameIndex = frame.frameIndex | 0
+    const frameCol = (frameIndex % cols) | 0
+    const frameRow = Math.floor(frameIndex / cols) | 0
+    const centerX = (frameW - 1) / 2
+    const centerY = (frameH - 1) / 2
+    const tipX = (typeof frame.tipX === "number") ? frame.tipX : 0
+    const tipY = (typeof frame.tipY === "number") ? frame.tipY : 0
+    const focusX = Math.max(0, Math.min(1, (centerX + tipX) / frameW))
+    const focusY = Math.max(0, Math.min(1, (centerY + tipY) / frameH))
+    const atlasW = Math.max(1, cols * frameW)
+    const atlasH = Math.max(1, rows * frameH)
+    const urlRaw = `/assets/weapons/_master/weapon_master ${frameW}x${frameH}.png`
+    const url = urlRaw.replace(/ /g, "%20")
+
+    return {
+        url,
+        frameW,
+        frameH,
+        cols,
+        rows,
+        sheetW: frameW * cols,
+        sheetH: frameH * rows,
+        frameCol,
+        frameRow,
+        focusX,
+        focusY,
+        sheetX: 0,
+        sheetY: 0,
+        atlasW,
+        atlasH,
+        zoom: WEAPON_MASTER_ICON_ZOOM,
+        key: `master:${wid}:${String(frame.variant || variant || "base")}`,
+    }
+}
+
+function _weaponIconMetaFor(weaponId: string, variant: string): any {
+    const wid = _shopNormWeaponId(weaponId || "")
+    if (!wid) return null
+    const v = String(variant || "base").toLowerCase() || "base"
+    const cacheKey = `${wid}|${v}`
+    if (cacheKey in _weaponIconCache) return _weaponIconCache[cacheKey]
+    const masterIcon = _weaponIconMetaFromMaster(wid, v)
+    if (masterIcon) {
+        _weaponIconCache[cacheKey] = masterIcon
+        return masterIcon
+    }
+    let metas = listWeaponSheetsForModel(wid, v) || []
+    const pref = WEAPON_ICON_SHEET_PREFS[wid]
+    if (pref && metas.length > 0) {
+        const filtered = metas.filter((m: any) => {
+            const anim = String(m.anim || "")
+            if (pref.animExact && anim !== pref.animExact) return false
+            if (pref.animIncludes && anim.indexOf(pref.animIncludes) < 0) return false
+            return true
+        })
+        if (filtered.length > 0) metas = filtered
+    }
+    if (!metas || metas.length <= 0) {
+        _weaponIconCache[cacheKey] = null
+        return null
+    }
+    let best = metas[0]
+    let bestScore = -999
+    for (let i = 0; i < metas.length; i++) {
+        const m: any = metas[i]
+        if (!m) continue
+        let score = 0
+        const anim = String(m.anim || "")
+        const layer = String(m.layer || "")
+        if (layer === "fg") score += 5
+        if (anim.indexOf("attack") >= 0 || anim.indexOf("slash") >= 0) score += 4
+        else if (anim.indexOf("thrust") >= 0) score += 3
+        else if (anim.indexOf("shoot") >= 0) score += 3
+        else if (anim.indexOf("walk") >= 0) score += 2
+        else if (anim.indexOf("idle") >= 0) score += 1
+        if (anim.indexOf("universal") >= 0) score += 1
+        const tile = m.tile | 0
+        if (tile === 64) score += 1
+        if (score > bestScore) {
+            bestScore = score
+            best = m
+        }
+    }
+    const frameW = best.frameW | 0
+    const frameH = best.frameH | 0
+    const cols = Math.max(1, best.cols | 0)
+    const rows = Math.max(1, best.rows | 0)
+    const anim = String(best.anim || "")
+    let frameRow = 0
+    if (rows >= 4) frameRow = 2 // down row in DIR_ORDER
+    else if (rows >= 2) frameRow = Math.floor(rows / 2)
+    let frameCol = 0
+    if (anim.indexOf("attack") >= 0 || anim.indexOf("slash") >= 0) {
+        frameCol = Math.min(cols - 1, Math.floor(cols * 0.6))
+    } else if (anim.indexOf("thrust") >= 0 || anim.indexOf("shoot") >= 0) {
+        frameCol = Math.min(cols - 1, Math.floor(cols * 0.5))
+    } else if (anim.indexOf("walk") >= 0) {
+        frameCol = Math.min(cols - 1, Math.floor(cols * 0.25))
+    }
+    let focusX = 0.7
+    let focusY = 0.45
+    if (anim.indexOf("attack") >= 0 || anim.indexOf("slash") >= 0) {
+        focusX = 0.75
+        focusY = 0.35
+    } else if (anim.indexOf("thrust") >= 0) {
+        focusX = 0.8
+        focusY = 0.45
+    } else if (anim.indexOf("shoot") >= 0) {
+        focusX = 0.8
+        focusY = 0.5
+    } else if (anim.indexOf("walk") >= 0) {
+        focusX = 0.6
+        focusY = 0.5
+    }
+    const override = _weaponIconOverrideFor(wid, v)
+    if (override) {
+        if (override.frameRow != null) frameRow = Math.max(0, Math.min(rows - 1, override.frameRow | 0))
+        if (override.frameCol != null) frameCol = Math.max(0, Math.min(cols - 1, override.frameCol | 0))
+        if (override.focusX != null) focusX = override.focusX
+        if (override.focusY != null) focusY = override.focusY
+    }
+    const atlasKey = String((best as any).atlasKey || "")
+    const atlas: any = atlasKey ? (WEAPON_ATLAS_DATA as any)[atlasKey] : null
+    const frame = (atlas && atlas.frames) ? (atlas.frames[best.key] && atlas.frames[best.key].frame) : null
+    const atlasImage = (atlas && atlas.meta && atlas.meta.image) ? String(atlas.meta.image) : ""
+    const atlasW = (atlas && atlas.meta && atlas.meta.size && typeof atlas.meta.size.w === "number") ? (atlas.meta.size.w | 0) : 0
+    const atlasH = (atlas && atlas.meta && atlas.meta.size && typeof atlas.meta.size.h === "number") ? (atlas.meta.size.h | 0) : 0
+    const sheetX = frame && typeof frame.x === "number" ? (frame.x | 0) : 0
+    const sheetY = frame && typeof frame.y === "number" ? (frame.y | 0) : 0
+    const urlKey = atlasImage || (atlasKey ? (atlasKey + ".png") : (best.key + ".png"))
+    const out = {
+        url: `/assets/weapons/_atlas/${urlKey}`,
+        frameW,
+        frameH,
+        cols,
+        rows,
+        sheetW: frameW * cols,
+        sheetH: frameH * rows,
+        frameCol,
+        frameRow,
+        focusX,
+        focusY,
+        sheetX,
+        sheetY,
+        atlasW,
+        atlasH,
+        key: String(best.key || ""),
+    }
+    _weaponIconCache[cacheKey] = out
+    return out
+}
+
+function _shopPriceForWeaponId(weaponId: string, equipSlot: string, fallbackPrice: number): number {
+    if (_shopIsBaseWeaponIdForSlot(weaponId, equipSlot)) return 0
+    return (fallbackPrice | 0)
+}
+
+function _shopStampOfferPresentation(it: Sprite, equipSlot: string, renderSlot: string, weaponId: string, ringIndex: number): void {
+    if (!it) return
+    const slot = (equipSlot || renderSlot || "").toLowerCase()
+    const bonusDesc = sprites.readDataString(it, SH_ITEM_BONUS_DESC) || ""
+    const t1 = sprites.readDataNumber(it, SH_ITEM_BONUS_T1) | 0
+    const t2 = sprites.readDataNumber(it, SH_ITEM_BONUS_T2) | 0
+    const t3 = sprites.readDataNumber(it, SH_ITEM_BONUS_T3) | 0
+    const t4 = sprites.readDataNumber(it, SH_ITEM_BONUS_T4) | 0
+    let rarity = (sprites.readDataString(it, SH_ITEM_RARITY) || "").toLowerCase()
+    if (!rarity) rarity = _shopRarityForWeaponId(weaponId, slot)
+    let variant = (sprites.readDataString(it, SH_ITEM_VARIANT) || "").toLowerCase()
+    if (!variant) {
+        const seedKey = `${_shopNormWeaponId(weaponId)}|${rarity}|${t1}|${t2}|${t3}|${t4}`
+        variant = _weaponPickVariantForRarity(weaponId, rarity, seedKey)
+    }
+    const price = _shopPriceForWeaponId(weaponId, slot, _shopPriceForRingIndex(ringIndex | 0))
+    const desc = _shopDescForWeaponId(weaponId, slot, bonusDesc)
+    const label = _shopLabelForWeaponId(weaponId, rarity, variant, t1, t2, t3, t4)
+    sprites.setDataString(it, SH_ITEM_LABEL, label)
+    sprites.setDataNumber(it, SH_ITEM_PRICE, price | 0)
+    sprites.setDataString(it, SH_ITEM_RARITY, rarity)
+    sprites.setDataString(it, SH_ITEM_VARIANT, variant)
+    sprites.setDataString(it, SH_ITEM_DESC, desc)
+}
+
 
 
 function _shopPrettyFamilyName(fam: number): string {
@@ -29530,6 +32386,8 @@ function _shopFormatBonusDesc(fam: number, t1: number, t2: number, t3: number, t
 
     const familyName = _shopPrettyFamilyName(fam);
 
+    const labels = WEAPON_TRAIT_LABELS;
+
 
 
     const a1 = t1 | 0, a2 = t2 | 0, a3 = t3 | 0, a4 = t4 | 0;
@@ -29540,13 +32398,13 @@ function _shopFormatBonusDesc(fam: number, t1: number, t2: number, t3: number, t
 
     if (a1 !== 0 && a2 === 0 && a3 === 0 && a4 === 0) {
 
-        return `+${a1} to Trait 1 for ${familyName}`;
+        return `+${a1} ${labels[0]} for ${familyName}`;
 
     }
 
     if (a1 !== 0 && a1 === a2 && a2 === a3 && a3 === a4) {
 
-        return `+${a1} to Traits 1, 2, 3, and 4 for ${familyName}`;
+        return `+${a1} to ${labels[0]}, ${labels[1]}, ${labels[2]}, and ${labels[3]} for ${familyName}`;
 
     }
 
@@ -29568,7 +32426,8 @@ function _shopFormatBonusDesc(fam: number, t1: number, t2: number, t3: number, t
 
         first = false;
 
-        s += `T${traitNum}+${v | 0}`;
+        const lbl = labels[(traitNum - 1) | 0] || ("Trait " + traitNum);
+        s += `${lbl}+${v | 0}`;
 
     }
 
@@ -29672,6 +32531,19 @@ function _shopRollBonusForOffer(it: Sprite): void {
 
 
 function _shopEnsureOfferHasBonus(it: Sprite): void {
+
+    const weaponId = sprites.readDataString(it, SH_ITEM_WEAPON_ID) || ""
+    const equipSlot = (sprites.readDataString(it, SH_ITEM_EQUIP_SLOT) || "").toLowerCase()
+    const isBase = _shopIsBaseWeaponIdForSlot(weaponId, equipSlot)
+    if (isBase || !weaponId) {
+        sprites.setDataNumber(it, SH_ITEM_BONUS_FAMILY, _shopFamilyFromEquipSlot(equipSlot) | 0)
+        sprites.setDataNumber(it, SH_ITEM_BONUS_T1, 0)
+        sprites.setDataNumber(it, SH_ITEM_BONUS_T2, 0)
+        sprites.setDataNumber(it, SH_ITEM_BONUS_T3, 0)
+        sprites.setDataNumber(it, SH_ITEM_BONUS_T4, 0)
+        sprites.setDataString(it, SH_ITEM_BONUS_DESC, "")
+        return
+    }
 
     const d = sprites.readDataString(it, SH_ITEM_BONUS_DESC) || "";
 
@@ -29895,6 +32767,7 @@ function _shopUnlockExitPadIfInShopFloor(nowMs: number): void {
             return
         }
     }
+
 
 
 
@@ -30479,11 +33352,11 @@ function shopHandleControls(nowMs: number): void {
 
         // ------------------------------------------------------------
 
-        // Q: Buy/Swap (statue offer)
+        // Interact: Buy/Swap (statue offer)
 
         // ------------------------------------------------------------
 
-        if (summary && summary.active && ctrl.A_edge) {
+        if (summary && summary.active && ctrl.Interact_edge) {
 
             const offer: Sprite = summary.offer
 
@@ -30522,6 +33395,15 @@ function shopHandleControls(nowMs: number): void {
             const takeT3 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T3) | 0
 
             const takeT4 = sprites.readDataNumber(offer, SH_ITEM_BONUS_T4) | 0
+
+            const giveMeta = _shopGetHeroWeaponMeta(hero, equipSlot)
+            let takeRarity = (sprites.readDataString(offer, SH_ITEM_RARITY) || "").toLowerCase()
+            if (!takeRarity) takeRarity = _shopRarityForWeaponId(takeId, equipSlot)
+            let takeVariant = (sprites.readDataString(offer, SH_ITEM_VARIANT) || "").toLowerCase()
+            if (!takeVariant) {
+                const takeSeed = `${takeId}|${equipSlot}|${takeT1}|${takeT2}|${takeT3}|${takeT4}`
+                takeVariant = _weaponPickVariantForRarity(takeId, takeRarity, takeSeed)
+            }
 
 
 
@@ -30687,7 +33569,7 @@ function shopHandleControls(nowMs: number): void {
 
             // Hero takes the offer (EQUIP SLOT drives gameplay)
 
-            _shopEquipWeaponToHeroSlot(hero, equipSlot, takeId)
+            _shopEquipWeaponToHeroSlot(hero, equipSlot, takeId, { rarity: takeRarity, variant: takeVariant })
 
 
 
@@ -30741,7 +33623,21 @@ function shopHandleControls(nowMs: number): void {
 
             sprites.setDataString(offer, SH_ITEM_EQUIP_SLOT, equipSlot)
 
+            const giveRarity = (giveMeta.rarity || "").toLowerCase() || _shopRarityForWeaponId(giveId, equipSlot)
+            const giveSeed = `${giveId}|${equipSlot}|${giveT1}|${giveT2}|${giveT3}|${giveT4}`
+            const giveVariant = (giveMeta.variant || "").toLowerCase() || _weaponPickVariantForRarity(giveId, giveRarity, giveSeed)
+
+            sprites.setDataNumber(offer, SH_ITEM_BONUS_T1, giveT1)
+            sprites.setDataNumber(offer, SH_ITEM_BONUS_T2, giveT2)
+            sprites.setDataNumber(offer, SH_ITEM_BONUS_T3, giveT3)
+            sprites.setDataNumber(offer, SH_ITEM_BONUS_T4, giveT4)
+            sprites.setDataString(offer, SH_ITEM_BONUS_DESC, _shopFormatBonusDesc(_shopFamilyFromEquipSlot(equipSlot), giveT1, giveT2, giveT3, giveT4))
+            sprites.setDataString(offer, SH_ITEM_RARITY, giveRarity)
+            sprites.setDataString(offer, SH_ITEM_VARIANT, giveVariant)
+
             _shopEquipWeaponToHeroSlot(offer, renderSlot, giveId)
+            _shopEnsureOfferHasBonus(offer)
+            _shopStampOfferPresentation(offer, equipSlot, renderSlot, giveId, si | 0)
 
 
 
@@ -31175,6 +34071,8 @@ function _shopGetFocusedOfferSummaryForHero(hi: number, nowMs: number): any {
     const price = sprites.readDataNumber(offer, SH_ITEM_PRICE) | 0
 
     const bonusDesc = sprites.readDataString(offer, SH_ITEM_BONUS_DESC) || ""
+    const rarity = sprites.readDataString(offer, SH_ITEM_RARITY) || ""
+    const desc = sprites.readDataString(offer, SH_ITEM_DESC) || ""
 
 
 
@@ -31196,7 +34094,9 @@ function _shopGetFocusedOfferSummaryForHero(hi: number, nowMs: number): any {
 
         renderSlot: (renderSlot || equipSlot || "thrust"),
 
-        bonusDesc
+        bonusDesc,
+        rarity,
+        desc
 
     }
 
@@ -31246,7 +34146,7 @@ function _shopBuildControlsLine(pid: number, summary: any): string {
 
     const price = summary.price | 0;
 
-    return `Q: buy/swap (${price}??)`;
+    return `Interact: buy/swap (${price | 0})`;
 
 }
 
@@ -31382,7 +34282,64 @@ function _shopGetFocusedOfferForHero(hi: number, nowMs: number): Sprite {
 
 
 
-function _shopEquipWeaponToHeroSlot(hero: Sprite, equipSlot: string, weaponId: string): void {
+function _shopSetHeroWeaponMeta(hero: Sprite, equipSlot: string, meta?: { rarity?: string; variant?: string }): void {
+    if (!hero || !meta) return
+    const slot = (equipSlot || "").toLowerCase()
+    const rarity = (meta.rarity || "").toLowerCase()
+    const variant = (meta.variant || "").toLowerCase()
+    if (slot === SHOP_EQUIP_SLOT_STRENGTH) {
+        sprites.setDataString(hero, HERO_DATA_WEAPON_STRENGTH_RARITY, rarity)
+        sprites.setDataString(hero, HERO_DATA_WEAPON_STRENGTH_VARIANT, variant)
+        return
+    }
+    if (slot === SHOP_EQUIP_SLOT_AGILITY) {
+        sprites.setDataString(hero, HERO_DATA_WEAPON_AGILITY_RARITY, rarity)
+        sprites.setDataString(hero, HERO_DATA_WEAPON_AGILITY_VARIANT, variant)
+        return
+    }
+    if (slot === SHOP_EQUIP_SLOT_INTELLIGENCE) {
+        sprites.setDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_RARITY, rarity)
+        sprites.setDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_VARIANT, variant)
+        return
+    }
+    if (slot === SHOP_EQUIP_SLOT_SUPPORT) {
+        sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_RARITY, rarity)
+        sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_VARIANT, variant)
+        return
+    }
+}
+
+function _shopGetHeroWeaponMeta(hero: Sprite, equipSlot: string): { rarity: string; variant: string } {
+    if (!hero) return { rarity: "", variant: "" }
+    const slot = (equipSlot || "").toLowerCase()
+    if (slot === SHOP_EQUIP_SLOT_STRENGTH) {
+        return {
+            rarity: sprites.readDataString(hero, HERO_DATA_WEAPON_STRENGTH_RARITY) || "",
+            variant: sprites.readDataString(hero, HERO_DATA_WEAPON_STRENGTH_VARIANT) || "",
+        }
+    }
+    if (slot === SHOP_EQUIP_SLOT_AGILITY) {
+        return {
+            rarity: sprites.readDataString(hero, HERO_DATA_WEAPON_AGILITY_RARITY) || "",
+            variant: sprites.readDataString(hero, HERO_DATA_WEAPON_AGILITY_VARIANT) || "",
+        }
+    }
+    if (slot === SHOP_EQUIP_SLOT_INTELLIGENCE) {
+        return {
+            rarity: sprites.readDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_RARITY) || "",
+            variant: sprites.readDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_VARIANT) || "",
+        }
+    }
+    if (slot === SHOP_EQUIP_SLOT_SUPPORT) {
+        return {
+            rarity: sprites.readDataString(hero, HERO_DATA_WEAPON_SUPPORT_RARITY) || "",
+            variant: sprites.readDataString(hero, HERO_DATA_WEAPON_SUPPORT_VARIANT) || "",
+        }
+    }
+    return { rarity: "", variant: "" }
+}
+
+function _shopEquipWeaponToHeroSlot(hero: Sprite, equipSlot: string, weaponId: string, meta?: { rarity?: string; variant?: string }): void {
 
     if (!hero) return
 
@@ -31394,13 +34351,29 @@ function _shopEquipWeaponToHeroSlot(hero: Sprite, equipSlot: string, weaponId: s
 
     // New trait slots
 
-    if (slot === SHOP_EQUIP_SLOT_STRENGTH) { sprites.setDataString(hero, HERO_DATA_WEAPON_STRENGTH_ID, wid); return }
+    if (slot === SHOP_EQUIP_SLOT_STRENGTH) {
+        sprites.setDataString(hero, HERO_DATA_WEAPON_STRENGTH_ID, wid);
+        if (meta) _shopSetHeroWeaponMeta(hero, slot, meta);
+        return
+    }
 
-    if (slot === SHOP_EQUIP_SLOT_AGILITY) { sprites.setDataString(hero, HERO_DATA_WEAPON_AGILITY_ID, wid); return }
+    if (slot === SHOP_EQUIP_SLOT_AGILITY) {
+        sprites.setDataString(hero, HERO_DATA_WEAPON_AGILITY_ID, wid);
+        if (meta) _shopSetHeroWeaponMeta(hero, slot, meta);
+        return
+    }
 
-    if (slot === SHOP_EQUIP_SLOT_INTELLIGENCE) { sprites.setDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID, wid); return }
+    if (slot === SHOP_EQUIP_SLOT_INTELLIGENCE) {
+        sprites.setDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID, wid);
+        if (meta) _shopSetHeroWeaponMeta(hero, slot, meta);
+        return
+    }
 
-    if (slot === SHOP_EQUIP_SLOT_SUPPORT) { sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID, wid); return }
+    if (slot === SHOP_EQUIP_SLOT_SUPPORT) {
+        sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID, wid);
+        if (meta) _shopSetHeroWeaponMeta(hero, slot, meta);
+        return
+    }
 
 
 
@@ -31435,6 +34408,7 @@ function _shopClearWeaponFromHeroSlotIfMatches(hero: Sprite, equipSlot: string, 
         if (cur === wid) {
 
             sprites.setDataString(hero, HERO_DATA_WEAPON_STRENGTH_ID, "")
+            _shopSetHeroWeaponMeta(hero, slot, { rarity: "", variant: "" })
 
             return true
 
@@ -31451,6 +34425,7 @@ function _shopClearWeaponFromHeroSlotIfMatches(hero: Sprite, equipSlot: string, 
         if (cur === wid) {
 
             sprites.setDataString(hero, HERO_DATA_WEAPON_AGILITY_ID, "")
+            _shopSetHeroWeaponMeta(hero, slot, { rarity: "", variant: "" })
 
             return true
 
@@ -31467,6 +34442,7 @@ function _shopClearWeaponFromHeroSlotIfMatches(hero: Sprite, equipSlot: string, 
         if (cur === wid) {
 
             sprites.setDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID, "")
+            _shopSetHeroWeaponMeta(hero, slot, { rarity: "", variant: "" })
 
             return true
 
@@ -31483,6 +34459,7 @@ function _shopClearWeaponFromHeroSlotIfMatches(hero: Sprite, equipSlot: string, 
         if (cur === wid) {
 
             sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID, "")
+            _shopSetHeroWeaponMeta(hero, slot, { rarity: "", variant: "" })
 
             return true
 
@@ -32288,9 +35265,8 @@ function _shopEnsureWeaponRingOffersForShopkeeper(sk: Sprite): void {
 
 
         const slot = shopRenderSlotForRingIndex(i)
-
         const gameplayKind = shopGameplayKindForRingIndex(i)
-
+        const equipSlot = _shopEquipSlotFromFamily(_shopFamilyFromGameplayKind(gameplayKind)) || ""
         const price = _shopPriceForRingIndex(i) | 0
 
 
@@ -32298,8 +35274,8 @@ function _shopEnsureWeaponRingOffersForShopkeeper(sk: Sprite): void {
         sprites.setDataNumber(it, SH_ITEM_RING_INDEX, i | 0)
 
         sprites.setDataString(it, SH_ITEM_RENDER_SLOT, slot)
-
         sprites.setDataString(it, SH_ITEM_GAMEPLAY_KIND, gameplayKind)
+        sprites.setDataString(it, SH_ITEM_EQUIP_SLOT, equipSlot)
 
 
 
@@ -32320,6 +35296,7 @@ function _shopEnsureWeaponRingOffersForShopkeeper(sk: Sprite): void {
         // Give it a rolled bonus if it doesn't already have one
 
         _shopEnsureOfferHasBonus(it)
+        _shopStampOfferPresentation(it, equipSlot, slot, weaponId, i | 0)
 
 
 
@@ -32475,6 +35452,14 @@ function _shopDestroyStatueSprites(): void {
 
         }
 
+    }
+
+    if (shopPriceTags && shopPriceTags.length) {
+        for (let i = 0; i < shopPriceTags.length; i++) {
+            const t = shopPriceTags[i]
+            if (t && !(t.flags & sprites.Flag.Destroyed)) t.destroy()
+            shopPriceTags[i] = null
+        }
     }
 
 
@@ -32871,6 +35856,12 @@ const SH_ITEM_PRICE = "shPrice"                    // number
 
 const SH_ITEM_BOUGHT_BY_PID = "shBoughtByPid"      // number (0=unbought)
 
+const SH_ITEM_RARITY = "shRarity"                 // string: common|uncommon|rare|epic|legendary
+
+const SH_ITEM_VARIANT = "shVariant"               // string: base|iron|gold|etc
+
+const SH_ITEM_DESC = "shDesc"                     // string: UI description
+
 
 
 
@@ -32995,15 +35986,17 @@ const SHOP_ALLOWED_WPN_SUPPORT: string[] = [
 const DBG_WPN_DROP_LAST_SEQ_KEY = "__dbgWpnDropLastSeq"
 const DBG_WPN_DROP_FLOOR_KEY = "__dbgWpnDropFloor"
 const DBG_WPN_DROP_RARITY_KEY = "__dbgWpnDropRarity"
+const DBG_WPN_DROP_FLOOR_KEY_PREFIX = "__dbgWpnDropFloor_"
+const DBG_WPN_DROP_RARITY_KEY_PREFIX = "__dbgWpnDropRarity_"
 
 const DBG_WPN_DROP_RARITIES = ["common", "uncommon", "rare", "epic", "legendary"]
-const DBG_WPN_DROP_RARITY_SCALE_X100: Record<string, number> = {
-    common: 70,
-    uncommon: 85,
-    rare: 100,
-    epic: 120,
-    legendary: 145,
-}
+const DBG_WPN_DROP_RARITY_RANGES = [
+    { rarity: "common", floorMin: 1, floorMax: 19, valueMin: 1, valueMax: 19 },
+    { rarity: "uncommon", floorMin: 20, floorMax: 39, valueMin: 20, valueMax: 39 },
+    { rarity: "rare", floorMin: 40, floorMax: 59, valueMin: 40, valueMax: 59 },
+    { rarity: "epic", floorMin: 60, floorMax: 79, valueMin: 60, valueMax: 79 },
+    { rarity: "legendary", floorMin: 80, floorMax: 100, valueMin: 80, valueMax: 100 },
+] as const
 
 type DbgWpnDropSlotDef = {
     equipSlot: string
@@ -33043,6 +36036,16 @@ function _dbgWpnDropIsWeaponAction(kindRaw: string): boolean {
     )
 }
 
+function _dbgWpnDropFamilyForActionKind(kindRaw: string): number {
+    const k = String(kindRaw || "").toLowerCase()
+    if (!k) return -1
+    if (k.startsWith("strength")) return FAMILY.STRENGTH
+    if (k.startsWith("agility")) return FAMILY.AGILITY
+    if (k.startsWith("intellect") || k.startsWith("intelligence")) return FAMILY.INTELLECT
+    if (k.startsWith("support") || k.startsWith("heal") || k.startsWith("wisdom")) return FAMILY.HEAL
+    return -1
+}
+
 function _dbgWpnDropHash(s: string): number {
     let h = 2166136261 >>> 0
     const str = String(s || "")
@@ -33059,9 +36062,23 @@ function _dbgWpnDropFloorScaleX100(floor: number): number {
     return Math.min(scaleBaseX100, BALANCE.SHOP.TRAIT_SCALE_PCT_MAX | 0) | 0
 }
 
+function _dbgWpnDropRangeForRarity(rarity: string): { rarity: string; floorMin: number; floorMax: number; valueMin: number; valueMax: number } {
+    const r = String(rarity || "").toLowerCase()
+    for (let i = 0; i < DBG_WPN_DROP_RARITY_RANGES.length; i++) {
+        const def = DBG_WPN_DROP_RARITY_RANGES[i]
+        if (def.rarity === r) return def
+    }
+    return DBG_WPN_DROP_RARITY_RANGES[0]
+}
+
 function _dbgWpnDropRarityForFloor(floor: number): { rarity: string; idx: number } {
     const floorIdx = Math.max(1, floor | 0) | 0
-    const idx = Math.min(DBG_WPN_DROP_RARITIES.length - 1, Math.max(0, floorIdx - 1)) | 0
+    let idx = DBG_WPN_DROP_RARITIES.length - 1
+    for (let i = 0; i < DBG_WPN_DROP_RARITY_RANGES.length; i++) {
+        const def = DBG_WPN_DROP_RARITY_RANGES[i]
+        if (floorIdx >= (def.floorMin | 0) && floorIdx <= (def.floorMax | 0)) { idx = i; break }
+    }
+    idx = Math.min(DBG_WPN_DROP_RARITIES.length - 1, Math.max(0, idx | 0)) | 0
     const rarity = DBG_WPN_DROP_RARITIES[idx] || "common"
     return { rarity, idx }
 }
@@ -33075,17 +36092,17 @@ function _dbgWpnDropPickWeapon(list: string[], floor: number, rarityIdx: number,
 }
 
 function _dbgWpnDropTraitBase(floor: number, rarity: string): number {
-    const traitLoAbs = BALANCE.SHOP.TRAIT_MIN_ABS | 0
-    const traitHiAbs = BALANCE.SHOP.TRAIT_MAX_ABS | 0
-    const pctRaw = DEBUG_WPN_DROP_SIM_TRAIT_PCT | 0
-    const pct = Math.max(1, Math.min(80, pctRaw)) | 0
-    const potentialMana = Math.max(1, _shopWeaponTraitMaxManaForTeam() | 0)
-    let base = Math.idiv(potentialMana * pct, 100)
-    const floorScale = _dbgWpnDropFloorScaleX100(floor | 0)
-    base = Math.idiv(base * floorScale, 100)
-    const rarityScale = DBG_WPN_DROP_RARITY_SCALE_X100[rarity] ?? 100
-    base = Math.idiv(base * (rarityScale | 0), 100)
-    return _clamp(base | 0, traitLoAbs, traitHiAbs)
+    const floorIdx = Math.max(1, floor | 0) | 0
+    const range = _dbgWpnDropRangeForRarity(rarity || "")
+    const f0 = range.floorMin | 0
+    const f1 = range.floorMax | 0
+    const v0 = range.valueMin | 0
+    const v1 = range.valueMax | 0
+    const f = _clamp(floorIdx, f0, f1) | 0
+    let base = (v0 + (f - f0)) | 0
+    if (base < v0) base = v0
+    if (base > v1) base = v1
+    return base | 0
 }
 
 function _dbgWpnDropRollTraits(fam: number, equipSlot: string, weaponId: string, floor: number, rarity: string): { t1: number; t2: number; t3: number; t4: number } {
@@ -33122,6 +36139,54 @@ function _dbgWpnDropSetRenderWeapon(hero: Sprite, renderSlot: string, weaponId: 
     if (slot === "cast") { sprites.setDataString(hero, HERO_DATA.WEAPON_CAST_ID, weaponId); return }
     if (slot === "exec") { sprites.setDataString(hero, HERO_DATA.WEAPON_EXEC_ID, weaponId); return }
     if (slot === "combo") { sprites.setDataString(hero, HERO_DATA.WEAPON_COMBO_ID, weaponId); return }
+}
+
+function _dbgWpnDropFloorKeyForSlot(equipSlot: string): string {
+    return DBG_WPN_DROP_FLOOR_KEY_PREFIX + String(equipSlot || "").toLowerCase()
+}
+
+function _dbgWpnDropRarityKeyForSlot(equipSlot: string): string {
+    return DBG_WPN_DROP_RARITY_KEY_PREFIX + String(equipSlot || "").toLowerCase()
+}
+
+function _dbgWpnDropSlotDefForEquipSlot(equipSlot: string): DbgWpnDropSlotDef | null {
+    const key = String(equipSlot || "").toLowerCase()
+    for (let i = 0; i < DBG_WPN_DROP_SLOT_DEFS.length; i++) {
+        const def = DBG_WPN_DROP_SLOT_DEFS[i]
+        if ((def.equipSlot || "").toLowerCase() === key) return def
+    }
+    return null
+}
+
+function _dbgWpnDropApplySlotForFloor(
+    hi: number,
+    hero: Sprite,
+    def: DbgWpnDropSlotDef,
+    floor: number,
+    weaponIdOverride?: string
+): void {
+    const equipSlot = (def.equipSlot || "").toLowerCase()
+    if (!equipSlot) return
+    const fam = _shopFamilyFromEquipSlot(equipSlot)
+    const rarityInfo = _dbgWpnDropRarityForFloor(floor | 0)
+    const weaponId = _shopNormWeaponId(
+        weaponIdOverride ? weaponIdOverride : _dbgWpnDropPickWeapon(def.allowed, floor | 0, rarityInfo.idx | 0, equipSlot)
+    )
+    if (!weaponId) return
+
+    if (equipSlot === SHOP_EQUIP_SLOT_STRENGTH) sprites.setDataString(hero, HERO_DATA_WEAPON_STRENGTH_ID, weaponId)
+    else if (equipSlot === SHOP_EQUIP_SLOT_AGILITY) sprites.setDataString(hero, HERO_DATA_WEAPON_AGILITY_ID, weaponId)
+    else if (equipSlot === SHOP_EQUIP_SLOT_INTELLIGENCE) sprites.setDataString(hero, HERO_DATA_WEAPON_INTELLIGENCE_ID, weaponId)
+    else if (equipSlot === SHOP_EQUIP_SLOT_SUPPORT) sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID, weaponId)
+
+    for (let r = 0; r < def.renderSlots.length; r++) {
+        _dbgWpnDropSetRenderWeapon(hero, def.renderSlots[r], weaponId)
+    }
+
+    const traits = _dbgWpnDropRollTraits(fam | 0, equipSlot, weaponId, floor | 0, rarityInfo.rarity)
+    _dbgWpnDropApplyTraits(hi, equipSlot, fam | 0, traits)
+    _shopSetHeroWeaponMeta(hero, equipSlot, { rarity: rarityInfo.rarity, variant: "base" })
+    sprites.setDataString(hero, _dbgWpnDropRarityKeyForSlot(equipSlot), rarityInfo.rarity)
 }
 
 function _dbgWpnDropApplyLoadoutForFloor(hi: number, hero: Sprite, floor: number, rarity: string): void {
@@ -33193,19 +36258,31 @@ function _dbgWpnDropSimTick(): void {
             floorCur = floorStart | 0
             sprites.setDataNumber(hero, DBG_WPN_DROP_FLOOR_KEY, floorCur | 0)
             sprites.setDataNumber(hero, DBG_WPN_DROP_LAST_SEQ_KEY, actionSeq | 0)
-            const rarity0 = _dbgWpnDropRarityForFloor(floorCur | 0)
-            sprites.setDataString(hero, DBG_WPN_DROP_RARITY_KEY, rarity0.rarity)
-            _dbgWpnDropApplyLoadoutForFloor(hi, hero, floorCur | 0, rarity0.rarity)
+            sprites.setDataString(hero, DBG_WPN_DROP_RARITY_KEY, _dbgWpnDropRarityForFloor(floorCur | 0).rarity)
+            for (let i = 0; i < DBG_WPN_DROP_SLOT_DEFS.length; i++) {
+                const def = DBG_WPN_DROP_SLOT_DEFS[i]
+                const slotKey = (def.equipSlot || "").toLowerCase()
+                if (!slotKey) continue
+                sprites.setDataNumber(hero, _dbgWpnDropFloorKeyForSlot(slotKey), floorCur | 0)
+                const baseWeapon = _shopDefaultWeaponIdForSlot(slotKey)
+                _dbgWpnDropApplySlotForFloor(hi, hero, def, floorCur | 0, baseWeapon)
+            }
             continue
         }
 
         if ((actionSeq | 0) > (lastSeq | 0) && _dbgWpnDropIsWeaponAction(actionKind)) {
-            const floorNext = (floorCur + floorStep) | 0
-            const rarityInfo = _dbgWpnDropRarityForFloor(floorNext | 0)
-            sprites.setDataNumber(hero, DBG_WPN_DROP_FLOOR_KEY, floorNext | 0)
+            const fam = _dbgWpnDropFamilyForActionKind(actionKind)
+            const equipSlot = _shopEquipSlotFromFamily(fam | 0)
+            const def = _dbgWpnDropSlotDefForEquipSlot(equipSlot)
+            if (def) {
+                const floorKey = _dbgWpnDropFloorKeyForSlot(equipSlot)
+                const floorPrev = Math.max(1, sprites.readDataNumber(hero, floorKey) | 0) | 0
+                const floorNext = (floorPrev + floorStep) | 0
+                sprites.setDataNumber(hero, floorKey, floorNext | 0)
+                sprites.setDataString(hero, _dbgWpnDropRarityKeyForSlot(equipSlot), _dbgWpnDropRarityForFloor(floorNext | 0).rarity)
+                _dbgWpnDropApplySlotForFloor(hi, hero, def, floorNext | 0)
+            }
             sprites.setDataNumber(hero, DBG_WPN_DROP_LAST_SEQ_KEY, actionSeq | 0)
-            sprites.setDataString(hero, DBG_WPN_DROP_RARITY_KEY, rarityInfo.rarity)
-            _dbgWpnDropApplyLoadoutForFloor(hi, hero, floorNext | 0, rarityInfo.rarity)
         } else if ((actionSeq | 0) > (lastSeq | 0)) {
             sprites.setDataNumber(hero, DBG_WPN_DROP_LAST_SEQ_KEY, actionSeq | 0)
         }
@@ -33625,6 +36702,8 @@ function _shopClearFocusDataForHeroIndex(hi: number): void {
     sprites.setDataNumber(hero, HERO_SHOP_FOCUS_PRICE_KEY, 0)
 
     sprites.setDataString(hero, HERO_SHOP_FOCUS_BONUS_KEY, "")
+    sprites.setDataString(hero, HERO_SHOP_FOCUS_RARITY_KEY, "")
+    sprites.setDataString(hero, HERO_SHOP_FOCUS_DESC_KEY, "")
 
     sprites.setDataNumber(hero, HERO_SHOP_FOCUS_OWNED_BY_KEY, 0)
 
@@ -33729,8 +36808,10 @@ function _shopUpdateUiForHero(hi: number, nowMs: number): void {
             const g: any = globalThis as any
 
             const dlg = g.__heDialog
+            const focus = g.__heShopFocus
 
             dlg?.hide?.()
+            focus?.hide?.()
 
             _shopDomWasShowing = false
 
@@ -33757,6 +36838,8 @@ function _shopUpdateUiForHero(hi: number, nowMs: number): void {
     const canAfford = ((getHeroCoins(hi) | 0) >= price) ? 1 : 0
 
     const slot = (summary.renderSlot || summary.equipSlot || "") + ""
+    const rarity = (summary.rarity || "").toLowerCase()
+    const desc = (summary.desc || summary.bonusDesc || "")
 
 
 
@@ -33775,6 +36858,8 @@ function _shopUpdateUiForHero(hi: number, nowMs: number): void {
     sprites.setDataNumber(hero, HERO_SHOP_FOCUS_PRICE_KEY, price)
 
     sprites.setDataString(hero, HERO_SHOP_FOCUS_BONUS_KEY, summary.bonusDesc || "")
+    sprites.setDataString(hero, HERO_SHOP_FOCUS_RARITY_KEY, rarity || "")
+    sprites.setDataString(hero, HERO_SHOP_FOCUS_DESC_KEY, desc || "")
 
     sprites.setDataNumber(hero, HERO_SHOP_FOCUS_OWNED_BY_KEY, ownedBy | 0)
 
@@ -33782,36 +36867,54 @@ function _shopUpdateUiForHero(hi: number, nowMs: number): void {
 
 
 
-    // Optional DOM “dialog box” (if your page actually installs __heDialog)
-
+    // Optional DOM “focus tooltip” (if your page actually installs __heShopFocus)
     if (SHOP_USE_DOM_DIALOG && hi === 0) {
+        const offerSprite = summary.offer as any
+        let anchor = "b"
+        let sx = offerSprite?.x | 0
+        let sy = offerSprite?.y | 0
+        try {
+            const sc: any = (globalThis as any).__phaserScene
+            const cam = sc && sc.cameras && sc.cameras.main ? sc.cameras.main : null
+            const zoom = cam && Number.isFinite(cam.zoom) ? Number(cam.zoom) : 1
+            const camX = cam && Number.isFinite(cam.x) ? Number(cam.x) : 0
+            const camY = cam && Number.isFinite(cam.y) ? Number(cam.y) : 0
+            const scrollX = cam && Number.isFinite(cam.scrollX) ? Number(cam.scrollX) : 0
+            const scrollY = cam && Number.isFinite(cam.scrollY) ? Number(cam.scrollY) : 0
+            sx = Math.round(((offerSprite.x - scrollX) * zoom) + camX)
+            sy = Math.round(((offerSprite.y - scrollY) * zoom) + camY)
+        } catch { }
+        const edgePad = 18
+        const posX = sx | 0
+        const posY = (sy - edgePad) | 0
 
-        const sig = `${summary.ringIndex}|${summary.weaponId}|${summary.bonusDesc}|${price}`
-
-        if (sig !== _shopDomLastSig) {
-
-            _shopDomLastSig = sig
-
-            _shopDomWasShowing = true
-
-
-
-            const g: any = globalThis as any
-
+        const sig = `${summary.ringIndex}|${summary.weaponId}|${summary.weaponLabel}|${desc}|${price}|${rarity}`
+        const g: any = globalThis as any
+        const focus = g.__heShopFocus
+        if (focus && typeof focus.show === "function") {
+            if (sig !== _shopDomLastSig) {
+                _shopDomLastSig = sig
+                _shopDomWasShowing = true
+                focus.show({
+                    name: summary.weaponLabel || summary.weaponId || "Weapon",
+                    rarity: rarity || "uncommon",
+                    desc: desc || "",
+                    price: price | 0,
+                    hint: `Interact: buy/swap`,
+                    pos: { x: posX | 0, y: posY | 0, anchor }
+                })
+            }
+            if (typeof focus.move === "function") {
+                focus.move({ x: posX | 0, y: posY | 0, anchor })
+            }
+        } else {
             const dlg = g.__heDialog
-
             dlg?.show?.({
-
                 speaker: "Shop",
-
-                text: `${summary.weaponLabel}\n${summary.bonusDesc}`,
-
-                hint: `Q: buy/swap (${price}??)`
-
+                text: `${summary.weaponLabel}\n${desc}`,
+                hint: `Interact: buy/swap`
             })
-
         }
-
     }
 
 }
@@ -34701,7 +37804,9 @@ function _shopInit_sanitizeHeroesOnEntry(): void {
 
 
 
-            _shopEquipWeaponToHeroSlot(hero, eqSlot, fix)
+            const fixRarity = _shopRarityForWeaponId(fix, eqSlot)
+            const fixVariant = _weaponPickVariantForRarity(fix, fixRarity, `${fix}|${eqSlot}|fix`)
+            _shopEquipWeaponToHeroSlot(hero, eqSlot, fix, { rarity: fixRarity, variant: fixVariant })
 
             logShop(`[SHOP][INIT][HERO_SANITIZE] hi=${hi} slot=${eqSlot} old=${cur || "(empty)"} new=${fix} si=${si}`)
 
@@ -34905,7 +38010,7 @@ function _shopInputs_readOfferMeta(offer: Sprite): any {
 
 function _shopInputs_pollABNow(hi: number): any {
     const st = _getInputStateForHeroIndex(hi | 0)
-    return { aNow: !!st.A, bNow: !!st.B }
+    return { aNow: !!st.Interact, bNow: !!st.B }
 
 }
 
@@ -34997,9 +38102,11 @@ function _shopInputs_handleBuyIfEdge(
 
             sprites.setDataNumber(offer, SH_ITEM_BOUGHT_BY_PID, pid)
 
+            const takeRarity = (sprites.readDataString(offer, SH_ITEM_RARITY) || "").toLowerCase() || _shopRarityForWeaponId(weaponId, equipSlot)
+            const takeSeed = `${weaponId}|${equipSlot}`
+            const takeVariant = (sprites.readDataString(offer, SH_ITEM_VARIANT) || "").toLowerCase() || _weaponPickVariantForRarity(weaponId, takeRarity, takeSeed)
 
-
-            _shopEquipWeaponToHeroSlot(hero, equipSlot, weaponId)
+            _shopEquipWeaponToHeroSlot(hero, equipSlot, weaponId, { rarity: takeRarity, variant: takeVariant })
 
 
 
@@ -35255,6 +38362,8 @@ function spawnShopItem(x: number, y: number, label: string): Sprite {
     sprites.setDataNumber(it, SH_ITEM_PRICE, 10)
 
     sprites.setDataNumber(it, SH_ITEM_BOUGHT_BY_PID, 0)
+
+    sprites.setDataString(it, SH_ITEM_VARIANT, "")
 
 
 
@@ -35818,6 +38927,12 @@ function _worldgen_forceIsland(map: number[][]): void {
                     }
                 }
             }
+            if (isOcclude) {
+                const idx = sprites.readDataNumber(target, EFFECT_FRAME_INDEX_DATA_KEY)
+                if (Number.isFinite(idx) && idx >= 0) {
+                    sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, Number(idx))
+                }
+            }
         }
     }
 
@@ -36319,9 +39434,9 @@ function _createEntranceFloorMap(): number[][] {
 
     // Entrance taper: rows 0-3 full ground, then 10-wide, then 8-wide, then 4-row zigzag to walkway.
     const baseTop = 1 // row 0 in your mental model
-    const fullGroundRows = 4
-    const midWidth20 = 10
-    const midWidth18 = 8
+    const fullGroundRows = 3
+    const midWidth20 = 20
+    const midWidth18 = 18
     const zigRows = 4
     const walkwayWideW = ((walkwayRight - walkwayLeftWide + 1) | 0)
 
@@ -36332,9 +39447,20 @@ function _createEntranceFloorMap(): number[][] {
     }
     const carveCentered = (r: number, width: number): void => {
         const w = Math.max(1, width | 0) | 0
-        const half = Math.idiv((w - 1) | 0, 2) | 0
-        const left = (centerC - half) | 0
-        const right = (left + w - 1) | 0
+        let left = 0
+        let right = 0
+        if ((w & 1) === 0) {
+            // Even width: center between the two middle columns.
+            const centerLeft = ((centerC | 0) - 1) | 0
+            const half = Math.idiv(w | 0, 2) | 0
+            left = ((centerLeft - half + 1) | 0)
+            right = ((left + w - 1) | 0)
+        } else {
+            // Odd width: center on the middle column.
+            const half = Math.idiv((w - 1) | 0, 2) | 0
+            left = ((centerC - half) | 0)
+            right = ((left + w - 1) | 0)
+        }
         carveSpan(r | 0, left | 0, right | 0)
     }
 
@@ -37990,7 +41116,6 @@ function _dunAuraStyleToOpts(style: PropAuraStyle | null): any {
 
 
 function _dunUpdateInteractableFocus(nowMs: number): void {
-
     if (!DUNGEON_MODE_ACTIVE) return
 
     if (!_dunInteractables || _dunInteractables.length === 0) {
@@ -38007,46 +41132,34 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
         _dunInteractFocusActive = 0
         _dunInteractFocusR = -1
         _dunInteractFocusC = -1
+        _dunInteractFocusName = ""
         return
     }
 
-
-
-    // Clear focus outline on interactables each tick (prefer decor sprite so offsets match)
+    // Clear focus outline on interactables each tick.
+    // NOTE: Interactable focus uses prop auras; do not use heroAnimGlue outlines here.
     for (let i = 0; i < _dunInteractables.length; i++) {
         const it = _dunInteractables[i]
         if (!it || (it.flags & sprites.Flag.Destroyed)) continue
-        const decor = _interactableDecorForRange(it)
-        if (decor && !(decor.flags & sprites.Flag.Destroyed)) _setFocusOutline(decor, false)
-        else _setFocusOutline(it, false)
+        // Intentionally no outline toggles for floor interactables.
     }
 
     let focusThisTick = false
-
     let focusR = -1
-
     let focusC = -1
     let focusName = ""
 
-
-
     for (let hi = 0; hi < heroes.length; hi++) {
-
         const hero = heroes[hi]
-
         if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue
 
         const owner = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
         if (owner <= 0) continue
 
-
-
         let found: Sprite = null
 
         for (let i = 0; i < _dunInteractables.length; i++) {
-
             const it = _dunInteractables[i]
-
             if (!it || (it.flags & sprites.Flag.Destroyed)) continue
             const focusable = sprites.readDataNumber(it, INTERACT_DATA.FOCUSABLE) | 0
             if (!focusable) continue
@@ -38059,63 +41172,33 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
             }
 
             try {
-
                 const last = (it as any).__dbgInteractScanMs ?? -999999
-
                 if (DEBUG_CHEST_SCAN_LOGS && nowMs - last > 1000) {
-
                     (it as any).__dbgInteractScanMs = nowMs
-
                     console.log("[FOCUS][INTERACT][SCAN]", {
-
                         used: used ? 1 : 0,
-
                         inRange: inRange ? 1 : 0,
-
                         action: action || "",
-
                         name: sprites.readDataString(it, DECOR_DATA.NAME) || "",
-
                         hero: { x: hero.x | 0, y: hero.y | 0 },
-
                         target: { x: it.x | 0, y: it.y | 0 },
-
                         decor: {
-
                             r: (sprites.readDataNumber(it, "decorTileR") | 0),
-
                             c: (sprites.readDataNumber(it, "decorTileC") | 0),
-
                         }
-
                     })
-
                 }
-
             } catch { }
 
             if (used) continue
-
             if (inRange) {
-
                 found = it
-
                 break
-
             }
-
         }
 
-
-
         if (found) {
-
             sprites.setDataNumber(hero, HERO_FOCUS_ACTIVE_KEY, 1)
-
-            const decor = _interactableDecorForRange(found)
-            if (decor && !(decor.flags & sprites.Flag.Destroyed)) _setFocusOutline(decor, true)
-            else _setFocusOutline(found, true)
-
             focusThisTick = true
             const focusDecor = _interactableDecorForRange(found)
             if (focusDecor && !(focusDecor.flags & sprites.Flag.Destroyed)) {
@@ -38129,25 +41212,76 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
             }
 
             try {
-
-                const k = "__focusInteractOnce_" + (found.id | 0);
-
-                const g: any = globalThis as any;
-
+                const k = "__focusInteractOnce_" + (found.id | 0)
+                const g: any = globalThis as any
                 if (!g[k]) {
-
-                    g[k] = 1;
-
+                    g[k] = 1
                     if (DEBUG_FOCUS_LOGS) {
-                        console.log("[FOCUS][INTERACT] highlight set", { id: found.id | 0, x: found.x | 0, y: found.y | 0 });
+                        console.log("[FOCUS][INTERACT] highlight set", { id: found.id | 0, x: found.x | 0, y: found.y | 0 })
                     }
+                }
+            } catch { }
+            break
+        }
+    }
 
+    const focusBase = focusName ? propBaseNameFromKey(focusName) : ""
+    const bookFocused = focusThisTick && focusBase === BOOK_MEMORIES_BASE
+    _dunBookHandleFocusChange(bookFocused, nowMs | 0)
+
+    const prevR = _dunInteractFocusR | 0
+    const prevC = _dunInteractFocusC | 0
+    const prevActive = _dunInteractFocusActive | 0
+    const prevName = _dunInteractFocusName || ""
+    const want = focusThisTick ? 1 : 0
+    const nextR = focusThisTick ? (focusR | 0) : -1
+    const nextC = focusThisTick ? (focusC | 0) : -1
+    const nextName = focusThisTick ? String(focusName || "") : ""
+
+    try {
+        _dunInteractFocusActive = want
+        _dunInteractFocusR = nextR
+        _dunInteractFocusC = nextC
+        _dunInteractFocusName = nextName
+
+        const g: any = globalThis as any
+        const sc: any = g ? g.__phaserScene : null
+        const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
+        const ok = !!(renderer && typeof renderer.setPropFocusAuraAt === "function")
+
+        if (ok) {
+            if (prevActive && (prevR >= 0 && prevC >= 0) && (!focusThisTick || prevR !== nextR || prevC !== nextC)) {
+                renderer.setPropFocusAuraAt(prevR, prevC, false, 0, 0)
+            }
+
+            if (focusThisTick && nextR >= 0 && nextC >= 0) {
+                let auraStyle: PropAuraStyle = null as any
+                if (focusName) {
+                    const base = propBaseNameFromKey(focusName)
+                    if (base === "fire_totem") auraStyle = _trapTotemAuraStyle(FIRE_TOTEM_AURA_FOCUS)
+                    else if (_dunIsChestBaseName(base)) auraStyle = CHEST_AURA_FOCUS
+                }
+
+                const auraRadius = auraStyle ? (auraStyle.radius ?? 3) : 3
+                const auraDepth = auraStyle ? (auraStyle.depthBias ?? 1) : 1
+                const auraOpts = _dunAuraStyleToOpts(auraStyle)
+
+                renderer.setPropFocusAuraAt(nextR, nextC, true, auraRadius | 0, auraDepth | 0, auraOpts)
+            }
         }
 
-    } catch { }
+    } catch { /* ignore */ }
+
+    if (DEBUG_TILEMAP_AUDIT_DUMP) {
+        const focusChanged =
+            (prevActive | 0) !== (want | 0) ||
+            (prevR | 0) !== (nextR | 0) ||
+            (prevC | 0) !== (nextC | 0) ||
+            String(prevName || "") !== String(nextName || "");
+        if (focusChanged) _heQueueVisualDump("focus-change", 200)
+    }
 
     _dunAuditDumpFloorOnEntry()
-
 }
 
 function _dunBuildTilemapAuditEntry(): string {
@@ -38217,6 +41351,180 @@ function _dunBuildTilemapAuditEntry(): string {
     )
 }
 
+function _dunBuildTilemapAuditStruct(): any {
+    if (!_engineWorldTileMap || _engineWorldTileMap.length === 0) return null
+    const rows = _engineWorldTileMap.length | 0
+    const cols = (_engineWorldTileMap[0]?.length ?? 0) | 0
+    if (rows <= 0 || cols <= 0) return null
+
+    const tileChar = (v: number): string => {
+        if ((v | 0) === (TILE_WALL | 0)) return "W"
+        if ((v | 0) === (TILE_EMPTY | 0)) return "G"
+        return "X"
+    }
+
+    const rowRle: string[] = []
+    for (let r = 0; r < rows; r++) {
+        const row = _engineWorldTileMap[r]
+        if (!row) continue
+        let cur = ""
+        let start = 0
+        const segs: string[] = []
+        for (let c = 0; c < cols; c++) {
+            const ch = tileChar(row[c] | 0)
+            if (c === 0) {
+                cur = ch
+                start = 0
+            } else if (ch !== cur) {
+                segs.push(`${cur}${start}-${(c - 1) | 0}`)
+                cur = ch
+                start = c | 0
+            }
+        }
+        if (cols > 0 && cur) segs.push(`${cur}${start}-${(cols - 1) | 0}`)
+        rowRle.push(`r${r}=${segs.join(",")}`)
+    }
+
+    const tileSize = WORLD_TILE_SIZE | 0
+    const decor: any[] = []
+    const pushDecor = (s: Sprite, kind: string): void => {
+        if (!s || (s.flags & sprites.Flag.Destroyed)) return
+        const name = sprites.readDataString(s, DECOR_DATA.NAME) || ""
+        const base = propBaseNameFromKey(name || "")
+        let r = sprites.readDataNumber(s, "decorTileR") | 0
+        let c = sprites.readDataNumber(s, "decorTileC") | 0
+        if (((r | 0) === 0 && (c | 0) === 0) && tileSize > 0) {
+            c = Math.idiv((s.left as any) | 0, tileSize) | 0
+            r = Math.idiv((s.top as any) | 0, tileSize) | 0
+        }
+        const offX = sprites.readDataNumber(s, "decorOffX") | 0
+        const offY = sprites.readDataNumber(s, "decorOffY") | 0
+        const native = (s as any).native
+        const outline = native ? (native as any).__focusOutlineImage : null
+        decor.push({
+            kind,
+            name,
+            base,
+            r: r | 0,
+            c: c | 0,
+            offX: offX | 0,
+            offY: offY | 0,
+            x: (s.x | 0),
+            y: (s.y | 0),
+            left: ((s as any).left ?? 0) | 0,
+            top: ((s as any).top ?? 0) | 0,
+            w: (s.width ?? 0) | 0,
+            h: (s.height ?? 0) | 0,
+            nativeOutline: outline ? {
+                x: (outline.x ?? 0) | 0,
+                y: (outline.y ?? 0) | 0,
+                depth: (outline.depth ?? 0) | 0,
+                tex: outline?.texture?.key ?? null,
+                frame: (outline?.frame?.name ?? outline?.frame?.index ?? null),
+                vis: !!outline?.visible,
+                alpha: (outline?.alpha ?? null),
+                bounds: boundsOfNative(outline),
+            } : null,
+        })
+    }
+    if (_engineDecorSolids && _engineDecorSolids.length) {
+        for (let i = 0; i < _engineDecorSolids.length; i++) pushDecor(_engineDecorSolids[i], "solid")
+    }
+    if (_engineDecorTriggers && _engineDecorTriggers.length) {
+        for (let i = 0; i < _engineDecorTriggers.length; i++) pushDecor(_engineDecorTriggers[i], "trigger")
+    }
+
+    const interactables: any[] = []
+    if (_dunInteractables && _dunInteractables.length) {
+        for (let i = 0; i < _dunInteractables.length; i++) {
+            const it = _dunInteractables[i]
+            if (!it || (it.flags & sprites.Flag.Destroyed)) continue
+            const name = sprites.readDataString(it, DECOR_DATA.NAME) || ""
+            const base = propBaseNameFromKey(name || "")
+            const r = sprites.readDataNumber(it, "decorTileR") | 0
+            const c = sprites.readDataNumber(it, "decorTileC") | 0
+            const offX = sprites.readDataNumber(it, "decorOffX") | 0
+            const offY = sprites.readDataNumber(it, "decorOffY") | 0
+            const native = (it as any).native
+            const outline = native ? (native as any).__focusOutlineImage : null
+            interactables.push({
+                name,
+                base,
+                r: r | 0,
+                c: c | 0,
+                offX: offX | 0,
+                offY: offY | 0,
+                x: (it.x | 0),
+                y: (it.y | 0),
+                left: ((it as any).left ?? 0) | 0,
+                top: ((it as any).top ?? 0) | 0,
+                w: (it.width ?? 0) | 0,
+                h: (it.height ?? 0) | 0,
+                nativeOutline: outline ? {
+                    x: (outline.x ?? 0) | 0,
+                    y: (outline.y ?? 0) | 0,
+                    depth: (outline.depth ?? 0) | 0,
+                    tex: outline?.texture?.key ?? null,
+                    frame: (outline?.frame?.name ?? outline?.frame?.index ?? null),
+                    vis: !!outline?.visible,
+                    alpha: (outline?.alpha ?? null),
+                    bounds: boundsOfNative(outline),
+                } : null,
+            })
+        }
+    }
+
+    return {
+        floor: { index: _dunFloorIndex | 0, kind: String(_dunFloorKind || "") },
+        rows: rows | 0,
+        cols: cols | 0,
+        rowRle,
+        decor,
+        interactables,
+    }
+}
+
+function _heBuildFocusAudit(tilemapVisual: any): any {
+    const audit: any = {
+        interact: {
+            active: _dunInteractFocusActive | 0,
+            r: _dunInteractFocusR | 0,
+            c: _dunInteractFocusC | 0,
+            name: String(_dunInteractFocusName || ""),
+        },
+        props: [] as any[],
+    }
+    if (!tilemapVisual || !Array.isArray(tilemapVisual.props)) return audit
+
+    for (let i = 0; i < tilemapVisual.props.length; i++) {
+        const p = tilemapVisual.props[i]
+        if (!p) continue
+        const base = String(p.baseName || "")
+        const aura = p.aura || null
+        const objs = Array.isArray(p.objs) ? p.objs : []
+        const overlays = Array.isArray(p.overlays) ? p.overlays : []
+        const baseObj = objs.length ? objs[0] : null
+        const baseX = baseObj ? (baseObj.x | 0) : 0
+        const baseY = baseObj ? (baseObj.y | 0) : 0
+        const auraX = aura ? (aura.x | 0) : 0
+        const auraY = aura ? (aura.y | 0) : 0
+        const dx = (aura ? ((auraX - baseX) | 0) : 0)
+        const dy = (aura ? ((auraY - baseY) | 0) : 0)
+        const entry = {
+            baseName: base,
+            anchor: p.anchor || null,
+            basePos: { x: baseX | 0, y: baseY | 0 },
+            auraPos: aura ? { x: auraX | 0, y: auraY | 0 } : null,
+            auraVis: aura ? (aura.vis ? 1 : 0) : 0,
+            auraAlpha: aura ? aura.alpha : null,
+            delta: aura ? { dx, dy } : null,
+            overlays,
+        }
+        audit.props.push(entry)
+    }
+    return audit
+}
+
 function _dunAuditDumpFloorOnEntry(): void {
     if (!DEBUG_TILEMAP_AUDIT_DUMP) return
     const entry = _dunBuildTilemapAuditEntry()
@@ -38231,58 +41539,6 @@ function _dunAuditDumpFloorOnEntry(): void {
         try { fn("tilemap-audit") } catch { }
     }
     _heQueueVisualDump("tilemap-visual-entry", 1200)
-}
-
-    }
-
-    const focusBase = focusName ? propBaseNameFromKey(focusName) : ""
-    const bookFocused = focusThisTick && focusBase === BOOK_MEMORIES_BASE
-    _dunBookHandleFocusChange(bookFocused, nowMs | 0)
-
-    // Drive prop focus outlines (true silhouette path via renderer).
-
-    try {
-
-        const prevR = _dunInteractFocusR | 0
-        const prevC = _dunInteractFocusC | 0
-        const prevActive = _dunInteractFocusActive | 0
-
-        const want = focusThisTick ? 1 : 0
-        const nextR = focusThisTick ? (focusR | 0) : -1
-        const nextC = focusThisTick ? (focusC | 0) : -1
-
-        _dunInteractFocusActive = want
-        _dunInteractFocusR = nextR
-        _dunInteractFocusC = nextC
-
-        const g: any = globalThis as any
-        const sc: any = g ? g.__phaserScene : null
-        const renderer: any = sc?.registry?.get?.("__worldTileRenderer")
-        const ok = !!(renderer && typeof renderer.setPropFocusAuraAt === "function")
-
-        if (ok) {
-            if (prevActive && (prevR >= 0 && prevC >= 0) && (!focusThisTick || prevR !== nextR || prevC !== nextC)) {
-                renderer.setPropFocusAuraAt(prevR, prevC, false, 0, 0)
-            }
-
-            if (focusThisTick && nextR >= 0 && nextC >= 0) {
-                let auraStyle: PropAuraStyle = null as any
-                if (focusName) {
-                    const base = propBaseNameFromKey(focusName)
-                    if (base === "fire_totem") auraStyle = _trapTotemAuraStyle(FIRE_TOTEM_AURA_FOCUS)
-                    else if (_dunIsChestBaseName(base)) auraStyle = CHEST_AURA_FOCUS
-                }
-
-                const auraRadius = auraStyle ? (auraStyle.radius ?? 3) : 3
-                const auraDepth = auraStyle ? (auraStyle.depthBias ?? 1) : 1
-                const auraOpts = _dunAuraStyleToOpts(auraStyle)
-
-                renderer.setPropFocusAuraAt(nextR, nextC, true, auraRadius | 0, auraDepth | 0, auraOpts)
-            }
-        }
-
-    } catch { /* ignore */ }
-
 }
 
 function _dunPickObjectiveChestInteractable(): Sprite | null {
@@ -38390,7 +41646,8 @@ function _dunUpdateObjectiveNpcOutline(nowMs: number): void {
     void nowMs
     if (!DUNGEON_MODE_ACTIVE) return
 
-    const target = _dunPickObjectiveNpcTarget()
+    let target = _dunPickObjectiveNpcTarget()
+    if (target === shopkeeperNpc) target = null
     let shouldHighlight = false
     if (target && !(target.flags & sprites.Flag.Destroyed)) {
         if (target === shopkeeperNpc) {
@@ -39615,6 +42872,79 @@ function resolveEnemyTilemapCollisions(forcedOnly = false): void {
     const tileSize = WORLD_TILE_SIZE
     const nowMs = game.runtime() | 0
 
+    function footPointForPos(e: Sprite, px: number, py: number, cw: number, ch: number) {
+        const auraFrameH = sprites.readDataNumber(e, "__monsterAuraFrameH") | 0
+        if (auraFrameH > 0) {
+            const auraMaxY = sprites.readDataNumber(e, "__monsterAuraMaxY") | 0
+            const auraCenterY = sprites.readDataNumber(e, "__monsterAuraCenterY") | 0
+            const auraFoot = sprites.readDataNumber(e, "__monsterAuraFootBottom") | 0
+            const maxY = (auraMaxY > 0) ? (auraMaxY | 0) : ((auraFoot > 0) ? (auraFoot | 0) : ((auraFrameH - 1) | 0))
+            const centerY = (auraCenterY > 0) ? (auraCenterY | 0) : (Math.round((auraFrameH - 1) / 2) | 0)
+            const footX = px | 0
+            const footY = ((py | 0) + (maxY - centerY)) | 0
+            return { footX, footY }
+        }
+
+        const img: any = (e as any).image
+        const dispH = (((img && img.height) ? (img.height | 0) : (((e as any).height | 0) || 0)) | 0) || (ch | 0)
+        let offY = Math.idiv((dispH - (ch | 0)) | 0, 2) | 0
+        if (offY < 0) offY = 0
+        const footX = px | 0
+        const footY = (((py | 0) + offY + (Math.idiv((ch | 0), 2) | 0) - 1) | 0)
+        return { footX, footY }
+    }
+
+    function sweepKnockback(e: Sprite, cw: number, ch: number, wallW: number, wallH: number, wallsBlock: boolean, propsBlock: boolean): boolean {
+        const prevX = sprites.readDataNumber(e, ENEMY_DATA.PREV_X)
+        const prevY = sprites.readDataNumber(e, ENEMY_DATA.PREV_Y)
+        if (!Number.isFinite(prevX) || !Number.isFinite(prevY)) return false
+
+        const curX = e.x
+        const curY = e.y
+        const dx = (curX - prevX) as any
+        const dy = (curY - prevY) as any
+        const dist = Math.sqrt(dx * dx + dy * dy)
+        if (!Number.isFinite(dist) || dist <= 0.01) return false
+
+        const stepPx = Math.max(4, Math.idiv(WORLD_TILE_SIZE | 0, 2)) | 0
+        const steps = Math.max(1, Math.ceil(dist / stepPx)) | 0
+
+        let lastSafeX = prevX
+        let lastSafeY = prevY
+
+        for (let s = 1; s <= steps; s++) {
+            const t = s / steps
+            const ix = prevX + dx * t
+            const iy = prevY + dy * t
+            const foot = footPointForPos(e, ix | 0, iy | 0, cw | 0, ch | 0)
+            const halfW = Math.idiv(wallW | 0, 2) | 0
+            const left = (foot.footX - halfW) | 0
+            const right = (foot.footX + halfW - 1) | 0
+            const bottom = foot.footY | 0
+            const top = (bottom - (wallH | 0) + 1) | 0
+
+            if (wallsBlock && _boxOverlapsWallBounds(left, right, top, bottom)) {
+                e.x = lastSafeX
+                e.y = lastSafeY
+                e.vx = 0
+                e.vy = 0
+                return true
+            }
+            if (propsBlock && _boxOverlapsDecorSolidsBounds(left, right, top, bottom)) {
+                e.x = lastSafeX
+                e.y = lastSafeY
+                e.vx = 0
+                e.vy = 0
+                return true
+            }
+
+            lastSafeX = ix
+            lastSafeY = iy
+        }
+
+        return false
+    }
+
     // Resolve collision for a single enemy using feet collider
     function resolveForEnemy(e: Sprite, wallsBlock: boolean, propsBlock: boolean) {
         if (!e) return
@@ -39943,6 +43273,14 @@ function resolveEnemyTilemapCollisions(forcedOnly = false): void {
             const kbUntil = sprites.readDataNumber(e, ENEMY_DATA.KNOCKBACK_UNTIL) | 0
             const kbActive = kbUntil > 0 && nowMs < kbUntil
             if (!hookPulling && !kbActive) continue
+            if (kbActive) {
+                const dims = _enemyGetColliderDims(e)
+                const cw = dims.w | 0
+                const ch = dims.h | 0
+                const wallW = ENEMY_WALL_COLLIDER_PX | 0
+                const wallH = ENEMY_WALL_COLLIDER_PX | 0
+                sweepKnockback(e, cw, ch, wallW, wallH, true, true)
+            }
             resolveForEnemy(e, !hookPulling, true)
         } else {
             if ((sprites.readDataNumber(e, ENEMY_DATA.HOOKSHOT_PULLING) | 0) !== 0) continue
@@ -40950,6 +44288,11 @@ function ensureHeroWeaponLoadoutSeeded(hero: Sprite, profileName: string, family
 
     sprites.setDataString(hero, HERO_DATA_WEAPON_SUPPORT_ID, DEFAULT_WEAPON_SUPPORT_ID)
 
+    _shopSetHeroWeaponMeta(hero, SHOP_EQUIP_SLOT_STRENGTH, { rarity: "common", variant: "base" })
+    _shopSetHeroWeaponMeta(hero, SHOP_EQUIP_SLOT_AGILITY, { rarity: "common", variant: "base" })
+    _shopSetHeroWeaponMeta(hero, SHOP_EQUIP_SLOT_INTELLIGENCE, { rarity: "common", variant: "base" })
+    _shopSetHeroWeaponMeta(hero, SHOP_EQUIP_SLOT_SUPPORT, { rarity: "common", variant: "base" })
+
 
 
     sprites.setDataNumber(hero, HERO_DATA.WEAPON_LOADOUT_VER, DEFAULT_WEAPON_LOADOUT_VER)
@@ -41081,7 +44424,7 @@ function _boxOverlapsDecorSolidsBounds(left: number, right: number, top: number,
         if (!(left < r && right > l && top < b && bottom > t)) continue
 
         const aabbUseAura = (sprites.readDataNumber(s, DECOR_SOLID_AABB_USE_AURA_KEY) | 0) !== 0
-        if (!aabbUseAura) return true
+        if (!aabbUseAura) continue
 
         const aabbTex = sprites.readDataString(s, DECOR_SOLID_AABB_TEX_KEY) || ""
         const aabbFrame = sprites.readDataNumber(s, DECOR_SOLID_AABB_FRAME_KEY) | 0
@@ -44923,7 +48266,7 @@ function _doHeroMoveGuardAndLogEarlyReturns(
     }
 
     const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0
-    if (hookState === AGI_HOOK_STATE.PENDING || hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT) {
+    if (hookState === AGI_HOOK_STATE.PENDING || hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT || hookState === AGI_HOOK_STATE.RECOVER) {
         if (_doHeroMoveDbgEnabledForPlayer(playerId)) {
             console.log(DEBUG_FILTER_PHRASE + " IGNORE agiHook timeMs=" + now + " button=" + button + " heroIndex=" + heroIndex + " hookState=" + hookState)
             _doHeroMoveDbgReset(playerId)
@@ -53981,6 +57324,12 @@ function _wpnAuraAlwaysShowEnabled(): boolean {
     return DEBUG_WPN_AURA_ALWAYS_SHOW;
 }
 
+function _agiCometAlignVisEnabled(heroIndex: number): boolean {
+    if (!DEBUG_AGI_COMET_ALIGN_VIS) return false;
+    const target = DEBUG_AGI_COMET_ALIGN_VIS_HERO_INDEX | 0;
+    return target < 0 || target === (heroIndex | 0);
+}
+
 function _wpnTraceLog(tag: string, payload: any): void {
     if (!_wpnTraceEnabled()) return;
     if (!payload || typeof payload !== "object") {
@@ -54852,6 +58201,162 @@ function _updateWeaponAuraDebugAll(): void {
     }
 }
 
+function _destroyWeaponTipDebugSprite(heroIndex: number, hero?: Sprite): void {
+    const h = hero || heroes[heroIndex];
+    if (!h) return;
+    const spr = sprites.readDataSprite(h, HERO_DATA.WPN_TIP_DEBUG_SPR);
+    if (spr && !(spr.flags & sprites.Flag.Destroyed)) {
+        spr.setFlag(SpriteFlag.Invisible, true);
+    }
+}
+
+function _ensureWeaponTipDebugSprite(
+    hero: Sprite,
+    width: number,
+    height: number
+): Sprite | null {
+    if (!hero) return null;
+    const w = Math.max(WPN_TIP_DEBUG_MIN_SIZE | 0, width | 0);
+    const h = Math.max(WPN_TIP_DEBUG_MIN_SIZE | 0, height | 0);
+    let spr = sprites.readDataSprite(hero, HERO_DATA.WPN_TIP_DEBUG_SPR);
+    if (!spr || (spr.flags & sprites.Flag.Destroyed)) {
+        spr = sprites.create(image.create(w, h), SpriteKind.HeroEffect);
+        sprites.setDataSprite(hero, HERO_DATA.WPN_TIP_DEBUG_SPR, spr);
+    }
+    spr.z = hero.z + WPN_AURA_DEBUG_Z_BOOST + 5;
+    spr.setFlag(SpriteFlag.Ghost, true);
+    spr.setFlag(SpriteFlag.Invisible, false);
+    return spr;
+}
+
+function _updateWeaponTipDebugForHero(heroIndex: number, hero: Sprite, nx: number, ny: number): void {
+    if (!_agiCometAlignVisEnabled(heroIndex)) {
+        _destroyWeaponTipDebugSprite(heroIndex, hero);
+        return;
+    }
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) {
+        _destroyWeaponTipDebugSprite(heroIndex, hero);
+        return;
+    }
+    const info = _getHeroWeaponFgInfo(hero);
+    const baseLocalX = (info?.offX || 0);
+    const baseLocalY = (info?.offY || 0);
+    let minX = 1e9;
+    let minY = 1e9;
+    let maxX = -1e9;
+    let maxY = -1e9;
+    let hasShape = false;
+    let hasWeaponRect = false;
+
+    if (info && info.frameRef) {
+        const ref: any = info.frameRef as any;
+        const frameW =
+            (typeof ref.width === "number" ? ref.width : undefined) ??
+            (typeof ref.realWidth === "number" ? ref.realWidth : undefined) ??
+            (typeof ref.cutWidth === "number" ? ref.cutWidth : undefined) ??
+            (typeof ref.sourceSizeW === "number" ? ref.sourceSizeW : undefined) ??
+            0;
+        const frameH =
+            (typeof ref.height === "number" ? ref.height : undefined) ??
+            (typeof ref.realHeight === "number" ? ref.realHeight : undefined) ??
+            (typeof ref.cutHeight === "number" ? ref.cutHeight : undefined) ??
+            (typeof ref.sourceSizeH === "number" ? ref.sourceSizeH : undefined) ??
+            0;
+        if (frameW > 0 && frameH > 0) {
+            const sx = Math.abs(info.scaleX || 1);
+            const sy = Math.abs(info.scaleY || 1);
+            const w = frameW * sx;
+            const h = frameH * sy;
+            const left = baseLocalX - (w * (info.originX ?? 0.5));
+            const top = baseLocalY - (h * (info.originY ?? 0.5));
+            const right = left + w;
+            const bottom = top + h;
+            minX = Math.min(minX, left);
+            minY = Math.min(minY, top);
+            maxX = Math.max(maxX, right);
+            maxY = Math.max(maxY, bottom);
+            hasWeaponRect = true;
+        }
+    }
+
+    if (!hasWeaponRect && info) {
+        for (let r = 0; r <= 3; r++) {
+            const shape = _getWeaponMaskShape(info, r);
+            if (!shape || !shape.offsets || shape.offsets.length === 0) continue;
+            hasShape = true;
+            const off = shape.offsets;
+            for (let i = 0; i < off.length; i += 2) {
+                const lx = baseLocalX + off[i];
+                const ly = baseLocalY + off[i + 1];
+                if (lx < minX) minX = lx;
+                if (ly < minY) minY = ly;
+                if (lx > maxX) maxX = lx;
+                if (ly > maxY) maxY = ly;
+            }
+        }
+    }
+    const vis = getHeroVisualInfoForStrength(hero, nx, ny);
+    let tipX = (vis[2] || 0);
+    let tipY = (vis[3] || 0);
+    const tipProj = (tipX * nx) + (tipY * ny);
+    if (tipProj < 0) {
+        tipX = -tipX;
+        tipY = -tipY;
+    }
+
+    if (hasWeaponRect || hasShape) {
+        minX = Math.floor(minX);
+        minY = Math.floor(minY);
+        maxX = Math.ceil(maxX);
+        maxY = Math.ceil(maxY);
+        const pad = 2;
+        const rectW = (maxX - minX + 1);
+        const rectH = (maxY - minY + 1);
+        const centerX = (minX + maxX) * 0.5;
+        const centerY = (minY + maxY) * 0.5;
+        const w = rectW + (pad * 2);
+        const h = rectH + (pad * 2);
+        const spr = _ensureWeaponTipDebugSprite(hero, w, h);
+        if (!spr || !spr.image) return;
+        const img = spr.image;
+        _projectileClearImage(img);
+        const cx = Math.idiv(img.width, 2);
+        const cy = Math.idiv(img.height, 2);
+        const rx = cx - Math.idiv(rectW, 2);
+        const ry = cy - Math.idiv(rectH, 2);
+        img.drawRect(rx, ry, rectW, rectH, 15);
+        spr.x = hero.x + centerX;
+        spr.y = hero.y + centerY;
+        const dx = tipX - centerX;
+        const dy = tipY - centerY;
+        const px = Math.round(cx + dx);
+        const py = Math.round(cy + dy);
+        const tipR = Math.max(2, DEBUG_AGI_COMET_ALIGN_VIS_TIP_R | 0);
+        _img_fillCircleCompat(img, px, py, tipR, 7);
+        _img_fillCircleCompat(img, px, py, Math.max(1, Math.round(tipR * 0.5)), 2);
+    } else if (tipX || tipY) {
+        const pad = 4;
+        const w = (pad * 2) + 1;
+        const h = (pad * 2) + 1;
+        const spr = _ensureWeaponTipDebugSprite(hero, w, h);
+        if (!spr || !spr.image) return;
+        const img = spr.image;
+        _projectileClearImage(img);
+        const cx = Math.idiv(img.width, 2);
+        const cy = Math.idiv(img.height, 2);
+        spr.x = hero.x + tipX;
+        spr.y = hero.y + tipY;
+        img.drawRect(cx - 1, cy - 1, 3, 3, 2);
+        const px = cx;
+        const py = cy;
+        const tipR = Math.max(2, DEBUG_AGI_COMET_ALIGN_VIS_TIP_R | 0);
+        _img_fillCircleCompat(img, px, py, tipR, 7);
+        _img_fillCircleCompat(img, px, py, Math.max(1, Math.round(tipR * 0.5)), 2);
+    } else {
+        _destroyWeaponTipDebugSprite(heroIndex, hero);
+    }
+}
+
 function _stampWeaponMaskLeadingEdgeAt(
     img: Image,
     minX: number,
@@ -55142,6 +58647,7 @@ const AGI_HOOK_STATE = {
     AIMING: 2,    // aim mode (held)
     EXTEND: 3,    // spear extending
     RETRACT: 4,   // retracting (pulling hero/monster or return-only)
+    RECOVER: 5,   // post-retract recovery (landing/fade)
 }
 
 const AGI_HOOK_TARGET = {
@@ -55228,6 +58734,7 @@ type AgiHookshotState = {
     tipDist: number
     speed: number
     minThrustEndMs: number
+    recoverEndMs: number
     hitReady: number
     returnOnly: number
     weaponLen: number
@@ -55467,6 +58974,10 @@ const AGI_THRUST_LANDING_MIN_MS = 200
 const AGI_THRUST_WINDUP_PULLBACK_PCT_X1000 = 200
 const AGI_WINDUP_PULLBACK_ENABLED = false
 
+// Hookshot forward needs 3 frames (4,5,5) at 10 fps.
+const AGI_HOOKSHOT_FORWARD_MIN_MS = 300
+const AGI_HOOKSHOT_FORWARD_HERO_COLS = [0, 1, 1]
+
 // Legacy AGI trail/charge rendering is disabled (comet-only visuals).
 const AGI_DISABLE_LEGACY_AGI_TRAIL_FX = true
 
@@ -55487,11 +58998,13 @@ const AGI_HOOKSHOT_CHAIN_FG_HAND_PX = 6
 const AGI_HOOKSHOT_SPEAR_Z_BIAS = (AGI_COMET_Z_BIAS | 0) + 2
 // Placeholder spear line visual (legacy). Disabled so only comet/chain render.
 const AGI_HOOKSHOT_SHOW_SPEAR_VISUAL = false
-const AGI_HOOKSHOT_SHOW_MARKER_VISUAL = true
+const AGI_HOOKSHOT_SHOW_MARKER_VISUAL = false
 const AGI_HOOKSHOT_SHOW_AIM_INDICATOR = true
+const AGI_HOOKSHOT_AIM_COMET_LEN_MULT = 5;
 const AGI_HOOKSHOT_AIM_TILT_UP_DEG = 30
 const AGI_HOOKSHOT_AIM_TILT_SIDE_DEG = 22.5
-const AGI_HOOKSHOT_AIM_DOT_COUNT = 4
+const AGI_HOOKSHOT_AIM_DOT_COUNT = 6
+const AGI_HOOKSHOT_AIM_INDICATOR_SKIN_ID = "aimIndicators"
 const AGI_HOOKSHOT_AIM_DOT_RADIUS_PX = 8
 const AGI_HOOKSHOT_AIM_DOT_OUTLINE_PX = 2
 const AGI_HOOKSHOT_AIM_DOT_EDGE_LIGHT_IDX = 1
@@ -56884,7 +60397,7 @@ function updateAgilityThrustMotionAll(nowMs: number): void {
         }
 
         const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0
-        if (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT) {
+        if (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT || hookState === AGI_HOOK_STATE.RECOVER) {
             sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
             sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
             hero.vx = 0
@@ -58425,6 +61938,7 @@ function _agiHookStateEnsure(heroIndex: number): AgiHookshotState {
         tipDist: 0,
         speed: 0,
         minThrustEndMs: 0,
+        recoverEndMs: 0,
         hitReady: 0,
         returnOnly: 0,
         weaponLen: 0,
@@ -58590,26 +62104,44 @@ function _agiHookTimingPosX1000(st: AgiHookshotState, hero: Sprite, nowMs: numbe
 function _agiHookEnsureAimDots(st: AgiHookshotState, hero: Sprite, fillIdx: number, edgeIdx: number): Sprite[] {
     let arr = st.aimIndicator || null;
     const count = Math.max(1, AGI_HOOKSHOT_AIM_DOT_COUNT | 0);
-    const img = _agiHookAimDotImage(fillIdx | 0, edgeIdx | 0);
-    if (!arr || arr.length !== count) {
-        if (arr) {
-            for (const d of arr) _agiHookDestroySprite(d);
-        }
-        arr = [];
-        for (let i = 0; i < count; i++) {
-            const dot = sprites.create(img, SpriteKind.HeroEffect);
+    if (!arr) arr = [];
+    if (arr.length < count) {
+        for (let i = arr.length; i < count; i++) {
+            const dot = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect);
+            applyEffectToSprite(dot, AGI_HOOKSHOT_AIM_INDICATOR_SKIN_ID, {
+                frameIndex: i,
+                frameIndexIsRaw: false,
+                alpha: 1,
+                blend: "normal"
+            });
             dot.setFlag(SpriteFlag.Ghost, true);
             dot.setFlag(SpriteFlag.Invisible, true);
             dot.z = hero.z + (AGI_COMET_Z_BIAS | 0) + 3 + i;
             arr.push(dot);
         }
-    } else {
-        for (const d of arr) {
-            if (d && !(d.flags & sprites.Flag.Destroyed)) d.setImage(img);
-        }
+    }
+    for (let i = 0; i < arr.length; i++) {
+        const d = arr[i];
+        if (!d || (d.flags & sprites.Flag.Destroyed)) continue;
+        applyEffectToSprite(d, AGI_HOOKSHOT_AIM_INDICATOR_SKIN_ID, {
+            frameIndex: i,
+            frameIndexIsRaw: false,
+            alpha: 1,
+            blend: "normal"
+        });
+        if (i >= count) d.setFlag(SpriteFlag.Invisible, true);
     }
     st.aimIndicator = arr;
     return arr;
+}
+
+function _agiHookHideAimDots(st: AgiHookshotState): void {
+    const arr = st.aimIndicator;
+    if (!arr || arr.length === 0) return;
+    for (const d of arr) {
+        if (!d || (d.flags & sprites.Flag.Destroyed)) continue;
+        d.setFlag(SpriteFlag.Invisible, true);
+    }
 }
 
 function _agiHookHideChain(st: AgiHookshotState): void {
@@ -58631,10 +62163,7 @@ function _agiHookUpdateAimDots(
     nowMs: number
 ): void {
     if (!AGI_HOOKSHOT_SHOW_AIM_INDICATOR) {
-        if (st.aimIndicator) {
-            for (const d of st.aimIndicator) _agiHookDestroySprite(d);
-            st.aimIndicator = null;
-        }
+        _agiHookHideAimDots(st);
         return;
     }
     const dirKey = _weaponDirKeyFromVector(nx, ny);
@@ -58718,10 +62247,7 @@ function _agiHookClearVisuals(st: AgiHookshotState): void {
     st.comet = null
     if (st.marker) _agiHookDestroySprite(st.marker)
     st.marker = null
-    if (st.aimIndicator) {
-        for (const d of st.aimIndicator) _agiHookDestroySprite(d)
-    }
-    st.aimIndicator = null
+    _agiHookHideAimDots(st)
     if (st.chain && st.chain.length) {
         for (const c of st.chain) _agiHookDestroySprite(c)
     }
@@ -58741,6 +62267,7 @@ function _agiHookStateLabel(state: number): string {
         case AGI_HOOK_STATE.AIMING: return "AIMING"
         case AGI_HOOK_STATE.EXTEND: return "EXTEND"
         case AGI_HOOK_STATE.RETRACT: return "RETRACT"
+        case AGI_HOOK_STATE.RECOVER: return "RECOVER"
     }
     return "NONE"
 }
@@ -59161,7 +62688,7 @@ function _agiHookEnsureCometSprite(st: AgiHookshotState, hero: Sprite, heroIndex
 
         const elem = _heroBodyEffectElement(hero, element | 0)
         const tint = _elementTintForMode(elem | 0, "offense") | 0
-        applyEffectToSprite(fx, STR_ARC_SKIN_ID, {
+        applyEffectToSprite(fx, AGI_HOOK_COMET_SKIN_ID, {
             mode: "full",
             alpha: AGI_COMET_ALPHA,
             blend: "normal",
@@ -59194,7 +62721,8 @@ function _agiHookUpdateCometSprite(
     state: number,
     isGhost: boolean,
     alignX?: number,
-    alignY?: number
+    alignY?: number,
+    aimLenMult?: number
 ): void {
     const fx = _agiHookEnsureCometSprite(st, hero, heroIndex, st.element | 0, isGhost)
     if (!fx || (fx.flags & sprites.Flag.Destroyed)) return
@@ -59254,25 +62782,73 @@ function _agiHookUpdateCometSprite(
     if ((state | 0) === AGI_HOOK_STATE.AIMING) {
         alignBaseX = weaponTipX
         alignBaseY = weaponTipY
+    } else if (Number.isFinite(alignBaseX) && Number.isFinite(alignBaseY)) {
+        // Use the moving spear tip when provided (extend/retract).
+        // This keeps the comet locked to the weapon tip instead of the hero.
+    } else {
+        alignBaseX = weaponTipX
+        alignBaseY = weaponTipY
     }
     const hasAlign = Number.isFinite(alignBaseX) && Number.isFinite(alignBaseY)
     const tipAnchorBaseX = hasAlign ? alignBaseX : baseTipX
     const tipAnchorBaseY = hasAlign ? alignBaseY : baseTipY
-    const tipAnchorX = tipAnchorBaseX + (nx * (AGI_COMET_TIP_ALIGN_FWD_PX | 0))
-    const tipAnchorY = tipAnchorBaseY + (ny * (AGI_COMET_TIP_ALIGN_FWD_PX | 0))
+    const aimScale = (typeof aimLenMult === "number" && Number.isFinite(aimLenMult) && aimLenMult > 0) ? aimLenMult : 1;
+    let tipAnchorX = tipAnchorBaseX + (nx * (AGI_COMET_TIP_ALIGN_FWD_PX | 0))
+    let tipAnchorY = tipAnchorBaseY + (ny * (AGI_COMET_TIP_ALIGN_FWD_PX | 0))
+    if ((state | 0) !== AGI_HOOK_STATE.AIMING) {
+        tipAnchorX += nx * (AGI_HOOKSHOT_COMET_TIP_FWD_PX | 0);
+        tipAnchorY += ny * (AGI_HOOKSHOT_COMET_TIP_FWD_PX | 0);
+    }
+    if ((state | 0) === AGI_HOOK_STATE.AIMING && aimScale > 1) {
+        const extra = Math.max(0, (wLen * (aimScale - 1)) * 0.5);
+        tipAnchorX += nx * extra;
+        tipAnchorY += ny * extra;
+    }
 
     const moveAngle = Math.atan2(ny, nx)
     const rot = _strengthArcNormalizeAngle(moveAngle - AGI_COMET_SW_BASE_ANGLE)
 
-    const growNorm = Math.max(0, Math.min(1, growthT / Math.max(0.0001, AGI_COMET_GROW_END_T)))
-    const growEase = Math.pow(growNorm, AGI_COMET_GROW_EXP)
+    const stateStartMs = st.cometStartMs | 0
+    const forwardDur = Math.max(AGI_HOOKSHOT_FORWARD_MIN_MS | 0, st.forwardMs | 0, AGI_THRUST_FORWARD_MIN_MS | 0)
+    const forwardFrameMs = Math.max(1, Math.round(forwardDur / Math.max(1, AGI_HOOK_COMET_FORWARD_RAW.length)))
+    const forwardElapsed = Math.max(0, (nowMs | 0) - (stateStartMs | 0))
 
-    let scale = AGI_COMET_SCALE * (0.6 + (0.4 * growEase))
-    if (preActive) scale *= 0.75
-    if (reelT > 0) scale *= Math.max(AGI_COMET_END_SCALE, 1 - (0.7 * reelT))
+    const pick = (seq: number[], t: number): number => _strengthArcPickFromSequence(seq, t, 1, false)
 
-    let alpha = preActive ? (AGI_COMET_PREACTIVE_ALPHA * (0.4 + (0.6 * preT))) : (AGI_COMET_ALPHA * (0.6 + (0.4 * growEase)))
-    if (reelT > 0) alpha *= Math.max(0, 1 - reelT)
+    let rawFrame = (AGI_HOOK_COMET_HOLD_RAW && AGI_HOOK_COMET_HOLD_RAW.length) ? (AGI_HOOK_COMET_HOLD_RAW[0] | 0) : 0
+    let isHold = false
+    let recoverT = 0
+    const stateNow = state | 0
+    if (preActive) {
+        rawFrame = pick(AGI_HOOK_COMET_GROW_RAW, Math.max(0, Math.min(1, preT)))
+    } else if (stateNow === AGI_HOOK_STATE.AIMING) {
+        rawFrame = (AGI_HOOK_COMET_HOLD_RAW && AGI_HOOK_COMET_HOLD_RAW.length) ? (AGI_HOOK_COMET_HOLD_RAW[0] | 0) : 0
+        isHold = true
+    } else if (stateNow === AGI_HOOK_STATE.EXTEND) {
+        const idx = Math.min(AGI_HOOK_COMET_FORWARD_RAW.length - 1, Math.floor(forwardElapsed / forwardFrameMs))
+        rawFrame = AGI_HOOK_COMET_FORWARD_RAW[idx | 0] | 0
+        isHold = idx >= (AGI_HOOK_COMET_FORWARD_RAW.length - 1)
+    } else if (stateNow === AGI_HOOK_STATE.RETRACT) {
+        rawFrame = (AGI_HOOK_COMET_HOLD_RAW && AGI_HOOK_COMET_HOLD_RAW.length) ? (AGI_HOOK_COMET_HOLD_RAW[0] | 0) : 0
+        isHold = true
+    } else if (stateNow === AGI_HOOK_STATE.RECOVER) {
+        const recEnd = st.recoverEndMs | 0
+        const recDur = recEnd > 0 ? Math.max(1, (recEnd - (stateStartMs | 0)) | 0) : Math.max(1, _agiHookRecoverMs(hero) | 0)
+        recoverT = Math.max(0, Math.min(1, ((nowMs | 0) - (stateStartMs | 0)) / Math.max(1, recDur)))
+        rawFrame = pick(AGI_HOOK_COMET_REEL_RAW, recoverT)
+    }
+
+    let scale = AGI_COMET_SCALE
+    let alpha = AGI_COMET_ALPHA
+    if (preActive) {
+        alpha = AGI_COMET_PREACTIVE_ALPHA * (0.4 + (0.6 * preT))
+    } else if (stateNow === AGI_HOOK_STATE.AIMING) {
+        const pulse = _agiCometHoldBlend(nowMs | 0, stateStartMs | 0)
+        alpha = AGI_COMET_PREACTIVE_ALPHA + ((AGI_COMET_ALPHA - AGI_COMET_PREACTIVE_ALPHA) * pulse)
+        alpha *= 0.6
+    } else if (stateNow === AGI_HOOK_STATE.RECOVER) {
+        alpha = AGI_COMET_ALPHA * Math.max(0, 1 - recoverT)
+    }
     if (isGhost) alpha *= 0.85
 
     if (alpha <= 0.01 || scale <= 0.01) {
@@ -59281,17 +62857,20 @@ function _agiHookUpdateCometSprite(
         return
     }
 
-    const startMs = st.cometStartMs | 0
-    const rawFrame = _agiCometPickRawFrame(preActive, preT, growthT, reelT, nowMs | 0, startMs | 0)
-    const isHold = !preActive && (reelT <= 0) && (growthT >= AGI_COMET_GROW_END_T)
-    const holdBlend = isHold ? _agiCometHoldBlend(nowMs | 0, startMs | 0) : 0
-    const baseRaw = isHold ? (AGI_COMET_HOLD_RAW[0] | 0) : (rawFrame | 0)
-    const blendRaw = (isHold && AGI_COMET_HOLD_RAW.length > 1) ? (AGI_COMET_HOLD_RAW[1] | 0) : -1
-    const frameIdx = _strengthArcFrameIndexFromRaw(STR_ARC_SKIN_ID, baseRaw | 0)
-    const tipOffset = _agiCometTipOffsetForRaw(STR_ARC_SKIN_ID, baseRaw | 0)
-    const axisScale =
+    const baseRaw = rawFrame | 0
+    const holdBlend = 0
+    const blendRaw = -1
+    const frameIdx = _strengthArcFrameIndexFromRaw(AGI_HOOK_COMET_SKIN_ID, baseRaw | 0)
+    const tipOffset = _agiCometTipOffsetForRaw(AGI_HOOK_COMET_SKIN_ID, baseRaw | 0)
+    let axisScale =
         _agiCometAxisScaleForWeaponLen(tipOffset, wLen | 0) ||
-        _agiCometAxisScaleForTipOffset(tipOffset)
+        _agiCometAxisScaleForTipOffset(tipOffset) ||
+        { sx: 1, sy: 1 };
+    if (aimScale !== 1 && tipOffset) {
+        const desiredLen = Math.max(1, (wLen | 0) * aimScale);
+        const artScale = _agiCometAxisScaleForArtAxis(tipOffset, desiredLen);
+        if (artScale) axisScale = artScale;
+    }
     const fallbackOffset = _agiCometDirOffset(nx, ny)
 
     const baseAlpha = isHold ? (alpha * (1 - holdBlend)) : alpha
@@ -59326,10 +62905,48 @@ function _agiHookUpdateCometSprite(
     fx.setFlag(SpriteFlag.Invisible, false)
 
     if (_agiCometAlignShouldLog(fx, nowMs | 0)) {
+        let weaponBoxW = 0;
+        let weaponBoxH = 0;
+        const info = _getHeroWeaponFgInfo(hero);
+        if (info && info.frameRef) {
+            const ref: any = info.frameRef as any;
+            const frameW =
+                (typeof ref.width === "number" ? ref.width : undefined) ??
+                (typeof ref.realWidth === "number" ? ref.realWidth : undefined) ??
+                (typeof ref.cutWidth === "number" ? ref.cutWidth : undefined) ??
+                (typeof ref.sourceSizeW === "number" ? ref.sourceSizeW : undefined) ??
+                0;
+            const frameH =
+                (typeof ref.height === "number" ? ref.height : undefined) ??
+                (typeof ref.realHeight === "number" ? ref.realHeight : undefined) ??
+                (typeof ref.cutHeight === "number" ? ref.cutHeight : undefined) ??
+                (typeof ref.sourceSizeH === "number" ? ref.sourceSizeH : undefined) ??
+                0;
+            if (frameW > 0 && frameH > 0) {
+                const sx = Math.abs(info.scaleX || 1);
+                const sy = Math.abs(info.scaleY || 1);
+                weaponBoxW = frameW * sx;
+                weaponBoxH = frameH * sy;
+            }
+        }
+        let cometLen = 0;
+        if (tipOffset) {
+            const ax = Math.abs(tipOffset.dx || 0);
+            const ay = Math.abs(tipOffset.dy || 0);
+            const dominant = Math.max(ax, ay);
+            const axisS = (ax >= ay) ? (axisScale.sx || 1) : (axisScale.sy || 1);
+            cometLen = dominant * 2 * scale * axisS;
+        }
         const weaponTipX = baseX + nx * (wLen | 0)
         const weaponTipY = baseY + ny * (wLen | 0)
+        const logKind =
+            isGhost ? "hook.aim"
+                : (stateNow === AGI_HOOK_STATE.EXTEND ? "hook.extend"
+                    : stateNow === AGI_HOOK_STATE.RETRACT ? "hook.retract"
+                        : stateNow === AGI_HOOK_STATE.RECOVER ? "hook.recover"
+                            : "hook");
         _agiCometAlignLogLine({
-            kind: isGhost ? "hook.aim" : ((state | 0) === AGI_HOOK_STATE.EXTEND ? "hook.extend" : "hook.retract"),
+            kind: logKind,
             heroIndex: heroIndex | 0,
             weaponTipX,
             weaponTipY,
@@ -59346,7 +62963,10 @@ function _agiHookUpdateCometSprite(
             scale,
             axisScaleX: axisScale.sx || 1,
             axisScaleY: axisScale.sy || 1,
-            rawFrame: baseRaw | 0
+            rawFrame: baseRaw | 0,
+            weaponBoxW,
+            weaponBoxH,
+            cometLen
         });
     }
 
@@ -59402,8 +63022,14 @@ function _agiHookUpdateCometSprite(
     }
 
     if (_agiCometShouldLog(fx, nowMs | 0)) {
+        const logKind =
+            isGhost ? "hook.aim"
+                : (stateNow === AGI_HOOK_STATE.EXTEND ? "hook.extend"
+                    : stateNow === AGI_HOOK_STATE.RETRACT ? "hook.retract"
+                        : stateNow === AGI_HOOK_STATE.RECOVER ? "hook.recover"
+                            : "hook");
         _agiCometLogLine({
-            kind: isGhost ? "hook.aim" : ((state | 0) === AGI_HOOK_STATE.EXTEND ? "hook.extend" : "hook.retract"),
+            kind: logKind,
             heroIndex: heroIndex | 0,
             ghost: !!isGhost,
             rawFrame: rawFrame | 0,
@@ -59421,9 +63047,11 @@ function _agiHookUpdateCometSprite(
             preActive,
             growthT,
             reelT,
-            skinId: STR_ARC_SKIN_ID
+            skinId: AGI_HOOK_COMET_SKIN_ID
         });
     }
+
+    _updateWeaponTipDebugForHero(heroIndex | 0, hero, nx, ny);
 }
 
 function _agiHookPositionSpear(spr: Sprite, baseX: number, baseY: number): void {
@@ -60147,15 +63775,56 @@ function _agiHookRecoverMs(hero: Sprite): number {
     return AGI_THRUST_LANDING_MIN_MS | 0
 }
 
+function _agiHookBeginRecover(
+    heroIndex: number,
+    hero: Sprite,
+    st: AgiHookshotState,
+    now: number,
+    reason: string
+): void {
+    const recoverMs = _agiHookRecoverMs(hero) | 0
+    if (recoverMs <= 0) {
+        _agiHookFinish(heroIndex, hero, st, now | 0, false, reason, true)
+        return
+    }
+    _agiHookSetState(heroIndex, hero, st, AGI_HOOK_STATE.RECOVER)
+    st.recoverEndMs = ((now | 0) + (recoverMs | 0)) | 0
+
+    sprites.setDataNumber(hero, HERO_DATA.WEAPON_OVERLAY_HIDE, 0)
+    clearHeroFrameColOverride(heroIndex)
+    sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
+
+    _animKeys_setPhasePart(
+        heroIndex,
+        hero,
+        "landing",
+        now | 0,
+        recoverMs | 0,
+        now | 0,
+        "AGI_HOOK_RECOVER",
+        "_agiHookBeginRecover"
+    )
+    sprites.setDataNumber(hero, HERO_DATA.PhasePartProgress, 0)
+
+    _agiHookHideChain(st)
+    _agiHookHideSpearVisuals(st)
+    _agiHookRetireWeaponCarrier(st)
+    hero.vx = 0
+    hero.vy = 0
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VX, 0)
+    sprites.setDataNumber(hero, HERO_DATA.STORED_VY, 0)
+}
+
 function _agiHookFinish(
     heroIndex: number,
     hero: Sprite,
     st: AgiHookshotState,
     now: number,
     unlockNow: boolean,
-    reason: string
+    reason: string,
+    skipRecoverDelay: boolean = false
 ): void {
-    const landMs = _agiHookRecoverMs(hero) | 0
+    const landMs = skipRecoverDelay ? 0 : (_agiHookRecoverMs(hero) | 0)
     const busyUntilNew = (landMs > 0) ? ((now + landMs) | 0) : 0
     _agiHookLog( heroIndex, hero, st, "FINISH", `reason=${reason} unlock=${unlockNow ? 1 : 0} landMs=${landMs | 0} busyUntil=${busyUntilNew}`, true)
 
@@ -60193,6 +63862,7 @@ function _agiHookFinish(
     st.tipDist = 0
     st.speed = 0
     st.minThrustEndMs = 0
+    st.recoverEndMs = 0
     st.hitApplied = 0
     st.lastGroundDist = 0
     st.recoverHoldPending = 0
@@ -60259,7 +63929,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
             continue
         }
 
-        if (state === AGI_HOOK_STATE.PENDING || state === AGI_HOOK_STATE.AIMING) {
+        if (state === AGI_HOOK_STATE.PENDING || state === AGI_HOOK_STATE.AIMING || state === AGI_HOOK_STATE.RECOVER) {
             sprites.setDataNumber(hero, HERO_DATA.WEAPON_OVERLAY_HIDE, 0)
         } else {
             sprites.setDataNumber(hero, HERO_DATA.WEAPON_OVERLAY_HIDE, 1)
@@ -60446,8 +64116,27 @@ function updateAgilityHookshotAll(nowMs: number): void {
             const aimEndX = base.x + nxAim * (st.weaponLen | 0)
             const aimEndY = base.y + nyAim * (st.weaponLen | 0)
             _agiHookRetireWeaponCarrier(st)
+            const aimTiming = _agiHookTimingPosX1000(st, hero, now | 0);
+            const aimT = Math.max(0, Math.min(1, (aimTiming.pos | 0) / 1000));
+            const aimLenMult = 1 + ((AGI_HOOKSHOT_AIM_COMET_LEN_MULT - 1) * aimT);
             _agiHookUpdateAimDots(st, hero, hi, nxAim, nyAim, base.x, base.y, ray.x, ray.y, st.weaponLen | 0, now | 0)
-            _agiHookUpdateCometSprite(st, hero, hi, nxAim, nyAim, base.x, base.y, st.weaponLen | 0, st.weaponLen | 0, now | 0, AGI_HOOK_STATE.AIMING, true, aimEndX, aimEndY)
+            _agiHookUpdateCometSprite(
+                st,
+                hero,
+                hi,
+                nxAim,
+                nyAim,
+                base.x,
+                base.y,
+                Math.max(1, Math.round((st.weaponLen | 0) * aimLenMult)),
+                st.weaponLen | 0,
+                now | 0,
+                AGI_HOOK_STATE.AIMING,
+                true,
+                aimEndX,
+                aimEndY,
+                aimLenMult
+            )
             _agiHookHideChain(st)
 
             hero.vx = 0
@@ -60496,7 +64185,8 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 if (speed < minSpeed) speed = minSpeed
                 st.speed = speed
 
-                const fwdMs = Math.max(st.forwardMs | 0, AGI_THRUST_FORWARD_MIN_MS | 0)
+                const fwdMs = Math.max(st.forwardMs | 0, AGI_THRUST_FORWARD_MIN_MS | 0, AGI_HOOKSHOT_FORWARD_MIN_MS | 0)
+                st.forwardMs = fwdMs | 0
                 st.minThrustEndMs = (now + fwdMs) | 0
                 st.targetKind = AGI_HOOK_TARGET.NONE
                 st.targetSpriteId = 0
@@ -60526,10 +64216,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
         }
 
         if (state === AGI_HOOK_STATE.EXTEND) {
-            if (st.aimIndicator) {
-                for (const d of st.aimIndicator) _agiHookDestroySprite(d)
-                st.aimIndicator = null
-            }
+            _agiHookHideAimDots(st)
             const nx = st.dirX || 1
             const ny = st.dirY || 0
             const base = _agiHookHandBase(hero, nx, ny)
@@ -60601,7 +64288,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
             const tipX = base.x + nx * (st.tipDist | 0)
             const tipY = base.y + ny * (st.tipDist | 0)
             _agiHookUpdateChain(st, hero, base.x, base.y, tipX, tipY, nx, ny, weaponLen | 0)
-            _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.EXTEND, false, tipX, tipY)
+            _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.EXTEND, false, tipX, tipY, 1)
 
             hero.vx = 0
             hero.vy = 0
@@ -60627,10 +64314,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
         }
 
         if (state === AGI_HOOK_STATE.RETRACT) {
-            if (st.aimIndicator) {
-                for (const d of st.aimIndicator) _agiHookDestroySprite(d)
-                st.aimIndicator = null
-            }
+            _agiHookHideAimDots(st)
             const nx = st.dirX || 1
             const ny = st.dirY || 0
             const wallsBlock = _agiHookWallsBlock()
@@ -60686,7 +64370,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 const tipX = base.x + nx * (st.tipDist | 0)
                 const tipY = base.y + ny * (st.tipDist | 0)
                 _agiHookUpdateChain(st, hero, base.x, base.y, tipX, tipY, nx, ny, weaponLen | 0)
-                _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.RETRACT, false, tipX, tipY)
+                _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.RETRACT, false, tipX, tipY, 1)
 
                 hero.vx = 0
                 hero.vy = 0
@@ -60772,7 +64456,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 const tipX = base.x + nx * (st.tipDist | 0)
                 const tipY = base.y + ny * (st.tipDist | 0)
                 _agiHookUpdateChain(st, hero, base.x, base.y, tipX, tipY, nx, ny, weaponLen | 0)
-                _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.RETRACT, false, tipX, tipY)
+                _agiHookUpdateCometSprite(st, hero, hi, nx, ny, base.x, base.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.RETRACT, false, tipX, tipY, 1)
 
                 if (newDist <= (weaponLen + 0.1)) {
                     sprites.setDataNumber(enemy, ENEMY_DATA.HOOKSHOT_PULLING, 0)
@@ -60820,7 +64504,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
                 const handNow = _agiHookHandBase(hero, nx, ny)
                 _agiHookUpdateWeaponCarrier(st, hi, hero, nx, ny, handNow.x, handNow.y, st.tipDist | 0, weaponLen | 0)
                 _agiHookUpdateChain(st, hero, handNow.x, handNow.y, st.targetX, st.targetY, nx, ny, weaponLen | 0)
-                _agiHookUpdateCometSprite(st, hero, hi, nx, ny, handNow.x, handNow.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.RETRACT, false, st.targetX, st.targetY)
+                _agiHookUpdateCometSprite(st, hero, hi, nx, ny, handNow.x, handNow.y, st.tipDist | 0, weaponLen | 0, now | 0, AGI_HOOK_STATE.RETRACT, false, st.targetX, st.targetY, 1)
 
                 if (newDist <= 0.1) {
                     sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, 0)
@@ -61257,8 +64941,8 @@ function spawnAgilityThrustProjectile(
 
 
 
-    // Remove legacy trail/placeholder visuals; comet is the only AGI thrust FX now.
-    _ensureAgilityCometFx(proj, heroIndex, hero, element | 0, dashMs | 0)
+    // Square-comet visuals only for AGI thrust (new sheet).
+    _ensureAgilitySquareCometFx(proj, heroIndex, hero, element | 0, dashMs | 0)
     // Keep trail FX visible even during windup so the beam fills immediately.
 
     return proj
@@ -61888,6 +65572,7 @@ function updateAgilityProjectilesMotionFor(
     const startMs = sprites.readDataNumber(proj, PROJ_DATA.START_TIME) | 0
 
     const dashMs = sprites.readDataNumber(proj, PROJ_DATA.DASH_MS) | 0
+    const dashEndMs = (startMs > 0 && dashMs > 0) ? ((startMs + dashMs) | 0) : 0
 
 
 
@@ -62010,26 +65695,13 @@ function updateAgilityProjectilesMotionFor(
     }
     const reelTComet = (reachT > 0) ? Math.max(0, Math.min(1, (nowMs - reachT) / Math.max(1, AGI_COMET_REEL_MS))) : 0;
     const elementNow = sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0;
-    _updateAgilityCometFx(
-        proj,
-        heroIndex,
-        hero,
-        elementNow | 0,
-        nx,
-        ny,
-        anchorX,
-        anchorY,
-        sBack,
-        sFront,
-        maxLen,
-        growthTComet,
-        reelTComet,
-        preActive,
-        activateAt | 0,
-        nowMs | 0,
-        startMs | 0,
-        dashMs | 0
-    )
+
+    // Hold the thrust frame once we've reached full extension, until dash ends.
+    if (dashEndMs > 0) {
+        const holdThrust = (reachT > 0 && nowMs < dashEndMs);
+        sprites.setDataNumber(hero, HERO_DATA.ANIM_HOLD, holdThrust ? 1 : 0);
+    }
+
     if (DEBUG_AGI_SQUARE_COMET_LOGS) {
         const now = nowMs | 0;
         const throttle = DEBUG_AGI_SQUARE_COMET_LOG_THROTTLE_MS | 0;
@@ -73618,7 +77290,7 @@ function _bossIntroHeroHasOtherLockOwner(hero: Sprite, hi: number, nowMs: number
     const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0
     if (agiState === AGI_STATE.ARMED || agiState === AGI_STATE.EXECUTING) return true
     const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0
-    if (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT) return true
+    if (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT || hookState === AGI_HOOK_STATE.RECOVER) return true
     const landEnd = sprites.readDataNumber(hero, INT_CAST_LAND_END_MS_KEY) | 0
     if (landEnd > 0 && nowMs < landEnd) return true
     if (supportPuzzleActive && supportPuzzleActive[hi]) return true
@@ -79203,7 +82875,7 @@ function updateHeroMovementPhase(now: number) {
 
         }
 
-        if (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT) {
+        if (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT || hookState === AGI_HOOK_STATE.RECOVER) {
             _dbgContract_noteWhy(hi, "AMBIENT_SKIP_AGI_EXEC", "updateHeroMovementPhase(hookshot)")
             _dbgMovePipeTick("AMB_SKIP", hi, hero, nowMs, "reason=AGI_HOOKSHOT")
             continue
@@ -79437,7 +83109,7 @@ function updateHeroControlLocks(now: number) {
         const isAgiBuildMode = (agiState === AGI_STATE.ARMED)
 
         const isAgiExecuting = (agiState === AGI_STATE.EXECUTING)
-        const isHookActive = (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT)
+        const isHookActive = (hookState === AGI_HOOK_STATE.AIMING || hookState === AGI_HOOK_STATE.EXTEND || hookState === AGI_HOOK_STATE.RETRACT || hookState === AGI_HOOK_STATE.RECOVER)
 
 
 
@@ -79964,6 +83636,15 @@ function _snapshotHeroPrevPositions(): void {
     }
 }
 
+function _snapshotEnemyPrevPositions(): void {
+    for (let ei = 0; ei < enemies.length; ei++) {
+        const e = enemies[ei]
+        if (!e) continue
+        sprites.setDataNumber(e, ENEMY_DATA.PREV_X, e.x)
+        sprites.setDataNumber(e, ENEMY_DATA.PREV_Y, e.y)
+    }
+}
+
 // Master update
 
 // Master update
@@ -79998,6 +83679,7 @@ game.onUpdate(function () {
 
     _heAutoDebugDumpTick(now)
     _heVisualDumpTick(now)
+    _heTilemapDeltaTick(now)
     _heEffectsDumpTick(now)
 
 
@@ -80080,6 +83762,7 @@ if (SHOP_MODE_ACTIVE) {
         updateGenericFocus(now)
 
         _snapshotHeroPrevPositions()
+        _snapshotEnemyPrevPositions()
 
         logHeroRuntimeContractAllHeroes(now, "onUpdate:shopMode")
 
@@ -80204,6 +83887,7 @@ if (SHOP_MODE_ACTIVE) {
     updateEnemyEffects(now)
 
     _snapshotHeroPrevPositions()
+    _snapshotEnemyPrevPositions()
 
 
 
@@ -83677,6 +87361,9 @@ const RELIC_CATALOG: { [relicId: string]: RelicDefinition } = {
 
 }
 
+applyStudentRelicDefinitions(RELIC_CATALOG)
+try { (globalThis as any).__heRelicCatalog = RELIC_CATALOG } catch { }
+
 const RELIC_SHOP_OFFER_COUNT = 3
 const RELIC_SHOP_PRICE_DEFAULT = 10
 
@@ -86265,6 +89952,51 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
 
     }
 
+    const _uiWeaponInfoForSlot = (equipSlot: string, fam: number, label: string, shortLabel: string): any => {
+        const slot = (equipSlot || "").toLowerCase()
+        let weaponId = _shopGetEquippedWeaponIdForHeroSlot(hero, slot)
+        if (!weaponId) weaponId = _shopDefaultWeaponIdForSlot(slot)
+        const mods = wpnModsByFamily[fam] || wpnModsByFamily[FAMILY.HEAL] || { dmg: 0, reach: 0, time: 0, status: 0 }
+        const t1 = mods.dmg | 0
+        const t2 = mods.reach | 0
+        const t3 = mods.time | 0
+        const t4 = mods.status | 0
+        const meta = _shopGetHeroWeaponMeta(hero, slot)
+        let rarity = (meta.rarity || "").toLowerCase()
+        if (!rarity) rarity = _shopRarityForWeaponId(weaponId, slot)
+        let variant = (meta.variant || "").toLowerCase()
+        if (!variant) {
+            const seedKey = `${_shopNormWeaponId(weaponId)}|${rarity}|${t1}|${t2}|${t3}|${t4}`
+            variant = _weaponPickVariantForRarity(weaponId, rarity, seedKey)
+        }
+        const bonusDesc = _shopFormatBonusDesc(fam, t1, t2, t3, t4)
+        const desc = _shopDescForWeaponId(weaponId, slot, bonusDesc)
+        const name = _shopLabelForWeaponId(weaponId, rarity, variant, t1, t2, t3, t4)
+        const icon = _weaponIconMetaFor(weaponId, variant)
+        return {
+            slot,
+            family: fam | 0,
+            slotLabel: label,
+            slotShort: shortLabel,
+            weaponId: String(weaponId || ""),
+            name,
+            desc,
+            bonusDesc,
+            rarity,
+            variant,
+            t1, t2, t3, t4,
+            icon,
+        }
+    }
+
+    const famSupport = (typeof (FAMILY as any).SUPPORT === "number") ? ((FAMILY as any).SUPPORT | 0) : (FAMILY.HEAL | 0)
+    const weapons = [
+        _uiWeaponInfoForSlot(SHOP_EQUIP_SLOT_STRENGTH, FAMILY.STRENGTH, "Strength", "STR"),
+        _uiWeaponInfoForSlot(SHOP_EQUIP_SLOT_AGILITY, FAMILY.AGILITY, "Agility", "AGI"),
+        _uiWeaponInfoForSlot(SHOP_EQUIP_SLOT_INTELLIGENCE, FAMILY.INTELLECT, "Intellect", "INT"),
+        _uiWeaponInfoForSlot(SHOP_EQUIP_SLOT_SUPPORT, famSupport, "Support", "SUP"),
+    ]
+
 
 
     const lvlBonuses = {
@@ -86395,6 +90127,8 @@ function _uiBuildSnapshot(pid: number, hi: number): any {
         wpnBonuses,
 
         wpnModsByFamily,
+
+        weapons,
 
         lvlUiBonuses,
 
@@ -86770,20 +90504,87 @@ function _heDebugTraceInternal(tag: any, data?: any): void {
 }
 
 const HE_EFFECTS_DUMP_DELAY_MS = 1200
+const HE_TRACE_PROOF_HOLD_MS = 15000
+const HE_EFFECTS_HALL_TRACE_INTERVAL_MS = (DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE && DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE > 0)
+    ? (DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE | 0)
+    : 250
+const HE_EFFECTS_HALL_TRACE_DURATION_MS = (DEBUG_EFFECTS_HALL_TRACE_DURATION_MS_OVERRIDE && DEBUG_EFFECTS_HALL_TRACE_DURATION_MS_OVERRIDE > 0)
+    ? (DEBUG_EFFECTS_HALL_TRACE_DURATION_MS_OVERRIDE | 0)
+    : 12000
+const HE_EFFECTS_HALL_TRACE_START_DELAY_MS = 2000
+const HE_EFFECTS_HALL_TRACE_WAIT_FOR_INPUT = true
+const HE_SCREEN_SNAP_TIMEOUT_MS = 750
+const HE_EFFECTS_HALL_TRACE_ALPHA_MIN = 0.05
+const HE_EFFECTS_HALL_TRACE_ALPHA_LEVELS = [0.2, 0.05, 0.01]
+const HE_EFFECTS_HALL_TRACE_SAMPLE_STRIDE = 2
+const HE_SCREEN_DEBUG_ALPHA_MIN = 0.05
+const HE_SCREEN_DEBUG_MAX_EXPECTED = 8
+const HE_SCREEN_DEBUG_MAX_CACHE = 128
 let _heEffectsDumpQueuedMs = 0
 let _heEffectsDumpReason = ""
 let _heEffectsDumpInFlight = false
+let _heDebugDumpHoldUntilMs = 0
 let _heEffectApplyCount = 0
 let _heEffectDumpTriggeredAt = 0
+let _heEffectsHallTraceActive = false
+let _heEffectsHallTraceStartMs = 0
+let _heEffectsHallTraceNextMs = 0
+let _heEffectsHallTraceEndMs = 0
+let _heEffectsHallTraceSamples: any[] = []
+let _heEffectsHallTraceInFlight = false
+let _heEffectsHallTraceLatest: any = null
+let _heEffectsHallTracePendingInput = false
+let _heEffectsHallTraceInputSeen = false
+const _heEffectsHallScreenSamplesById: { [k: number]: any } = Object.create(null)
+let _heScreenSnapSeq = 0
+let _heScreenSnapQueue: any[] = []
+let _heScreenSnapInFlight: any = null
+let _heScreenSnapInFlightAt = 0
+let _heScreenSnapInFlightAtFrame = 0
+let _heScreenSnapFrame = 0
+let _heScreenSnapCapturePending = false
+let _heScreenSnapPostrenderInstalled = false
+let _heScreenSnapEnqueued = 0
+let _heScreenSnapScheduled = 0
+let _heScreenSnapCallbacks = 0
+let _heScreenSnapCompleted = 0
+let _heScreenSnapTimeouts = 0
+let _heScreenSnapErrors = 0
+let _heScreenSnapLastScheduledAtMs: number | null = null
+let _heScreenSnapLastScheduledFrame: number | null = null
+let _heScreenSnapLastCallbackAtMs: number | null = null
+let _heScreenSnapLastCallbackFrame: number | null = null
+let _heScreenSnapLastCompletedAtMs: number | null = null
+let _heScreenSnapExternalCalls = 0
+let _heScreenSnapLastExternalCaller: string | null = null
+let _heScreenSnapScheduling = false
+const _heScreenSnapResults: any[] = []
+const _heFramePixelCache: { [k: string]: any } = Object.create(null)
+const _heFramePixelCacheOrder: string[] = []
+const _heMaskedBoundsCache: { [k: string]: any } = Object.create(null)
+const _heMaskedBoundsCacheOrder: string[] = []
 
 function _heQueueEffectsDump(reason: string, delayMs?: number): void {
     if (!DEBUG_DEBUG_DUMP || !DEBUG_EFFECTS_DUMP) return
     const now = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
     const delay = (delayMs != null ? delayMs : HE_EFFECTS_DUMP_DELAY_MS) | 0
     const when = (now + Math.max(0, delay)) | 0
-    if (_heEffectsDumpQueuedMs > 0 && _heEffectsDumpQueuedMs <= when) return
+    const reasonTag = String(reason || "")
+    if (_heDebugDumpHoldUntilMs > 0 && now < (_heDebugDumpHoldUntilMs | 0) && reasonTag.indexOf("trace-proof") < 0) {
+        return
+    }
+    const force = reasonTag.indexOf("trace-proof") >= 0
+    if (!force && _heEffectsDumpQueuedMs > 0 && _heEffectsDumpQueuedMs <= when) return
     _heEffectsDumpQueuedMs = when
-    _heEffectsDumpReason = String(reason || "")
+    _heEffectsDumpReason = reasonTag
+    if (force) {
+        _heDebugDumpHoldUntilMs = (now + HE_TRACE_PROOF_HOLD_MS) | 0
+        if (DEBUG_EFFECTS_HALL_LOGS) {
+            console.log(
+                "[VFX][HALL][TRACE][DUMP] queued reason=" + reasonTag + " when=" + (_heEffectsDumpQueuedMs | 0)
+            )
+        }
+    }
 }
 
 function _heNoteEffectApplied(): void {
@@ -86811,14 +90612,597 @@ function _heEffectsDumpTick(nowMs: number): void {
     }
     _heEffectsDumpInFlight = true
     const reason = _heEffectsDumpReason || "effects"
+    if (DEBUG_EFFECTS_HALL_LOGS && reason.indexOf("trace-proof") >= 0) {
+        console.log("[VFX][HALL][TRACE][DUMP] fire reason=" + reason)
+    }
     let p: any = null
     try { p = fn(reason) } catch { p = null }
     _heEffectsDumpQueuedMs = 0
     _heEffectsDumpReason = ""
     if (p && typeof p.then === "function") {
-        p.then(() => { _heEffectsDumpInFlight = false }).catch(() => { _heEffectsDumpInFlight = false })
+        p.then((res: any) => {
+            if (DEBUG_EFFECTS_HALL_LOGS && reason.indexOf("trace-proof") >= 0) {
+                const ok = res && typeof res.ok === "boolean" ? res.ok : null
+                const r = res && typeof res.reason === "string" ? res.reason : ""
+                const file = res && typeof res.file === "string" ? res.file : ""
+                console.log("[VFX][HALL][TRACE][DUMP] done ok=" + ok + " reason=" + r + " file=" + file)
+            }
+            _heEffectsDumpInFlight = false
+        }).catch((err: any) => {
+            if (DEBUG_EFFECTS_HALL_LOGS && reason.indexOf("trace-proof") >= 0) {
+                console.log("[VFX][HALL][TRACE][DUMP] fail err=" + String(err || ""))
+            }
+            _heEffectsDumpInFlight = false
+        })
     } else {
+        if (DEBUG_EFFECTS_HALL_LOGS && reason.indexOf("trace-proof") >= 0) {
+            console.log("[VFX][HALL][TRACE][DUMP] done sync")
+        }
         _heEffectsDumpInFlight = false
+    }
+}
+
+function _heStartEffectsHallTraceNow(nowMs: number): void {
+    if (_heEffectsHallTraceActive) return
+    const now = nowMs | 0
+    _heEffectsHallTraceActive = true
+    _heEffectsHallTraceStartMs = now
+    _heEffectsHallTraceNextMs = (now + HE_EFFECTS_HALL_TRACE_START_DELAY_MS) | 0
+    _heEffectsHallTraceEndMs = (now + HE_EFFECTS_HALL_TRACE_START_DELAY_MS + HE_EFFECTS_HALL_TRACE_DURATION_MS) | 0
+    _heEffectsHallTraceSamples = []
+    if (DEBUG_EFFECTS_HALL_LOGS) {
+        console.log("[VFX][HALL][TRACE] started")
+    }
+}
+
+function _heNotifyFirstInput(): void {
+    if (_heEffectsHallTraceInputSeen) return
+    _heEffectsHallTraceInputSeen = true
+    if (_heEffectsHallTracePendingInput && !_heEffectsHallTraceActive) {
+        _heEffectsHallTracePendingInput = false
+        const now = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
+        _heStartEffectsHallTraceNow(now)
+    }
+}
+
+function _heStartEffectsHallTrace(nowMs: number): void {
+    if (!DEBUG_DEBUG_DUMP || !DEBUG_EFFECTS_HALL_TRACE) return
+    if (_heEffectsHallTraceActive || _heEffectsHallTracePendingInput) return
+    if (HE_EFFECTS_HALL_TRACE_WAIT_FOR_INPUT && !_heEffectsHallTraceInputSeen) {
+        _heEffectsHallTracePendingInput = true
+        const g: any = globalThis as any
+        if (g && typeof g.__heNotifyFirstInput !== "function") {
+            g.__heNotifyFirstInput = _heNotifyFirstInput
+        }
+        if (g && typeof g.__heQueueScreenSamples !== "function") {
+            g.__heQueueScreenSamples = _heQueueScreenSamples
+        }
+        return
+    }
+    _heStartEffectsHallTraceNow(nowMs | 0)
+}
+
+function _heEffectsHallTraceTick(nowMs: number): void {
+    if (!DEBUG_DEBUG_DUMP || !DEBUG_EFFECTS_HALL_TRACE) return
+    if (!_heEffectsHallTraceActive) return
+    if (_heEffectsHallTraceInFlight) return
+    const now = nowMs | 0
+    if (now < (_heEffectsHallTraceNextMs | 0)) return
+    if (now >= (_heEffectsHallTraceEndMs | 0)) {
+        _heEffectsHallTraceActive = false
+        _heEffectsHallTraceInFlight = true
+        if (DEBUG_EFFECTS_HALL_LOGS) {
+            console.log(
+                "[VFX][HALL][TRACE] completed samples=" + (_heEffectsHallTraceSamples.length | 0)
+            )
+        }
+        const g: any = globalThis as any
+        const net: any = g && g.__net
+        const payload = {
+            type: "effectsHallTraceV1",
+            createdAt: Date.now(),
+            startMs: _heEffectsHallTraceStartMs | 0,
+            durationMs: HE_EFFECTS_HALL_TRACE_DURATION_MS | 0,
+            intervalMs: HE_EFFECTS_HALL_TRACE_INTERVAL_MS | 0,
+            alphaMin: HE_EFFECTS_HALL_TRACE_ALPHA_MIN,
+            samples: _heEffectsHallTraceSamples.slice(0)
+        }
+        _heEffectsHallTraceLatest = payload
+        let p: any = null
+        if (net && typeof net.sendDebugDump === "function") {
+            try { p = net.sendDebugDump(payload, "effects-hall-trace") } catch { p = null }
+        }
+        if (p && typeof p.then === "function") {
+            p.then(() => {
+                _heEffectsHallTraceInFlight = false
+                _heQueueEffectsDump("trace-proof", 0)
+            }).catch(() => {
+                _heEffectsHallTraceInFlight = false
+                _heQueueEffectsDump("trace-proof", 0)
+            })
+        } else {
+            _heEffectsHallTraceInFlight = false
+            _heQueueEffectsDump("trace-proof", 0)
+        }
+        const dumpFn = g && g.__heDebugDumpToFile
+        if (typeof dumpFn === "function") {
+            if (DEBUG_EFFECTS_HALL_LOGS) {
+                console.log("[VFX][HALL][TRACE][DUMP] direct fire reason=trace-proof")
+            }
+            let dp: any = null
+            try { dp = dumpFn("trace-proof") } catch { dp = null }
+            if (dp && typeof dp.then === "function") {
+                dp.then((res: any) => {
+                    if (DEBUG_EFFECTS_HALL_LOGS) {
+                        const ok = res && typeof res.ok === "boolean" ? res.ok : null
+                        const r = res && typeof res.reason === "string" ? res.reason : ""
+                        const file = res && typeof res.file === "string" ? res.file : ""
+                        console.log("[VFX][HALL][TRACE][DUMP] direct done ok=" + ok + " reason=" + r + " file=" + file)
+                    }
+                }).catch((err: any) => {
+                    if (DEBUG_EFFECTS_HALL_LOGS) {
+                        console.log("[VFX][HALL][TRACE][DUMP] direct fail err=" + String(err || ""))
+                    }
+                })
+            } else if (DEBUG_EFFECTS_HALL_LOGS) {
+                console.log("[VFX][HALL][TRACE][DUMP] direct done sync")
+            }
+        } else if (DEBUG_EFFECTS_HALL_LOGS) {
+            console.log("[VFX][HALL][TRACE][DUMP] direct missing __heDebugDumpToFile")
+        }
+        return
+    }
+    _heEffectsHallTraceNextMs = (now + HE_EFFECTS_HALL_TRACE_INTERVAL_MS) | 0
+
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    const atlas = _getEffectAtlasAny()
+    if (!sc || !atlas) return
+    const all = (sprites && typeof sprites.allSprites === "function") ? sprites.allSprites() : []
+    const alphaMin = HE_EFFECTS_HALL_TRACE_ALPHA_MIN
+    const stride = HE_EFFECTS_HALL_TRACE_SAMPLE_STRIDE | 0
+    const alphaLevels = HE_EFFECTS_HALL_TRACE_ALPHA_LEVELS
+    const liteTrace = !!DEBUG_EFFECTS_HALL_TRACE_LITE
+    const byBase: { [k: string]: any } = Object.create(null)
+    for (let i = 0; i < all.length; i++) {
+        const s = all[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+        const tag = sprites.readDataString(s, "__hallTag") || ""
+        if (!tag) continue
+        if (tag.indexOf("hall/alpha") < 0 && tag.indexOf("hall/poison") < 0 && tag.indexOf("hall/dust") < 0) continue
+        const parts = tag.split("|")
+        const base = parts[0] || ""
+        const slot = parts[1] || ""
+        if (!base || !slot) continue
+        let entry = byBase[base]
+        if (!entry) {
+            entry = { baseTag: base }
+            byBase[base] = entry
+        }
+        if (slot === "fill") entry.fill = s
+        else if (slot === "mask") entry.mask = s
+        else if (slot === "border") entry.border = s
+        else if (slot === "border-mask") entry.borderMask = s
+        else if (slot === "mask-outline") entry.border = s
+        else if (slot === "mask2-outline") entry.borderMask = s
+    }
+
+    const sampleItems: any[] = []
+    for (const baseTag in byBase) {
+        const entry = byBase[baseTag]
+        const fill = entry.fill as Sprite | undefined
+        const maskSprite = fill
+            ? (sprites.readDataSprite(fill, EFFECT_MASK_SPRITE_REF_DATA_KEY) || entry.mask)
+            : (entry.mask as Sprite | undefined)
+        const border = entry.border as Sprite | undefined
+        const borderMaskSprite = border
+            ? (sprites.readDataSprite(border, EFFECT_MASK_SPRITE_REF_DATA_KEY) || entry.borderMask)
+            : (entry.borderMask as Sprite | undefined)
+
+        const fillInfo = fill ? _heBuildEffectTraceInfo(fill, atlas, sc, stride, alphaMin, liteTrace) : null
+        if (fillInfo && fill) {
+            const maskRef = sprites.readDataSprite(fill, EFFECT_MASK_SPRITE_REF_DATA_KEY)
+            const maskRefNative = maskRef && (maskRef as any).native
+            fillInfo.maskRefId = maskRef ? ((maskRef as any).id | 0) : null
+            fillInfo.maskRefTag = maskRef ? (sprites.readDataString(maskRef, "__hallTag") || "") : ""
+            fillInfo.maskRefHasNative = !!maskRefNative
+            fillInfo.mode = (sprites.readDataString(fill, EFFECT_MODE_DATA_KEY) || "").trim()
+            fillInfo.maskInvert = sprites.readDataNumber(fill, EFFECT_MASK_INVERT_DATA_KEY)
+            // Approximate tile coverage if this fill is a TileSprite.
+            const isTile = fillInfo.nativeIsTile | 0
+            if (isTile && fillInfo.nativeDisplayW && fillInfo.nativeDisplayH && fillInfo.nativeFrameW && fillInfo.nativeFrameH) {
+                const tileW = (fillInfo.nativeFrameW || 0) * (fillInfo.nativeTileScaleX || 1)
+                const tileH = (fillInfo.nativeFrameH || 0) * (fillInfo.nativeTileScaleY || 1)
+                const tilesX = tileW > 0 ? Math.max(1, Math.round((fillInfo.nativeDisplayW || 0) / tileW)) : null
+                const tilesY = tileH > 0 ? Math.max(1, Math.round((fillInfo.nativeDisplayH || 0) / tileH)) : null
+                fillInfo.nativeTileCount = (tilesX && tilesY) ? { x: tilesX | 0, y: tilesY | 0 } : null
+            } else {
+                fillInfo.nativeTileCount = null
+            }
+        }
+        const maskInfo = maskSprite ? _heBuildEffectTraceInfo(maskSprite, atlas, sc, stride, alphaMin, liteTrace) : null
+        const borderInfo = border ? _heBuildEffectTraceInfo(border, atlas, sc, stride, alphaMin, liteTrace) : null
+        const borderMaskInfo = borderMaskSprite ? _heBuildEffectTraceInfo(borderMaskSprite, atlas, sc, stride, alphaMin, liteTrace) : null
+
+        const fillBoundsByAlpha = liteTrace ? null : (fillInfo ? _heBuildBoundsAtLevels(fillInfo, stride, alphaLevels) : null)
+        const maskBoundsByAlpha = liteTrace ? null : (maskInfo ? _heBuildBoundsAtLevels(maskInfo, stride, alphaLevels) : null)
+        const borderBoundsByAlpha = liteTrace ? null : (borderInfo ? _heBuildBoundsAtLevels(borderInfo, stride, alphaLevels) : null)
+        const borderMaskBoundsByAlpha = liteTrace ? null : (borderMaskInfo ? _heBuildBoundsAtLevels(borderMaskInfo, stride, alphaLevels) : null)
+
+        const fillMasked = liteTrace ? null : _heBuildMaskedBoundsAtLevels(fillInfo, maskInfo, stride, alphaLevels)
+        const borderMasked = liteTrace ? null : _heBuildMaskedBoundsAtLevels(borderInfo, borderMaskInfo, stride, alphaLevels)
+        const fillMaskCoverage = (liteTrace || !fillInfo || !maskInfo)
+            ? null
+            : _heSampleMaskCoverage(
+                fillInfo.texKey,
+                fillInfo.frame | 0,
+                fillInfo.frameW | 0,
+                fillInfo.frameH | 0,
+                maskInfo.texKey,
+                maskInfo.frame | 0,
+                maskInfo.frameW | 0,
+                maskInfo.frameH | 0,
+                stride | 0,
+                alphaMin
+            )
+
+        const fillCorners = liteTrace ? null : _heBuildTraceCornersByAlpha(fillInfo, fillMasked, alphaLevels)
+        const maskCorners = liteTrace ? null : _heBuildTraceCornersByAlpha(maskInfo, null, alphaLevels)
+        const borderCorners = liteTrace ? null : _heBuildTraceCornersByAlpha(borderInfo, borderMasked, alphaLevels)
+        const borderMaskCorners = liteTrace ? null : _heBuildTraceCornersByAlpha(borderMaskInfo, null, alphaLevels)
+
+        const fillBoundsScaled = fillMasked && fillMasked.best && fillMasked.best.boundsScaled
+            ? fillMasked.best.boundsScaled
+            : (fillInfo ? fillInfo.boundsScaled : null)
+        const fillRawBoundsScaled = fillInfo ? fillInfo.boundsScaled : null
+        const fillMaskedBest = fillMasked && fillMasked.best ? fillMasked.best.boundsScaled : null
+        const borderBoundsScaled = borderMasked && borderMasked.best && borderMasked.best.boundsScaled
+            ? borderMasked.best.boundsScaled
+            : (borderInfo ? borderInfo.boundsScaled : null)
+        const fillVsMaskPos = (fillInfo && maskInfo)
+            ? { dx: (fillInfo.x | 0) - (maskInfo.x | 0), dy: (fillInfo.y | 0) - (maskInfo.y | 0) }
+            : null
+        const fillVsMaskBounds = (fillInfo && maskInfo && fillInfo.nativeBounds && maskInfo.nativeBounds)
+            ? {
+                dx: (fillInfo.nativeBounds.x | 0) - (maskInfo.nativeBounds.x | 0),
+                dy: (fillInfo.nativeBounds.y | 0) - (maskInfo.nativeBounds.y | 0),
+                wDelta: (fillInfo.nativeBounds.w | 0) - (maskInfo.nativeBounds.w | 0),
+                hDelta: (fillInfo.nativeBounds.h | 0) - (maskInfo.nativeBounds.h | 0)
+            }
+            : null
+        const fillMaskVsRaw = (fillMaskedBest && fillRawBoundsScaled)
+            ? {
+                wDelta: Math.round((fillMaskedBest.w || 0) - (fillRawBoundsScaled.w || 0)),
+                hDelta: Math.round((fillMaskedBest.h || 0) - (fillRawBoundsScaled.h || 0)),
+                wRatio: (fillRawBoundsScaled.w && fillMaskedBest.w) ? Number((fillMaskedBest.w / fillRawBoundsScaled.w).toFixed(3)) : null,
+                hRatio: (fillRawBoundsScaled.h && fillMaskedBest.h) ? Number((fillMaskedBest.h / fillRawBoundsScaled.h).toFixed(3)) : null
+            }
+            : null
+        const fillMaskSuspect = (fillMaskVsRaw && (fillMaskVsRaw.wRatio != null || fillMaskVsRaw.hRatio != null))
+            ? {
+                wRatio: fillMaskVsRaw.wRatio,
+                hRatio: fillMaskVsRaw.hRatio,
+                looksUnmasked: (fillMaskVsRaw.wRatio != null && fillMaskVsRaw.wRatio >= 0.95)
+                    && (fillMaskVsRaw.hRatio != null && fillMaskVsRaw.hRatio >= 0.95)
+            }
+            : null
+        const borderVsFill = (fillBoundsScaled && borderBoundsScaled)
+            ? {
+                wDelta: Math.round((borderBoundsScaled.w || 0) - (fillBoundsScaled.w || 0)),
+                hDelta: Math.round((borderBoundsScaled.h || 0) - (fillBoundsScaled.h || 0)),
+                wRatio: (fillBoundsScaled.w && borderBoundsScaled.w) ? Number((borderBoundsScaled.w / fillBoundsScaled.w).toFixed(3)) : null,
+                hRatio: (fillBoundsScaled.h && borderBoundsScaled.h) ? Number((borderBoundsScaled.h / fillBoundsScaled.h).toFixed(3)) : null
+            }
+            : null
+
+        if (fill && sc) {
+            // capture later as a single snapshot per tick (avoids Phaser snapshot override)
+        }
+
+        let clusterIndex: number | null = null
+        let clusterRole = ""
+        const m = /cluster\/(\d+)/.exec(baseTag)
+        if (m && m[1]) {
+            clusterIndex = Number(m[1]) | 0
+            if (clusterIndex === 0) clusterRole = "center"
+            else if (clusterIndex === 1) clusterRole = "leftLarge"
+            else if (clusterIndex === 2) clusterRole = "rightMedium"
+            else if (clusterIndex === 3) clusterRole = "frontSmall"
+        }
+        sampleItems.push({
+            baseTag,
+            clusterIndex,
+            clusterRole,
+            fill: fillInfo,
+            mask: maskInfo,
+            fillMasked,
+            fillBoundsByAlpha,
+            maskBoundsByAlpha,
+            fillRawBoundsScaled,
+            fillMaskedBest,
+            fillVsMaskPos,
+            fillVsMaskBounds,
+            fillMaskVsRaw,
+            fillMaskSuspect,
+            fillMaskCoverage,
+            fillCorners,
+            maskCorners,
+            border: borderInfo,
+            borderMask: borderMaskInfo,
+            borderMasked,
+            borderBoundsByAlpha,
+            borderMaskBoundsByAlpha,
+            borderCorners,
+            borderMaskCorners,
+            hasNativeMask: !!(fill as any)?.native?.mask,
+            borderHasNativeMask: !!(border as any)?.native?.mask,
+            borderVsFill
+        })
+    }
+
+    // Also capture any untagged dust/waves fills so we can identify stray squares.
+    for (let i = 0; i < all.length; i++) {
+        const s = all[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+        const tag = sprites.readDataString(s, "__hallTag") || ""
+        if (tag) continue
+        const skin = (sprites.readDataString(s, "effectSkin") || "")
+        if (skin.indexOf("waves3 texture") < 0 && skin.indexOf("waves2 texture") < 0) continue
+        const fillInfo = _heBuildEffectTraceInfo(s, atlas, sc, stride, alphaMin)
+        if (!fillInfo) continue
+        sampleItems.push({
+            baseTag: `untracked:${fillInfo.id}`,
+            fill: fillInfo,
+            mask: null,
+            fillMasked: null,
+            fillBoundsByAlpha: null,
+            maskBoundsByAlpha: null,
+            fillCorners: null,
+            maskCorners: null,
+            border: null,
+            borderMask: null,
+            borderMasked: null,
+            borderBoundsByAlpha: null,
+            borderMaskBoundsByAlpha: null,
+            borderCorners: null,
+            borderMaskCorners: null,
+            hasNativeMask: !!(s as any)?.native?.__effectPaintMask,
+            borderHasNativeMask: false,
+            borderVsFill: null
+        })
+    }
+
+    // Summarize all effect textures used in this sample (by skin and by native texture key).
+    const textureUsage: any = { skins: Object.create(null), texKeys: Object.create(null) }
+    for (let i = 0; i < all.length; i++) {
+        const s = all[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+        const skin = (sprites.readDataString(s, "effectSkin") || "").trim()
+        if (!skin) continue
+        textureUsage.skins[skin] = (textureUsage.skins[skin] | 0) + 1
+        const nat: any = (s as any).native
+        const texKey = nat && nat.texture ? (nat.texture.key || "") : ""
+        if (texKey) textureUsage.texKeys[texKey] = (textureUsage.texKeys[texKey] | 0) + 1
+    }
+
+    // Capture native tile sprites used for hall fills (not in sprites.allSprites()).
+    const nativeTiles: any[] = []
+    for (let i = 0; i < _dunEffectsHallNativeFx.length; i++) {
+        const entry = _dunEffectsHallNativeFx[i]
+        const tile: any = entry && entry.sprite
+        if (!tile || tile.destroyed) continue
+        const texKey = tile.texture ? (tile.texture.key || "") : ""
+        const frame = tile.frame ? (tile.frame.name ?? tile.frame.index ?? null) : null
+        const maskPresent = !!tile.mask
+        nativeTiles.push({
+            tag: tile.__heHallTag || "",
+            texKey,
+            frame,
+            x: Math.round(tile.x || 0),
+            y: Math.round(tile.y || 0),
+            w: Math.round(tile.displayWidth || tile.width || 0),
+            h: Math.round(tile.displayHeight || tile.height || 0),
+            tileScaleX: Number.isFinite(tile.tileScaleX) ? Number(tile.tileScaleX) : null,
+            tileScaleY: Number.isFinite(tile.tileScaleY) ? Number(tile.tileScaleY) : null,
+            tilePosX: Number.isFinite(tile.tilePositionX) ? Number(tile.tilePositionX) : null,
+            tilePosY: Number.isFinite(tile.tilePositionY) ? Number(tile.tilePositionY) : null,
+            alpha: Number.isFinite(tile.alpha) ? Number(tile.alpha) : null,
+            tint: Number.isFinite(tile.tintTopLeft) ? (tile.tintTopLeft | 0) : null,
+            depth: Number.isFinite(tile.depth) ? (tile.depth | 0) : null,
+            maskPresent: maskPresent ? 1 : 0,
+            maskSpriteId: tile.__heMaskSpriteId || "",
+            maskSpriteTag: tile.__heMaskSpriteTag || ""
+        })
+    }
+
+    // One snapshot per tick for all visible fills (queued through the snapshot pump).
+    const fillItems: any[] = []
+    for (const baseTag in byBase) {
+        const entry = byBase[baseTag]
+        if (!entry || !entry.fill) continue
+        const fillSprite = entry.fill as Sprite
+        const fillInfo = _heBuildEffectTraceInfo(fillSprite, atlas, sc, stride, alphaMin)
+        let boundsW = 0
+        let boundsH = 0
+        if (fillInfo && fillInfo.boundsScaled) {
+            boundsW = fillInfo.boundsScaled.w | 0
+            boundsH = fillInfo.boundsScaled.h | 0
+        }
+        fillItems.push({
+            sprite: fillSprite,
+            id: (fillSprite as any).id | 0,
+            boundsW,
+            boundsH,
+            expected: {
+                tag: sprites.readDataString(fillSprite, "__hallTag") || "",
+                texKey: fillInfo ? fillInfo.texKey : "",
+                frame: fillInfo ? fillInfo.frame : null,
+            }
+        })
+    }
+    if (fillItems.length && sc) {
+        const expectedProbes = _heBuildVisualProbes(sc, null)
+        _heQueueEffectsHallScreenSamplesOnce(sc, fillItems, stride, alphaMin, expectedProbes, liteTrace)
+    }
+
+    _heEffectsHallTraceSamples.push({
+        t: now,
+        items: sampleItems,
+        textureUsage,
+        nativeTiles
+    })
+}
+
+function _heBuildMaskedBoundsInfo(
+    fillInfo: any,
+    maskInfo: any,
+    stride: number,
+    alphaMin: number
+): any {
+    if (!fillInfo || !maskInfo) return null
+    if (!fillInfo.texKey || !maskInfo.texKey) return null
+    if (fillInfo.frame == null || maskInfo.frame == null) return null
+    const mb = _heSampleMaskedFrameBounds(
+        fillInfo.texKey,
+        fillInfo.frame | 0,
+        fillInfo.frameW | 0,
+        fillInfo.frameH | 0,
+        maskInfo.texKey,
+        maskInfo.frame | 0,
+        maskInfo.frameW | 0,
+        maskInfo.frameH | 0,
+        stride | 0,
+        alphaMin
+    )
+    if (!mb) return null
+    let boundsScaled: any = null
+    if (fillInfo.scale != null) {
+        const sx = Number.isFinite(fillInfo.scaleX) && fillInfo.scaleX > 0 ? fillInfo.scaleX : fillInfo.scale
+        const sy = Number.isFinite(fillInfo.scaleY) && fillInfo.scaleY > 0 ? fillInfo.scaleY : fillInfo.scale
+        boundsScaled = (mb && mb.w && mb.h && sx && sy)
+            ? { w: Math.round(mb.w * sx), h: Math.round(mb.h * sy) }
+            : null
+    }
+    return {
+        bounds: mb,
+        boundsScaled
+    }
+}
+
+function _heBuildBoundsAtLevels(info: any, stride: number, levels: number[]): any {
+    if (!info || !info.texKey || info.frame == null || info.frameW <= 0 || info.frameH <= 0) return null
+    const out: any = {}
+    for (let i = 0; i < levels.length; i++) {
+        const a = levels[i]
+        const b = _heSampleEffectFrameBounds(
+            info.texKey,
+            info.frame | 0,
+            info.frameW | 0,
+            info.frameH | 0,
+            stride | 0,
+            a
+        )
+        let boundsScaled: any = null
+        if (b && info.scale != null) {
+            const sx = Number.isFinite(info.scaleX) && info.scaleX > 0 ? info.scaleX : info.scale
+            const sy = Number.isFinite(info.scaleY) && info.scaleY > 0 ? info.scaleY : info.scale
+            boundsScaled = (b && b.w && b.h && sx && sy)
+                ? { w: Math.round(b.w * sx), h: Math.round(b.h * sy) }
+                : null
+        }
+        out[String(a)] = { bounds: b, boundsScaled }
+    }
+    return out
+}
+
+function _heBuildMaskedBoundsAtLevels(
+    fillInfo: any,
+    maskInfo: any,
+    stride: number,
+    levels: number[]
+): any {
+    if (!fillInfo || !maskInfo) return null
+    if (!fillInfo.texKey || !maskInfo.texKey) return null
+    if (fillInfo.frame == null || maskInfo.frame == null) return null
+    const out: any = {}
+    let best: any = null
+    for (let i = 0; i < levels.length; i++) {
+        const a = levels[i]
+        const mb = _heSampleMaskedFrameBounds(
+            fillInfo.texKey,
+            fillInfo.frame | 0,
+            fillInfo.frameW | 0,
+            fillInfo.frameH | 0,
+            maskInfo.texKey,
+            maskInfo.frame | 0,
+            maskInfo.frameW | 0,
+            maskInfo.frameH | 0,
+            stride | 0,
+            a
+        )
+        let boundsScaled: any = null
+        if (mb && fillInfo.scale != null) {
+            const sx = Number.isFinite(fillInfo.scaleX) && fillInfo.scaleX > 0 ? fillInfo.scaleX : fillInfo.scale
+            const sy = Number.isFinite(fillInfo.scaleY) && fillInfo.scaleY > 0 ? fillInfo.scaleY : fillInfo.scale
+            boundsScaled = (mb && mb.w && mb.h && sx && sy)
+                ? { w: Math.round(mb.w * sx), h: Math.round(mb.h * sy) }
+                : null
+        }
+        const entry = { bounds: mb, boundsScaled }
+        out[String(a)] = entry
+        if (!best && mb && mb.w && mb.h) best = entry
+    }
+    return { levels: out, best }
+}
+
+function _heBuildTraceCornersByAlpha(info: any, masked: any, levels: number[]): any {
+    if (!info) return null
+    const out: any = {}
+    if (masked && masked.levels) {
+        for (let i = 0; i < levels.length; i++) {
+            const a = levels[i]
+            const entry = masked.levels[String(a)]
+            if (entry && entry.boundsScaled) {
+                out[String(a)] = _heBuildTraceCornersFor(info, entry.boundsScaled)
+            }
+        }
+    } else if (info.boundsScaled) {
+        out["raw"] = _heBuildTraceCornersFor(info, info.boundsScaled)
+    }
+    return out
+}
+
+function _heBuildTraceCornersFor(info: any, boundsScaled: any): any {
+    if (!boundsScaled || !Number.isFinite(info.x) || !Number.isFinite(info.y)) return null
+    const w = boundsScaled.w | 0
+    const h = boundsScaled.h | 0
+    const halfW = Math.round(w / 2)
+    const halfH = Math.round(h / 2)
+    return {
+        left: (info.x | 0) - halfW,
+        right: (info.x | 0) + halfW,
+        top: (info.y | 0) - halfH,
+        bottom: (info.y | 0) + halfH,
+        w: w | 0,
+        h: h | 0
+    }
+}
+
+function _heBuildTraceCorners(info: any, masked: any): any {
+    if (!info) return null
+    const boundsScaled = (masked && masked.boundsScaled) ? masked.boundsScaled : info.boundsScaled
+    if (!boundsScaled || !Number.isFinite(info.x) || !Number.isFinite(info.y)) return null
+    const w = boundsScaled.w | 0
+    const h = boundsScaled.h | 0
+    const halfW = Math.round(w / 2)
+    const halfH = Math.round(h / 2)
+    return {
+        left: (info.x | 0) - halfW,
+        right: (info.x | 0) + halfW,
+        top: (info.y | 0) - halfH,
+        bottom: (info.y | 0) + halfH,
+        w: w | 0,
+        h: h | 0
     }
 }
 
@@ -86905,6 +91289,1676 @@ function _heSampleEffectFrameColors(
     }
 }
 
+function _heSampleEffectFrameBounds(
+    texKey: string,
+    frameId: number,
+    frameW: number,
+    frameH: number,
+    stride: number,
+    alphaMin: number
+): any {
+    if (!isPhaserRuntime()) return null
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    if (!sc || !sc.textures || !sc.textures.exists(texKey)) return null
+    const fw = frameW | 0
+    const fh = frameH | 0
+    if (fw <= 0 || fh <= 0) return null
+    const cache = _heGetFramePixels(sc, texKey, frameId, fw, fh)
+    if (!cache || !cache.pix) return null
+    const key = `${stride | 0}|${alphaMin || 0}`
+    const existing = cache.boundsByAlpha && cache.boundsByAlpha[key]
+    if (existing) return existing
+    const b = _heSampleFrameBoundsFromPix(cache.pix, fw, fh, stride, alphaMin)
+    if (cache.boundsByAlpha) cache.boundsByAlpha[key] = b
+    return b
+}
+
+function _heSampleMaskedFrameBounds(
+    fillTexKey: string,
+    fillFrameId: number,
+    fillW: number,
+    fillH: number,
+    maskTexKey: string,
+    maskFrameId: number,
+    maskW: number,
+    maskH: number,
+    stride: number,
+    alphaMin: number
+): any {
+    if (!isPhaserRuntime()) return null
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    if (!sc || !sc.textures || !sc.textures.exists(fillTexKey) || !sc.textures.exists(maskTexKey)) return null
+    const fw = fillW | 0
+    const fh = fillH | 0
+    const mw = maskW | 0
+    const mh = maskH | 0
+    if (fw <= 0 || fh <= 0 || mw <= 0 || mh <= 0) return null
+    const cache = _heGetFramePixels(sc, fillTexKey, fillFrameId, fw, fh)
+    const mcache = _heGetFramePixels(sc, maskTexKey, maskFrameId, mw, mh)
+    if (!cache || !cache.pix || !mcache || !mcache.pix) return null
+    const cacheKey = `${fillTexKey}|${fillFrameId}|${maskTexKey}|${maskFrameId}|${fw}x${fh}|${mw}x${mh}|${stride | 0}|${alphaMin || 0}`
+    const cached = _heMaskedBoundsCache[cacheKey]
+    if (cached) return cached
+    const step = Math.max(1, stride | 0)
+    const pix = cache.pix
+    const mpix = mcache.pix
+    const aMin = Math.max(0, Math.min(255, Math.round((alphaMin || 0) * 255)))
+    const scaleX = mw / fw
+    const scaleY = mh / fh
+    const fillCx = (fw - 1) / 2
+    const fillCy = (fh - 1) / 2
+    const maskCx = (mw - 1) / 2
+    const maskCy = (mh - 1) / 2
+    let minX = fw
+    let minY = fh
+    let maxX = -1
+    let maxY = -1
+    let nonZero = 0
+    for (let y = 0; y < fh; y += step) {
+        const row = y * fw
+        for (let x = 0; x < fw; x += step) {
+            const i = ((row + x) << 2)
+            const a = pix[i + 3]
+            let ma = 0
+            if (mw === fw && mh === fh) {
+                ma = mpix[i + 3] | 0
+            } else {
+                const mx = Math.round((x - fillCx) * scaleX + maskCx)
+                const my = Math.round((y - fillCy) * scaleY + maskCy)
+                if (mx >= 0 && my >= 0 && mx < mw && my < mh) {
+                    const mi = ((my * mw + mx) << 2)
+                    ma = mpix[mi + 3] | 0
+                }
+            }
+            const ca = Math.round((a * ma) / 255)
+            if (ca < aMin) continue
+            nonZero++
+            if (x < minX) minX = x
+            if (y < minY) minY = y
+            if (x > maxX) maxX = x
+            if (y > maxY) maxY = y
+        }
+    }
+    if (maxX < minX || maxY < minY) {
+        const empty = { w: 0, h: 0, minX: 0, minY: 0, maxX: 0, maxY: 0, nonZero: 0 }
+        _heMaskedBoundsCache[cacheKey] = empty
+        _heMaskedBoundsCacheOrder.push(cacheKey)
+        if (_heMaskedBoundsCacheOrder.length > HE_SCREEN_DEBUG_MAX_CACHE) {
+            const drop = _heMaskedBoundsCacheOrder.shift()
+            if (drop) delete _heMaskedBoundsCache[drop]
+        }
+        return empty
+    }
+    const w = (maxX - minX + 1) | 0
+    const h = (maxY - minY + 1) | 0
+    const out = {
+        minX,
+        minY,
+        maxX,
+        maxY,
+        w,
+        h,
+        nonZero
+    }
+    _heMaskedBoundsCache[cacheKey] = out
+    _heMaskedBoundsCacheOrder.push(cacheKey)
+    if (_heMaskedBoundsCacheOrder.length > HE_SCREEN_DEBUG_MAX_CACHE) {
+        const drop = _heMaskedBoundsCacheOrder.shift()
+        if (drop) delete _heMaskedBoundsCache[drop]
+    }
+    return out
+}
+
+function _heSampleSnapshotBounds(
+    image: any,
+    w: number,
+    h: number,
+    stride: number,
+    alphaMin: number
+): any {
+    if (typeof document === "undefined") return null
+    if (!image || w <= 0 || h <= 0) return null
+    const canvas = document.createElement("canvas")
+    canvas.width = w
+    canvas.height = h
+    const ctx = canvas.getContext("2d", { willReadFrequently: true } as any) as CanvasRenderingContext2D | null
+    if (!ctx) return null
+    try { ctx.drawImage(image, 0, 0, w, h) } catch { return null }
+    let data: ImageData | null = null
+    try { data = ctx.getImageData(0, 0, w, h) } catch { data = null }
+    if (!data) return null
+    const step = Math.max(1, stride | 0)
+    const pix = data.data
+    const aMin = Math.max(0, Math.min(255, Math.round((alphaMin || 0) * 255)))
+    let minX = w
+    let minY = h
+    let maxX = -1
+    let maxY = -1
+    let nonZero = 0
+    let total = 0
+    for (let y = 0; y < h; y += step) {
+        const row = y * w
+        for (let x = 0; x < w; x += step) {
+            const i = ((row + x) << 2)
+            const a = pix[i + 3]
+            total++
+            if (a < aMin) continue
+            nonZero++
+            if (x < minX) minX = x
+            if (y < minY) minY = y
+            if (x > maxX) maxX = x
+            if (y > maxY) maxY = y
+        }
+    }
+    if (maxX < minX || maxY < minY) {
+        return { w: 0, h: 0, minX: 0, minY: 0, maxX: 0, maxY: 0, nonZero: 0, total, pct: 0 }
+    }
+    const bw = (maxX - minX + 1) | 0
+    const bh = (maxY - minY + 1) | 0
+    const pct = total > 0 ? Number((nonZero / total).toFixed(4)) : null
+    return { minX, minY, maxX, maxY, w: bw, h: bh, nonZero, total, pct }
+}
+
+function _heSampleSnapshotBoundsFromData(
+    pix: Uint8ClampedArray,
+    imgW: number,
+    imgH: number,
+    rx: number,
+    ry: number,
+    rw: number,
+    rh: number,
+    stride: number,
+    alphaMin: number
+): any {
+    const step = Math.max(1, stride | 0)
+    const aMin = Math.max(0, Math.min(255, Math.round((alphaMin || 0) * 255)))
+    let minX = rw
+    let minY = rh
+    let maxX = -1
+    let maxY = -1
+    let nonZero = 0
+    let total = 0
+    const x0 = Math.max(0, rx | 0)
+    const y0 = Math.max(0, ry | 0)
+    const x1 = Math.min(imgW, (rx + rw) | 0)
+    const y1 = Math.min(imgH, (ry + rh) | 0)
+    for (let y = y0; y < y1; y += step) {
+        const row = y * imgW
+        for (let x = x0; x < x1; x += step) {
+            const i = ((row + x) << 2)
+            const a = pix[i + 3]
+            total++
+            if (a < aMin) continue
+            nonZero++
+            const lx = x - rx
+            const ly = y - ry
+            if (lx < minX) minX = lx
+            if (ly < minY) minY = ly
+            if (lx > maxX) maxX = lx
+            if (ly > maxY) maxY = ly
+        }
+    }
+    if (maxX < minX || maxY < minY) {
+        return { w: 0, h: 0, minX: 0, minY: 0, maxX: 0, maxY: 0, nonZero: 0, total, pct: 0 }
+    }
+    const bw = (maxX - minX + 1) | 0
+    const bh = (maxY - minY + 1) | 0
+    const pct = total > 0 ? Number((nonZero / total).toFixed(4)) : null
+    return { minX, minY, maxX, maxY, w: bw, h: bh, nonZero, total, pct }
+}
+
+function _heSampleFrameBoundsFromPix(
+    pix: Uint8ClampedArray,
+    w: number,
+    h: number,
+    stride: number,
+    alphaMin: number
+): any {
+    const step = Math.max(1, stride | 0)
+    const aMin = Math.max(0, Math.min(255, Math.round((alphaMin || 0) * 255)))
+    let minX = w
+    let minY = h
+    let maxX = -1
+    let maxY = -1
+    let nonZero = 0
+    for (let y = 0; y < h; y += step) {
+        const row = y * w
+        for (let x = 0; x < w; x += step) {
+            const i = ((row + x) << 2)
+            const a = pix[i + 3]
+            if (a < aMin) continue
+            nonZero++
+            if (x < minX) minX = x
+            if (y < minY) minY = y
+            if (x > maxX) maxX = x
+            if (y > maxY) maxY = y
+        }
+    }
+    if (maxX < minX || maxY < minY) {
+        return { w: 0, h: 0, minX: 0, minY: 0, maxX: 0, maxY: 0, nonZero: 0 }
+    }
+    const bw = (maxX - minX + 1) | 0
+    const bh = (maxY - minY + 1) | 0
+    return { minX, minY, maxX, maxY, w: bw, h: bh, nonZero }
+}
+
+function _heFramePixelCacheKey(
+    texKey: string,
+    frame: any,
+    frameW: number,
+    frameH: number
+): string {
+    const name = frame ? (frame.name ?? frame.index ?? "") : ""
+    const cutX = frame ? (frame.cutX | 0) : 0
+    const cutY = frame ? (frame.cutY | 0) : 0
+    return `${texKey}|${name}|${frameW | 0}x${frameH | 0}@${cutX},${cutY}`
+}
+
+function _heGetFramePixels(
+    sc: any,
+    texKey: string,
+    frameId: any,
+    frameW: number,
+    frameH: number
+): any | null {
+    if (!sc || !texKey) return null
+    const tex = sc.textures ? sc.textures.get(texKey) : null
+    const frame = tex && typeof tex.get === "function" ? tex.get(frameId) : null
+    if (!frame || !frame.source || !frame.source.image) return null
+    const fw = (frameW && frameW > 0) ? (frameW | 0) : (frame.cutWidth | 0) || (frame.width | 0) || 0
+    const fh = (frameH && frameH > 0) ? (frameH | 0) : (frame.cutHeight | 0) || (frame.height | 0) || 0
+    if (!(fw > 0 && fh > 0)) return null
+    const key = _heFramePixelCacheKey(texKey, frame, fw, fh)
+    const cached = _heFramePixelCache[key]
+    if (cached && cached.w === fw && cached.h === fh && cached.pix) return cached
+    if (typeof document === "undefined") return null
+    const img = frame.source.image as HTMLImageElement | HTMLCanvasElement
+    const canvas = document.createElement("canvas")
+    canvas.width = fw
+    canvas.height = fh
+    const ctx = canvas.getContext("2d", { willReadFrequently: true } as any) as CanvasRenderingContext2D | null
+    if (!ctx) return null
+    try { ctx.drawImage(img, frame.cutX | 0, frame.cutY | 0, fw, fh, 0, 0, fw, fh) } catch { return null }
+    let data: ImageData | null = null
+    try { data = ctx.getImageData(0, 0, fw, fh) } catch { data = null }
+    if (!data) return null
+    const entry = {
+        w: fw,
+        h: fh,
+        pix: data.data,
+        frameId: frameId,
+        texKey: texKey,
+        pointsByAlpha: Object.create(null),
+        boundsByAlpha: Object.create(null)
+    }
+    _heFramePixelCache[key] = entry
+    _heFramePixelCacheOrder.push(key)
+    if (_heFramePixelCacheOrder.length > HE_SCREEN_DEBUG_MAX_CACHE) {
+        const drop = _heFramePixelCacheOrder.shift()
+        if (drop) delete _heFramePixelCache[drop]
+    }
+    return entry
+}
+
+function _heComputeAlphaProbePoints(
+    cache: any,
+    alphaMin: number
+): any | null {
+    if (!cache || !cache.pix) return null
+    const key = String(alphaMin || 0)
+    const existing = cache.pointsByAlpha && cache.pointsByAlpha[key]
+    if (existing) return existing
+    const w = cache.w | 0
+    const h = cache.h | 0
+    if (!(w > 0 && h > 0)) return null
+    const pix: Uint8ClampedArray = cache.pix
+    const aMin = Math.max(0, Math.min(255, Math.round((alphaMin || 0) * 255)))
+    let minX = w
+    let minY = h
+    let maxX = -1
+    let maxY = -1
+    let sumX = 0
+    let sumY = 0
+    let count = 0
+    let maxA = -1
+    let maxAX = 0
+    let maxAY = 0
+    let leftY = 0
+    let rightY = 0
+    let topX = 0
+    let bottomX = 0
+    for (let y = 0; y < h; y++) {
+        const row = y * w
+        for (let x = 0; x < w; x++) {
+            const i = ((row + x) << 2)
+            const a = pix[i + 3]
+            if (a < aMin) continue
+            count++
+            sumX += x
+            sumY += y
+            if (x < minX) {
+                minX = x
+                leftY = y
+            }
+            if (y < minY) {
+                minY = y
+                topX = x
+            }
+            if (x > maxX) {
+                maxX = x
+                rightY = y
+            }
+            if (y > maxY) {
+                maxY = y
+                bottomX = x
+            }
+            if (a > maxA) {
+                maxA = a
+                maxAX = x
+                maxAY = y
+            }
+        }
+    }
+    if (count <= 0 || maxX < minX || maxY < minY) return null
+    const center = { x: Math.round(sumX / count), y: Math.round(sumY / count) }
+    const pts = {
+        center,
+        left: { x: minX, y: leftY },
+        right: { x: maxX, y: rightY },
+        top: { x: topX, y: minY },
+        bottom: { x: bottomX, y: maxY },
+        maxA: { x: maxAX, y: maxAY, a: maxA }
+    }
+    if (!cache.pointsByAlpha) cache.pointsByAlpha = Object.create(null)
+    cache.pointsByAlpha[key] = pts
+    return pts
+}
+
+function _heLocalToWorld(
+    native: any,
+    frameW: number,
+    frameH: number,
+    lx: number,
+    ly: number
+): { x: number; y: number } | null {
+    if (!native) return null
+    const ox = (Number.isFinite(native.originX) ? native.originX : 0.5) * frameW
+    const oy = (Number.isFinite(native.originY) ? native.originY : 0.5) * frameH
+    const sx = Number.isFinite(native.scaleX) ? native.scaleX : (native.displayWidth / Math.max(1, frameW))
+    const sy = Number.isFinite(native.scaleY) ? native.scaleY : (native.displayHeight / Math.max(1, frameH))
+    if (!Number.isFinite(sx) || !Number.isFinite(sy) || sx === 0 || sy === 0) return null
+    const dx = (lx - ox) * sx
+    const dy = (ly - oy) * sy
+    const rot = Number.isFinite(native.rotation) ? native.rotation : 0
+    const cos = Math.cos(rot)
+    const sin = Math.sin(rot)
+    const rx = (dx * cos) - (dy * sin)
+    const ry = (dx * sin) + (dy * cos)
+    return { x: Number(native.x || 0) + rx, y: Number(native.y || 0) + ry }
+}
+
+function _heWorldToLocal(
+    native: any,
+    frameW: number,
+    frameH: number,
+    wx: number,
+    wy: number
+): { x: number; y: number } | null {
+    if (!native) return null
+    const ox = (Number.isFinite(native.originX) ? native.originX : 0.5) * frameW
+    const oy = (Number.isFinite(native.originY) ? native.originY : 0.5) * frameH
+    const sx = Number.isFinite(native.scaleX) ? native.scaleX : (native.displayWidth / Math.max(1, frameW))
+    const sy = Number.isFinite(native.scaleY) ? native.scaleY : (native.displayHeight / Math.max(1, frameH))
+    if (!Number.isFinite(sx) || !Number.isFinite(sy) || sx === 0 || sy === 0) return null
+    const dx = (wx - Number(native.x || 0))
+    const dy = (wy - Number(native.y || 0))
+    const rot = Number.isFinite(native.rotation) ? native.rotation : 0
+    const cos = Math.cos(-rot)
+    const sin = Math.sin(-rot)
+    const rx = (dx * cos) - (dy * sin)
+    const ry = (dx * sin) + (dy * cos)
+    const lx = (rx / sx) + ox
+    const ly = (ry / sy) + oy
+    return { x: lx, y: ly }
+}
+
+function _heComputeSpriteAlphaAtWorld(
+    sc: any,
+    sprite: Sprite,
+    wx: number,
+    wy: number,
+    alphaMin: number
+): any | null {
+    if (!sprite) return null
+    const native: any = (sprite as any).native
+    if (!native || !native.texture || !native.frame) return null
+    const texKey = native.texture.key || ""
+    const frameId = native.frame.name ?? native.frame.index ?? 0
+    const frameW = (native.frame.cutWidth | 0) || (native.frame.width | 0) || 0
+    const frameH = (native.frame.cutHeight | 0) || (native.frame.height | 0) || 0
+    if (!(frameW > 0 && frameH > 0)) return null
+    const cache = _heGetFramePixels(sc, texKey, frameId, frameW, frameH)
+    if (!cache || !cache.pix) return { ok: false, reason: "no-pixels", texKey, frameId }
+    const local = _heWorldToLocal(native, frameW, frameH, wx, wy)
+    if (!local) return { ok: false, reason: "no-local", texKey, frameId }
+    const lx = Math.floor(local.x)
+    const ly = Math.floor(local.y)
+    if (lx < 0 || ly < 0 || lx >= frameW || ly >= frameH) {
+        return {
+            ok: true,
+            inside: false,
+            alpha: 0,
+            texKey,
+            frameId,
+            localX: lx,
+            localY: ly
+        }
+    }
+    const idx = ((ly * frameW) + lx) * 4
+    const a = cache.pix[idx + 3] | 0
+    const aMin = Math.max(0, Math.min(255, Math.round((alphaMin || 0) * 255)))
+    return {
+        ok: true,
+        inside: true,
+        alpha: a,
+        alphaMin: aMin,
+        meetsMin: a >= aMin,
+        texKey,
+        frameId,
+        localX: lx,
+        localY: ly
+    }
+}
+
+function _heBuildProbePointsForSprite(
+    sc: any,
+    sprite: Sprite,
+    alphaMin: number
+): any[] {
+    const native: any = sprite ? (sprite as any).native : null
+    if (!native || !native.texture || !native.frame) return []
+    const texKey = native.texture.key || ""
+    const frameId = native.frame.name ?? native.frame.index ?? 0
+    const frameW = (native.frame.cutWidth | 0) || (native.frame.width | 0) || 0
+    const frameH = (native.frame.cutHeight | 0) || (native.frame.height | 0) || 0
+    if (!(frameW > 0 && frameH > 0)) return []
+    const cache = _heGetFramePixels(sc, texKey, frameId, frameW, frameH)
+    if (!cache || !cache.pix) return []
+    const pts = _heComputeAlphaProbePoints(cache, alphaMin)
+    if (!pts) return []
+    const out: any[] = []
+    const mapping = [
+        { label: "center", p: pts.center },
+        { label: "left", p: pts.left },
+        { label: "right", p: pts.right },
+        { label: "top", p: pts.top },
+        { label: "bottom", p: pts.bottom },
+        { label: "maxA", p: pts.maxA }
+    ]
+    for (let i = 0; i < mapping.length; i++) {
+        const m = mapping[i]
+        const wp = _heLocalToWorld(native, frameW, frameH, m.p.x, m.p.y)
+        if (!wp) continue
+        out.push({
+            label: m.label,
+            worldX: wp.x,
+            worldY: wp.y,
+            localX: m.p.x,
+            localY: m.p.y
+        })
+    }
+    return out
+}
+
+function _heBuildVisualProbeBounds(native: any): any | null {
+    if (!native) return null
+    const w = Number.isFinite(native.displayWidth) ? Number(native.displayWidth) : (Number.isFinite(native.width) ? Number(native.width) : 0)
+    const h = Number.isFinite(native.displayHeight) ? Number(native.displayHeight) : (Number.isFinite(native.height) ? Number(native.height) : 0)
+    if (!(w > 0 && h > 0)) return null
+    const ox = Number.isFinite(native.originX) ? Number(native.originX) : 0.5
+    const oy = Number.isFinite(native.originY) ? Number(native.originY) : 0.5
+    const left = Number(native.x || 0) - (w * ox)
+    const top = Number(native.y || 0) - (h * oy)
+    return { x: left, y: top, w, h }
+}
+
+function _heBuildVisualProbes(sc: any, opts?: any): any[] {
+    const onlyEffects = !(opts && opts.includeAll)
+    const probes: any[] = []
+    const all = (sprites && typeof sprites.allSprites === "function") ? sprites.allSprites() : []
+    for (let i = 0; i < all.length; i++) {
+        const s = all[i]
+        if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+        const native: any = (s as any).native
+        if (!native) continue
+        if (onlyEffects) {
+            const skin = sprites.readDataString(s, "effectSkin") || ""
+            const tag = sprites.readDataString(s, "__hallTag") || ""
+            if (!skin && !tag) continue
+        }
+        if (native.visible === false) continue
+        const texKey = native.texture ? (native.texture.key || "") : ""
+        const frameId = native.frame ? (native.frame.name ?? native.frame.index ?? 0) : 0
+        const bounds = _heBuildVisualProbeBounds(native)
+        const maskRef = sprites.readDataSprite(s, EFFECT_MASK_SPRITE_REF_DATA_KEY)
+        const depth = Number.isFinite(native.depth) ? Number(native.depth) : (Number.isFinite((s as any).z) ? Number((s as any).z) : 0)
+        const tag = (sprites.readDataString(s, "__hallTag") || sprites.readDataString(s, "effectSkin") || ("sprite#" + ((s as any).id | 0)))
+        probes.push({
+            id: (s as any).id | 0,
+            tag,
+            sprite: s,
+            native,
+            texKey,
+            frameId,
+            depth,
+            bounds,
+            maskSprite: maskRef || null,
+            kind: "sprite"
+        })
+    }
+    // Include hall-native tiles (fills) for expected coverage.
+    for (let i = 0; i < _dunEffectsHallNativeFx.length; i++) {
+        const entry = _dunEffectsHallNativeFx[i]
+        const tile: any = entry && entry.sprite
+        if (!tile || tile.destroyed) continue
+        if (onlyEffects && !tile.__heHallTag) continue
+        const w = Number.isFinite(tile.displayWidth) ? Number(tile.displayWidth) : (Number.isFinite(tile.width) ? Number(tile.width) : 0)
+        const h = Number.isFinite(tile.displayHeight) ? Number(tile.displayHeight) : (Number.isFinite(tile.height) ? Number(tile.height) : 0)
+        if (!(w > 0 && h > 0)) continue
+        const ox = Number.isFinite(tile.originX) ? Number(tile.originX) : 0.5
+        const oy = Number.isFinite(tile.originY) ? Number(tile.originY) : 0.5
+        const left = Number(tile.x || 0) - (w * ox)
+        const top = Number(tile.y || 0) - (h * oy)
+        probes.push({
+            id: tile.__heHallTileId || 0,
+            tag: tile.__heHallTag || "nativeTile",
+            sprite: null,
+            native: tile,
+            texKey: tile.texture ? (tile.texture.key || "") : "",
+            frameId: tile.frame ? (tile.frame.name ?? tile.frame.index ?? 0) : 0,
+            depth: Number.isFinite(tile.depth) ? Number(tile.depth) : 0,
+            bounds: { x: left, y: top, w, h },
+            maskSprite: tile.__heMaskSpriteRef || null,
+            kind: "tile"
+        })
+    }
+    return probes
+}
+
+function _heExpectedAtScreenPoint(
+    sc: any,
+    screenX: number,
+    screenY: number,
+    probes: any[],
+    alphaMin: number
+): any {
+    const cam = sc && sc.cameras && sc.cameras.main ? sc.cameras.main : null
+    const zoom = cam && Number.isFinite(cam.zoom) ? Number(cam.zoom) : 1
+    const camX = cam && Number.isFinite(cam.x) ? Number(cam.x) : 0
+    const camY = cam && Number.isFinite(cam.y) ? Number(cam.y) : 0
+    const scrollX = cam && Number.isFinite(cam.scrollX) ? Number(cam.scrollX) : 0
+    const scrollY = cam && Number.isFinite(cam.scrollY) ? Number(cam.scrollY) : 0
+    const wx = ((screenX - camX) / zoom) + scrollX
+    const wy = ((screenY - camY) / zoom) + scrollY
+    const candidates: any[] = []
+    for (let i = 0; i < probes.length; i++) {
+        const p = probes[i]
+        if (!p || !p.bounds) continue
+        const b = p.bounds
+        const inside = (wx >= b.x && wy >= b.y && wx <= (b.x + b.w) && wy <= (b.y + b.h))
+        const dx = (wx < b.x) ? (b.x - wx) : (wx > (b.x + b.w) ? (wx - (b.x + b.w)) : 0)
+        const dy = (wy < b.y) ? (b.y - wy) : (wy > (b.y + b.h) ? (wy - (b.y + b.h)) : 0)
+        const dist = Math.sqrt((dx * dx) + (dy * dy))
+        let alpha = null
+        let maskAlpha = null
+        let effectiveAlpha = null
+        let fill = null
+        let mask = null
+        if (p.kind === "tile") {
+            alpha = inside ? 255 : 0
+            maskAlpha = 255
+            effectiveAlpha = alpha
+        } else if (inside && p.sprite) {
+            fill = _heComputeSpriteAlphaAtWorld(sc, p.sprite, wx, wy, alphaMin)
+            if (p.maskSprite) {
+                mask = _heComputeSpriteAlphaAtWorld(sc, p.maskSprite, wx, wy, alphaMin)
+                if (fill && fill.alpha != null && mask && mask.alpha != null) {
+                    maskAlpha = mask.alpha | 0
+                    effectiveAlpha = Math.round((fill.alpha * maskAlpha) / 255)
+                }
+            }
+            if (fill && fill.alpha != null) {
+                alpha = fill.alpha | 0
+                if (effectiveAlpha == null) effectiveAlpha = alpha
+            }
+        }
+        candidates.push({
+            id: p.id,
+            tag: p.tag,
+            kind: p.kind,
+            depth: p.depth,
+            inside,
+            dist: Number.isFinite(dist) ? Number(dist.toFixed(2)) : null,
+            alpha,
+            maskAlpha,
+            effectiveAlpha,
+            texKey: p.texKey || "",
+            frameId: p.frameId ?? null,
+            maskTag: p.maskSprite ? (sprites.readDataString(p.maskSprite, "__hallTag") || "") : "",
+            bounds: p.bounds || null,
+            fill,
+            mask
+        })
+    }
+    candidates.sort((a, b) => {
+        const da = Number.isFinite(a.depth) ? a.depth : 0
+        const db = Number.isFinite(b.depth) ? b.depth : 0
+        if (db !== da) return db - da
+        return (b.id | 0) - (a.id | 0)
+    })
+    const top = candidates.length ? candidates[0] : null
+    return {
+        screenX: screenX | 0,
+        screenY: screenY | 0,
+        worldX: Number(wx.toFixed(2)),
+        worldY: Number(wy.toFixed(2)),
+        top,
+        candidates: candidates.slice(0, HE_SCREEN_DEBUG_MAX_EXPECTED | 0)
+    }
+}
+
+function _heScreenSnapEnqueue(req: any): number {
+    if (!req) return -1
+    const id = (++_heScreenSnapSeq) | 0
+    req.id = id
+    _heScreenSnapQueue.push(req)
+    _heScreenSnapEnqueued = (_heScreenSnapEnqueued + 1) | 0
+    return id
+}
+
+function _heRecordScreenSnapResult(entry: any): void {
+    if (!entry) return
+    _heScreenSnapResults.push(entry)
+    if (_heScreenSnapResults.length > 20) {
+        _heScreenSnapResults.splice(0, _heScreenSnapResults.length - 20)
+    }
+}
+
+function _heScreenSnapNoteError(reason?: string, err?: string): void {
+    _heScreenSnapErrors = (_heScreenSnapErrors + 1) | 0
+    if (reason && DEBUG_EFFECTS_HALL_LOGS) {
+        console.log(
+            "[VFX][HALL][SNAP][ERR]" +
+            " reason=" + reason +
+            (err ? (" err=" + err) : "")
+        )
+    }
+}
+
+function _heScreenSnapNoteTimeout(reason?: string, err?: string): void {
+    _heScreenSnapTimeouts = (_heScreenSnapTimeouts + 1) | 0
+    _heScreenSnapNoteError(reason || "snapshot-timeout", err || "")
+}
+
+function _heEnsureSnapshotGuard(renderer: any): void {
+    if (!renderer || renderer.__heSnapshotGuarded) return
+    const wrap = (name: string) => {
+        const raw = renderer[name]
+        if (typeof raw !== "function") return
+        if (renderer["__heRaw_" + name]) return
+        renderer["__heRaw_" + name] = raw.bind(renderer)
+        renderer[name] = (...args: any[]) => {
+            if (!_heScreenSnapScheduling) {
+                _heScreenSnapExternalCalls = (_heScreenSnapExternalCalls + 1) | 0
+                try {
+                    const err = new Error()
+                    const stack = String(err && err.stack || "")
+                    const lines = stack.split("\n").slice(2, 6).map((l) => l.trim()).filter(Boolean)
+                    _heScreenSnapLastExternalCaller = lines.join(" | ") || null
+                } catch { }
+            }
+            return renderer["__heRaw_" + name](...args)
+        }
+    }
+    wrap("snapshotArea")
+    wrap("snapshotPixel")
+    wrap("snapshot")
+    renderer.__heSnapshotGuarded = true
+}
+
+function _heGetScreenSnapDiag(sc: any): any {
+    const renderer: any = sc && sc.sys && sc.sys.game ? sc.sys.game.renderer : null
+    const typeVal = renderer ? renderer.type : null
+    const hasGL = !!(renderer && renderer.gl)
+    const isWebGL = !!(renderer && (renderer.type === ((typeof Phaser !== "undefined" && Phaser && (Phaser as any).WEBGL) || 2)))
+    const isCanvas = !!(renderer && (renderer.type === ((typeof Phaser !== "undefined" && Phaser && (Phaser as any).CANVAS) || 1)))
+    const width = (renderer && (renderer.width || (renderer.canvas && renderer.canvas.width))) || 0
+    const height = (renderer && (renderer.height || (renderer.canvas && renderer.canvas.height))) || 0
+    const now = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
+    const inFlight = _heScreenSnapInFlight
+    const inFlightRect = inFlight && inFlight.rect ? {
+        x: inFlight.rect.x | 0,
+        y: inFlight.rect.y | 0,
+        w: inFlight.rect.w | 0,
+        h: inFlight.rect.h | 0
+    } : null
+    const inFlightAgeMs = inFlight ? Math.max(0, (now - (_heScreenSnapInFlightAt | 0)) | 0) : 0
+    const inFlightAgeFrames = inFlight ? Math.max(0, (_heScreenSnapFrame - (_heScreenSnapInFlightAtFrame | 0)) | 0) : 0
+    return {
+        renderer: {
+            type: String(typeVal || ""),
+            isWebGL: !!isWebGL,
+            isCanvas: !!isCanvas,
+            hasGL: !!hasGL,
+            resolution: Number.isFinite(renderer && renderer.resolution) ? Number(renderer.resolution) : 1,
+            width: width | 0,
+            height: height | 0
+        },
+        pump: {
+            frame: _heScreenSnapFrame | 0,
+            queueLen: _heScreenSnapQueue.length | 0,
+            inFlightId: inFlight ? (inFlight.id ?? null) : null,
+            inFlightRect,
+            inFlightAgeMs: inFlightAgeMs | 0,
+            inFlightAgeFrames: inFlightAgeFrames | 0
+        },
+        counters: {
+            enqueued: _heScreenSnapEnqueued | 0,
+            scheduled: _heScreenSnapScheduled | 0,
+            callbacks: _heScreenSnapCallbacks | 0,
+            completed: _heScreenSnapCompleted | 0,
+            timeouts: _heScreenSnapTimeouts | 0,
+            errors: _heScreenSnapErrors | 0
+        },
+        last: {
+            scheduledAtMs: _heScreenSnapLastScheduledAtMs,
+            scheduledFrame: _heScreenSnapLastScheduledFrame,
+            callbackAtMs: _heScreenSnapLastCallbackAtMs,
+            callbackFrame: _heScreenSnapLastCallbackFrame,
+            completedAtMs: _heScreenSnapLastCompletedAtMs
+        },
+        guard: {
+            detectedExternalSnapshotCalls: _heScreenSnapExternalCalls | 0,
+            lastExternalCaller: _heScreenSnapLastExternalCaller
+        }
+    }
+}
+
+function _heQueueScreenSamples(req: any): number {
+    const g: any = globalThis as any
+    const sc: any = g ? g.__phaserScene : null
+    if (!sc || !req) return -1
+    const rawSamples: any[] = Array.isArray(req.samples) ? req.samples.slice(0) : []
+    const cam = sc.cameras && sc.cameras.main ? sc.cameras.main : null
+    const zoom = cam && Number.isFinite(cam.zoom) ? cam.zoom : 1
+    const camX = cam && Number.isFinite(cam.x) ? cam.x : 0
+    const camY = cam && Number.isFinite(cam.y) ? cam.y : 0
+    const scrollX = cam && Number.isFinite(cam.scrollX) ? cam.scrollX : 0
+    const scrollY = cam && Number.isFinite(cam.scrollY) ? cam.scrollY : 0
+    const pad = Number.isFinite(req.padPx) ? (req.padPx | 0) : 2
+    const includeExpected = !!req.includeExpected
+    const expectedAlphaMin = Number.isFinite(req.expectedAlphaMin) ? Number(req.expectedAlphaMin) : HE_SCREEN_DEBUG_ALPHA_MIN
+    const expectedProbes = includeExpected ? _heBuildVisualProbes(sc, req.probeScope || null) : null
+    if (req.autoProbe) {
+        const probeList = expectedProbes || _heBuildVisualProbes(sc, req.probeScope || null)
+        const tagFilters = Array.isArray(req.probeTags) ? req.probeTags.map((v: any) => String(v || "")) : []
+        const idFilters = Array.isArray(req.probeIds) ? req.probeIds.map((v: any) => (v | 0)) : []
+        for (let i = 0; i < probeList.length; i++) {
+            const p = probeList[i]
+            if (!p || !p.sprite) continue
+            if (idFilters.length && idFilters.indexOf(p.id | 0) < 0) continue
+            if (tagFilters.length) {
+                let ok = false
+                for (let t = 0; t < tagFilters.length; t++) {
+                    const needle = tagFilters[t]
+                    if (needle && String(p.tag || "").indexOf(needle) >= 0) { ok = true; break }
+                }
+                if (!ok) continue
+            }
+            const probeSprite = p.maskSprite || p.sprite
+            const pts = _heBuildProbePointsForSprite(sc, probeSprite, expectedAlphaMin)
+            for (let k = 0; k < pts.length; k++) {
+                const pt = pts[k]
+                rawSamples.push({
+                    label: `${p.tag}:${pt.label}`,
+                    worldX: pt.worldX,
+                    worldY: pt.worldY,
+                    expectedHint: { tag: p.tag, id: p.id }
+                })
+            }
+        }
+    }
+    const samples: any[] = []
+    let minX = Number.MAX_SAFE_INTEGER
+    let minY = Number.MAX_SAFE_INTEGER
+    let maxX = -1
+    let maxY = -1
+    for (let i = 0; i < rawSamples.length; i++) {
+        const s = rawSamples[i] || {}
+        let sx = Number.isFinite(s.screenX) ? Number(s.screenX) : null
+        let sy = Number.isFinite(s.screenY) ? Number(s.screenY) : null
+        if (sx == null || sy == null) {
+            const wx = Number.isFinite(s.worldX) ? Number(s.worldX) : null
+            const wy = Number.isFinite(s.worldY) ? Number(s.worldY) : null
+            if (wx == null || wy == null) continue
+            sx = Math.round(((wx - scrollX) * zoom) + camX)
+            sy = Math.round(((wy - scrollY) * zoom) + camY)
+        }
+        const expected = includeExpected
+            ? _heExpectedAtScreenPoint(sc, sx | 0, sy | 0, expectedProbes || [], expectedAlphaMin)
+            : (s.expected || null)
+        samples.push({
+            label: String(s.label || ""),
+            screenX: sx | 0,
+            screenY: sy | 0,
+            expectedHint: s.expectedHint || null,
+            expected: expected
+        })
+        if ((sx | 0) < minX) minX = (sx | 0)
+        if ((sy | 0) < minY) minY = (sy | 0)
+        if ((sx | 0) > maxX) maxX = (sx | 0)
+        if ((sy | 0) > maxY) maxY = (sy | 0)
+    }
+    if (!samples.length) return -1
+    const rect = {
+        x: (minX - pad) | 0,
+        y: (minY - pad) | 0,
+        w: Math.max(1, (maxX - minX + 1 + (pad * 2)) | 0),
+        h: Math.max(1, (maxY - minY + 1 + (pad * 2)) | 0)
+    }
+    const label = String(req.label || "")
+    return _heScreenSnapEnqueue({
+        rect,
+        onDone: (image: any) => {
+            const cap = image && image.rgba ? image : null
+            let pix: Uint8ClampedArray | Uint8Array | null = null
+            let iw = rect.w | 0
+            let ih = rect.h | 0
+            let rectX = rect.x | 0
+            let rectY = rect.y | 0
+            let scaleX = 1
+            let scaleY = 1
+            if (cap && cap.rgba && cap.w && cap.h) {
+                pix = cap.rgba
+                iw = cap.w | 0
+                ih = cap.h | 0
+                if (cap.viewRect) {
+                    rectX = cap.viewRect.x | 0
+                    rectY = cap.viewRect.y | 0
+                }
+                scaleX = Number.isFinite(cap.scaleX) ? Number(cap.scaleX) : 1
+                scaleY = Number.isFinite(cap.scaleY) ? Number(cap.scaleY) : 1
+            } else {
+                if (!image || typeof document === "undefined") {
+                    _heRecordScreenSnapResult({ label, ok: false, reason: "snapshot-null", rect, samples })
+                    return
+                }
+                const canvas = document.createElement("canvas")
+                canvas.width = rect.w
+                canvas.height = rect.h
+                const ctx = canvas.getContext("2d", { willReadFrequently: true } as any) as CanvasRenderingContext2D | null
+                if (!ctx) {
+                    _heRecordScreenSnapResult({ label, ok: false, reason: "no-ctx", rect, samples })
+                    return
+                }
+                try { ctx.drawImage(image, 0, 0) } catch { }
+                let data: ImageData | null = null
+                try { data = ctx.getImageData(0, 0, rect.w, rect.h) } catch { data = null }
+                if (!data) {
+                    _heRecordScreenSnapResult({ label, ok: false, reason: "no-imagedata", rect, samples })
+                    return
+                }
+                pix = data.data
+            }
+            if (!pix || iw <= 0 || ih <= 0) {
+                _heRecordScreenSnapResult({ label, ok: false, reason: "no-pixels", rect, samples })
+                return
+            }
+            const outSamples: any[] = []
+            for (let i = 0; i < samples.length; i++) {
+                const s = samples[i]
+                const px = Math.round((s.screenX - rectX) * scaleX)
+                const py = Math.round((s.screenY - rectY) * scaleY)
+                if (px < 0 || py < 0 || px >= iw || py >= ih) {
+                    outSamples.push({ ...s, rgba: null })
+                    continue
+                }
+                const idx = ((py * iw) + px) * 4
+                const r = pix[idx] | 0
+                const g2 = pix[idx + 1] | 0
+                const b = pix[idx + 2] | 0
+                const a = pix[idx + 3] | 0
+                const hex = "#" + ((r << 16) | (g2 << 8) | b).toString(16).padStart(6, "0")
+                outSamples.push({ ...s, rgba: { r, g: g2, b, a }, hex })
+            }
+            _heRecordScreenSnapResult({
+                label,
+                ok: true,
+                rect,
+                viewRect: cap && cap.viewRect ? cap.viewRect : rect,
+                fbRect: cap && cap.fbRect ? cap.fbRect : null,
+                scaleX,
+                scaleY,
+                samples: outSamples
+            })
+        },
+        onFail: (reason: string, err?: string) => {
+            _heRecordScreenSnapResult({ label, ok: false, reason: reason || "snapshot-error", err: err || "", rect, samples })
+        }
+    })
+}
+
+function _heScreenSnapPumpTick(sc: any, nowMs: number): void {
+    if (!_heScreenSnapQueue.length && !_heScreenSnapInFlight) return
+    const now = nowMs | 0
+    _heScreenSnapFrame = (_heScreenSnapFrame + 1) | 0
+    if (_heScreenSnapInFlight && (now - _heScreenSnapInFlightAt) > (HE_SCREEN_SNAP_TIMEOUT_MS | 0)) {
+        const stuck = _heScreenSnapInFlight
+        _heScreenSnapInFlight = null
+        _heScreenSnapCapturePending = false
+        _heScreenSnapNoteTimeout("snapshot-timeout", `ageMs=${now - _heScreenSnapInFlightAt}`)
+        try { stuck.onFail?.("snapshot-timeout", `ageMs=${now - _heScreenSnapInFlightAt}`) } catch { }
+    }
+    if (_heScreenSnapInFlight) return
+    if (!_heScreenSnapQueue.length) return
+    const renderer: any = (sc as any)?.sys?.game?.renderer ?? null
+    if (!renderer || typeof renderer.snapshotArea !== "function") return
+    _heEnsureSnapshotGuard(renderer)
+    if (!_heScreenSnapPostrenderInstalled && sc && sc.game && sc.game.events) {
+        sc.game.events.on("postrender", () => _heScreenSnapPostrender(sc))
+        _heScreenSnapPostrenderInstalled = true
+    }
+    const req = _heScreenSnapQueue.shift()
+    if (!req || !req.rect) return
+    const rx = req.rect.x | 0
+    const ry = req.rect.y | 0
+    const rw = req.rect.w | 0
+    const rh = req.rect.h | 0
+    if (rw <= 0 || rh <= 0) {
+        try { req.onFail?.("invalid-rect", `w=${rw} h=${rh}`) } catch { }
+        return
+    }
+    _heScreenSnapInFlight = req
+    _heScreenSnapInFlightAt = now
+    _heScreenSnapInFlightAtFrame = _heScreenSnapFrame | 0
+    _heScreenSnapScheduled = (_heScreenSnapScheduled + 1) | 0
+    _heScreenSnapLastScheduledAtMs = now | 0
+    _heScreenSnapLastScheduledFrame = _heScreenSnapFrame | 0
+    if (DEBUG_EFFECTS_HALL_LOGS) {
+        console.log(
+            "[VFX][HALL][SNAP][SCHEDULE]" +
+            " id=" + (req.id ?? "n/a") +
+            " rect=" + rx + "," + ry + "," + rw + "," + rh +
+            " frame=" + (_heScreenSnapFrame | 0) +
+            " queue=" + (_heScreenSnapQueue.length | 0)
+        )
+    }
+    const gl = renderer.gl || null
+    if (gl) {
+        _heScreenSnapCapturePending = true
+        return
+    }
+    try {
+        _heScreenSnapScheduling = true
+        renderer.snapshotArea(rx, ry, rw, rh, (image: any) => {
+            const done = req
+            if (_heScreenSnapInFlight && _heScreenSnapInFlight.id === done.id) {
+                _heScreenSnapInFlight = null
+            }
+            try {
+                _heScreenSnapCallbacks = (_heScreenSnapCallbacks + 1) | 0
+                _heScreenSnapLastCallbackAtMs = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
+                _heScreenSnapLastCallbackFrame = _heScreenSnapFrame | 0
+                done.onDone?.(image)
+                _heScreenSnapCompleted = (_heScreenSnapCompleted + 1) | 0
+                _heScreenSnapLastCompletedAtMs = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
+            } catch (err: any) {
+                _heScreenSnapNoteError("sample-error", String(err?.message || err || ""))
+                try { done.onFail?.("sample-error", String(err?.message || err || "")) } catch { }
+            }
+        })
+    } catch (err: any) {
+        _heScreenSnapInFlight = null
+        _heScreenSnapNoteError("snapshot-error", String(err?.message || err || ""))
+        try { req.onFail?.("snapshot-error", String(err?.message || err || "")) } catch { }
+    } finally {
+        _heScreenSnapScheduling = false
+    }
+}
+
+function _heScreenSnapPostrender(sc: any): void {
+    if (!_heScreenSnapInFlight || !_heScreenSnapCapturePending) return
+    const renderer: any = sc && sc.sys && sc.sys.game ? sc.sys.game.renderer : null
+    const gl: any = renderer && renderer.gl ? renderer.gl : null
+    if (!renderer || !gl) return
+    if (typeof gl.isContextLost === "function" && gl.isContextLost()) {
+        const req = _heScreenSnapInFlight
+        _heScreenSnapInFlight = null
+        _heScreenSnapCapturePending = false
+        _heScreenSnapNoteError("gl-context-lost", "gl.isContextLost()=true")
+        try { req.onFail?.("gl-context-lost", "gl.isContextLost()=true") } catch { }
+        return
+    }
+    const req = _heScreenSnapInFlight
+    _heScreenSnapCapturePending = false
+    try {
+        _heScreenSnapCallbacks = (_heScreenSnapCallbacks + 1) | 0
+        _heScreenSnapLastCallbackAtMs = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
+        _heScreenSnapLastCallbackFrame = _heScreenSnapFrame | 0
+        const cap = _heCaptureWebGLRectPixels(renderer, gl, req.rect)
+        _heScreenSnapCompleted = (_heScreenSnapCompleted + 1) | 0
+        _heScreenSnapLastCompletedAtMs = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
+        _heScreenSnapInFlight = null
+        req.onDone?.(cap)
+    } catch (err: any) {
+        _heScreenSnapInFlight = null
+        _heScreenSnapNoteError("readpixels-error", String(err?.message || err || ""))
+        try { req.onFail?.("readpixels-error", String(err?.message || err || "")) } catch { }
+    }
+}
+
+function _heCaptureWebGLRectPixels(
+    renderer: any,
+    gl: WebGLRenderingContext | WebGL2RenderingContext,
+    rect: { x: number; y: number; w: number; h: number }
+): any {
+    const vw = (renderer && (renderer.width || (renderer.canvas && renderer.canvas.width))) | 0
+    const vh = (renderer && (renderer.height || (renderer.canvas && renderer.canvas.height))) | 0
+    const dbw = gl.drawingBufferWidth | 0
+    const dbh = gl.drawingBufferHeight | 0
+    const scaleX = vw > 0 ? (dbw / vw) : 1
+    const scaleY = vh > 0 ? (dbh / vh) : 1
+    const x0 = Math.floor(rect.x)
+    const y0 = Math.floor(rect.y)
+    const x1 = Math.ceil(rect.x + rect.w)
+    const y1 = Math.ceil(rect.y + rect.h)
+    const cx0 = Math.max(0, Math.min(vw, x0))
+    const cy0 = Math.max(0, Math.min(vh, y0))
+    const cx1 = Math.max(0, Math.min(vw, x1))
+    const cy1 = Math.max(0, Math.min(vh, y1))
+    const cw = (cx1 - cx0) | 0
+    const ch = (cy1 - cy0) | 0
+    if (cw <= 0 || ch <= 0) {
+        throw new Error(`readpixels-offscreen:${rect.x},${rect.y},${rect.w},${rect.h}`)
+    }
+    const fbx0 = Math.floor(cx0 * scaleX)
+    const fbx1 = Math.ceil((cx0 + cw) * scaleX)
+    const vBottom = vh - (cy0 + ch)
+    const fby0 = Math.floor(vBottom * scaleY)
+    const fby1 = Math.ceil((vBottom + ch) * scaleY)
+    const fbw = (fbx1 - fbx0) | 0
+    const fbh = (fby1 - fby0) | 0
+    if (fbw <= 0 || fbh <= 0) {
+        throw new Error(`readpixels-empty:${fbw}x${fbh}`)
+    }
+    const rgbaBL = new Uint8Array(fbw * fbh * 4)
+    const prevFbo = gl.getParameter(gl.FRAMEBUFFER_BINDING)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, null)
+    gl.pixelStorei(gl.PACK_ALIGNMENT, 1)
+    gl.readPixels(fbx0, fby0, fbw, fbh, gl.RGBA, gl.UNSIGNED_BYTE, rgbaBL)
+    gl.bindFramebuffer(gl.FRAMEBUFFER, prevFbo)
+    const rgbaTL = new Uint8Array(rgbaBL.length)
+    const rowBytes = fbw * 4
+    for (let row = 0; row < fbh; row++) {
+        const src = row * rowBytes
+        const dst = (fbh - 1 - row) * rowBytes
+        rgbaTL.set(rgbaBL.subarray(src, src + rowBytes), dst)
+    }
+    return {
+        rgba: rgbaTL,
+        w: fbw,
+        h: fbh,
+        scaleX,
+        scaleY,
+        viewRect: { x: cx0 | 0, y: cy0 | 0, w: cw | 0, h: ch | 0 },
+        fbRect: { x: fbx0 | 0, y: fby0 | 0, w: fbw | 0, h: fbh | 0 }
+    }
+}
+
+function _heQueueEffectsHallScreenSamplesOnce(
+    sc: any,
+    fillItems: any[],
+    stride: number,
+    alphaMin: number,
+    expectedProbes?: any[],
+    liteSamples?: boolean
+): void {
+    if (!sc || !fillItems.length) return
+    const now = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
+    let allFresh = true
+    for (let i = 0; i < fillItems.length; i++) {
+        const s = fillItems[i]
+        const id = (s && s.id) ? (s.id | 0) : -1
+        if (id < 0) continue
+        const cur = _heEffectsHallScreenSamplesById[id]
+        if (!cur || cur.reason !== "ok" || !cur.t || (now - (cur.t | 0)) > 600) {
+            allFresh = false
+            break
+        }
+    }
+    if (allFresh) return
+    if (_heScreenSnapInFlight || _heScreenSnapQueue.length) return
+    const cam = sc.cameras && sc.cameras.main ? sc.cameras.main : null
+    const zoom = cam && Number.isFinite(cam.zoom) ? cam.zoom : 1
+    const camX = cam && Number.isFinite(cam.x) ? cam.x : 0
+    const camY = cam && Number.isFinite(cam.y) ? cam.y : 0
+    const scrollX = cam && Number.isFinite(cam.scrollX) ? cam.scrollX : 0
+    const scrollY = cam && Number.isFinite(cam.scrollY) ? cam.scrollY : 0
+    const renderer: any = (sc as any)?.sys?.game?.renderer ?? null
+    const rw = (renderer?.width ?? renderer?.canvas?.width ?? sc.scale?.width ?? 0) | 0
+    const rh = (renderer?.height ?? renderer?.canvas?.height ?? sc.scale?.height ?? 0) | 0
+    const targets: any[] = []
+    let minX = Number.MAX_SAFE_INTEGER
+    let minY = Number.MAX_SAFE_INTEGER
+    let maxX = -1
+    let maxY = -1
+    for (let i = 0; i < fillItems.length; i++) {
+        const item = fillItems[i]
+        const s = item.sprite as Sprite
+        const id = (s as any).id | 0
+        const native: any = (s as any).native
+        if (!native) {
+            _heEffectsHallScreenSamplesById[id] = { reason: "no-native" }
+            continue
+        }
+        const dx = Number.isFinite(native.displayWidth) ? Number(native.displayWidth) : (Number.isFinite(native.width) ? Number(native.width) : 0)
+        const dy = Number.isFinite(native.displayHeight) ? Number(native.displayHeight) : (Number.isFinite(native.height) ? Number(native.height) : 0)
+        if (!(dx > 0 && dy > 0)) {
+            _heEffectsHallScreenSamplesById[id] = { reason: "bad-size", displayW: dx, displayH: dy }
+            continue
+        }
+        const cx = Number.isFinite(native.x) ? Number(native.x) : (Number.isFinite(s.x) ? Number(s.x) : 0)
+        const cy = Number.isFinite(native.y) ? Number(native.y) : (Number.isFinite(s.y) ? Number(s.y) : 0)
+        const sw = Math.max(1, Math.round(dx * zoom))
+        const sh = Math.max(1, Math.round(dy * zoom))
+        const sx = Math.round(((cx - (dx / 2)) - scrollX) * zoom + camX)
+        const sy = Math.round(((cy - (dy / 2)) - scrollY) * zoom + camY)
+        if (rw > 0 && rh > 0) {
+            if (sx < 0 || sy < 0 || (sx + sw) > rw || (sy + sh) > rh) {
+                _heEffectsHallScreenSamplesById[id] = {
+                    reason: "offscreen",
+                    screenX: sx,
+                    screenY: sy,
+                    screenW: sw,
+                    screenH: sh,
+                    rendererW: rw,
+                    rendererH: rh
+                }
+                continue
+            }
+        }
+        const samples: any[] = []
+        const maskRef = sprites.readDataSprite(s, EFFECT_MASK_SPRITE_REF_DATA_KEY)
+        const probeSprite = maskRef || s
+        const probePts = _heBuildProbePointsForSprite(sc, probeSprite, alphaMin)
+        if (probePts.length) {
+            for (let p = 0; p < probePts.length; p++) {
+                const pt = probePts[p]
+                const px = Math.round(((pt.worldX - scrollX) * zoom) + camX)
+                const py = Math.round(((pt.worldY - scrollY) * zoom) + camY)
+                const expected = expectedProbes
+                    ? _heExpectedAtScreenPoint(sc, px | 0, py | 0, expectedProbes, alphaMin)
+                    : (item.expected || null)
+                samples.push({
+                    label: pt.label,
+                    screenX: px,
+                    screenY: py,
+                    expectedHint: item.expected || null,
+                    expected
+                })
+            }
+        } else {
+            // fallback: sample within approximate bounds
+            const bw = item.boundsW || dx
+            const bh = item.boundsH || dy
+            const pts = [
+                { label: "center", dx: 0, dy: 0 },
+                { label: "left", dx: -(bw * 0.25), dy: 0 },
+                { label: "right", dx: (bw * 0.25), dy: 0 },
+                { label: "top", dx: 0, dy: -(bh * 0.25) },
+                { label: "bottom", dx: 0, dy: (bh * 0.25) },
+            ]
+            for (let p = 0; p < pts.length; p++) {
+                const pt = pts[p]
+                const wx = cx + pt.dx
+                const wy = cy + pt.dy
+                const px = Math.round(((wx - scrollX) * zoom) + camX)
+                const py = Math.round(((wy - scrollY) * zoom) + camY)
+                const expected = expectedProbes
+                    ? _heExpectedAtScreenPoint(sc, px | 0, py | 0, expectedProbes, alphaMin)
+                    : (item.expected || null)
+                samples.push({
+                    label: pt.label,
+                    screenX: px,
+                    screenY: py,
+                    expectedHint: item.expected || null,
+                    expected
+                })
+            }
+        }
+        _heEffectsHallScreenSamplesById[id] = {
+            reason: "pending",
+            t: now,
+            screenX: sx,
+            screenY: sy,
+            screenW: sw,
+            screenH: sh,
+            alphaMin: alphaMin,
+            rendererW: rw,
+            rendererH: rh
+        }
+        targets.push({ id, sx, sy, sw, sh, samples })
+        if (sx < minX) minX = sx
+        if (sy < minY) minY = sy
+        if ((sx + sw) > maxX) maxX = (sx + sw)
+        if ((sy + sh) > maxY) maxY = (sy + sh)
+    }
+    if (!targets.length) return
+    const uw = Math.max(1, (maxX - minX) | 0)
+    const uh = Math.max(1, (maxY - minY) | 0)
+    if (liteSamples) {
+        const x0 = minX | 0
+        const y0 = minY | 0
+        const x1 = (minX + uw - 1) | 0
+        const y1 = (minY + uh - 1) | 0
+        const cx = (minX + (uw >> 1)) | 0
+        const cy = (minY + (uh >> 1)) | 0
+        const ix = (minX + Math.round(uw * 0.25)) | 0
+        const iy = (minY + Math.round(uh * 0.25)) | 0
+        const jx = (minX + Math.round(uw * 0.75)) | 0
+        const jy = (minY + Math.round(uh * 0.75)) | 0
+        const litePts = [
+            { label: "tl", screenX: x0, screenY: y0 },
+            { label: "tr", screenX: x1, screenY: y0 },
+            { label: "bl", screenX: x0, screenY: y1 },
+            { label: "br", screenX: x1, screenY: y1 },
+            { label: "inset-tl", screenX: ix, screenY: iy },
+            { label: "inset-tr", screenX: jx, screenY: iy },
+            { label: "inset-bl", screenX: ix, screenY: jy },
+            { label: "inset-br", screenX: jx, screenY: jy },
+            { label: "center", screenX: cx, screenY: cy },
+        ]
+        _heQueueScreenSamples({
+            label: "effects-hall-lite",
+            samples: litePts,
+            includeExpected: true,
+            expectedAlphaMin: alphaMin,
+        })
+        for (let i = 0; i < targets.length; i++) {
+            const t = targets[i]
+            _heEffectsHallScreenSamplesById[t.id] = {
+                reason: "lite-skip",
+                t: now,
+                screenX: t.sx,
+                screenY: t.sy,
+                screenW: t.sw,
+                screenH: t.sh,
+                alphaMin: alphaMin,
+                rendererW: rw,
+                rendererH: rh
+            }
+        }
+        return
+    }
+    const req = {
+        rect: { x: minX | 0, y: minY | 0, w: uw | 0, h: uh | 0 },
+        onDone: (image: any) => {
+            const cap = image && image.rgba ? image : null
+            let pix: Uint8ClampedArray | Uint8Array | null = null
+            let imgW = uw | 0
+            let imgH = uh | 0
+            let rectX = minX | 0
+            let rectY = minY | 0
+            let scaleX = 1
+            let scaleY = 1
+            if (cap && cap.rgba && cap.w && cap.h) {
+                pix = cap.rgba
+                imgW = cap.w | 0
+                imgH = cap.h | 0
+                if (cap.viewRect) {
+                    rectX = cap.viewRect.x | 0
+                    rectY = cap.viewRect.y | 0
+                }
+                scaleX = Number.isFinite(cap.scaleX) ? Number(cap.scaleX) : 1
+                scaleY = Number.isFinite(cap.scaleY) ? Number(cap.scaleY) : 1
+            } else {
+                if (!image || typeof document === "undefined") {
+                    for (const t of targets) {
+                        _heEffectsHallScreenSamplesById[t.id] = { reason: "snapshot-null" }
+                    }
+                    return
+                }
+                const canvas = document.createElement("canvas")
+                canvas.width = uw
+                canvas.height = uh
+                const ctx = canvas.getContext("2d", { willReadFrequently: true } as any) as CanvasRenderingContext2D | null
+                if (!ctx) {
+                    for (const t of targets) {
+                        _heEffectsHallScreenSamplesById[t.id] = { reason: "no-ctx" }
+                    }
+                    return
+                }
+                try { ctx.drawImage(image, 0, 0) } catch { }
+                let data: ImageData | null = null
+                try { data = ctx.getImageData(0, 0, uw, uh) } catch { data = null }
+                if (!data) {
+                    for (const t of targets) {
+                        _heEffectsHallScreenSamplesById[t.id] = { reason: "no-imagedata" }
+                    }
+                    return
+                }
+                pix = data.data
+            }
+            if (!pix || imgW <= 0 || imgH <= 0) {
+                for (const t of targets) {
+                    _heEffectsHallScreenSamplesById[t.id] = { reason: "no-pixels" }
+                }
+                return
+            }
+            for (const t of targets) {
+                const rx = Math.round((t.sx - rectX) * scaleX)
+                const ry = Math.round((t.sy - rectY) * scaleY)
+                const sw = Math.max(1, Math.round((t.sw | 0) * scaleX))
+                const sh = Math.max(1, Math.round((t.sh | 0) * scaleY))
+                const b = _heSampleSnapshotBoundsFromData(pix as any, imgW, imgH, rx, ry, sw, sh, stride | 0, alphaMin)
+                const samples = []
+                for (let i = 0; i < t.samples.length; i++) {
+                    const s = t.samples[i]
+                    const px = Math.round((s.screenX - rectX) * scaleX)
+                    const py = Math.round((s.screenY - rectY) * scaleY)
+                    if (px < 0 || py < 0 || px >= imgW || py >= imgH) {
+                        samples.push({ label: s.label, screenX: s.screenX, screenY: s.screenY, rgba: null, expected: s.expected })
+                        continue
+                    }
+                    const idx = ((py * imgW) + px) * 4
+                    const r = pix[idx] | 0
+                    const g = pix[idx + 1] | 0
+                    const b2 = pix[idx + 2] | 0
+                    const a = pix[idx + 3] | 0
+                    const hex = "#" + ((r << 16) | (g << 8) | b2).toString(16).padStart(6, "0")
+                    samples.push({
+                        label: s.label,
+                        screenX: s.screenX,
+                        screenY: s.screenY,
+                        rgba: { r, g, b: b2, a },
+                        hex,
+                        expected: s.expected
+                    })
+                }
+                _heEffectsHallScreenSamplesById[t.id] = {
+                    reason: "ok",
+                    t: now,
+                    screenX: t.sx,
+                    screenY: t.sy,
+                    screenW: t.sw,
+                    screenH: t.sh,
+                    alphaMin: alphaMin,
+                    bounds: b,
+                    scaleX,
+                    scaleY,
+                    viewRect: cap && cap.viewRect ? cap.viewRect : { x: minX | 0, y: minY | 0, w: uw | 0, h: uh | 0 },
+                    fbRect: cap && cap.fbRect ? cap.fbRect : null,
+                    samples
+                }
+            }
+        },
+        onFail: (reason: string, err?: string) => {
+            for (const t of targets) {
+                _heEffectsHallScreenSamplesById[t.id] = {
+                    reason: reason || "snapshot-error",
+                    err: err || ""
+                }
+            }
+        }
+    }
+    _heScreenSnapEnqueue(req)
+}
+
+function _heSampleMaskCoverage(
+    fillTexKey: string,
+    fillFrameId: number,
+    fillW: number,
+    fillH: number,
+    maskTexKey: string,
+    maskFrameId: number,
+    maskW: number,
+    maskH: number,
+    stride: number,
+    alphaMin: number
+): any {
+    const fill = _heSampleEffectFrameBounds(
+        fillTexKey,
+        fillFrameId,
+        fillW,
+        fillH,
+        stride,
+        alphaMin
+    )
+    const masked = _heSampleMaskedFrameBounds(
+        fillTexKey,
+        fillFrameId,
+        fillW,
+        fillH,
+        maskTexKey,
+        maskFrameId,
+        maskW,
+        maskH,
+        stride,
+        alphaMin
+    )
+    const fillCount = fill && Number.isFinite(fill.nonZero) ? (fill.nonZero | 0) : 0
+    const maskedCount = masked && Number.isFinite(masked.nonZero) ? (masked.nonZero | 0) : 0
+    const pct = (fillCount > 0) ? Number((maskedCount / fillCount).toFixed(4)) : null
+    return {
+        alphaMin: Number(alphaMin),
+        fillNonZero: fillCount,
+        maskedNonZero: maskedCount,
+        pct
+    }
+}
+
+function _heResolveFrameIdForTrace(resolved: any, nativeFrame: any, frameIndex: number, frameIndexRaw: number): number | null {
+    if (typeof nativeFrame === "number" && Number.isFinite(nativeFrame)) {
+        return nativeFrame | 0
+    }
+    const frameCount = resolved && resolved.frameIndices ? (resolved.frameIndices.length | 0) : 0
+    if (!resolved || frameCount <= 0 || !resolved.frameIndices) return null
+    let idx = Number.isFinite(frameIndex) && frameIndex >= 0 ? (frameIndex | 0) : 0
+    if (frameIndexRaw) {
+        const found = resolved.frameIndices.indexOf(idx | 0)
+        if (found >= 0) idx = found
+    }
+    idx = Math.max(0, Math.min(frameCount - 1, idx | 0))
+    return resolved.frameIndices[idx] | 0
+}
+
+function _heBuildEffectTraceInfo(
+    s: Sprite,
+    atlas: any,
+    sc: any,
+    stride: number,
+    alphaMin: number,
+    lite?: boolean
+): any {
+    const skin = (sprites.readDataString(s, "effectSkin") || "").trim()
+    const dir = (sprites.readDataString(s, "effectDir") || "").trim()
+    const frameIndex = sprites.readDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY)
+    const frameIndexRaw = sprites.readDataNumber(s, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY) | 0
+    const scale = sprites.readDataNumber(s, EFFECT_SCALE_DATA_KEY)
+    const scaleX = sprites.readDataNumber(s, EFFECT_SCALE_X_DATA_KEY)
+    const scaleY = sprites.readDataNumber(s, EFFECT_SCALE_Y_DATA_KEY)
+    const native: any = (s as any).native
+    const nativeFrame = native && native.frame ? (native.frame.name ?? native.frame.index ?? null) : null
+    const nativeTex = native && native.texture ? (native.texture.key ?? "") : ""
+    const nativeType = native && native.constructor && native.constructor.name ? String(native.constructor.name) : ""
+    const nativeIsTile = native
+        ? (nativeType === "TileSprite" || typeof (native as any).tilePositionX === "number")
+        : false
+    const nativeDisplayW = (native && typeof native.displayWidth === "number") ? native.displayWidth : null
+    const nativeDisplayH = (native && typeof native.displayHeight === "number") ? native.displayHeight : null
+    const nativeW = (native && typeof native.width === "number") ? native.width : null
+    const nativeH = (native && typeof native.height === "number") ? native.height : null
+    const nativeFrameW = native && native.frame && Number.isFinite((native.frame as any).cutWidth)
+        ? Number((native.frame as any).cutWidth)
+        : (native && native.frame && Number.isFinite((native.frame as any).width) ? Number((native.frame as any).width) : null)
+    const nativeFrameH = native && native.frame && Number.isFinite((native.frame as any).cutHeight)
+        ? Number((native.frame as any).cutHeight)
+        : (native && native.frame && Number.isFinite((native.frame as any).height) ? Number((native.frame as any).height) : null)
+    const nativeTileScaleX = native && Number.isFinite((native as any).tileScaleX) ? Number((native as any).tileScaleX) : null
+    const nativeTileScaleY = native && Number.isFinite((native as any).tileScaleY) ? Number((native as any).tileScaleY) : null
+    const nativeTilePosX = native && Number.isFinite((native as any).tilePositionX) ? Number((native as any).tilePositionX) : null
+    const nativeTilePosY = native && Number.isFinite((native as any).tilePositionY) ? Number((native as any).tilePositionY) : null
+    const nativeMaskType = native ? (native.__effectPaintMaskType || "") : ""
+    const nativeMaskAttached = native ? !!native.__effectPaintMask : false
+    const nativeMaskPresent = native ? !!(native as any).mask : false
+    const nativeMaskFail = native ? (native.__effectMaskFailReason || "") : ""
+    const nativeMaskSpriteId = native ? (native.__effectPaintMaskSpriteId || "") : ""
+    const nativeVisible = native ? (native.visible ? 1 : 0) : null
+    const nativeAlpha = native && Number.isFinite(native.alpha) ? Number(native.alpha) : null
+    const nativeRotation = native && Number.isFinite(native.rotation) ? Number(native.rotation) : null
+    const nativeOriginX = native && Number.isFinite(native.originX) ? Number(native.originX) : null
+    const nativeOriginY = native && Number.isFinite(native.originY) ? Number(native.originY) : null
+    let nativeBounds: any = null
+    if (native && typeof native.getBounds === "function") {
+        try {
+            const b = native.getBounds()
+            if (b && Number.isFinite(b.x) && Number.isFinite(b.y) && Number.isFinite(b.width) && Number.isFinite(b.height)) {
+                nativeBounds = {
+                    x: Math.round(b.x),
+                    y: Math.round(b.y),
+                    w: Math.round(b.width),
+                    h: Math.round(b.height)
+                }
+            }
+        } catch { }
+    }
+    let nativeMode = ""
+    if (native && typeof native.getData === "function") {
+        try { nativeMode = String(native.getData(EFFECT_MODE_DATA_KEY) || "") } catch { }
+    }
+
+    let resolved: any = null
+    if (atlas && skin) {
+        resolved = _resolveEffectEntry(atlas, skin, dir || "")
+    }
+    const frameW = resolved ? (resolved.frameW | 0) : 0
+    const frameH = resolved ? (resolved.frameH | 0) : 0
+    const frameId = resolved ? _heResolveFrameIdForTrace(resolved, nativeFrame, frameIndex, frameIndexRaw) : null
+    const bounds = (!lite && nativeTex && frameId != null && frameW > 0 && frameH > 0)
+        ? _heSampleEffectFrameBounds(nativeTex, frameId | 0, frameW | 0, frameH | 0, stride | 0, alphaMin)
+        : null
+    const sx = Number.isFinite(scaleX) && scaleX > 0 ? scaleX : scale
+    const sy = Number.isFinite(scaleY) && scaleY > 0 ? scaleY : scale
+    const wScaled = bounds ? Math.round((bounds.w || 0) * (Number.isFinite(sx) && sx > 0 ? sx : 1)) : null
+    const hScaled = bounds ? Math.round((bounds.h || 0) * (Number.isFinite(sy) && sy > 0 ? sy : 1)) : null
+    const unionRawCount = sprites.readDataNumber(s, "__hallUnionRawCount")
+    const unionOutlineCount = sprites.readDataNumber(s, "__hallUnionOutlineCount")
+    const unionRawMinX = sprites.readDataNumber(s, "__hallUnionRawMinX")
+    const unionRawMinY = sprites.readDataNumber(s, "__hallUnionRawMinY")
+    const unionRawMaxX = sprites.readDataNumber(s, "__hallUnionRawMaxX")
+    const unionRawMaxY = sprites.readDataNumber(s, "__hallUnionRawMaxY")
+    const unionOutMinX = sprites.readDataNumber(s, "__hallUnionOutMinX")
+    const unionOutMinY = sprites.readDataNumber(s, "__hallUnionOutMinY")
+    const unionOutMaxX = sprites.readDataNumber(s, "__hallUnionOutMaxX")
+    const unionOutMaxY = sprites.readDataNumber(s, "__hallUnionOutMaxY")
+    const unionImg1W = sprites.readDataNumber(s, "__hallUnionImg1W")
+    const unionImg1H = sprites.readDataNumber(s, "__hallUnionImg1H")
+    const unionImg2W = sprites.readDataNumber(s, "__hallUnionImg2W")
+    const unionImg2H = sprites.readDataNumber(s, "__hallUnionImg2H")
+    const unionFrameW = sprites.readDataNumber(s, "__hallUnionFrameW")
+    const unionFrameH = sprites.readDataNumber(s, "__hallUnionFrameH")
+    const spawnX = sprites.readDataNumber(s, "__hallSpawnX")
+    const spawnY = sprites.readDataNumber(s, "__hallSpawnY")
+    const dustCenterX = sprites.readDataNumber(s, "__hallDustCenterX")
+    const dustCenterY = sprites.readDataNumber(s, "__hallDustCenterY")
+    const dustOffsetX = sprites.readDataNumber(s, "__hallDustOffsetX")
+    const dustOffsetY = sprites.readDataNumber(s, "__hallDustOffsetY")
+    const dustBottomY = sprites.readDataNumber(s, "__hallDustBottomY")
+    const alignBottomY = sprites.readDataNumber(s, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY)
+    const dustRiseStart = sprites.readDataNumber(s, "__hallDustRiseStart")
+    const dustRiseMs = sprites.readDataNumber(s, "__hallDustRiseMs")
+    const dustRiseStartScaleX = sprites.readDataNumber(s, "__hallDustRiseStartScaleX")
+    const dustRiseStartScaleY = sprites.readDataNumber(s, "__hallDustRiseStartScaleY")
+    const dustRiseEndScaleX = sprites.readDataNumber(s, "__hallDustRiseEndScaleX")
+    const dustRiseEndScaleY = sprites.readDataNumber(s, "__hallDustRiseEndScaleY")
+    const screenSample = _heEffectsHallScreenSamplesById[(s as any).id | 0] || null
+    return {
+        id: (s as any).id | 0,
+        tag: sprites.readDataString(s, "__hallTag") || "",
+        skin,
+        texKey: nativeTex || (resolved ? String(resolved.textureKey || "") : ""),
+        frame: (frameId != null) ? (frameId | 0) : null,
+        frameW: frameW | 0,
+        frameH: frameH | 0,
+        x: s.x | 0,
+        y: s.y | 0,
+        scale: Number.isFinite(scale) ? Number(scale) : null,
+        scaleX: Number.isFinite(scaleX) ? Number(scaleX) : null,
+        scaleY: Number.isFinite(scaleY) ? Number(scaleY) : null,
+        nativeDisplayW: (nativeDisplayW != null) ? Math.round(nativeDisplayW) : null,
+        nativeDisplayH: (nativeDisplayH != null) ? Math.round(nativeDisplayH) : null,
+        nativeW: (nativeW != null) ? Math.round(nativeW) : null,
+        nativeH: (nativeH != null) ? Math.round(nativeH) : null,
+        nativeType: nativeType,
+        nativeIsTile: nativeIsTile ? 1 : 0,
+        nativeFrameW: (nativeFrameW != null) ? Math.round(nativeFrameW) : null,
+        nativeFrameH: (nativeFrameH != null) ? Math.round(nativeFrameH) : null,
+        nativeTileScaleX: (nativeTileScaleX != null) ? Number(nativeTileScaleX) : null,
+        nativeTileScaleY: (nativeTileScaleY != null) ? Number(nativeTileScaleY) : null,
+        nativeTilePosX: (nativeTilePosX != null) ? Number(nativeTilePosX) : null,
+        nativeTilePosY: (nativeTilePosY != null) ? Number(nativeTilePosY) : null,
+        nativeMaskType: nativeMaskType || "",
+        nativeMaskAttached: nativeMaskAttached ? 1 : 0,
+        nativeMaskFail: nativeMaskFail || "",
+        nativeMaskPresent: nativeMaskPresent ? 1 : 0,
+        nativeMaskSpriteId: nativeMaskSpriteId || "",
+        nativeMode: nativeMode || "",
+        nativeVisible: nativeVisible,
+        nativeAlpha: nativeAlpha,
+        nativeRotation: nativeRotation,
+        nativeOriginX: nativeOriginX,
+        nativeOriginY: nativeOriginY,
+        nativeBounds: nativeBounds,
+        spawnX: Number.isFinite(spawnX) ? (spawnX | 0) : null,
+        spawnY: Number.isFinite(spawnY) ? (spawnY | 0) : null,
+        dustCenterX: Number.isFinite(dustCenterX) ? (dustCenterX | 0) : null,
+        dustCenterY: Number.isFinite(dustCenterY) ? (dustCenterY | 0) : null,
+        dustOffsetX: Number.isFinite(dustOffsetX) ? (dustOffsetX | 0) : null,
+        dustOffsetY: Number.isFinite(dustOffsetY) ? (dustOffsetY | 0) : null,
+        dustBottomY: Number.isFinite(dustBottomY) ? (dustBottomY | 0) : null,
+        alignBottomY: Number.isFinite(alignBottomY) ? (alignBottomY | 0) : null,
+        dustRiseStart: Number.isFinite(dustRiseStart) ? (dustRiseStart | 0) : null,
+        dustRiseMs: Number.isFinite(dustRiseMs) ? (dustRiseMs | 0) : null,
+        dustRiseStartScaleX: Number.isFinite(dustRiseStartScaleX) ? Number(dustRiseStartScaleX) : null,
+        dustRiseStartScaleY: Number.isFinite(dustRiseStartScaleY) ? Number(dustRiseStartScaleY) : null,
+        dustRiseEndScaleX: Number.isFinite(dustRiseEndScaleX) ? Number(dustRiseEndScaleX) : null,
+        dustRiseEndScaleY: Number.isFinite(dustRiseEndScaleY) ? Number(dustRiseEndScaleY) : null,
+        screenSample: screenSample,
+        bounds,
+        boundsScaled: (wScaled != null && hScaled != null) ? { w: wScaled, h: hScaled } : null,
+        unionRawCount: Number.isFinite(unionRawCount) ? (unionRawCount | 0) : null,
+        unionOutlineCount: Number.isFinite(unionOutlineCount) ? (unionOutlineCount | 0) : null,
+        unionRawBounds: (Number.isFinite(unionRawMinX) && Number.isFinite(unionRawMinY) && Number.isFinite(unionRawMaxX) && Number.isFinite(unionRawMaxY))
+            ? { minX: unionRawMinX | 0, minY: unionRawMinY | 0, maxX: unionRawMaxX | 0, maxY: unionRawMaxY | 0 }
+            : null,
+        unionOutlineBounds: (Number.isFinite(unionOutMinX) && Number.isFinite(unionOutMinY) && Number.isFinite(unionOutMaxX) && Number.isFinite(unionOutMaxY))
+            ? { minX: unionOutMinX | 0, minY: unionOutMinY | 0, maxX: unionOutMaxX | 0, maxY: unionOutMaxY | 0 }
+            : null,
+        unionImg: (Number.isFinite(unionImg1W) || Number.isFinite(unionImg2W) || Number.isFinite(unionFrameW))
+            ? {
+                img1W: Number.isFinite(unionImg1W) ? (unionImg1W | 0) : null,
+                img1H: Number.isFinite(unionImg1H) ? (unionImg1H | 0) : null,
+                img2W: Number.isFinite(unionImg2W) ? (unionImg2W | 0) : null,
+                img2H: Number.isFinite(unionImg2H) ? (unionImg2H | 0) : null,
+                frameW: Number.isFinite(unionFrameW) ? (unionFrameW | 0) : null,
+                frameH: Number.isFinite(unionFrameH) ? (unionFrameH | 0) : null
+            }
+            : null
+    }
+}
+
 function _heCollectEffectsDump(): any {
     if (!DEBUG_EFFECTS_DUMP) return null
     const g: any = globalThis as any
@@ -86913,6 +92967,7 @@ function _heCollectEffectsDump(): any {
     const all = (sprites && typeof sprites.allSprites === "function") ? sprites.allSprites() : []
     const max = Math.max(0, DEBUG_EFFECTS_DUMP_MAX | 0) | 0
     const out: any[] = []
+    const unmaskedWaves: any[] = []
     let total = 0
     for (let i = 0; i < all.length; i++) {
         const s = all[i]
@@ -86980,7 +93035,7 @@ function _heCollectEffectsDump(): any {
             sample = _heSampleEffectFrameColors(nativeTex, frameId | 0, frameW | 0, frameH | 0, DEBUG_EFFECTS_DUMP_SAMPLE_STRIDE | 0)
         }
 
-        out.push({
+        const item = {
             id: (s as any).id | 0,
             kind: s.kind | 0,
             x: s.x | 0,
@@ -87028,7 +93083,25 @@ function _heCollectEffectsDump(): any {
                 frameId: frameId != null ? (frameId | 0) : null
             } : null,
             sample
-        })
+        }
+        out.push(item)
+
+        if ((maskId | 0) === 0 && unmaskedWaves.length < 25) {
+            const skinLower = (skin || "").toLowerCase()
+            const texLower = (nativeTex || "").toLowerCase()
+            if (skinLower.indexOf("waves") >= 0 || texLower.indexOf("waves") >= 0) {
+                unmaskedWaves.push({
+                    id: item.id | 0,
+                    hallTag,
+                    skin,
+                    texKey: nativeTex || "",
+                    mode: item.mode,
+                    alpha: item.alpha,
+                    visible: item.native ? item.native.visible : null,
+                    depth: item.native ? item.native.depth : null
+                })
+            }
+        }
     }
     return {
         count: out.length | 0,
@@ -87036,6 +93109,8 @@ function _heCollectEffectsDump(): any {
         applyCount: _heEffectApplyCount | 0,
         sampleStride: DEBUG_EFFECTS_DUMP_SAMPLE_STRIDE | 0,
         pixelSampling: DEBUG_EFFECTS_DUMP_PIXELS ? 1 : 0,
+        unmaskedWavesCount: unmaskedWaves.length | 0,
+        unmaskedWaves,
         items: out
     }
 }
@@ -87044,6 +93119,58 @@ function _heBuildDebugDump(reason?: string): any {
     const g: any = globalThis as any
     let runtimeMs = 0
     try { runtimeMs = game.runtime() | 0 } catch { }
+    const reasonTag = String(reason || "")
+    if (reasonTag.indexOf("trace-proof") >= 0) {
+        const traceLatest = _heEffectsHallTraceLatest
+        const traceAll = (traceLatest && Array.isArray(traceLatest.samples)) ? traceLatest.samples : []
+        const traceCount = traceAll.length | 0
+        const traceCompact = traceAll.length ? [traceAll[traceAll.length - 1]] : []
+        const traceSummary = traceLatest
+            ? {
+                type: traceLatest.type || "effectsHallTraceV1",
+                createdAt: traceLatest.createdAt || null,
+                startMs: traceLatest.startMs || 0,
+                durationMs: traceLatest.durationMs || 0,
+                intervalMs: traceLatest.intervalMs || 0,
+                alphaMin: traceLatest.alphaMin ?? null,
+                sampleCount: traceCount,
+                samples: traceCompact
+            }
+            : null
+        return {
+            type: "heDebugDumpV1",
+            createdAt: Date.now(),
+            runtimeMs: runtimeMs | 0,
+            reason: reasonTag,
+            host: g && typeof g.__isHost === "boolean" ? !!g.__isHost : null,
+            floor: {
+                index: _dunFloorIndex | 0,
+                kind: String(_dunFloorKind || ""),
+            },
+            effectsHallTrace: traceSummary,
+            effectsHallTraceLive: (traceCompact && traceCompact.length)
+                ? {
+                    active: !!_heEffectsHallTraceActive,
+                    inFlight: !!_heEffectsHallTraceInFlight,
+                    startMs: _heEffectsHallTraceStartMs | 0,
+                    endMs: _heEffectsHallTraceEndMs | 0,
+                    nextMs: _heEffectsHallTraceNextMs | 0,
+                    sampleCount: traceCount,
+                    samples: traceCompact
+                }
+                : {
+                    active: !!_heEffectsHallTraceActive,
+                    inFlight: !!_heEffectsHallTraceInFlight,
+                    startMs: _heEffectsHallTraceStartMs | 0,
+                    endMs: _heEffectsHallTraceEndMs | 0,
+                    nextMs: _heEffectsHallTraceNextMs | 0,
+                    sampleCount: traceCount,
+                    samples: []
+                },
+            screenSnapResults: _heScreenSnapResults.slice(0),
+            screenSnapDiag: _heGetScreenSnapDiag(g && g.__phaserScene),
+        }
+    }
     const internals = g && g.__HeroEnginePhaserInternals
     let floorFlags: any = null
     if (internals && typeof internals.getFloorSaveFlags === "function") {
@@ -87140,7 +93267,9 @@ function _heBuildDebugDump(reason?: string): any {
     const traceBuf = _heGetDebugTraceBuffer()
     const trace = traceBuf.length ? traceBuf.slice(-HE_DEBUG_TRACE_MAX) : []
 
-    const effects = _heCollectEffectsDump()
+    const isTilemapDump = reasonTag.indexOf("tilemap") >= 0
+    const isTilemapFocusDump = reasonTag.indexOf("tilemap-focus") >= 0
+    const effects = isTilemapDump ? null : _heCollectEffectsDump()
     if (DEBUG_TILEMAP_AUDIT_DUMP && !_tilemapAuditDumpLatest) {
         const fn = (typeof _dunBuildTilemapAuditEntry === "function") ? _dunBuildTilemapAuditEntry : null
         if (fn) {
@@ -87157,6 +93286,105 @@ function _heBuildDebugDump(reason?: string): any {
         const tr = g && g.__heTileRenderer
         if (tr && typeof tr.getVisualAudit === "function") {
             try { tilemapVisual = tr.getVisualAudit() } catch { }
+        }
+    }
+    const decorateBoundsPts = (b: any): any => {
+        if (!b) return null
+        const x = (b.x ?? 0) | 0
+        const y = (b.y ?? 0) | 0
+        const w = (b.w ?? b.width ?? 0) | 0
+        const h = (b.h ?? b.height ?? 0) | 0
+        if ((w | 0) <= 0 || (h | 0) <= 0) return null
+        const x2 = (x + (w - 1)) | 0
+        const y2 = (y + (h - 1)) | 0
+        const cx = (x + (w >> 1)) | 0
+        const cy = (y + (h >> 1)) | 0
+        return {
+            tl: { x, y },
+            tr: { x: x2, y },
+            bl: { x, y: y2 },
+            br: { x: x2, y: y2 },
+            c: { x: cx, y: cy },
+        }
+    }
+    const decorateVisual = (tv: any): void => {
+        if (!tv || !Array.isArray(tv.props)) return
+        for (let i = 0; i < tv.props.length; i++) {
+            const p = tv.props[i]
+            if (!p) continue
+            const objs = Array.isArray(p.objs) ? p.objs : []
+            const overlays = Array.isArray(p.overlays) ? p.overlays : []
+            for (let oi = 0; oi < objs.length; oi++) {
+                const o = objs[oi]
+                if (!o) continue
+                if (o.bounds && !o.boundsPts) o.boundsPts = decorateBoundsPts(o.bounds)
+                if (o.screenBounds && !o.screenPts) o.screenPts = decorateBoundsPts(o.screenBounds)
+            }
+            for (let oi = 0; oi < overlays.length; oi++) {
+                const o = overlays[oi]
+                if (!o) continue
+                if (o.bounds && !o.boundsPts) o.boundsPts = decorateBoundsPts(o.bounds)
+                if (o.screenBounds && !o.screenPts) o.screenPts = decorateBoundsPts(o.screenBounds)
+            }
+            if (p.aura) {
+                const a = p.aura
+                if (a.bounds && !a.boundsPts) a.boundsPts = decorateBoundsPts(a.bounds)
+                if (a.screenBounds && !a.screenPts) a.screenPts = decorateBoundsPts(a.screenBounds)
+                const kids = Array.isArray(a.kids) ? a.kids : []
+                for (let ki = 0; ki < kids.length; ki++) {
+                    const k = kids[ki]
+                    if (!k) continue
+                    if (k.bounds && !k.boundsPts) k.boundsPts = decorateBoundsPts(k.bounds)
+                    if (k.screenBounds && !k.screenPts) k.screenPts = decorateBoundsPts(k.screenBounds)
+                }
+            }
+        }
+    }
+    if (tilemapVisual) decorateVisual(tilemapVisual)
+
+    if (isTilemapFocusDump) {
+        const focusR = _dunInteractFocusR | 0
+        const focusC = _dunInteractFocusC | 0
+        const focusedProps: any[] = []
+        if (tilemapVisual && Array.isArray(tilemapVisual.props)) {
+            for (let i = 0; i < tilemapVisual.props.length; i++) {
+                const p = tilemapVisual.props[i]
+                if (!p || !p.anchor) continue
+                if ((p.anchor.r | 0) !== focusR || (p.anchor.c | 0) !== focusC) continue
+                focusedProps.push(p)
+            }
+        }
+        return {
+            type: "heDebugDumpV1",
+            createdAt: Date.now(),
+            runtimeMs: runtimeMs | 0,
+            reason: reasonTag,
+            host: g && typeof g.__isHost === "boolean" ? !!g.__isHost : null,
+            floor: {
+                index: _dunFloorIndex | 0,
+                kind: String(_dunFloorKind || ""),
+                baseFamily: String(_dunBaseFamily || ""),
+                wallFamily: String(_dunWallFamily || ""),
+            },
+            world: {
+                worldRev: _engineWorldRev | 0,
+                decorRev: _engineDecorRev | 0,
+                tileSize: WORLD_TILE_SIZE | 0,
+                rows: worldRows | 0,
+                cols: worldCols | 0,
+            },
+            tilemapFocus: DEBUG_TILEMAP_AUDIT_DUMP ? _heBuildFocusAudit(tilemapVisual) : null,
+            tilemapVisual: tilemapVisual ? {
+                rows: tilemapVisual.rows,
+                cols: tilemapVisual.cols,
+                tileSize: tilemapVisual.tileSize,
+                props: focusedProps,
+            } : null,
+            tilemapTimeline: DEBUG_TILEMAP_AUDIT_DUMP ? {
+                intervalMs: HE_TILEMAP_DELTA_INTERVAL_MS | 0,
+                samples: _heTilemapDeltaTimeline.slice(Math.max(0, _heTilemapDeltaTimeline.length - 30)),
+            } : null,
+            tilemapPixelProbe: DEBUG_TILEMAP_AUDIT_DUMP ? _heTilemapPixelProbeLatest : null,
         }
     }
     const vfxTweak = (g && g.__heVfxTweak && typeof g.__heVfxTweak === "object")
@@ -87206,8 +93434,15 @@ function _heBuildDebugDump(reason?: string): any {
         tilemapAudit: DEBUG_TILEMAP_AUDIT_DUMP ? {
             latest: String(_tilemapAuditDumpLatest || ""),
             history: _tilemapAuditDumpHistory.slice(0),
+            map: _dunBuildTilemapAuditStruct(),
         } : null,
         tilemapVisual,
+        tilemapFocus: DEBUG_TILEMAP_AUDIT_DUMP ? _heBuildFocusAudit(tilemapVisual) : null,
+        tilemapTimeline: DEBUG_TILEMAP_AUDIT_DUMP ? {
+            intervalMs: HE_TILEMAP_DELTA_INTERVAL_MS | 0,
+            samples: _heTilemapDeltaTimeline.slice(Math.max(0, _heTilemapDeltaTimeline.length - 60)),
+        } : null,
+        tilemapPixelProbe: DEBUG_TILEMAP_AUDIT_DUMP ? _heTilemapPixelProbeLatest : null,
         save: {
             pendingSaveFromFile: !!(g && g.__pendingSaveFromFile),
             pendingSaveName: (g && g.__pendingSaveFromFile && g.__pendingSaveFromFile.name) ? String(g.__pendingSaveFromFile.name || "") : null,
@@ -87226,6 +93461,26 @@ function _heBuildDebugDump(reason?: string): any {
         enemies: enemyDump,
         npcs: npcDump,
         effects,
+        effectsHallTrace: _heEffectsHallTraceLatest,
+        effectsHallTraceLive: (_heEffectsHallTraceSamples && _heEffectsHallTraceSamples.length)
+            ? {
+                active: !!_heEffectsHallTraceActive,
+                inFlight: !!_heEffectsHallTraceInFlight,
+                startMs: _heEffectsHallTraceStartMs | 0,
+                endMs: _heEffectsHallTraceEndMs | 0,
+                nextMs: _heEffectsHallTraceNextMs | 0,
+                samples: _heEffectsHallTraceSamples.slice(0)
+            }
+            : {
+                active: !!_heEffectsHallTraceActive,
+                inFlight: !!_heEffectsHallTraceInFlight,
+                startMs: _heEffectsHallTraceStartMs | 0,
+                endMs: _heEffectsHallTraceEndMs | 0,
+                nextMs: _heEffectsHallTraceNextMs | 0,
+                samples: []
+            },
+        screenSnapResults: _heScreenSnapResults.slice(0),
+        screenSnapDiag: _heGetScreenSnapDiag(g && g.__phaserScene),
         vfxTweak,
         trace,
     }
@@ -87236,6 +93491,12 @@ let _heAutoDebugDumpLastMs = 0
 let _heAutoDebugDumpInFlight = false
 let _tilemapAuditDumpLatest = ""
 let _tilemapAuditDumpHistory: string[] = []
+const HE_TILEMAP_DELTA_INTERVAL_MS = 250
+const HE_TILEMAP_DELTA_MAX_EVENTS = 400
+let _heTilemapDeltaLastMs = 0
+let _heTilemapDeltaPrevEntities: Record<string, any> = Object.create(null)
+let _heTilemapDeltaPrevLayers: Record<string, number> = Object.create(null)
+let _heTilemapDeltaTimeline: any[] = []
 const HE_VISUAL_DUMP_DELAY_MS = 1200
 const HE_VISUAL_DUMP_COOLDOWN_MS = 1200
 let _heVisualDumpQueuedMs = 0
@@ -87243,23 +93504,581 @@ let _heVisualDumpReason = ""
 let _heVisualDumpInFlight = false
 let _heVisualDumpLastMs = 0
 let _heVisualDumpLastDecorRev = -1
+let _heVisualDumpNeedPixels = false
+let _heTilemapPixelProbeLatest: any = null
+
+function _heInstallDebugDumpToFile(g: any): void {
+    if (!g) return
+    g.__heDebugDumpToFile = function (reason?: string): Promise<any> {
+        if (!DEBUG_DEBUG_DUMP) return Promise.resolve({ ok: false, reason: "disabled" })
+        if (g && typeof g.__isHost === "boolean" && !g.__isHost) {
+            return Promise.resolve({ ok: false, reason: "not-host" })
+        }
+        const net: any = g && g.__net
+        if (!net || typeof net.sendDebugDump !== "function") {
+            return Promise.resolve({ ok: false, reason: "no-net" })
+        }
+        const withTimeout = (p: Promise<any>, ms: number, reasonTag: string): Promise<any> => {
+            let settled = false
+            return new Promise((resolve) => {
+                const t = setTimeout(() => {
+                    if (settled) return
+                    settled = true
+                    resolve({ ok: false, reason: reasonTag })
+                }, ms | 0)
+                p.then((res: any) => {
+                    if (settled) return
+                    settled = true
+                    clearTimeout(t)
+                    resolve(res)
+                }).catch((err: any) => {
+                    if (settled) return
+                    settled = true
+                    clearTimeout(t)
+                    resolve({ ok: false, reason: String(err || "error") })
+                })
+            })
+        }
+        const tag = String(reason || "")
+        const dumpTimeoutMs = tag.indexOf("trace-proof") >= 0 ? 15000 : 3000
+        const wantPixels = DEBUG_TILEMAP_AUDIT_DUMP && tag.indexOf("tilemap-focus") >= 0
+        if (wantPixels) {
+            let focusProbe: any = null
+            try {
+                const sc: any = g ? g.__phaserScene : null
+                const renderer: any = sc && sc.game ? sc.game.renderer : null
+                const visual = sc && sc.registry ? sc.registry.get("__worldTileRenderer") : null
+                if (visual && typeof visual.getVisualAudit === "function") {
+                    const audit: any = visual.getVisualAudit()
+                    const focusR = _dunInteractFocusR | 0
+                    const focusC = _dunInteractFocusC | 0
+                    if (audit && Array.isArray(audit.props)) {
+                        for (let i = 0; i < audit.props.length; i++) {
+                            const p = audit.props[i]
+                            if (!p || !p.anchor) continue
+                            if ((p.anchor.r | 0) !== (focusR | 0) || (p.anchor.c | 0) !== (focusC | 0)) continue
+                            const kids = p.aura && Array.isArray(p.aura.kids) ? p.aura.kids : []
+                            if (kids.length) {
+                                const kid = kids[0]
+                                focusProbe = {
+                                    r: focusR | 0,
+                                    c: focusC | 0,
+                                    name: String(_dunInteractFocusName || ""),
+                                    kidBounds: kid?.screenBounds ?? null,
+                                }
+                            }
+                            break
+                        }
+                    }
+                }
+                if (focusProbe && renderer && typeof renderer.snapshotArea === "function" && focusProbe.kidBounds) {
+                    const b = focusProbe.kidBounds
+                    const x = Math.max(0, (b.x ?? 0) | 0)
+                    const y = Math.max(0, (b.y ?? 0) | 0)
+                    const w = Math.max(1, (b.w ?? 0) | 0)
+                    const h = Math.max(1, (b.h ?? 0) | 0)
+                    const pointsFromBounds = (bb: any): any => {
+                        if (!bb) return null
+                        const bx = (bb.x ?? 0) | 0
+                        const by = (bb.y ?? 0) | 0
+                        const bw = (bb.w ?? bb.width ?? 0) | 0
+                        const bh = (bb.h ?? bb.height ?? 0) | 0
+                        if ((bw | 0) <= 0 || (bh | 0) <= 0) return null
+                        const bx2 = (bx + (bw - 1)) | 0
+                        const by2 = (by + (bh - 1)) | 0
+                        const bcx = (bx + (bw >> 1)) | 0
+                        const bcy = (by + (bh >> 1)) | 0
+                        return {
+                            tl: { x: bx, y: by },
+                            tr: { x: bx2, y: by },
+                            bl: { x: bx, y: by2 },
+                            br: { x: bx2, y: by2 },
+                            c: { x: bcx, y: bcy },
+                        }
+                    }
+                    return new Promise((resolve) => {
+                        let done = false
+                        const finish = (res: any): void => {
+                            if (done) return
+                            done = true
+                            g.__heDebugDumpLastResult = res
+                            resolve(res)
+                        }
+                        const timeout = setTimeout(() => {
+                            if (!done) {
+                                focusProbe.pixelSampleSupported = 0
+                                _heTilemapPixelProbeLatest = focusProbe
+                                const payload = _heBuildDebugDump(reason)
+                                withTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
+                                    finish({ ok: false, reason: "timeout-snapshot", sent: res })
+                                })
+                            }
+                        }, 3000)
+                        try {
+                            renderer.snapshotArea(x, y, w, h, (img: any) => {
+                                try {
+                                    const ctx = (img && img.getContext) ? img.getContext("2d") : null
+                                    if (ctx) {
+                                        const sample = (sx: number, sy: number): any => {
+                                            try {
+                                                const data = ctx.getImageData(sx, sy, 1, 1).data
+                                                return { r: data[0] | 0, g: data[1] | 0, b: data[2] | 0, a: data[3] | 0 }
+                                            } catch { return null }
+                                        }
+                                        const pts = pointsFromBounds({ x: 0, y: 0, w: w | 0, h: h | 0 })
+                                        focusProbe.pixelSamples = {
+                                            tl: sample(pts.tl.x | 0, pts.tl.y | 0),
+                                            tr: sample(pts.tr.x | 0, pts.tr.y | 0),
+                                            bl: sample(pts.bl.x | 0, pts.bl.y | 0),
+                                            br: sample(pts.br.x | 0, pts.br.y | 0),
+                                            c: sample(pts.c.x | 0, pts.c.y | 0),
+                                        }
+                                        focusProbe.pixelSampleBounds = { x, y, w, h }
+                                        focusProbe.pixelSampleSupported = 1
+                                    } else {
+                                        focusProbe.pixelSampleSupported = 0
+                                    }
+                                } catch {
+                                    focusProbe.pixelSampleSupported = 0
+                                }
+                                    _heTilemapPixelProbeLatest = focusProbe
+                                    const payload = _heBuildDebugDump(reason)
+                                    withTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
+                                        clearTimeout(timeout)
+                                        finish(res)
+                                    })
+                                })
+                            } catch {
+                                _heTilemapPixelProbeLatest = focusProbe
+                                const payload = _heBuildDebugDump(reason)
+                                withTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
+                                    clearTimeout(timeout)
+                                    finish(res)
+                                })
+                            }
+                        })
+                    }
+                if (focusProbe) _heTilemapPixelProbeLatest = focusProbe
+            } catch {
+                /* ignore */
+            }
+        }
+        const payload = _heBuildDebugDump(reason)
+        return withTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout")
+    }
+}
 
 function _heQueueVisualDump(reason: string, delayMs?: number): void {
     if (!DEBUG_TILEMAP_AUDIT_DUMP) return
     const now = game.runtime() | 0
+    if (_heEffectsHallTraceActive) return
+    if (_heDebugDumpHoldUntilMs > 0 && (now | 0) < (_heDebugDumpHoldUntilMs | 0)) return
     const delay = (typeof delayMs === "number" && delayMs >= 0) ? (delayMs | 0) : (HE_VISUAL_DUMP_DELAY_MS | 0)
     const when = (now + delay) | 0
     if (_heVisualDumpQueuedMs > 0 && _heVisualDumpQueuedMs <= when) return
+    let tag = String(reason || "tilemap-visual")
+    if (tag.indexOf("tilemap") < 0) tag = "tilemap-" + tag
     _heVisualDumpQueuedMs = when
-    _heVisualDumpReason = String(reason || "tilemap-visual")
+    _heVisualDumpReason = tag
+    if (tag.indexOf("focus") >= 0) _heVisualDumpNeedPixels = true
+}
+
+function _heHashString(s: string): number {
+    let h = 5381
+    for (let i = 0; i < s.length; i++) {
+        h = (((h << 5) + h) ^ s.charCodeAt(i)) | 0
+    }
+    return h | 0
+}
+
+function _heBuildTilemapDeltaSnapshot(): { entities: Record<string, any>, layers: Record<string, number> } | null {
+    const g: any = globalThis as any
+    const tr = g && g.__heTileRenderer
+    if (!tr || typeof tr.getVisualAudit !== "function") return null
+    let visual: any = null
+    try { visual = tr.getVisualAudit() } catch { visual = null }
+    if (!visual) return null
+
+    const entities: Record<string, any> = Object.create(null)
+    const layers: Record<string, number> = Object.create(null)
+    const sc: any = g ? g.__phaserScene : null
+    const cam: any = sc && sc.cameras ? sc.cameras.main : null
+
+    if (Array.isArray(visual.layers)) {
+        for (let i = 0; i < visual.layers.length; i++) {
+            const layer = visual.layers[i]
+            if (!layer) continue
+            const rows = String(layer.rows || "")
+            const key = String(layer.name || "layer")
+            layers[key] = _heHashString(rows)
+        }
+    }
+
+    if (Array.isArray(visual.props)) {
+        for (let i = 0; i < visual.props.length; i++) {
+            const p = visual.props[i]
+            if (!p) continue
+            const anchor = p.anchor || { r: -1, c: -1 }
+            const baseName = String(p.baseName || "")
+            const rawKey = String(p.rawKey || "")
+            const texKey = String(p.textureKey || "")
+            const keyBase = `prop:${baseName}:${anchor.r},${anchor.c}:${texKey}:${rawKey}`
+            const objs = Array.isArray(p.objs) ? p.objs : []
+            const overlays = Array.isArray(p.overlays) ? p.overlays : []
+            const aura = p.aura || null
+
+            if (objs.length) {
+                const o = objs[0]
+                const b = boundsOfNative(o)
+                const sb = screenBoundsOfNative(o)
+                entities[`${keyBase}:base`] = {
+                    kind: "propBase",
+                    x: (o?.x ?? 0) | 0,
+                    y: (o?.y ?? 0) | 0,
+                    depth: (o?.depth ?? 0) | 0,
+                    tex: o?.tex ?? null,
+                    frame: o?.frame ?? null,
+                    vis: !!o?.vis,
+                    bounds: b,
+                    boundsPts: pointsFromBounds(b),
+                    screenBounds: sb,
+                    screenPts: pointsFromBounds(sb),
+                }
+            }
+            for (let oi = 0; oi < overlays.length; oi++) {
+                const o = overlays[oi]
+                const b = boundsOfNative(o)
+                const sb = screenBoundsOfNative(o)
+                entities[`${keyBase}:overlay:${oi}`] = {
+                    kind: "overlay",
+                    x: (o?.x ?? 0) | 0,
+                    y: (o?.y ?? 0) | 0,
+                    depth: (o?.depth ?? 0) | 0,
+                    tex: o?.tex ?? null,
+                    frame: o?.frame ?? null,
+                    vis: !!o?.vis,
+                    bounds: b,
+                    boundsPts: pointsFromBounds(b),
+                    screenBounds: sb,
+                    screenPts: pointsFromBounds(sb),
+                }
+            }
+            if (aura) {
+                const b = boundsOfNative(aura)
+                const sb = screenBoundsOfNative(aura)
+                entities[`${keyBase}:aura`] = {
+                    kind: "aura",
+                    x: (aura?.x ?? 0) | 0,
+                    y: (aura?.y ?? 0) | 0,
+                    depth: (aura?.depth ?? 0) | 0,
+                    vis: !!aura?.vis,
+                    alpha: (aura?.alpha ?? null),
+                    bounds: b,
+                    boundsPts: pointsFromBounds(b),
+                    screenBounds: sb,
+                    screenPts: pointsFromBounds(sb),
+                }
+                const kids = Array.isArray(aura?.kids) ? aura.kids : []
+                for (let ki = 0; ki < kids.length; ki++) {
+                    const k = kids[ki]
+                    const kb = boundsOfNative(k)
+                    const ksb = screenBoundsOfNative(k)
+                    entities[`${keyBase}:auraKid:${ki}`] = {
+                        kind: "auraKid",
+                        x: (k?.x ?? 0) | 0,
+                        y: (k?.y ?? 0) | 0,
+                        depth: (k?.depth ?? 0) | 0,
+                        tex: k?.tex ?? null,
+                        frame: k?.frame ?? null,
+                        vis: !!k?.vis,
+                        alpha: (k?.alpha ?? null),
+                        bounds: kb,
+                        boundsPts: pointsFromBounds(kb),
+                        screenBounds: ksb,
+                        screenPts: pointsFromBounds(ksb),
+                    }
+                }
+            }
+        }
+    }
+
+    function boundsOfNative(o: any): any {
+        if (!o) return null
+        try {
+            if (typeof o.getBounds === "function") {
+                const b = o.getBounds()
+                if (b) return { x: (b.x ?? 0) | 0, y: (b.y ?? 0) | 0, w: (b.width ?? 0) | 0, h: (b.height ?? 0) | 0 }
+            }
+        } catch { /* ignore */ }
+        const w = (o.displayWidth ?? o.width ?? 0) | 0
+        const h = (o.displayHeight ?? o.height ?? 0) | 0
+        const x = ((o.x ?? 0) - (w >> 1)) | 0
+        const y = ((o.y ?? 0) - (h >> 1)) | 0
+        if ((w | 0) <= 0 && (h | 0) <= 0) return null
+        return { x, y, w, h }
+    }
+
+    function pointsFromBounds(b: any): any {
+        if (!b) return null
+        const x = (b.x ?? 0) | 0
+        const y = (b.y ?? 0) | 0
+        const w = (b.w ?? b.width ?? 0) | 0
+        const h = (b.h ?? b.height ?? 0) | 0
+        if ((w | 0) <= 0 || (h | 0) <= 0) return null
+        const x2 = (x + (w - 1)) | 0
+        const y2 = (y + (h - 1)) | 0
+        const cx = (x + (w >> 1)) | 0
+        const cy = (y + (h >> 1)) | 0
+        return {
+            tl: { x, y },
+            tr: { x: x2, y },
+            bl: { x, y: y2 },
+            br: { x: x2, y: y2 },
+            c: { x: cx, y: cy },
+        }
+    }
+
+    function screenBoundsOfNative(o: any): any {
+        const b = boundsOfNative(o)
+        if (!b) return null
+        if (!cam) return null
+        const zoom = Number.isFinite(cam.zoom) ? cam.zoom : 1
+        const sx = Math.round((b.x - (cam.scrollX || 0)) * zoom)
+        const sy = Math.round((b.y - (cam.scrollY || 0)) * zoom)
+        const sw = Math.round((b.w || 0) * zoom)
+        const sh = Math.round((b.h || 0) * zoom)
+        return { x: sx | 0, y: sy | 0, w: sw | 0, h: sh | 0 }
+    }
+
+    const addOutlineEntity = (kind: string, s: any, name: string, r: number, c: number): void => {
+        if (!s) return
+        const native: any = (s as any).native ?? null
+        const outline: any = native ? (native as any).__focusOutlineImage : null
+        if (!outline) return
+        const b = boundsOfNative(outline)
+        const sb = screenBoundsOfNative(outline)
+        const key = `outline:${kind}:${String(name || "")}:${(s.id ?? 0) | 0}:${r | 0},${c | 0}`
+        entities[key] = {
+            kind: "outline",
+            name: String(name || ""),
+            r: r | 0,
+            c: c | 0,
+            x: (outline.x ?? 0) | 0,
+            y: (outline.y ?? 0) | 0,
+            depth: (outline.depth ?? 0) | 0,
+            tex: outline?.texture?.key ?? null,
+            frame: (outline?.frame?.name ?? outline?.frame?.index ?? null),
+            vis: !!outline?.visible,
+            alpha: (outline?.alpha ?? null),
+            bounds: b,
+            boundsPts: pointsFromBounds(b),
+            screenBounds: sb,
+            screenPts: pointsFromBounds(sb),
+        }
+    }
+
+    if (_engineDecorSolids && _engineDecorSolids.length) {
+        for (let i = 0; i < _engineDecorSolids.length; i++) {
+            const s = _engineDecorSolids[i]
+            if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+            const name = sprites.readDataString(s, DECOR_DATA.NAME) || ""
+            const r = sprites.readDataNumber(s, "decorTileR") | 0
+            const c = sprites.readDataNumber(s, "decorTileC") | 0
+            addOutlineEntity("decor", s, name, r | 0, c | 0)
+        }
+    }
+    if (_engineDecorTriggers && _engineDecorTriggers.length) {
+        for (let i = 0; i < _engineDecorTriggers.length; i++) {
+            const s = _engineDecorTriggers[i]
+            if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+            const name = sprites.readDataString(s, DECOR_DATA.NAME) || ""
+            const r = sprites.readDataNumber(s, "decorTileR") | 0
+            const c = sprites.readDataNumber(s, "decorTileC") | 0
+            addOutlineEntity("decor", s, name, r | 0, c | 0)
+        }
+    }
+    if (_dunInteractables && _dunInteractables.length) {
+        for (let i = 0; i < _dunInteractables.length; i++) {
+            const s = _dunInteractables[i]
+            if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+            const name = sprites.readDataString(s, DECOR_DATA.NAME) || ""
+            const r = sprites.readDataNumber(s, "decorTileR") | 0
+            const c = sprites.readDataNumber(s, "decorTileC") | 0
+            addOutlineEntity("interact", s, name, r | 0, c | 0)
+        }
+    }
+
+    const focusKey = "focus:interact"
+    entities[focusKey] = {
+        kind: "focus",
+        active: _dunInteractFocusActive | 0,
+        r: _dunInteractFocusR | 0,
+        c: _dunInteractFocusC | 0,
+        name: String(_dunInteractFocusName || ""),
+    }
+
+    const getFocusCenter = (): { x: number, y: number } | null => {
+        if (!(_dunInteractFocusActive | 0)) return null
+        if ((_dunInteractFocusR | 0) < 0 || (_dunInteractFocusC | 0) < 0) return null
+        let decor: Sprite = null as any
+        try {
+            const base = propBaseNameFromKey(String(_dunInteractFocusName || ""))
+            decor = _dunFindDecorAtTile(_dunInteractFocusR | 0, _dunInteractFocusC | 0, base || "")
+            if (!decor && base) decor = _dunFindDecorAtTile(_dunInteractFocusR | 0, _dunInteractFocusC | 0, "")
+        } catch { decor = null as any }
+        if (decor && !(decor.flags & sprites.Flag.Destroyed)) return { x: decor.x | 0, y: decor.y | 0 }
+        return { x: ((_dunInteractFocusC | 0) * (WORLD_TILE_SIZE | 0) + ((WORLD_TILE_SIZE | 0) >> 1)) | 0, y: ((_dunInteractFocusR | 0) * (WORLD_TILE_SIZE | 0) + ((WORLD_TILE_SIZE | 0) >> 1)) | 0 }
+    }
+
+    const focusCenter = getFocusCenter()
+    if (focusCenter) {
+        const focusRadius = (WORLD_TILE_SIZE | 0) * 10
+        const maxPhaser = 60
+        const childList = (sc && sc.children && Array.isArray(sc.children.list)) ? sc.children.list : null
+        if (childList && childList.length) {
+            const phaserList: any[] = []
+            for (let i = 0; i < childList.length; i++) {
+                const o: any = childList[i]
+                if (!o || o.visible === false) continue
+                const texKey = String(o?.texture?.key || "").toLowerCase()
+                if (!texKey) continue
+                if (texKey.indexOf("aura") < 0 && texKey.indexOf("outline") < 0 && texKey.indexOf("focus") < 0) continue
+                const ox = (o.x ?? 0) | 0
+                const oy = (o.y ?? 0) | 0
+                const dx = Math.abs((ox - (focusCenter.x | 0)) | 0)
+                const dy = Math.abs((oy - (focusCenter.y | 0)) | 0)
+                if (dx > focusRadius || dy > focusRadius) continue
+                phaserList.push({ o, i, dx, dy })
+            }
+            phaserList.sort((a, b) => ((a.dx + a.dy) | 0) - ((b.dx + b.dy) | 0))
+            for (let i = 0; i < phaserList.length && i < maxPhaser; i++) {
+                const o: any = phaserList[i].o
+                const idx = phaserList[i].i | 0
+                const dx = phaserList[i].dx | 0
+                const dy = phaserList[i].dy | 0
+                const texKey = o?.texture?.key
+                const ox = (o.x ?? 0) | 0
+                const oy = (o.y ?? 0) | 0
+                const b = boundsOfNative(o)
+                const sb = screenBoundsOfNative(o)
+                const frame = (o?.frame?.name ?? o?.frame?.index ?? null)
+                const key = `phaser:${idx}:${String(texKey || "")}:${String(frame || "")}`
+                entities[key] = {
+                    kind: "phaserObj",
+                    idx: idx | 0,
+                    type: String(o?.type || o?.constructor?.name || ""),
+                    x: ox | 0,
+                    y: oy | 0,
+                    depth: (o?.depth ?? 0) | 0,
+                    tex: texKey,
+                    frame,
+                    vis: !!o?.visible,
+                    alpha: (o?.alpha ?? null),
+                    bounds: b,
+                    boundsPts: pointsFromBounds(b),
+                    screenBounds: sb,
+                    screenPts: pointsFromBounds(sb),
+                    focusDx: dx | 0,
+                    focusDy: dy | 0,
+                }
+            }
+        }
+    }
+
+    return { entities, layers }
+}
+
+function _heTilemapDeltaTick(nowMs: number): void {
+    if (!DEBUG_TILEMAP_AUDIT_DUMP) return
+    const now = nowMs | 0
+    if (_heTilemapDeltaLastMs && ((now - (_heTilemapDeltaLastMs | 0)) < (HE_TILEMAP_DELTA_INTERVAL_MS | 0))) return
+    _heTilemapDeltaLastMs = now
+
+    const snap = _heBuildTilemapDeltaSnapshot()
+    if (!snap) return
+
+    const events: any[] = []
+    const cur = snap.entities
+    const prev = _heTilemapDeltaPrevEntities
+
+    for (const k in cur) {
+        const curE = cur[k]
+        const prevE = prev[k]
+        if (!prevE) {
+            events.push({ type: "appear", key: k, data: curE })
+            continue
+        }
+        const changes: any = {}
+        const keys = Object.keys(curE)
+        for (let i = 0; i < keys.length; i++) {
+            const f = keys[i]
+            const cv = (curE as any)[f]
+            const pv = (prevE as any)[f]
+            if (cv !== pv) changes[f] = { from: pv, to: cv }
+        }
+        if (Object.keys(changes).length) {
+            events.push({ type: "change", key: k, changes })
+        }
+    }
+    for (const k in prev) {
+        if (!(k in cur)) {
+            events.push({ type: "disappear", key: k, data: prev[k] })
+        }
+    }
+
+    const prevLayers = _heTilemapDeltaPrevLayers
+    const curLayers = snap.layers
+    for (const lk in curLayers) {
+        const curH = curLayers[lk] | 0
+        const prevH = (prevLayers[lk] | 0)
+        if ((prevH | 0) !== (curH | 0)) {
+            events.push({ type: "layer", key: `layer:${lk}`, hash: curH | 0, prev: prevH | 0 })
+        }
+    }
+    for (const lk in prevLayers) {
+        if (!(lk in curLayers)) {
+            events.push({ type: "layerGone", key: `layer:${lk}`, hash: prevLayers[lk] | 0 })
+        }
+    }
+
+    _heTilemapDeltaPrevEntities = cur
+    _heTilemapDeltaPrevLayers = curLayers
+
+    if (events.length) {
+        _heTilemapDeltaTimeline.push({ t: now | 0, events })
+        if (_heTilemapDeltaTimeline.length > (HE_TILEMAP_DELTA_MAX_EVENTS | 0)) {
+            _heTilemapDeltaTimeline.splice(0, _heTilemapDeltaTimeline.length - (HE_TILEMAP_DELTA_MAX_EVENTS | 0))
+        }
+    }
 }
 
 function _heVisualDumpTick(nowMs: number): void {
     if (!DEBUG_TILEMAP_AUDIT_DUMP) return
+    if (_heEffectsHallTraceActive) return
+    if (_heDebugDumpHoldUntilMs > 0 && (nowMs | 0) < (_heDebugDumpHoldUntilMs | 0)) return
     const g: any = globalThis as any
     if (!g || !g.__isHost) return
     const net: any = g && g.__net
     if (!net || typeof net.sendDebugDump !== "function") return
+    const pointsFromBounds = (b: any): any => {
+        if (!b) return null
+        const x = (b.x ?? 0) | 0
+        const y = (b.y ?? 0) | 0
+        const w = (b.w ?? b.width ?? 0) | 0
+        const h = (b.h ?? b.height ?? 0) | 0
+        if ((w | 0) <= 0 || (h | 0) <= 0) return null
+        const x2 = (x + (w - 1)) | 0
+        const y2 = (y + (h - 1)) | 0
+        const cx = (x + (w >> 1)) | 0
+        const cy = (y + (h >> 1)) | 0
+        return {
+            tl: { x, y },
+            tr: { x: x2, y },
+            bl: { x, y: y2 },
+            br: { x: x2, y: y2 },
+            c: { x: cx, y: cy },
+        }
+    }
 
     // Queue when decor state changes (props/decals likely changed)
     if ((_engineDecorRev | 0) !== (_heVisualDumpLastDecorRev | 0)) {
@@ -87279,22 +94098,98 @@ function _heVisualDumpTick(nowMs: number): void {
     const reason = _heVisualDumpReason || "tilemap-visual"
     _heVisualDumpReason = ""
 
-    let p: any = null
+    const sc: any = g ? g.__phaserScene : null
+    const renderer: any = sc && sc.game ? sc.game.renderer : null
+    const visual = sc && sc.registry ? sc.registry.get("__worldTileRenderer") : null
+
+    let focusProbe: any = null
     try {
-        p = net.sendDebugDump(_heBuildDebugDump(reason), reason)
-    } catch {
-        _heVisualDumpInFlight = false
-        return
-    }
-    if (p && typeof p.then === "function") {
-        p.then(() => {
+        if (_heVisualDumpNeedPixels && visual && typeof visual.getVisualAudit === "function") {
+            const audit: any = visual.getVisualAudit()
+            const focusR = _dunInteractFocusR | 0
+            const focusC = _dunInteractFocusC | 0
+            if (audit && Array.isArray(audit.props)) {
+                for (let i = 0; i < audit.props.length; i++) {
+                    const p = audit.props[i]
+                    if (!p || !p.anchor) continue
+                    if ((p.anchor.r | 0) !== (focusR | 0) || (p.anchor.c | 0) !== (focusC | 0)) continue
+                    const kids = p.aura && Array.isArray(p.aura.kids) ? p.aura.kids : []
+                    if (kids.length) {
+                        const kid = kids[0]
+                        focusProbe = {
+                            r: focusR | 0,
+                            c: focusC | 0,
+                            name: String(_dunInteractFocusName || ""),
+                            kidBounds: kid?.screenBounds ?? null,
+                        }
+                    }
+                    break
+                }
+            }
+        }
+    } catch { focusProbe = null }
+
+    const sendDump = (): void => {
+        let p: any = null
+        try {
+            if (focusProbe) _heTilemapPixelProbeLatest = focusProbe
+            p = net.sendDebugDump(_heBuildDebugDump(reason), reason)
+        } catch {
             _heVisualDumpInFlight = false
-        }).catch(() => {
+            return
+        }
+        if (p && typeof p.then === "function") {
+            p.then(() => {
+                _heVisualDumpInFlight = false
+            }).catch(() => {
+                _heVisualDumpInFlight = false
+            })
+        } else {
             _heVisualDumpInFlight = false
-        })
-    } else {
-        _heVisualDumpInFlight = false
+        }
+        _heVisualDumpNeedPixels = false
     }
+
+    if (_heVisualDumpNeedPixels && focusProbe && renderer && typeof renderer.snapshotArea === "function" && focusProbe.kidBounds) {
+        const b = focusProbe.kidBounds
+        const x = Math.max(0, (b.x ?? 0) | 0)
+        const y = Math.max(0, (b.y ?? 0) | 0)
+        const w = Math.max(1, (b.w ?? 0) | 0)
+        const h = Math.max(1, (b.h ?? 0) | 0)
+        try {
+            renderer.snapshotArea(x, y, w, h, (img: any) => {
+                try {
+                    const ctx = (img && img.getContext) ? img.getContext("2d") : null
+                    if (ctx) {
+                        const sample = (sx: number, sy: number): any => {
+                            try {
+                                const data = ctx.getImageData(sx, sy, 1, 1).data
+                                return { r: data[0] | 0, g: data[1] | 0, b: data[2] | 0, a: data[3] | 0 }
+                            } catch { return null }
+                        }
+                        const pts = pointsFromBounds({ x: 0, y: 0, w: w | 0, h: h | 0 })
+                        focusProbe.pixelSamples = {
+                            tl: sample(pts.tl.x | 0, pts.tl.y | 0),
+                            tr: sample(pts.tr.x | 0, pts.tr.y | 0),
+                            bl: sample(pts.bl.x | 0, pts.bl.y | 0),
+                            br: sample(pts.br.x | 0, pts.br.y | 0),
+                            c: sample(pts.c.x | 0, pts.c.y | 0),
+                        }
+                        focusProbe.pixelSampleBounds = { x, y, w, h }
+                        focusProbe.pixelSampleSupported = 1
+                    } else {
+                        focusProbe.pixelSampleSupported = 0
+                    }
+                } catch {
+                    focusProbe.pixelSampleSupported = 0
+                }
+                sendDump()
+            })
+            return
+        } catch { /* fall through */ }
+    }
+
+    sendDump()
 }
 
 function _heAutoDebugDumpTick(nowMs: number): void {
@@ -87306,6 +94201,7 @@ function _heAutoDebugDumpTick(nowMs: number): void {
     const interval = HE_AUTO_DEBUG_DUMP_INTERVAL_MS | 0
     if (interval <= 0) return
     if (_heAutoDebugDumpInFlight) return
+    if (_heDebugDumpHoldUntilMs > 0 && (nowMs | 0) < (_heDebugDumpHoldUntilMs | 0)) return
     const elapsed = (nowMs | 0) - (_heAutoDebugDumpLastMs | 0)
     if (_heAutoDebugDumpLastMs && elapsed < interval) return
     _heAutoDebugDumpLastMs = nowMs | 0
@@ -87338,7 +94234,10 @@ function _heAutoDebugDumpTick(nowMs: number): void {
 
         if (!g) return
 
-        if (g.__heUiApiInstalled) return
+        if (g.__heUiApiInstalled) {
+            _heInstallDebugDumpToFile(g)
+            return
+        }
 
         g.__heUiApiInstalled = true
 
@@ -87436,18 +94335,7 @@ function _heAutoDebugDumpTick(nowMs: number): void {
             return _heBuildDebugDump(reason)
         }
 
-        g.__heDebugDumpToFile = function (reason?: string): Promise<any> {
-            if (!DEBUG_DEBUG_DUMP) return Promise.resolve({ ok: false, reason: "disabled" })
-            if (g && typeof g.__isHost === "boolean" && !g.__isHost) {
-                return Promise.resolve({ ok: false, reason: "not-host" })
-            }
-            const net: any = g && g.__net
-            if (!net || typeof net.sendDebugDump !== "function") {
-                return Promise.resolve({ ok: false, reason: "no-net" })
-            }
-            const payload = _heBuildDebugDump(reason)
-            return net.sendDebugDump(payload, reason)
-        }
+        _heInstallDebugDumpToFile(g)
 
         if (!g.__heVfxTweak || typeof g.__heVfxTweak !== "object") {
             g.__heVfxTweak = { ..._vfxTweakDefaults }
@@ -87465,6 +94353,8 @@ function _heAutoDebugDumpTick(nowMs: number): void {
                 _hallPaletteVersion++
                 _opaqueMaskVersion++
                 _maskAlphaVersion++
+                _auraOutlineVersion++
+                _maskOutlineVersion++
                 _vfxClearHallPaletteCaches()
                 _vfxClearHallPaletteTextures()
                 _dunEnterFloor_spawnEffectsHall(game.runtime() | 0)
