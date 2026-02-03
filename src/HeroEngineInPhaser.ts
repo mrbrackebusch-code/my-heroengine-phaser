@@ -21287,6 +21287,9 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         _applySmokeAnim(maskOpts, (cfg.smokeAnim || "alive") as any)
         if (cloudTint) maskOpts.tint = cloudTint | 0
         applyEffectToSprite(mfx, maskSkin, maskOpts)
+        if (CLOUD_GEOMETRY_SKIN_ID) {
+            sprites.setDataString(mfx, "__hallOccSkin", CLOUD_GEOMETRY_SKIN_ID)
+        }
         if (Number.isFinite(cfg.maskFrameOffset)) {
             const atlas = _getEffectAtlasAny()
             const resolved = atlas ? _resolveEffectEntry(atlas, maskSkin, "") : null
@@ -23728,8 +23731,10 @@ function _dunTickEffectsHall(nowMs: number): void {
                     if ((now - (lastUnion | 0)) < unionMs) continue
                     sprites.setDataNumber(fx, "__hallUnionUpdateAt", now | 0)
                     const resolveFrame = (s: Sprite, native: any): any => {
-                        const skin = (sprites.readDataString(s, "effectSkin") || "").trim()
-                        const dir = (sprites.readDataString(s, "effectDir") || "").trim()
+                        const occSkin = (sprites.readDataString(s, "__hallOccSkin") || "").trim()
+                        const occDir = (sprites.readDataString(s, "__hallOccDir") || "").trim()
+                        const skin = (occSkin || (sprites.readDataString(s, "effectSkin") || "")).trim()
+                        const dir = (occDir || (sprites.readDataString(s, "effectDir") || "")).trim()
                         if (!skin) return null
                         const resolved = _resolveEffectEntry(atlas, skin, dir || "")
                         if (!resolved) return null
