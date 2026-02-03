@@ -18,6 +18,7 @@ Student SDK (safe hooks)
 - props: registerSpec, registerVisual, registerDecal
 - npc/prop registry: registerStudentNpc, listStudentNpcs, registerStudentNpcInteractHandler; registerStudentProp, listStudentProps, registerStudentPropInteractHandler
 - traps: registerDefinition
+- pets/inventory: registerPetAtlas, listPetAtlases, registerPetBehavior, listPetBehaviors, registerPetStats, listPetStats, registerPetAcquisition, listPetAcquisitions, registerInventoryItem, registerInventoryHooks, registerAlly
 - relics: register (adds to core relic catalog)
 - vfx: register (adds to VFX registry)
 - ui: createOverlay, getOverlay, removeOverlay
@@ -29,7 +30,7 @@ Notes
 - NPC ids should use the <Name>NPC convention (example: ShopkeeperNPC).
 - Student props can alias visuals/specs via visualKey/specKey; interactAction can be "prop" or "npc".
 - Student NPCs are tagged when you spawn an LPC NPC with npcRole or profileName matching the NPC id.
-- If you need new hooks or APIs in core, ask the maintainer.
+- If you need new hooks or APIs in core, add them to src/student/<Name>/<Name>Needs.md and ask the maintainer.
 
 Debug flags (student-friendly)
 - Edit `src/student/studentDebugOverrides.ts` to toggle curated debug logs without touching core.
@@ -44,6 +45,18 @@ Debug flags (student-friendly)
   - propInteractLogs -> prop interact logs
   - trapLogs -> trap prompt/effect logs
   - shrineOverlayLogs -> shrine overlay logs
+
+Student debug sandbox (blank canvas)
+- Start the dev server, then open: debug.html?student=<Name> (or ?profile=<Name>)
+- Your optional debug entry file is: src/student/<Name>/debug.ts
+- The debug page auto-discovers students from src/student/*/index.ts (no registration needed).
+- This page does not boot the full game; it is a blank sandbox canvas.
+- Export either:
+  - default function (ctx) { ... } OR
+  - const studentDebug = { preload, create, update }
+- Use ctx.api.assets.register* to queue assets in preload; use ctx.api.ui.createOverlay for DOM.
+- Helpers available: ctx.api.helpers.addLabel, addPlaceholderHero, addGrid, spawnHero, spawnProfileHero.
+- If you want types, import from src/studentSystemsHooks.ts (allowed).
 
 Debug start floor (per-student, no merge conflicts)
 - In your `src/student/<Name>/index.ts`, inside your system register, call:
@@ -92,3 +105,8 @@ Student folders
 - ChrisS: src/student/ChrisS/
 - Cortez: src/student/Cortez/
 - Esau: src/student/Esau/
+
+GitHub usernames (PR guard)
+- Alan: kindalqn
+- Daniel: dmaradia
+- Jason: Scooperd00per

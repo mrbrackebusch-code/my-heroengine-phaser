@@ -1,16 +1,16 @@
 {
   "type": "heDebugDumpV1",
-  "createdAt": 1770047384865,
-  "runtimeMs": 181193,
+  "createdAt": 1770134344657,
+  "runtimeMs": 98915,
   "reason": "auto",
   "host": true,
   "floor": {
     "index": 0,
-    "kind": "entrance",
-    "baseFamily": "ground_black",
-    "wallFamily": "chasm_black",
-    "palette": "obsidian",
-    "objectiveDone": false,
+    "kind": "hall",
+    "baseFamily": "sand_water",
+    "wallFamily": "water_chasm",
+    "palette": "desert_oasis",
+    "objectiveDone": true,
     "combatWavesActive": false,
     "combatWavesComplete": false,
     "doorState": "",
@@ -33,8 +33,8 @@
     "shadowUntilMs": 0
   },
   "world": {
-    "worldRev": 3,
-    "decorRev": 259,
+    "worldRev": 2,
+    "decorRev": 12,
     "tileSize": 32,
     "rows": 34,
     "cols": 60
@@ -53,19 +53,19 @@
     "savedHeroProfiles": 0,
     "savedNpcKeys": 0,
     "tilemap": {
-      "rev": 25,
+      "rev": 183,
       "rows": 34,
       "cols": 60,
       "tileSize": 32,
-      "worldRev": 3,
+      "worldRev": 2,
       "floorIndex": -1,
-      "floorKind": "entrance",
-      "baseFamily": "ground_black",
-      "wallFamily": "chasm_black",
-      "decorRev": 259,
-      "baseSig": 1055817701,
-      "decorSig": 203159717,
-      "worldSig": -1426229920
+      "floorKind": "hall",
+      "baseFamily": "sand_water",
+      "wallFamily": "water_chasm",
+      "decorRev": 12,
+      "baseSig": 86608890,
+      "decorSig": -888916347,
+      "worldSig": 1795959243
     }
   },
   "heroes": [
@@ -75,8 +75,8 @@
       "profile": "LongBlond",
       "name": "LongBlond",
       "family": "",
-      "x": 1031,
-      "y": 533,
+      "x": 1004,
+      "y": 420,
       "hp": 1000,
       "maxHp": 1000,
       "mana": 1000,
@@ -105,13 +105,13 @@
   "screenSnapResults": [],
   "screenSnapDiag": {
     "renderer": {
-      "type": "",
-      "isWebGL": false,
+      "type": "2",
+      "isWebGL": true,
       "isCanvas": false,
-      "hasGL": false,
+      "hasGL": true,
       "resolution": 1,
-      "width": 0,
-      "height": 0
+      "width": 525,
+      "height": 455
     },
     "pump": {
       "frame": 0,

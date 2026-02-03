@@ -317,6 +317,88 @@ registerWisdomMusicHooks({
 
 ---
 
+## Group 10 — Pet System (Elizabeth + Lourdes + Alan)
+**Purpose**
+- Pet companions with art/animation, AI behaviors, stats/progression, and interactions (feed/heal/ride).
+
+**Deliverables**
+- Pet atlas registry for art + animation keys
+- Pet behavior registry for AI hooks
+- Pet stats + acquisition registry (eggs/summons/quests/drops)
+- Inventory hooks for feeding/healing/hatching
+- Ally registry for combat integration
+
+**Minimum API (expected)**
+```ts
+type PetAtlas = {
+  id: string;
+  textureKey: string;
+  anims?: {
+    idle?: string;
+    walk?: string;
+    hurt?: string;
+    interact?: string;
+    ride?: string;
+    sit?: string;
+    climb?: string;
+  };
+};
+
+type PetBehavior = {
+  id: string;
+  petId: string;
+  onSpawn?: (ctx: any) => void;
+  onUpdate?: (ctx: any) => void;
+  onDamage?: (ctx: any) => void;
+  onHeal?: (ctx: any) => void;
+  onMount?: (ctx: any) => void;
+  onUnmount?: (ctx: any) => void;
+};
+
+type PetStats = {
+  id: string;
+  baseHp?: number;
+  baseAtk?: number;
+  growthHp?: number;
+  growthAtk?: number;
+  maxLevel?: number;
+};
+
+type PetAcquisition = {
+  id: string;
+  petId: string;
+  kind: "egg" | "summon" | "quest" | "drop";
+  condition?: string;
+};
+
+type InventoryItem = { id: string; name?: string; iconKey?: string };
+
+type InventoryHook = {
+  onItemUse?: (ctx: any) => void;
+  onPetFeed?: (ctx: any) => void;
+  onPetHeal?: (ctx: any) => void;
+  onPetHatch?: (ctx: any) => void;
+};
+
+type AllyDef = { id: string; kind: "pet" | "summon" | "monster" };
+
+registerPetAtlas(def: PetAtlas): string
+registerPetBehavior(def: PetBehavior): string
+registerPetStats(def: PetStats): string
+registerPetAcquisition(def: PetAcquisition): string
+registerInventoryItem(def: InventoryItem): string
+registerInventoryHooks(hooks: InventoryHook): void
+registerAlly(def: AllyDef): string
+```
+
+**Dependencies**
+- Group 1 (registries)
+- Group 2 (overlays for pet/inventory UI)
+- Group 4 (items/drops/harvestables)
+- Combat pipeline (pet/allies vs monsters)
+
+---
+
 ## Cross-Group Consistency Rules
 - Use the student hook surface (Group 1) as the single entry point.
 - Prefer shared overlay + registry utilities; avoid bespoke per-system DOM.

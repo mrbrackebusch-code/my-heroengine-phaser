@@ -1,0 +1,192 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Student Debug Sandbox</title>
+    <style>
+      :root {
+        --bg: #0f1116;
+        --panel: #141824;
+        --panel-border: #23283a;
+        --text: #e7e9ee;
+        --muted: #a7adba;
+        --accent: #7cc4ff;
+      }
+
+      * {
+        box-sizing: border-box;
+      }
+
+      body {
+        margin: 0;
+        background: var(--bg);
+        color: var(--text);
+        font-family: "Segoe UI", Tahoma, Geneva, Verdana, sans-serif;
+      }
+
+      #debug-root {
+        display: flex;
+        flex-direction: column;
+        min-height: 100vh;
+      }
+
+      #debug-header {
+        display: flex;
+        justify-content: space-between;
+        align-items: center;
+        padding: 16px 20px;
+        border-bottom: 1px solid var(--panel-border);
+        background: var(--panel);
+      }
+
+      #debug-header .title {
+        font-size: 18px;
+        font-weight: 600;
+        letter-spacing: 0.2px;
+      }
+
+      #debug-current {
+        color: var(--muted);
+        font-size: 14px;
+      }
+
+      #debug-body {
+        flex: 1;
+        display: grid;
+        grid-template-columns: 280px 1fr;
+        gap: 16px;
+        padding: 16px;
+      }
+
+      #debug-sidebar {
+        display: flex;
+        flex-direction: column;
+        gap: 16px;
+      }
+
+      .section {
+        background: var(--panel);
+        border: 1px solid var(--panel-border);
+        padding: 12px;
+        border-radius: 8px;
+      }
+
+      .section-title {
+        font-size: 12px;
+        text-transform: uppercase;
+        letter-spacing: 0.08em;
+        color: var(--muted);
+        margin-bottom: 8px;
+      }
+
+      #debug-list {
+        display: grid;
+        gap: 6px;
+      }
+
+      #debug-list a {
+        color: var(--text);
+        text-decoration: none;
+        padding: 6px 8px;
+        border-radius: 6px;
+        border: 1px solid transparent;
+      }
+
+      #debug-list a:hover {
+        border-color: var(--panel-border);
+        background: #1b2030;
+      }
+
+      #debug-list a.active {
+        border-color: var(--accent);
+        color: var(--accent);
+      }
+
+      .steps {
+        margin: 0;
+        padding-left: 18px;
+        color: var(--muted);
+        font-size: 13px;
+        line-height: 1.4;
+      }
+
+      .steps code {
+        color: var(--text);
+      }
+
+      #debug-status {
+        font-size: 13px;
+        color: var(--muted);
+      }
+
+      #debug-url {
+        margin-top: 6px;
+        font-size: 12px;
+        color: var(--muted);
+        word-break: break-all;
+      }
+
+      #debug-stage {
+        position: relative;
+        background: #0b0d12;
+        border: 1px solid var(--panel-border);
+        border-radius: 10px;
+        overflow: hidden;
+        min-height: 520px;
+      }
+
+      #debug-game {
+        width: 100%;
+        height: 100%;
+      }
+
+      #debug-overlay-root {
+        position: absolute;
+        inset: 0;
+        pointer-events: auto;
+      }
+
+      @media (max-width: 900px) {
+        #debug-body {
+          grid-template-columns: 1fr;
+        }
+      }
+    </style>
+  </head>
+  <body>
+    <div id="debug-root">
+      <header id="debug-header">
+        <div class="title">Student Debug Sandbox</div>
+        <div id="debug-current">Select a student profile</div>
+      </header>
+      <div id="debug-body">
+        <aside id="debug-sidebar">
+          <div class="section">
+            <div class="section-title">Profiles</div>
+            <div id="debug-list"></div>
+          </div>
+          <div class="section">
+            <div class="section-title">How to use</div>
+            <ol class="steps">
+              <li>Start the dev server.</li>
+              <li>Open <code>debug.html?student=Kyle</code> (or <code>?profile=Kyle</code>).</li>
+              <li>Edit <code>src/student/Kyle/debug.ts</code>.</li>
+              <li>Reload to see changes.</li>
+            </ol>
+          </div>
+          <div class="section">
+            <div class="section-title">Status</div>
+            <div id="debug-status">No student selected.</div>
+            <div id="debug-url"></div>
+          </div>
+        </aside>
+        <main id="debug-stage">
+          <div id="debug-game"></div>
+          <div id="debug-overlay-root"></div>
+        </main>
+      </div>
+    </div>
+    <script type="module" src="/src/debug.ts"></script>
+  </body>
+</html>
