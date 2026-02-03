@@ -3852,12 +3852,50 @@ private initTileAtlasAndInstallTilemapHook() {
 
     // Build atlas once
     this.tileAtlas = buildTileAtlas(this);
+    this._publishInventoryIconMeta();
 
     // Install net hook for tilemap messages
     this._tilemap_installNetTilemapHandler();
 
     // Apply any pending cached tilemap (if the net layer received one before we installed the handler)
     this._tilemap_applyPendingCachedNetTilemapIfAny();
+}
+
+private _publishInventoryIconMeta(): void {
+    try {
+        const atlas = this.tileAtlas;
+        if (!atlas) return;
+
+        const keys = Array.isArray(atlas.allTextureKeys) ? atlas.allTextureKeys : [];
+        let coinKey =
+            keys.find((k) => k === "tiles.coins") ||
+            keys.find((k) => k.startsWith("tiles.coins")) ||
+            keys.find((k) => k.includes("coins")) ||
+            "";
+        if (!coinKey) return;
+
+        const info = atlas.getSheetInfo(coinKey);
+        const url = atlas.getSheetUrl(coinKey);
+        if (!info || !url) return;
+
+        const g: any = globalThis as any;
+        if (!g) return;
+        const prev = (g.__heInventoryIcons && typeof g.__heInventoryIcons === "object") ? g.__heInventoryIcons : {};
+        g.__heInventoryIcons = {
+            ...prev,
+            coins: {
+                url,
+                frameW: info.frameW | 0,
+                frameH: info.frameH | 0,
+                cols: info.cols | 0,
+                rows: info.rows | 0,
+                frameCol: 0,
+                frameRow: 0,
+            },
+        };
+    } catch {
+        // silent
+    }
 }
 
 

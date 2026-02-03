@@ -1218,7 +1218,8 @@
         letter-spacing: 0.2px;
         text-align: right;
       }
-      #hud-you-slot.hud-coins-angry {
+      #hud-you-slot.hud-coins-angry,
+      #hud-you-coins.hud-coins-angry {
         color: #ff4b4b;
         text-shadow: 0 0 6px rgba(255, 75, 75, 0.85);
         animation: hud-coins-angry 0.35s ease-in-out 2;
@@ -1555,38 +1556,121 @@
       #relic-bar {
         grid-column: 2;
         grid-row: 2;
-        display: flex;
-        align-items: center;
-        gap: 8px;
-        padding: 6px 8px;
+        display: grid;
+        grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+        align-items: stretch;
+        gap: 0;
+        padding: 0;
         box-sizing: border-box;
         height: 100%;
 
-        background: rgba(18, 18, 22, 0.92);
-        border: 2px solid #000;
-        border-radius: 10px;
-        box-shadow: 0 0 0 2px rgba(255, 255, 255, 0.18);
+        background: transparent;
+        border: 0;
+        border-radius: 0;
+        box-shadow: none;
         overflow: hidden;
       }
 
-      #relic-bar .relic-bar-title {
-        font-size: 10px;
+      .relic-panel {
+        position: relative;
+        display: flex;
+        align-items: stretch;
+        min-width: 0;
+        height: 100%;
+        padding: 0;
+        box-sizing: border-box;
+        border: 2px solid rgba(255, 255, 255, 0.18);
+        border-radius: 0;
+        background: linear-gradient(
+          to bottom,
+          rgba(255, 255, 255, 0.10),
+          rgba(255, 255, 255, 0.02)
+        );
+        box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.55);
+        overflow: hidden;
+      }
+
+      .relic-panel-title {
+        position: absolute;
+        top: -1px;
+        left: 4px;
+        font-size: 9px;
         font-weight: 800;
         letter-spacing: 0.2px;
+        text-transform: uppercase;
         color: var(--txt);
+        line-height: 1;
         text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
-        white-space: nowrap;
+        pointer-events: none;
+        z-index: 2;
       }
 
       #relic-bar .relic-bar-box {
         display: flex;
-        align-items: center;
+        align-items: flex-start;
         gap: 6px;
         flex: 1 1 auto;
         min-width: 0;
+        height: 100%;
+        flex-wrap: wrap;
+        align-content: flex-start;
         overflow-x: auto;
         overflow-y: hidden;
-        padding: 2px 0;
+        padding: 0;
+        justify-content: flex-start;
+      }
+
+      .inventory-items {
+        display: flex;
+        align-items: flex-start;
+        justify-content: flex-start;
+        gap: 6px;
+        flex: 1 1 auto;
+        min-width: 0;
+        height: 100%;
+        flex-wrap: wrap;
+        align-content: flex-start;
+        overflow: hidden;
+        padding: 0;
+      }
+
+      .inventory-entry {
+        display: inline-flex;
+        align-items: center;
+        gap: 2px;
+      }
+
+      .inventory-slot {
+        width: 28px;
+        height: 28px;
+        border-radius: 6px;
+        background: rgba(24, 24, 30, 0.75);
+        border: 1px solid rgba(0, 0, 0, 0.9);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.12);
+        display: inline-flex;
+        align-items: center;
+        justify-content: center;
+      }
+
+      .inventory-icon {
+        width: 26px;
+        height: 26px;
+        border-radius: 6px;
+        background-color: rgba(0, 0, 0, 0.35);
+        box-shadow: inset 0 0 0 1px rgba(255, 255, 255, 0.14);
+        background-repeat: no-repeat;
+        image-rendering: pixelated;
+      }
+
+      .inventory-count {
+        font-size: 12px;
+        font-weight: 800;
+        color: var(--txt);
+        font-variant-numeric: tabular-nums;
+        letter-spacing: 0;
+        text-shadow: 1px 1px 0 rgba(0, 0, 0, 0.85);
+        min-width: 0;
+        text-align: left;
       }
 
       #buffs-panel {
@@ -1972,7 +2056,7 @@
   grid-template-rows: auto 1fr;
   gap: var(--hud-gap);
   box-sizing: border-box;
-  padding: var(--hud-gap);
+  padding: var(--hud-gap) var(--hud-gap) 0 var(--hud-gap);
   border: 2px solid rgba(0, 0, 0, 0.9);
   border-radius: 14px;
   background: #0b0b0d;
@@ -2372,8 +2456,21 @@
             </div>
           </div>
           <div id="relic-bar" aria-hidden="true">
-            <div class="relic-bar-title">Relics:</div>
-            <div class="xp-relics-box relic-bar-box" id="xp-relics-box"></div>
+            <div class="relic-panel relic-panel-relics">
+              <div class="relic-panel-title">Relics</div>
+              <div class="xp-relics-box relic-bar-box" id="xp-relics-box"></div>
+            </div>
+            <div class="relic-panel relic-panel-inventory" id="inventory-bar">
+              <div class="relic-panel-title">Inventory</div>
+              <div class="inventory-items" id="inventory-items">
+                <div class="inventory-entry inventory-coin">
+                  <div class="inventory-slot" id="hud-you-coins">
+                    <div class="inventory-icon" id="inventory-coin-icon" aria-hidden="true"></div>
+                  </div>
+                  <div class="inventory-count" id="inventory-coin-count">0</div>
+                </div>
+              </div>
+            </div>
           </div>
           <div id="relic-tooltip" aria-hidden="true"></div>
           <div id="weapon-tooltip" aria-hidden="true"></div>
@@ -2744,6 +2841,10 @@
           youManaLabel: document.getElementById("hud-you-mana-label"),
           youManaRate: document.getElementById("hud-you-mana-rate"),
           youCoins: document.getElementById("hud-you-coins"),
+          inventoryBar: document.getElementById("inventory-bar"),
+          inventoryItems: document.getElementById("inventory-items"),
+          inventoryCoinIcon: document.getElementById("inventory-coin-icon"),
+          inventoryCoinCount: document.getElementById("inventory-coin-count"),
           loadBtn: document.getElementById("hud-load-btn"),
           loadNote: document.getElementById("hud-load-note"),
           dumpBtn: document.getElementById("hud-dump-btn"),
@@ -3465,7 +3566,7 @@
           const localPid = getPid ? (getPid() | 0) : 0;
           if (localPid > 0 && localPid !== pid) return;
         }
-        const el = R.youSlot || R.youCoins;
+        const el = R.youCoins || R.youSlot;
         if (!el) return;
         el.classList.remove("hud-coins-angry");
         void el.offsetWidth;
@@ -5648,7 +5749,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
 
         let _hud_weaponRenderKey = "";
 
-        function _hud_weaponIconStyle(icon, sizePx) {
+        function _hud_weaponIconStyle(icon, sizePx, allowUpscale) {
           if (!icon || !icon.url) return "";
           const frameW = Math.max(1, icon.frameW | 0);
           const frameH = Math.max(1, icon.frameH | 0);
@@ -5658,7 +5759,8 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const atlasH = Math.max(1, (icon.atlasH | 0) || sheetH);
           const size = Math.max(1, sizePx | 0);
           const zoom = (typeof icon.zoom === "number" && isFinite(icon.zoom) && icon.zoom > 0) ? icon.zoom : 1;
-          const baseScale = Math.min(1, size / frameW, size / frameH);
+          const baseScaleRaw = Math.min(size / frameW, size / frameH);
+          const baseScale = allowUpscale ? baseScaleRaw : Math.min(1, baseScaleRaw);
           const scale = Math.max(0.01, Math.min(3, baseScale * zoom));
           const bgW = Math.max(1, Math.round(atlasW * scale));
           const bgH = Math.max(1, Math.round(atlasH * scale));
@@ -5688,6 +5790,41 @@ function _readTeamCoins(pid, hero, spritesNS) {
           const offY = Math.round(-viewY * scale);
           const url = String(icon.url || "");
           return `background-image:url('${url}'); background-size:${bgW}px ${bgH}px; background-position:${offX}px ${offY}px;`;
+        }
+
+        function _hud_applyInventoryCoinIcon() {
+          const iconEl = R.inventoryCoinIcon;
+          if (!iconEl || iconEl.dataset.heIconApplied === "1") return;
+          const metaAll = (window.__heInventoryIcons && typeof window.__heInventoryIcons === "object") ? window.__heInventoryIcons : null;
+          const meta = metaAll ? metaAll.coins : null;
+          if (!meta || !meta.url) return;
+
+          const frameW = Math.max(1, meta.frameW | 0);
+          const frameH = Math.max(1, meta.frameH | 0);
+          const cols = Math.max(1, meta.cols | 0);
+          const rows = Math.max(1, meta.rows | 0);
+          const frameCol = (meta.frameCol | 0) || 0;
+          const frameRow = (meta.frameRow | 0) || 0;
+          const zoom = (typeof meta.zoom === "number" && isFinite(meta.zoom)) ? meta.zoom : 1;
+          const style = _hud_weaponIconStyle({
+            url: String(meta.url || ""),
+            frameW,
+            frameH,
+            sheetW: frameW * cols,
+            sheetH: frameH * rows,
+            atlasW: frameW * cols,
+            atlasH: frameH * rows,
+            frameCol,
+            frameRow,
+            focusX: 0.5,
+            focusY: 0.5,
+            zoom,
+          }, 26, true);
+
+          if (style) {
+            iconEl.setAttribute("style", style);
+            iconEl.dataset.heIconApplied = "1";
+          }
         }
 
         function _hud_renderWeapons(boxEl, snap) {
@@ -5720,7 +5857,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             const bonus = String(w.bonusDesc || "");
             const rarity = String(w.rarity || "");
             const showBonus = bonus && bonus !== desc;
-            const style = _hud_weaponIconStyle(w.icon || null, iconSize);
+            const style = _hud_weaponIconStyle(w.icon || null, iconSize, false);
             const iconCls = style ? "" : "weapon-empty";
             const nameEsc = _hud_escapeAttr(name);
             const slotEsc = _hud_escapeAttr(slotShort);
@@ -5756,7 +5893,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             setText(R.youManaRate, "");
             if (R.youMana) R.youMana.classList.remove("hud-mana-flash");
             if (R.youManaRate) R.youManaRate.classList.remove("hud-regen-boost");
-            setText(R.youCoins, "");
+            if (R.inventoryCoinCount) setText(R.inventoryCoinCount, "0");
 
             renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aCost, R.aElem, null);
             renderMoveV2(null, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bCost, R.bElem, null);
@@ -5784,7 +5921,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             setText(R.youManaRate, "");
             if (R.youMana) R.youMana.classList.remove("hud-mana-flash");
             if (R.youManaRate) R.youManaRate.classList.remove("hud-regen-boost");
-            setText(R.youCoins, "");
+            if (R.inventoryCoinCount) setText(R.inventoryCoinCount, "0");
 
             renderMoveV2(null, R.boxA, R.aNote, R.aRaw, R.aKind, R.aDmg, R.aReach, R.aTime, R.aStatus, R.aCost, R.aElem, null);
             renderMoveV2(null, R.boxB, R.bNote, R.bRaw, R.bKind, R.bDmg, R.bReach, R.bTime, R.bStatus, R.bCost, R.bElem, null);
@@ -5827,9 +5964,12 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
 
           const coinsActual = _readTeamCoins(pid, hero, spritesNS);
-          const coinsShown = _hud_readAnimatedCoins(coinsActual, R.youCoins);
-          setText(R.youSlot, `${EMOJI.coin} ${coinsShown}`);
-          setText(R.youCoins, "");
+          const coinsShown = _hud_readAnimatedCoins(coinsActual, R.youCoins || R.youSlot);
+          const coinsDisplayRaw = Math.max(0, coinsShown | 0);
+          const coinsDisplay = coinsDisplayRaw > 999 ? "999+" : String(coinsDisplayRaw);
+          setText(R.youSlot, `${EMOJI.coin} ${coinsDisplay}`);
+          if (R.inventoryCoinCount) setText(R.inventoryCoinCount, coinsDisplay);
+          _hud_applyInventoryCoinIcon();
 
 
           // --- XP / Level (per-hero) ---

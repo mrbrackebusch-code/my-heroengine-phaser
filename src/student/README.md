@@ -29,6 +29,11 @@ Rules
 - Logging must be behind debug flags in src/debugFlags.ts.
 - Keep an index.ts in your folder; it is auto-discovered.
 
+GitHub usernames (PR guard)
+- Alan: kindalqn
+- Daniel: dmaradia
+- Jason: Scooperd00per
+
 Student debug flags (safe to edit)
 - Use `src/student/studentDebugOverrides.ts` to toggle curated debug logs without touching core.
 - Flip booleans to true/false, then rebuild/reload.
@@ -43,6 +48,18 @@ Student debug flags (safe to edit)
   - trapLogs -> trap prompt/effect logs
   - shrineOverlayLogs -> shrine overlay logs
 
+Student debug sandbox (blank canvas)
+- Start the dev server, then open: debug.html?student=<Name> (or ?profile=<Name>)
+- Your optional debug entry file is: src/student/<Name>/debug.ts
+- The debug page auto-discovers students from src/student/*/index.ts (no registration needed).
+- This page does not boot the full game; it is a blank sandbox canvas.
+- Export either:
+  - default function (ctx) { ... } OR
+  - const studentDebug = { preload, create, update }
+- Use ctx.api.assets.register* to queue assets in preload; use ctx.api.ui.createOverlay for DOM.
+- Helpers available: ctx.api.helpers.addLabel, addPlaceholderHero, addGrid, spawnHero, spawnProfileHero.
+- If you want types, import from src/studentSystemsHooks.ts (allowed).
+
 Debug start floor (per-student)
 - In your `src/student/<Name>/index.ts`, inside your system register, call:
   - `api.debug.setStartFloor({ enabled: true, floorIndex: 1, kind: "shop" })`
@@ -55,4 +72,4 @@ Entry point
 - Your system entry file is src/student/<Name>/index.ts.
 - Use src/studentSdk.ts for registration and safe hooks.
 
-If you need new hooks or APIs, ask the maintainer.
+If you need new hooks or APIs, add them to src/student/<Name>/<Name>Needs.md and ask the maintainer.

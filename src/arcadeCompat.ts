@@ -13249,6 +13249,7 @@ function _effectEnsureSpriteMask(nativeAny: any, maskNative: any): boolean {
     const lastType = nativeAny.__effectPaintMaskType;
     const lastMask = nativeAny.__effectPaintMaskSpriteId;
     if (lastType === "sprite" && lastMask === maskId && nativeAny.__effectPaintMask) {
+        try { (nativeAny.__effectPaintMask as any).invertAlpha = wantInvert; } catch { }
         try { nativeAny.setMask?.(nativeAny.__effectPaintMask); } catch { }
         nativeAny.__effectMaskFailReason = "";
         return true;
@@ -13258,6 +13259,7 @@ function _effectEnsureSpriteMask(nativeAny: any, maskNative: any): boolean {
 
     try {
         const mask = maskImg.createBitmapMask();
+        try { (mask as any).invertAlpha = wantInvert; } catch { }
         nativeAny.setMask(mask);
         nativeAny.__effectPaintMask = mask;
         nativeAny.__effectPaintMaskType = "sprite";
