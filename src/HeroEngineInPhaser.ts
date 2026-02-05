@@ -4,6 +4,7 @@ import { Grid as PFGrid, AStarFinder as PFAStarFinder, DiagonalMovement as PFDia
 import { MONSTER_AURA_FEET } from "./generated/monsterAuraFeet";
 import { auraKey } from "./auraConfig";
 import { getAuraMaskFrameView } from "./auraMaskBits";
+import { HOOKSHOT_THRUST_FRAMES, type HookshotWeaponFrame } from "./generated/hookshotWeaponMeta";
 import { listWeaponSheetsForModel, listWeaponVariants } from "./weaponAtlas";
 import { WEAPON_ATLAS_DATA } from "./generated/weaponAtlasMeta";
 import { WEAPON_MASTER_FRAMES, WEAPON_MASTER_SHEET } from "./generated/weaponMasterMeta";
@@ -3575,12 +3576,52 @@ function _agiCometElementTexturePick(element: number, dir: string): { skinId: st
     return pick;
 }
 
+function _effectSpriteHasFrameSource(s: Sprite): boolean {
+    const native: any = s ? (s as any).native : null;
+    const frame: any = native ? native.frame : null;
+    const source: any = frame ? frame.source : null;
+    return !!(source && source.image);
+}
+
 function _agiSquareCometFillHide(proj: Sprite): void {
     if (!proj) return;
     const fx = sprites.readDataSprite(proj, AGI_SQUARE_COMET_FILL_FX_KEY);
     if (fx && !(fx.flags & sprites.Flag.Destroyed)) {
         fx.setFlag(SpriteFlag.Invisible, true);
+        sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, null as any);
     }
+}
+
+function _agiSquareCometLayerToWeapon(
+    hero: Sprite,
+    fx: Sprite,
+    fillFx?: Sprite | null
+): void {
+    if (!hero || !fx) return;
+    const heroDepth = ((hero.y | 0) * WORLD_DEPTH_Y_SCALE) + ((hero.z | 0));
+    fx.z = (heroDepth - ((fx.y | 0) * WORLD_DEPTH_Y_SCALE)) | 0;
+    if (fillFx && !(fillFx.flags & sprites.Flag.Destroyed)) {
+        fillFx.z = (heroDepth - ((fillFx.y | 0) * WORLD_DEPTH_Y_SCALE)) | 0;
+    }
+    try {
+        const g: any = globalThis as any;
+        const sc: any = g ? g.__phaserScene : null;
+        const dl: any = sc?.sys?.displayList;
+        const nativeHero: any = (hero as any).native;
+        const nativeFx: any = (fx as any).native;
+        if (dl && nativeHero && nativeFx) {
+            if (typeof dl.moveAbove === "function") dl.moveAbove(nativeFx, nativeHero);
+            const fg = (nativeHero as any).__weaponFg;
+            if (fg && typeof dl.moveBelow === "function") dl.moveBelow(nativeFx, fg);
+            if (fillFx) {
+                const nativeFill: any = (fillFx as any).native;
+                if (nativeFill) {
+                    if (typeof dl.moveAbove === "function") dl.moveAbove(nativeFill, nativeFx);
+                    if (fg && typeof dl.moveBelow === "function") dl.moveBelow(nativeFill, fg);
+                }
+            }
+        }
+    } catch { /* ignore */ }
 }
 
 function _ensureAgilitySquareCometFillFx(
@@ -3593,6 +3634,18 @@ function _ensureAgilitySquareCometFillFx(
     const pick = _agiCometElementTexturePick(element | 0, dir || "");
     let fx = sprites.readDataSprite(proj, AGI_SQUARE_COMET_FILL_FX_KEY);
     if (!pick || !pick.skinId) {
+        if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.setFlag(SpriteFlag.Invisible, true);
+        return null;
+    }
+    const atlas = _getEffectAtlasAny();
+    const resolved = atlas ? _resolveEffectEntry(atlas, pick.skinId, pick.dir || "") : null;
+    const g: any = globalThis as any;
+    const sc: any = g ? g.__phaserScene : null;
+    if (!resolved || !sc || !sc.textures || !sc.textures.exists(resolved.textureKey)) {
+        if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.setFlag(SpriteFlag.Invisible, true);
+        return null;
+    }
+    if (!_effectSpriteHasFrameSource(maskFx)) {
         if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.setFlag(SpriteFlag.Invisible, true);
         return null;
     }
@@ -3873,6 +3926,8 @@ function _updateAgilityCometFx(
     if (preActive && preT <= 0) {
         fx.setFlag(SpriteFlag.Invisible, true);
         _setAgilityCometAurasVisible(fx, false);
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY);
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY);
         return;
     }
 
@@ -3899,6 +3954,8 @@ function _updateAgilityCometFx(
     if (alpha <= 0.01 || scale <= 0.01) {
         fx.setFlag(SpriteFlag.Invisible, true);
         _setAgilityCometAurasVisible(fx, false);
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY);
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY);
         return;
     }
 
@@ -4151,6 +4208,8 @@ function _updateAgilitySquareCometFx(
     if (preActive && preT <= 0) {
         fx.setFlag(SpriteFlag.Invisible, true);
         _agiSquareCometFillHide(proj);
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY);
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY);
         if (_agiSquareCometShouldLog(fx, nowMs | 0)) {
             console.log(
                 "[AGI][COMET][SQUARE] skip=pre_t0 hero=" + (heroIndex | 0) +
@@ -4163,9 +4222,6 @@ function _updateAgilitySquareCometFx(
     const tipDist = _agiCometTipDistance(sBack, sFront, maxLen, reelT);
     const baseTipX = anchorX + nx * tipDist;
     const baseTipY = anchorY + ny * tipDist;
-
-    const moveAngle = Math.atan2(ny, nx);
-    const rot = _strengthArcNormalizeAngle(moveAngle - AGI_COMET_SW_BASE_ANGLE);
 
     const growNorm = Math.max(0, Math.min(1, growthT / Math.max(0.0001, AGI_COMET_GROW_END_T)));
     const growEase = Math.pow(growNorm, AGI_COMET_GROW_EXP);
@@ -4185,6 +4241,8 @@ function _updateAgilitySquareCometFx(
     if (alpha <= 0.01 || scale <= 0.01) {
         fx.setFlag(SpriteFlag.Invisible, true);
         _agiSquareCometFillHide(proj);
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY);
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY);
         if (_agiSquareCometShouldLog(fx, nowMs | 0)) {
             console.log(
                 "[AGI][COMET][SQUARE] skip=alpha_scale hero=" + (heroIndex | 0) +
@@ -4207,12 +4265,12 @@ function _updateAgilitySquareCometFx(
         rawFrame = pick(AGI_SQUARE_COMET_GROW_RAW, t);
     } else if (partRaw === "forward") {
         const t = (partProgRaw > 0) ? partT : Math.max(0, Math.min(1, growthT));
-        rawFrame = pick([3, 4], t);
+        rawFrame = pick([2, 3], t);
     } else if (partRaw === "landing") {
         const t = (partProgRaw > 0) ? partT : Math.max(0, Math.min(1, reelT));
-        rawFrame = pick(AGI_SQUARE_COMET_REEL_RAW, t);
+        rawFrame = pick([4, 5, 6, 1], t);
     } else {
-        if (reelT > 0) rawFrame = pick(AGI_SQUARE_COMET_REEL_RAW, Math.max(0, Math.min(1, reelT)));
+        if (reelT > 0) rawFrame = pick([4, 5, 6, 1], Math.max(0, Math.min(1, reelT)));
         else rawFrame = pick(AGI_SQUARE_COMET_GROW_RAW, Math.max(0, Math.min(1, growthT)));
     }
 
@@ -4226,13 +4284,28 @@ function _updateAgilitySquareCometFx(
     let weaponTipX = hero.x;
     let weaponTipY = hero.y;
     if (info) {
-        baseX = hero.x + (info.offX || 0);
-        baseY = hero.y + (info.offY || 0);
-        const lead = _weaponLeadingEdgeForFrameIndex(info, STR_WPN_AURA_OUTLINE_RADIUS | 0, nx, ny, 0);
-        if (Number.isFinite(lead) && lead > 0) {
-            weaponLen = Math.round(lead);
-            weaponTipX = baseX + nx * weaponLen;
-            weaponTipY = baseY + ny * weaponLen;
+        let usedMaskAxis = false;
+        const axis = _weaponAxisFromMask(info, nx, ny);
+        if (axis) {
+            baseX = hero.x + axis.x0;
+            baseY = hero.y + axis.y0;
+            weaponTipX = hero.x + axis.x1;
+            weaponTipY = hero.y + axis.y1;
+            const axisLen = Math.hypot(axis.x1 - axis.x0, axis.y1 - axis.y0);
+            if (axisLen > 0) {
+                weaponLen = Math.round(axisLen);
+                usedMaskAxis = true;
+            }
+        }
+        if (!usedMaskAxis) {
+            baseX = hero.x + (info.offX || 0);
+            baseY = hero.y + (info.offY || 0);
+            const lead = _weaponLeadingEdgeForFrameIndex(info, STR_WPN_AURA_OUTLINE_RADIUS | 0, nx, ny, 0);
+            if (Number.isFinite(lead) && lead > 0) {
+                weaponLen = Math.round(lead);
+                weaponTipX = baseX + nx * weaponLen;
+                weaponTipY = baseY + ny * weaponLen;
+            }
         }
     }
     if (weaponLen <= 0) {
@@ -4263,6 +4336,14 @@ function _updateAgilitySquareCometFx(
         }
     }
     if (weaponLen <= 0) weaponLen = 1;
+    let moveAngle = Math.atan2(ny, nx);
+    const axisDx = weaponTipX - baseX;
+    const axisDy = weaponTipY - baseY;
+    if (Number.isFinite(axisDx) && Number.isFinite(axisDy)) {
+        const aLen = Math.hypot(axisDx, axisDy);
+        if (aLen > 0.001) moveAngle = Math.atan2(axisDy, axisDx);
+    }
+    const rot = _strengthArcNormalizeAngle(moveAngle - AGI_COMET_SW_BASE_ANGLE);
     const tailOffset = _agiCometTailOffsetForRaw(AGI_SQUARE_COMET_SKIN_ID, rawFrame | 0);
     const axisScale =
         _agiCometAxisScaleForWeaponLenWithTail(tipOffset, tailOffset, weaponLen) ||
@@ -4277,7 +4358,8 @@ function _updateAgilitySquareCometFx(
     sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, alpha)));
     sprites.setDataNumber(fx, EFFECT_FLIP_X_DATA_KEY, 0);
     sprites.setDataNumber(fx, EFFECT_FLIP_Y_DATA_KEY, 0);
-    const elemTint = _elementTintForMode(_heroBodyEffectElement(hero, element | 0) | 0, "offense") | 0;
+    const elem = _heroBodyEffectElement(hero, element | 0) | 0;
+    const elemTint = _elementTintForMode(elem, "offense") | 0;
 
     const dirOff = _agiCometAlignDirOffset(nx, ny, true);
     const sideX = -ny;
@@ -4311,15 +4393,13 @@ function _updateAgilitySquareCometFx(
 
     fx.x = tipX;
     fx.y = tipY;
-    fx.z = (hero.z | 0) + (AGI_SQUARE_COMET_Z_BIAS | 0);
     fx.setFlag(SpriteFlag.Invisible, false);
 
     const fillDir = _enemyDirFromVector(nx, ny);
-    const fillFx = _ensureAgilitySquareCometFillFx(proj, fx, element | 0, fillDir);
+    const fillFx = _ensureAgilitySquareCometFillFx(proj, fx, elem | 0, fillDir);
     if (fillFx && !(fillFx.flags & sprites.Flag.Destroyed)) {
         fillFx.x = tipX;
         fillFx.y = tipY;
-        fillFx.z = (fx.z | 0) - 1;
         fillFx.setFlag(SpriteFlag.Invisible, false);
         sprites.setDataNumber(fillFx, EFFECT_ROT_DATA_KEY, rot);
         sprites.setDataNumber(fillFx, EFFECT_SCALE_DATA_KEY, scale);
@@ -4331,6 +4411,8 @@ function _updateAgilitySquareCometFx(
         if (elemTint) sprites.setDataNumber(fx, EFFECT_TINT_DATA_KEY, elemTint | 0);
         else sprites.setDataNumber(fx, EFFECT_TINT_DATA_KEY, 0);
     }
+
+    _agiSquareCometLayerToWeapon(hero, fx, fillFx || null);
 
     _updateWeaponAxisDebugForHero(heroIndex | 0, hero, baseX, baseY, nx, ny, weaponLen | 0);
     _updateCometAxisDebugForFx(
@@ -4916,7 +4998,7 @@ const AGI_COMET_FX_KEY = "agiCometFx";
 const AGI_SQUARE_COMET_FX_KEY = "agiSquareCometFx";
 const AGI_SQUARE_COMET_FILL_FX_KEY = "agiSquareCometFillFx";
 const AGI_COMET_Z_BIAS = 18;
-const AGI_SQUARE_COMET_Z_BIAS = 5000;
+const AGI_SQUARE_COMET_Z_BIAS = 1;
 const AGI_COMET_ALPHA = 0.8;
 const AGI_SQUARE_COMET_ALPHA = 1;
 const AGI_COMET_PREACTIVE_ALPHA = 0.28;
@@ -4971,7 +5053,7 @@ const AGI_HOOK_COMET_FORWARD_RAW = [3, 4, 5];
 const AGI_HOOK_COMET_HOLD_RAW = [5];
 const AGI_HOOK_COMET_REEL_RAW = [2, 1, 6];
 const AGI_SQUARE_COMET_SKIN_ID = "SquareComet";
-const AGI_SQUARE_COMET_GROW_RAW = [0, 1, 7, 2];
+const AGI_SQUARE_COMET_GROW_RAW = [8, 0, 1, 7];
 const AGI_SQUARE_COMET_HOLD_RAW = [4];
 const AGI_SQUARE_COMET_REEL_RAW = [5, 6];
 const AGI_SQUARE_COMET_RAW_OFFSET_DY: { [raw: number]: number } = {};
@@ -5035,11 +5117,15 @@ const WPN_DOWN_FORCE_SIDE_SIGN = -1;
 const WPN_AURA_DEBUG_COLORS = [2, 7, 9, 14]; // r0..r3 overlay colors
 const WPN_AURA_DEBUG_Z_BOOST = 5000;
 const WPN_TIP_DEBUG_MIN_SIZE = 256;
+const WPN_TIP_DEBUG_MAX_SIZE = 768;
 const AGI_WPN_AXIS_DEBUG_SPR_KEY = "__agiWpnAxisDbg";
 const AGI_COMET_AXIS_DEBUG_SPR_KEY = "__agiCometAxisDbg";
+const AGI_HOOK_WPN_AXIS_DEBUG_SPR_KEY = "__agiHookWpnAxisDbg";
 const AGI_AXIS_DEBUG_MIN_SIZE = 16;
+const AGI_AXIS_DEBUG_MAX_SIZE = 512;
 const AGI_WPN_AXIS_DEBUG_COLOR = 2;
 const AGI_COMET_AXIS_DEBUG_COLOR = 9;
+const AGI_HOOK_WPN_AXIS_DEBUG_COLOR = 4;
 const HERO_AURA_SIDE_PAD_PX = 2;
 const HERO_AURA_SIDE_RADIUS_PAD = 1;
 const WPN_TRACE_ID_KEY = "__wpnTraceId";
@@ -5048,6 +5134,27 @@ let __wpnTraceSeq = 0;
 const __wpnTraceLogOnce: { [k: string]: 1 } = Object.create(null);
 const _elementTintCache: { [k: string]: number } = Object.create(null);
 const __agiCometAxisCache: { [k: string]: { frameW: number; frameH: number; axisX: number; axisY: number; axisPxX: number; axisPxY: number; axisSrc: string } } = Object.create(null);
+const __hookshotFrameByIndex: { [k: number]: HookshotWeaponFrame } = (() => {
+    const out: { [k: number]: HookshotWeaponFrame } = Object.create(null);
+    for (const f of HOOKSHOT_THRUST_FRAMES) {
+        const idx = f.frameIndex | 0;
+        if (!(idx in out)) out[idx] = f;
+    }
+    return out;
+})();
+const __hookshotFrameByWeaponVariant: { [k: string]: HookshotWeaponFrame } = (() => {
+    const out: { [k: string]: HookshotWeaponFrame } = Object.create(null);
+    for (const f of HOOKSHOT_THRUST_FRAMES) {
+        const wid = String(f.weaponId || "").trim().toLowerCase();
+        const v = String((f as any).variant || "").trim().toLowerCase();
+        if (!wid) continue;
+        const key = `${wid}|${v}`;
+        if (!(key in out)) out[key] = f;
+        const anyKey = `${wid}|*`;
+        if (!(anyKey in out)) out[anyKey] = f;
+    }
+    return out;
+})();
 
 function _getEffectAtlasAny(): any {
     const g: any = globalThis as any;
@@ -5226,6 +5333,15 @@ function _strengthArcResolveVariantSkin(baseId: string, dir: string, variant: st
     const useDir = String(dir || "").trim().toLowerCase();
     const baseNorm = baseId.includes("_") ? baseId.replace(/_/g, " ") : baseId;
     const baseCandidates = baseNorm && baseNorm !== baseId ? [baseNorm, baseId] : [baseId];
+    const findSizedVariant = (prefix: string): string => {
+        if (!atlas || !prefix) return "";
+        const needle = `${prefix} `;
+        for (const key of Object.keys(atlas)) {
+            if (!key.startsWith(needle)) continue;
+            if (/\d+x\d+$/i.test(key)) return key;
+        }
+        return "";
+    };
 
     if (!atlas) {
         const base = baseCandidates[0];
@@ -5241,8 +5357,16 @@ function _strengthArcResolveVariantSkin(baseId: string, dir: string, variant: st
         if (dirInfixId && _resolveEffectEntry(atlas, dirInfixId, "")) {
             return { skinId: dirInfixId };
         }
+        const sizedDirInfix = dirInfixId ? findSizedVariant(dirInfixId) : "";
+        if (sizedDirInfix && _resolveEffectEntry(atlas, sizedDirInfix, "")) {
+            return { skinId: sizedDirInfix };
+        }
         if (variantId && _resolveEffectEntry(atlas, variantId, useDir)) {
             return { skinId: variantId, dir: useDir || undefined };
+        }
+        const sizedVariant = variantId ? findSizedVariant(variantId) : "";
+        if (sizedVariant && _resolveEffectEntry(atlas, sizedVariant, useDir)) {
+            return { skinId: sizedVariant, dir: useDir || undefined };
         }
         if (_resolveEffectEntry(atlas, base, useDir)) {
             return { skinId: base, dir: useDir || undefined };
@@ -14056,6 +14180,7 @@ const HALL_DEMO_FADE_MS = 0
 const HALL_MASK_DENSITY_K = 16
 const HALL_MASK_DENSITY_GAMMA = 0.85
 const HALL_MASK_OUTLINE_ALPHA_MIN = 0
+const HALL_MASK_OCCLUDE_ALPHA_MIN = 12
 const HALL_MASK_UNION_UPDATE_MIN_MS = 60
 const HALL_MASK_UNION_ROT_EPS_RAD = 0.005
 const HALL_MASK_UNION_OUTLINE_EVERY = 2
@@ -20343,16 +20468,16 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
             const clusterY = (yTop2 + 40) | 0
             const clusterX = (baseX | 0)
             const dustRiseStart = (nowMs | 0)
-            const frontTag = "hall/dust/cluster/3|mask"
+            const dustRiseMs = HALL_DUST_RISE_MS | 0
             const clusterCfg = [
                 // Center (largest): steady rise/fall, no stagger.
-                { dxFrac: 0, dyFrac: 0.22, regionScale: 1.0, riseMs: 3000, riseOffsetMs: 0, endY: 0.7, endX: 1.2, riseSteps: [1], riseEasePow: 1, rotDeg: 0, fillOffset: 0, maskScaleMult: 1, maskFpsMult: 3.5, maskFrameOffset: 0, maskFlipX: false, maskFlipY: false },
+                { dxFrac: 0, dyFrac: 0.22, regionScale: 1.0, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 1, rotDeg: 0, fillOffset: 0, maskScaleMult: 1, maskFpsMult: 0.35, maskFrameOffset: 0, maskFlipX: false, maskFlipY: false, riseJitterPct: 0, riseJitterPhase: 0 },
                 // Left (larger) explodes early, then eases.
-                { dxFrac: -0.35, dyFrac: 0.10, regionScale: 0.7, riseMs: 3200, riseOffsetMs: 120, endY: 0.7, endX: 1.2, riseSteps: [50, 10, 20, 20], riseEasePow: 3, rotDeg: 0, fillOffset: 7, maskScaleMult: 1, maskFpsMult: 3.0, maskFrameOffset: 8, maskFlipX: false, maskFlipY: false },
+                { dxFrac: -0.35, dyFrac: 0.10, regionScale: 0.7, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 7, maskScaleMult: 1, maskFpsMult: 0.42, maskFrameOffset: 8, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.03, riseJitterPhase: 0.8 },
                 // Right (medium) explodes later, with a top burst.
-                { dxFrac: 0.30, dyFrac: 0.14, regionScale: 0.55, riseMs: 3400, riseOffsetMs: 520, endY: 0.7, endX: 1.2, riseSteps: [18, 14, 40, 28], riseEasePow: 3, rotDeg: 0, fillOffset: 13, maskScaleMult: 1, maskFpsMult: 2.6, maskFrameOffset: 16, maskFlipX: false, maskFlipY: false },
+                { dxFrac: 0.30, dyFrac: 0.14, regionScale: 0.55, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 13, maskScaleMult: 1, maskFpsMult: 0.4, maskFrameOffset: 16, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.04, riseJitterPhase: 2.1 },
                 // Front small (top) pops last.
-                { dxFrac: 0.20, dyFrac: 0.30, regionScale: 0.35, riseMs: 3600, riseOffsetMs: 900, endY: 0.7, endX: 1.2, riseSteps: [16, 16, 28, 40], riseEasePow: 3, rotDeg: 0, fillOffset: 19, maskScaleMult: 1.0, maskFpsMult: 2.2, maskFrameOffset: 24, maskFlipX: false, maskFlipY: false },
+                { dxFrac: 0.20, dyFrac: 0.30, regionScale: 0.35, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 19, maskScaleMult: 1.0, maskFpsMult: 0.38, maskFrameOffset: 24, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.05, riseJitterPhase: 3.7 },
             ]
             for (let i = 0; i < clusterCfg.length; i++) {
                 const c = clusterCfg[i]
@@ -20376,20 +20501,23 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
                     hideGeometry: false,
                     dustRise: true,
                     dustFade: false,
-                    dustRiseStartMs: (dustRiseStart + (c as any).riseOffsetMs) | 0,
+                    dustRiseStartMs: (dustRiseStart | 0),
                     dustRiseMs: c.riseMs,
                     dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
                     dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
                     dustRiseEndScaleX: c.endX,
                     dustRiseEndScaleY: c.endY,
-                    dustRiseSteps: (c as any).riseSteps,
+                    dustRiseScaleMult: c.regionScale,
                     dustRiseEasePow: (c as any).riseEasePow,
+                    dustRiseJitterPct: (c as any).riseJitterPct,
+                    dustRiseJitterPhase: (c as any).riseJitterPhase,
                     dustCenterX: clusterX,
                     dustCenterY: clusterY,
                     dustOffsetX: dx,
                     dustOffsetY: dy,
                     borderPerMask: true,
                     borderAlpha: 1,
+                    borderTint: 0xffffff,
                     borderOutlinePx: 1,
                     borderOutlineAlphaMin: HALL_DUST_BORDER_ALPHA_MIN,
                     maskRotateSpeedRadPerMs: 0,
@@ -20414,56 +20542,140 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
                     maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_MIN
                 })
             }
-            // Ensure back layers are occluded by the front (small) layer, including outlines.
-            const frontMask = _dunEffectsHallFx.find((fx) => {
+            // Ensure back layers are occluded by any front layers (all clusters above in depth).
+            const clusterMasks: Record<number, Sprite> = Object.create(null)
+            const clusterIndices: number[] = []
+            for (let i = 0; i < _dunEffectsHallFx.length; i++) {
+                const fx = _dunEffectsHallFx[i]
+                if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
                 const tag = sprites.readDataString(fx, "__hallTag") || ""
-                return tag === frontTag
-            })
-            let frontOcclude: Sprite | null = null
-            if (frontMask) {
-                const existing = sprites.readDataSprite(frontMask, "__hallOccludeMask")
-                if (existing && !(existing.flags & sprites.Flag.Destroyed)) {
-                    frontOcclude = existing as any
-                } else {
-                    const baseSkin = (sprites.readDataString(frontMask, "effectSkin") || "").trim() || CLOUD_GEOMETRY_SKIN_ID
-                    const occludeSkin = _ensureMaskAlphaFloorSkin(baseSkin, 1, 1)
-                    const occluder = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
-                    occluder.setFlag(SpriteFlag.Ghost, true)
-                    occluder.setFlag(SpriteFlag.Invisible, true)
-                    sprites.setDataString(occluder, "__hallTag", "hall/dust/cluster/occlude")
-                    sprites.setDataNumber(occluder, "__hallFollowMaskId", (frontMask.id | 0))
-                    occluder.x = frontMask.x
-                    occluder.y = frontMask.y
-                    occluder.z = 1005
-                    const fpsRaw = sprites.readDataNumber(frontMask, EFFECT_FPS_DATA_KEY)
-                    const occludeOpts: EffectApplyOpts = {
-                        alpha: 1,
-                        scale: 1,
-                        blend: "normal",
-                        forceTop: true,
-                        repeat: -1,
-                        fps: _vfxTweakFps(Number.isFinite(fpsRaw) && fpsRaw > 0 ? Number(fpsRaw) : 8),
-                        mode: "full"
+                const m = /^hall\/dust\/cluster\/(\d+)\|mask$/.exec(tag)
+                if (!m || !m[1]) continue
+                const idx = Number(m[1]) | 0
+                if (!(idx >= 0)) continue
+                clusterMasks[idx] = fx
+                clusterIndices.push(idx)
+            }
+            if (clusterIndices.length) {
+                clusterIndices.sort((a, b) => a - b)
+                for (let i = 0; i < clusterIndices.length; i++) {
+                    const idx = clusterIndices[i]
+                    const backMask = clusterMasks[idx]
+                    if (!backMask) continue
+                    const frontMasks: Sprite[] = []
+                    for (let j = i + 1; j < clusterIndices.length; j++) {
+                        const fidx = clusterIndices[j]
+                        const fm = clusterMasks[fidx]
+                        if (fm) frontMasks.push(fm)
                     }
-                    applyEffectToSprite(occluder, occludeSkin, occludeOpts)
-                    _dunEffectsHallFx.push(occluder)
-                    sprites.setDataSprite(frontMask, "__hallOccludeMask", occluder as any)
-                    frontOcclude = occluder
-                }
-                for (let i = 0; i < _dunEffectsHallFx.length; i++) {
-                    const fx = _dunEffectsHallFx[i]
-                    if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
-                    const tag = sprites.readDataString(fx, "__hallTag") || ""
-                    if (!tag.startsWith("hall/dust/cluster/")) continue
-                    if (tag.startsWith("hall/dust/cluster/3")) continue
-                    // Only occlude outlines; fills must keep their own masks for correct cropping.
-                    if (tag.indexOf("|mask-outline") < 0 && tag.indexOf("|mask2-outline") < 0) continue
-                    sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, (frontOcclude || frontMask) as any)
-                    sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 1)
-                    const native: any = (fx as any).native
-                    if (native) {
-                        try { native.__effectMaskInvert = true } catch { }
-                        try { native.setData?.(EFFECT_MASK_INVERT_DATA_KEY, 1) } catch { }
+                    const anyFx: any = backMask as any
+                    const g: any = (globalThis as any)
+                    const sc = g ? g.__phaserScene : null
+                    const atlas = _getEffectAtlasAny()
+                    if (sc && sc.textures && atlas) {
+                        const skin = (sprites.readDataString(backMask, "effectSkin") || "").trim()
+                        const dir = (sprites.readDataString(backMask, "effectDir") || "").trim()
+                        const resolved = skin ? _resolveEffectEntry(atlas, skin, dir || "") : null
+                        const fw = resolved ? (resolved.frameW | 0) : 0
+                        const fh = resolved ? (resolved.frameH | 0) : 0
+                        if (fw > 0 && fh > 0) {
+                            if (!anyFx.__hallMaskOcclude) {
+                                const outKey = `effects.hallocclude.${(backMask.id | 0)}.${fw}x${fh}`
+                                const canvasTex = sc.textures.exists(outKey)
+                                    ? sc.textures.get(outKey)
+                                    : sc.textures.createCanvas(outKey, fw, fh)
+                                if (canvasTex) {
+                                    const ctx = canvasTex.getContext()
+                                    const tmp1 = document.createElement("canvas")
+                                    tmp1.width = fw
+                                    tmp1.height = fh
+                                    const tmp2 = document.createElement("canvas")
+                                    tmp2.width = fw
+                                    tmp2.height = fh
+                                    const tctx1 = tmp1.getContext("2d", { willReadFrequently: true } as any)
+                                    const tctx2 = tmp2.getContext("2d", { willReadFrequently: true } as any)
+                                    if (ctx && tctx1 && tctx2) {
+                                        try { ctx.clearRect(0, 0, fw, fh) } catch { }
+                                        canvasTex.refresh()
+                                        const maskImage = sc.add.image(backMask.x, backMask.y, canvasTex.key)
+                                        maskImage.setVisible(false)
+                                        maskImage.setOrigin(0.5, 0.5)
+                                        ;(maskImage as any).__heMaskNativeOverride = maskImage
+                                        const frontKey = `effects.hallocclude.front.${(backMask.id | 0)}.${fw}x${fh}`
+                                        const frontTex = sc.textures.exists(frontKey)
+                                            ? sc.textures.get(frontKey)
+                                            : sc.textures.createCanvas(frontKey, fw, fh)
+                                        const frontCtx = frontTex ? frontTex.getContext() : null
+                                        if (frontCtx && frontTex) {
+                                            try { frontCtx.clearRect(0, 0, fw, fh) } catch { }
+                                            frontTex.refresh()
+                                        }
+                                        const borderKey = `effects.hallocclude.border.${(backMask.id | 0)}.${fw}x${fh}`
+                                        const borderTex = sc.textures.exists(borderKey)
+                                            ? sc.textures.get(borderKey)
+                                            : sc.textures.createCanvas(borderKey, fw, fh)
+                                        const borderCtx = borderTex ? borderTex.getContext() : null
+                                        if (borderCtx && borderTex) {
+                                            try { borderCtx.clearRect(0, 0, fw, fh) } catch { }
+                                            borderTex.refresh()
+                                        }
+                                        const frontMaskImage = frontTex ? sc.add.image(backMask.x, backMask.y, frontTex.key) : null
+                                        if (frontMaskImage) {
+                                            frontMaskImage.setVisible(false)
+                                            frontMaskImage.setOrigin(0.5, 0.5)
+                                            ;(frontMaskImage as any).__heMaskNativeOverride = frontMaskImage
+                                        }
+                                        const frontMaskSprite = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+                                        frontMaskSprite.setFlag(SpriteFlag.Ghost, true)
+                                        frontMaskSprite.setFlag(SpriteFlag.Invisible, true)
+                                        frontMaskSprite.x = backMask.x
+                                        frontMaskSprite.y = backMask.y
+                                        ;(frontMaskSprite as any).__heMaskNativeOverride = frontMaskImage
+                                        const borderMaskImage = borderTex ? sc.add.image(backMask.x, backMask.y, borderTex.key) : null
+                                        if (borderMaskImage) {
+                                            borderMaskImage.setVisible(false)
+                                            borderMaskImage.setOrigin(0.5, 0.5)
+                                            ;(borderMaskImage as any).__heMaskNativeOverride = borderMaskImage
+                                        }
+                                        const borderMaskSprite = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+                                        borderMaskSprite.setFlag(SpriteFlag.Ghost, true)
+                                        borderMaskSprite.setFlag(SpriteFlag.Invisible, true)
+                                        borderMaskSprite.x = backMask.x
+                                        borderMaskSprite.y = backMask.y
+                                        ;(borderMaskSprite as any).__heMaskNativeOverride = borderMaskImage
+                                        anyFx.__hallMaskOcclude = {
+                                            canvasTex,
+                                            ctx,
+                                            tmp1,
+                                            tmp2,
+                                            tctx1,
+                                            tctx2,
+                                            frameW: fw,
+                                            frameH: fh,
+                                            src1: backMask,
+                                            src2List: frontMasks.slice(),
+                                            maskImage,
+                                            frontCanvasTex: frontTex,
+                                            frontCtx,
+                                            frontMaskImage,
+                                            frontMaskSprite,
+                                            borderCanvasTex: borderTex,
+                                            borderCtx,
+                                            borderMaskImage,
+                                            borderMaskSprite
+                                        }
+                                        if (frontMasks.length) {
+                                            anyFx.__heMaskNativeOverride = maskImage
+                                        }
+                                    }
+                                }
+                            } else if (anyFx.__hallMaskOcclude) {
+                                anyFx.__hallMaskOcclude.src2List = frontMasks.slice()
+                                if (frontMasks.length && anyFx.__hallMaskOcclude.maskImage) {
+                                    anyFx.__heMaskNativeOverride = anyFx.__hallMaskOcclude.maskImage
+                                }
+                            }
+                        }
                     }
                 }
             }
@@ -20843,6 +21055,8 @@ type DebugCloudConfig = {
     dustRiseEndScaleX?: number
     dustRiseEndScaleY?: number
     dustRiseScaleMult?: number
+    dustRiseJitterPct?: number
+    dustRiseJitterPhase?: number
     fillFrameOffset?: number
     regionMinW?: number
     regionMinH?: number
@@ -21073,6 +21287,9 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         _applySmokeAnim(maskOpts, (cfg.smokeAnim || "alive") as any)
         if (cloudTint) maskOpts.tint = cloudTint | 0
         applyEffectToSprite(mfx, maskSkin, maskOpts)
+        if (CLOUD_GEOMETRY_SKIN_ID) {
+            sprites.setDataString(mfx, "__hallOccSkin", CLOUD_GEOMETRY_SKIN_ID)
+        }
         if (Number.isFinite(cfg.maskFrameOffset)) {
             const atlas = _getEffectAtlasAny()
             const resolved = atlas ? _resolveEffectEntry(atlas, maskSkin, "") : null
@@ -21126,6 +21343,8 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         if (Number.isFinite(cfg.dustRiseEndScaleX)) sprites.setDataNumber(maskFx, "__hallDustRiseEndScaleX", Number(cfg.dustRiseEndScaleX))
         if (Number.isFinite(cfg.dustRiseEndScaleY)) sprites.setDataNumber(maskFx, "__hallDustRiseEndScaleY", Number(cfg.dustRiseEndScaleY))
         if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(maskFx, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
+        if (Number.isFinite(cfg.dustRiseJitterPct)) sprites.setDataNumber(maskFx, "__hallDustRiseJitterPct", Number(cfg.dustRiseJitterPct))
+        if (Number.isFinite(cfg.dustRiseJitterPhase)) sprites.setDataNumber(maskFx, "__hallDustRiseJitterPhase", Number(cfg.dustRiseJitterPhase))
         sprites.setDataNumber(maskFx, "__hallDustCenterX", dcx)
         sprites.setDataNumber(maskFx, "__hallDustCenterY", dcy)
         sprites.setDataNumber(maskFx, "__hallDustOffsetX", dox)
@@ -21154,6 +21373,8 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         if (Number.isFinite(cfg.dustRiseEndScaleX)) sprites.setDataNumber(maskFx2, "__hallDustRiseEndScaleX", Number(cfg.dustRiseEndScaleX))
         if (Number.isFinite(cfg.dustRiseEndScaleY)) sprites.setDataNumber(maskFx2, "__hallDustRiseEndScaleY", Number(cfg.dustRiseEndScaleY))
         if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(maskFx2, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
+        if (Number.isFinite(cfg.dustRiseJitterPct)) sprites.setDataNumber(maskFx2, "__hallDustRiseJitterPct", Number(cfg.dustRiseJitterPct))
+        if (Number.isFinite(cfg.dustRiseJitterPhase)) sprites.setDataNumber(maskFx2, "__hallDustRiseJitterPhase", Number(cfg.dustRiseJitterPhase))
         sprites.setDataNumber(maskFx2, "__hallDustCenterX", dcx)
         sprites.setDataNumber(maskFx2, "__hallDustCenterY", dcy)
         sprites.setDataNumber(maskFx2, "__hallDustOffsetX", dox)
@@ -21167,7 +21388,7 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
             : _pickEnemyPaletteBright(cfg.paletteKey || "earth")
         const outlinePx = Math.max(1, (cfg.borderOutlinePx | 0) || 1)
         const outlineMin = Number.isFinite(cfg.borderOutlineAlphaMin) ? (cfg.borderOutlineAlphaMin as number) : 0
-        const outlineSkin = _ensureOutlineMaskSkin(CLOUD_GEOMETRY_SKIN_ID, outlinePx, outlineMin)
+        const outlineSkin = _ensureOutlineMaskSkin(maskSkin, outlinePx, outlineMin)
         const makeOutline = (tagSuffix: string, followMask: Sprite | null, rotSpeed?: number, rotBase?: number, fpsMult?: number, wobbleAmp?: number, wobblePeriod?: number): void => {
             const ofx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
             ofx.setFlag(SpriteFlag.Ghost, true)
@@ -21175,6 +21396,11 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
             sprites.setDataNumber(ofx, "__hallSpawnX", cx | 0)
             sprites.setDataNumber(ofx, "__hallSpawnY", cy | 0)
             if (followMask) sprites.setDataNumber(ofx, "__hallFollowMaskId", (followMask.id | 0))
+            if (followMask) {
+                sprites.setDataString(followMask, "__hallBorderOutlineSkin", outlineSkin)
+                sprites.setDataNumber(followMask, "__hallBorderOutlineMin", outlineMin)
+                sprites.setDataNumber(followMask, "__hallBorderOutlinePx", outlinePx)
+            }
             ofx.x = cx | 0
             ofx.y = cy | 0
             ofx.z = 1100
@@ -21203,6 +21429,8 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
                 if (Number.isFinite(cfg.dustRiseEndScaleX)) sprites.setDataNumber(ofx, "__hallDustRiseEndScaleX", Number(cfg.dustRiseEndScaleX))
                 if (Number.isFinite(cfg.dustRiseEndScaleY)) sprites.setDataNumber(ofx, "__hallDustRiseEndScaleY", Number(cfg.dustRiseEndScaleY))
                 if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(ofx, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
+                if (Number.isFinite(cfg.dustRiseJitterPct)) sprites.setDataNumber(ofx, "__hallDustRiseJitterPct", Number(cfg.dustRiseJitterPct))
+                if (Number.isFinite(cfg.dustRiseJitterPhase)) sprites.setDataNumber(ofx, "__hallDustRiseJitterPhase", Number(cfg.dustRiseJitterPhase))
                 if (Number.isFinite(cfg.dustCenterX)) sprites.setDataNumber(ofx, "__hallDustCenterX", Number(cfg.dustCenterX))
                 if (Number.isFinite(cfg.dustCenterY)) sprites.setDataNumber(ofx, "__hallDustCenterY", Number(cfg.dustCenterY))
                 if (Number.isFinite(cfg.dustOffsetX)) sprites.setDataNumber(ofx, "__hallDustOffsetX", Number(cfg.dustOffsetX))
@@ -21213,9 +21441,10 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
                 scale: maskScale,
                 blend: "normal",
                 forceTop: true,
+                forceVisible: true,
                 repeat: -1,
                 fps: _vfxTweakFps(8),
-                mode: "outline"
+                mode: "projectile"
             }
             _applySmokeAnim(opts, (cfg.smokeAnim || "alive") as any)
             if (borderTint) opts.tint = borderTint | 0
@@ -21350,7 +21579,7 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
             forceTop: true,
             repeat: -1,
             fps: _vfxTweakFps(8),
-            mode: "full"
+            mode: "projectile"
         }
         _applySmokeAnim(borderOpts, (cfg.smokeAnim || "alive") as any)
         if (borderTint) borderOpts.tint = borderTint | 0
@@ -23399,8 +23628,18 @@ function _dunTickEffectsHall(nowMs: number): void {
                 }
             }
             const easePowRaw = sprites.readDataNumber(fx, "__hallDustRiseEasePow")
-            const easePow = Number.isFinite(easePowRaw) && easePowRaw > 0 ? Number(easePowRaw) : 3
-            const t = 1 - Math.pow(1 - tRaw, easePow)
+            const easePow = Number.isFinite(easePowRaw) && easePowRaw > 0 ? Number(easePowRaw) : 2
+            const tBase = 1 - Math.pow(1 - tRaw, easePow)
+            let t = tBase
+            const jitterRaw = sprites.readDataNumber(fx, "__hallDustRiseJitterPct")
+            if (Number.isFinite(jitterRaw) && (jitterRaw as number) !== 0) {
+                const jitter = Math.max(-0.2, Math.min(0.2, Number(jitterRaw)))
+                const phaseRaw = sprites.readDataNumber(fx, "__hallDustRiseJitterPhase")
+                const phase = Number.isFinite(phaseRaw) ? Number(phaseRaw) : 0
+                const envelope = Math.sin(Math.PI * tRaw)
+                const wobble = Math.sin(phase + (tRaw * Math.PI * 2))
+                t = Math.max(0, Math.min(1, tBase + (jitter * envelope * wobble)))
+            }
             const startSxRaw = sprites.readDataNumber(fx, "__hallDustRiseStartScaleX")
             const startSyRaw = sprites.readDataNumber(fx, "__hallDustRiseStartScaleY")
             const endSxRaw = sprites.readDataNumber(fx, "__hallDustRiseEndScaleX")
@@ -23492,8 +23731,10 @@ function _dunTickEffectsHall(nowMs: number): void {
                     if ((now - (lastUnion | 0)) < unionMs) continue
                     sprites.setDataNumber(fx, "__hallUnionUpdateAt", now | 0)
                     const resolveFrame = (s: Sprite, native: any): any => {
-                        const skin = (sprites.readDataString(s, "effectSkin") || "").trim()
-                        const dir = (sprites.readDataString(s, "effectDir") || "").trim()
+                        const occSkin = (sprites.readDataString(s, "__hallOccSkin") || "").trim()
+                        const occDir = (sprites.readDataString(s, "__hallOccDir") || "").trim()
+                        const skin = (occSkin || (sprites.readDataString(s, "effectSkin") || "")).trim()
+                        const dir = (occDir || (sprites.readDataString(s, "effectDir") || "")).trim()
                         if (!skin) return null
                         const resolved = _resolveEffectEntry(atlas, skin, dir || "")
                         if (!resolved) return null
@@ -23669,9 +23910,11 @@ function _dunTickEffectsHall(nowMs: number): void {
                         sprites.setDataNumber(src1, "__hallUnionOutMaxX", outlineCount > 0 ? outMaxX : -1)
                         sprites.setDataNumber(src1, "__hallUnionOutMaxY", outlineCount > 0 ? outMaxY : -1)
                     }
+                    const pos1x = Number.isFinite(n1.x) ? Number(n1.x) : src1.x
+                    const pos1y = Number.isFinite(n1.y) ? Number(n1.y) : src1.y
                     if (union.maskImage) {
-                        union.maskImage.x = src1.x
-                        union.maskImage.y = src1.y
+                        union.maskImage.x = pos1x
+                        union.maskImage.y = pos1y
                         union.maskImage.rotation = 0
                         const sx = (Number(n1.scaleX ?? 1) * (fw / Math.max(1, uw)))
                         const sy = (Number(n1.scaleY ?? 1) * (fh / Math.max(1, uh)))
@@ -23679,13 +23922,250 @@ function _dunTickEffectsHall(nowMs: number): void {
                         union.maskImage.setAlpha(1)
                     }
                     if (union.outlineImage) {
-                        union.outlineImage.x = src1.x
-                        union.outlineImage.y = src1.y
+                        union.outlineImage.x = pos1x
+                        union.outlineImage.y = pos1y
                         union.outlineImage.rotation = 0
                         const sx = (Number(n1.scaleX ?? 1) * (fw / Math.max(1, uw)))
                         const sy = (Number(n1.scaleY ?? 1) * (fh / Math.max(1, uh)))
                         union.outlineImage.setScale(sx, sy)
                         union.outlineImage.setAlpha(Number.isFinite(union.outlineImage.alpha) ? union.outlineImage.alpha : 1)
+                    }
+                } catch { }
+            }
+        }
+
+        const occlude: any = (fx as any).__hallMaskOcclude
+        if (occlude && occlude.ctx && occlude.tctx1 && occlude.tctx2 && occlude.src1 && occlude.frameW && occlude.frameH) {
+            const src1 = occlude.src1 as Sprite
+            const src2List: Sprite[] = Array.isArray(occlude.src2List)
+                ? (occlude.src2List as Sprite[])
+                : (occlude.src2 ? [occlude.src2 as Sprite] : [])
+            const n1: any = src1 && (src1 as any).native
+            const atlas = _getEffectAtlasAny()
+            const g2: any = globalThis as any
+            const sc = g2 ? g2.__phaserScene : null
+            if (atlas && sc && n1) {
+                try {
+                    const lastOcclude = sprites.readDataNumber(fx, "__hallOccludeUpdateAt") || 0
+                    const occFps = sprites.readDataNumber(src1, EFFECT_FPS_DATA_KEY)
+                    const occMs = (Number.isFinite(occFps) && (occFps as number) > 0)
+                        ? Math.max(HALL_MASK_UNION_UPDATE_MIN_MS, Math.round(1000 / Math.max(1, occFps)))
+                        : HALL_MASK_UNION_UPDATE_MIN_MS
+                    if ((now - (lastOcclude | 0)) < occMs) continue
+                    sprites.setDataNumber(fx, "__hallOccludeUpdateAt", now | 0)
+                    const resolveFrame = (s: Sprite, native: any): any => {
+                        const skin = (sprites.readDataString(s, "effectSkin") || "").trim()
+                        const dir = (sprites.readDataString(s, "effectDir") || "").trim()
+                        if (!skin) return null
+                        const resolved = _resolveEffectEntry(atlas, skin, dir || "")
+                        if (!resolved) return null
+                        const frameIndex = sprites.readDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY)
+                        const frameIndexRaw = sprites.readDataNumber(s, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY) | 0
+                        const nativeFrame = native && native.frame ? (native.frame.name ?? native.frame.index ?? null) : null
+                        const frameId = _heResolveFrameIdForTrace(resolved, nativeFrame, frameIndex, frameIndexRaw)
+                        if (frameId == null) return null
+                        const tex = sc.textures.get(resolved.textureKey)
+                        const f = tex ? tex.get(frameId | 0) : null
+                        if (!f || !f.source || !f.source.image) return null
+                        return { resolved, frame: f, img: f.source.image, frameId: frameId | 0 }
+                    }
+                    const r1 = resolveFrame(src1, n1)
+                    if (!r1) continue
+                    const frontEntries: Array<{ sprite: Sprite; native: any; resolved: any; frame: any; img: any; frameId: number }> = []
+                    for (let i = 0; i < src2List.length; i++) {
+                        const s2 = src2List[i]
+                        if (!s2 || (s2.flags & sprites.Flag.Destroyed)) continue
+                        const n2: any = (s2 as any).native
+                        if (!n2) continue
+                        const r2 = resolveFrame(s2, n2)
+                        if (!r2) continue
+                        frontEntries.push({ sprite: s2, native: n2, resolved: r2.resolved, frame: r2.frame, img: r2.img, frameId: r2.frameId | 0 })
+                    }
+                    const fw = (r1.resolved.frameW | 0) || (r1.frame.cutWidth | 0)
+                    const fh = (r1.resolved.frameH | 0) || (r1.frame.cutHeight | 0)
+                    if (fw <= 0 || fh <= 0) continue
+                    occlude.frameW = fw | 0
+                    occlude.frameH = fh | 0
+                    const pad = 0
+                    const ow = fw + (pad * 2)
+                    const oh = fh + (pad * 2)
+                    if ((occlude.tctx1.canvas.width | 0) !== (ow | 0) || (occlude.tctx1.canvas.height | 0) !== (oh | 0)) {
+                        occlude.tctx1.canvas.width = ow | 0
+                        occlude.tctx1.canvas.height = oh | 0
+                    }
+                    if ((occlude.tctx2.canvas.width | 0) !== (ow | 0) || (occlude.tctx2.canvas.height | 0) !== (oh | 0)) {
+                        occlude.tctx2.canvas.width = ow | 0
+                        occlude.tctx2.canvas.height = oh | 0
+                    }
+                    const pos1x = Number.isFinite(n1.x) ? Number(n1.x) : src1.x
+                    const pos1y = Number.isFinite(n1.y) ? Number(n1.y) : src1.y
+                    const s1x = Number.isFinite(n1.scaleX) && n1.scaleX > 0 ? Number(n1.scaleX) : 1
+                    const s1y = Number.isFinite(n1.scaleY) && n1.scaleY > 0 ? Number(n1.scaleY) : 1
+                    const rot1 = Number(n1.rotation ?? 0)
+                    const cx = ow / 2
+                    const cy = oh / 2
+                    occlude.tctx1.setTransform(1, 0, 0, 1, 0, 0)
+                    occlude.tctx1.clearRect(0, 0, ow, oh)
+                    occlude.tctx1.drawImage(r1.img, r1.frame.cutX, r1.frame.cutY, r1.frame.cutWidth, r1.frame.cutHeight, 0, 0, fw, fh)
+                    occlude.tctx2.setTransform(1, 0, 0, 1, 0, 0)
+                    occlude.tctx2.clearRect(0, 0, ow, oh)
+                    for (let i = 0; i < frontEntries.length; i++) {
+                        const fe = frontEntries[i]
+                        const n2 = fe.native
+                        const pos2x = Number.isFinite(n2.x) ? Number(n2.x) : fe.sprite.x
+                        const pos2y = Number.isFinite(n2.y) ? Number(n2.y) : fe.sprite.y
+                        const s2x = Number.isFinite(n2.scaleX) && n2.scaleX > 0 ? Number(n2.scaleX) : 1
+                        const s2y = Number.isFinite(n2.scaleY) && n2.scaleY > 0 ? Number(n2.scaleY) : 1
+                        const dxw = pos2x - pos1x
+                        const dyw = pos2y - pos1y
+                        const cosr = Math.cos(-rot1)
+                        const sinr = Math.sin(-rot1)
+                        const dxl = ((dxw * cosr) - (dyw * sinr)) / s1x
+                        const dyl = ((dxw * sinr) + (dyw * cosr)) / s1y
+                        const rx = s2x / s1x
+                        const ry = s2y / s1y
+                        const rot = Number(n2.rotation ?? 0) - rot1
+                        occlude.tctx2.save()
+                        occlude.tctx2.translate(cx + dxl, cy + dyl)
+                        if (rot) occlude.tctx2.rotate(rot)
+                        if (rx !== 1 || ry !== 1) occlude.tctx2.scale(rx, ry)
+                        const f2w = (fe.frame.cutWidth ?? fe.frame.width ?? fw) | 0
+                        const f2h = (fe.frame.cutHeight ?? fe.frame.height ?? fh) | 0
+                        occlude.tctx2.drawImage(
+                            fe.img,
+                            fe.frame.cutX,
+                            fe.frame.cutY,
+                            fe.frame.cutWidth,
+                            fe.frame.cutHeight,
+                            -f2w / 2,
+                            -f2h / 2,
+                            f2w,
+                            f2h
+                        )
+                        occlude.tctx2.restore()
+                    }
+                    if ((occlude.canvasTex && typeof occlude.canvasTex.resize === "function") && ((occlude.canvasTex.width | 0) !== (ow | 0) || (occlude.canvasTex.height | 0) !== (oh | 0))) {
+                        try { occlude.canvasTex.resize(ow | 0, oh | 0) } catch { }
+                    }
+                    const d1 = occlude.tctx1.getImageData(0, 0, ow, oh)
+                    const d2 = occlude.tctx2.getImageData(0, 0, ow, oh)
+                    const out = occlude.ctx.createImageData(ow, oh)
+                    const frontOut = (occlude.frontCtx && occlude.frontCanvasTex)
+                        ? occlude.frontCtx.createImageData(ow, oh)
+                        : null
+                    const p1 = d1.data
+                    const p2 = d2.data
+                    const po = out.data
+                    const pfo = frontOut ? frontOut.data : null
+                    const occMin = Math.max(0, Math.min(255, HALL_MASK_OCCLUDE_ALPHA_MIN | 0))
+                    for (let i = 0; i < p1.length; i += 4) {
+                        const a1 = p1[i + 3]
+                        const a2 = p2[i + 3]
+                        const a = (a1 >= occMin && a2 < occMin) ? 255 : 0
+                        po[i] = 255
+                        po[i + 1] = 255
+                        po[i + 2] = 255
+                        po[i + 3] = a
+                        if (pfo) {
+                            const fa = (a2 >= occMin) ? 255 : 0
+                            pfo[i] = 255
+                            pfo[i + 1] = 255
+                            pfo[i + 2] = 255
+                            pfo[i + 3] = fa
+                        }
+                    }
+                    occlude.ctx.putImageData(out, 0, 0)
+                    occlude.canvasTex.refresh()
+                    if (frontOut && occlude.frontCtx && occlude.frontCanvasTex) {
+                        occlude.frontCtx.putImageData(frontOut, 0, 0)
+                        occlude.frontCanvasTex.refresh()
+                    }
+                    if (occlude.borderCtx && occlude.borderCanvasTex) {
+                        try {
+                            const outlineMinRaw = sprites.readDataNumber(src1, "__hallBorderOutlineMin")
+                            const outlinePxRaw = sprites.readDataNumber(src1, "__hallBorderOutlinePx")
+                            const borderMin = Math.max(0, Math.min(255, Math.round((Number.isFinite(outlineMinRaw) ? Number(outlineMinRaw) : 0) * 255)))
+                            const t = Math.max(1, Math.min(6, (outlinePxRaw | 0) || 1))
+                            const outImg = occlude.borderCtx.createImageData(ow, oh)
+                            const po2 = outImg.data
+                            const minBack = Math.max(1, borderMin | 0)
+                            for (let y = 0; y < oh; y++) {
+                                for (let x = 0; x < ow; x++) {
+                                    const idx = ((y * ow + x) << 2)
+                                    const ba = p1[idx + 3] | 0
+                                    if (ba < minBack) continue
+                                    const fa = p2[idx + 3] | 0
+                                    if (fa >= occMin) continue
+                                    let edge = false
+                                    for (let dy = -t; dy <= t && !edge; dy++) {
+                                        const yy = y + dy
+                                        if (yy < 0 || yy >= oh) { edge = true; break }
+                                        for (let dx = -t; dx <= t; dx++) {
+                                            if (dx === 0 && dy === 0) continue
+                                            const xx = x + dx
+                                            if (xx < 0 || xx >= ow) { edge = true; break }
+                                            const nidx = ((yy * ow + xx) << 2)
+                                            const na = p1[nidx + 3] | 0
+                                            if (na < minBack) { edge = true; break }
+                                        }
+                                    }
+                                    if (!edge) continue
+                                    po2[idx] = 255
+                                    po2[idx + 1] = 255
+                                    po2[idx + 2] = 255
+                                    po2[idx + 3] = 255
+                                }
+                            }
+                            occlude.borderCtx.putImageData(outImg, 0, 0)
+                            occlude.borderCanvasTex.refresh()
+                        } catch { }
+                    }
+                    sprites.setDataNumber(src1, "__hallOccludeFrame1", r1.frameId | 0)
+                    if (occlude.maskImage) {
+                        occlude.maskImage.x = pos1x
+                        occlude.maskImage.y = pos1y
+                        occlude.maskImage.rotation = rot1
+                        const sx = s1x
+                        const sy = s1y
+                        occlude.maskImage.setScale(sx, sy)
+                        occlude.maskImage.setAlpha(1)
+                        if (!(occlude.maskImage as any).__heMaskNativeOverride) {
+                            ;(occlude.maskImage as any).__heMaskNativeOverride = occlude.maskImage
+                        }
+                    }
+                    if (occlude.frontMaskImage) {
+                        occlude.frontMaskImage.x = pos1x
+                        occlude.frontMaskImage.y = pos1y
+                        occlude.frontMaskImage.rotation = rot1
+                        const sx = s1x
+                        const sy = s1y
+                        occlude.frontMaskImage.setScale(sx, sy)
+                        occlude.frontMaskImage.setAlpha(1)
+                        if (!(occlude.frontMaskImage as any).__heMaskNativeOverride) {
+                            ;(occlude.frontMaskImage as any).__heMaskNativeOverride = occlude.frontMaskImage
+                        }
+                    }
+                    if (occlude.frontMaskSprite) {
+                        occlude.frontMaskSprite.x = pos1x
+                        occlude.frontMaskSprite.y = pos1y
+                        ;(occlude.frontMaskSprite as any).__heMaskNativeOverride = occlude.frontMaskImage
+                    }
+                    if (occlude.borderMaskImage) {
+                        occlude.borderMaskImage.x = pos1x
+                        occlude.borderMaskImage.y = pos1y
+                        occlude.borderMaskImage.rotation = rot1
+                        const sx = s1x
+                        const sy = s1y
+                        occlude.borderMaskImage.setScale(sx, sy)
+                        occlude.borderMaskImage.setAlpha(1)
+                        if (!(occlude.borderMaskImage as any).__heMaskNativeOverride) {
+                            ;(occlude.borderMaskImage as any).__heMaskNativeOverride = occlude.borderMaskImage
+                        }
+                    }
+                    if (occlude.borderMaskSprite) {
+                        occlude.borderMaskSprite.x = pos1x
+                        occlude.borderMaskSprite.y = pos1y
+                        ;(occlude.borderMaskSprite as any).__heMaskNativeOverride = occlude.borderMaskImage
                     }
                 } catch { }
             }
@@ -23701,17 +24181,57 @@ function _dunTickEffectsHall(nowMs: number): void {
         fx.x = target.x
         fx.y = target.y
         const tag = sprites.readDataString(fx, "__hallTag") || ""
-        if (tag.indexOf("|fill") >= 0 || tag.indexOf("|mask-outline") >= 0 || tag.indexOf("|mask2-outline") >= 0 || tag.indexOf("|occlude") >= 0) {
-            const isOutline = (tag.indexOf("|mask-outline") >= 0 || tag.indexOf("|mask2-outline") >= 0)
-            const isOcclude = (tag.indexOf("|occlude") >= 0)
-            let maskRef = sprites.readDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY)
-            if (!maskRef && !isOutline) {
-                sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, target as any)
-                maskRef = target as any
+            if (tag.indexOf("|fill") >= 0 || tag.indexOf("|mask-outline") >= 0 || tag.indexOf("|mask2-outline") >= 0 || tag.indexOf("|occlude") >= 0 || tag.indexOf("|border") >= 0) {
+                const isOutline = (tag.indexOf("|mask-outline") >= 0 || tag.indexOf("|mask2-outline") >= 0)
+                const isBorder = (tag.indexOf("|border") >= 0)
+                const isOcclude = (tag.indexOf("|occlude") >= 0)
+                let maskRef = sprites.readDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY)
+                const occ = (target as any).__hallMaskOcclude
+                const occMaskImg = (occ && occ.maskImage && Array.isArray(occ.src2List) && occ.src2List.length > 0)
+                    ? occ.maskImage
+                    : null
+                const occBorderSprite = (occ && occ.borderMaskSprite) ? occ.borderMaskSprite : null
+                if (occMaskImg) {
+                    ;(target as any).__heMaskNativeOverride = occMaskImg
+                } else if ((target as any).__heMaskNativeOverride === (occ ? occ.maskImage : null)) {
+                    ;(target as any).__heMaskNativeOverride = null
+                }
+                if (isBorder) {
+                    if (occBorderSprite) {
+                        if (maskRef !== occBorderSprite) {
+                            sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, occBorderSprite as any)
+                            maskRef = occBorderSprite as any
+                        }
+                        sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 0)
+                    } else if (maskRef !== target) {
+                        sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, target as any)
+                        maskRef = target as any
+                        sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 0)
+                    }
+                } else if (isOutline) {
+                    if (occBorderSprite) {
+                        if (maskRef !== occBorderSprite) {
+                            sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, occBorderSprite as any)
+                            maskRef = occBorderSprite as any
+                        }
+                        sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 0)
+                    } else if (maskRef !== target) {
+                        sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, target as any)
+                        maskRef = target as any
+                        sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 0)
+                    }
+                } else {
+                    if (!isOcclude && !maskRef && (tag.indexOf("|fill") >= 0 || isOutline)) {
+                        sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, target as any)
+                        maskRef = target as any
+                    }
+                if (!isOcclude && (tag.indexOf("|fill") >= 0 || isOutline)) {
+                    sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 0)
+                }
             }
             sprites.setDataNumber(fx, EFFECT_ROT_DATA_KEY, 0)
-            const alignSource = isOutline ? target : (maskRef || target)
-            const scaleSource = isOutline ? alignSource : (maskRef || alignSource)
+            const alignSource = (isOutline || isBorder) ? target : (maskRef || target)
+            const scaleSource = (isOutline || isBorder) ? alignSource : (maskRef || alignSource)
             const maskHasDustRise = (alignSource && (sprites.readDataNumber(alignSource, "__hallDustRise") | 0) !== 0)
             if (alignSource && maskHasDustRise) {
                 const baseScale = sprites.readDataNumber(alignSource, EFFECT_SCALE_DATA_KEY)
@@ -23797,17 +24317,37 @@ function _dunTickEffectsHall(nowMs: number): void {
                 }
             }
             const native: any = (fx as any).native
-            const maskNative: any = (target as any).native
-            if (native && maskNative && !native.__effectPaintMask && typeof maskNative.createBitmapMask === "function") {
-                try {
-                    const mask = maskNative.createBitmapMask()
-                    native.setMask(mask)
-                    native.__effectPaintMask = mask
-                    native.__effectPaintMaskType = "sprite"
-                    native.__effectPaintMaskSpriteId = (maskNative as any).__effectMaskSpriteId || (maskNative as any).name || maskNative
-                    native.__effectMaskFailReason = ""
-                } catch {
-                    try { native.__effectMaskFailReason = "mask-force-attach-failed" } catch { }
+            let maskNative: any = null
+            if (maskRef) {
+                const maskAny: any = maskRef as any
+                const override = maskAny.__heMaskNativeOverride
+                if (override && (override as any).scene) maskNative = override
+                else if (maskAny.native) maskNative = maskAny.native
+                else if (maskAny.scene) maskNative = maskAny
+            } else if (target) {
+                const targetAny: any = target as any
+                if (targetAny.native) maskNative = targetAny.native
+            }
+            if (native && maskNative && typeof maskNative.createBitmapMask === "function") {
+                const maskId = (maskNative as any).__effectMaskSpriteId || (maskNative as any).name || maskNative
+                const wantInvert = (sprites.readDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY) | 0) !== 0
+                const lastType = native.__effectPaintMaskType
+                const lastId = native.__effectPaintMaskSpriteId
+                if (lastType !== "sprite" || lastId !== maskId || !native.__effectPaintMask) {
+                    try {
+                        const mask = maskNative.createBitmapMask()
+                        if (mask) (mask as any).invertAlpha = wantInvert
+                        native.setMask(mask)
+                        native.__effectPaintMask = mask
+                        native.__effectPaintMaskType = "sprite"
+                        native.__effectPaintMaskSpriteId = maskId
+                        native.__effectMaskFailReason = ""
+                    } catch {
+                        try { native.__effectMaskFailReason = "mask-force-attach-failed" } catch { }
+                    }
+                } else if (native.__effectPaintMask) {
+                    try { (native.__effectPaintMask as any).invertAlpha = wantInvert } catch { }
+                    try { native.setMask?.(native.__effectPaintMask) } catch { }
                 }
             }
         }
@@ -58586,8 +59126,10 @@ function _ensureWeaponTipDebugSprite(
     height: number
 ): Sprite | null {
     if (!hero) return null;
-    const w = Math.max(WPN_TIP_DEBUG_MIN_SIZE | 0, width | 0);
-    const h = Math.max(WPN_TIP_DEBUG_MIN_SIZE | 0, height | 0);
+    const minSize = WPN_TIP_DEBUG_MIN_SIZE | 0;
+    const maxSize = WPN_TIP_DEBUG_MAX_SIZE | 0;
+    const w = Math.min(maxSize, Math.max(minSize, width | 0));
+    const h = Math.min(maxSize, Math.max(minSize, height | 0));
     let spr = sprites.readDataSprite(hero, HERO_DATA.WPN_TIP_DEBUG_SPR);
     if (!spr || (spr.flags & sprites.Flag.Destroyed)) {
         spr = sprites.create(image.create(w, h), SpriteKind.HeroEffect);
@@ -58618,13 +59160,13 @@ function _disposeAxisDebugSprite(owner: Sprite, key: string): void {
 
 function _ensureAxisDebugSprite(owner: Sprite, key: string, size: number, z: number): Sprite | null {
     if (!owner) return null;
-    const s = Math.max(AGI_AXIS_DEBUG_MIN_SIZE | 0, size | 0);
+    const minSize = AGI_AXIS_DEBUG_MIN_SIZE | 0;
+    const maxSize = AGI_AXIS_DEBUG_MAX_SIZE | 0;
+    const s = Math.min(maxSize, Math.max(minSize, size | 0));
     let spr = sprites.readDataSprite(owner, key);
     if (!spr || (spr.flags & sprites.Flag.Destroyed)) {
         spr = sprites.create(image.create(s, s), SpriteKind.HeroEffect);
         sprites.setDataSprite(owner, key, spr);
-    } else if (spr.image && (spr.image.width !== s || spr.image.height !== s)) {
-        spr.setImage(image.create(s, s));
     }
     spr.z = z | 0;
     spr.setFlag(SpriteFlag.Ghost, true);
@@ -58646,15 +59188,18 @@ function _updateAxisDebugLine(
     const dx = x1 - x0;
     const dy = y1 - y0;
     if (!Number.isFinite(dx) || !Number.isFinite(dy)) return;
-    const size = Math.max(AGI_AXIS_DEBUG_MIN_SIZE | 0, Math.ceil(Math.max(Math.abs(dx), Math.abs(dy))) + 6);
-    const spr = _ensureAxisDebugSprite(owner, key, size | 0, z | 0);
+    const maxSize = AGI_AXIS_DEBUG_MAX_SIZE | 0;
+    const spr = _ensureAxisDebugSprite(owner, key, maxSize | 0, z | 0);
     if (!spr || !spr.image) return;
     const img = spr.image;
     _projectileClearImage(img);
     const cx = Math.idiv(img.width, 2);
     const cy = Math.idiv(img.height, 2);
-    const hx = dx * 0.5;
-    const hy = dy * 0.5;
+    const maxSpan = Math.max(1, (Math.min(img.width, img.height) - 6) * 0.5);
+    const span = Math.max(Math.abs(dx), Math.abs(dy));
+    const scale = span > maxSpan ? (maxSpan / span) : 1;
+    const hx = dx * 0.5 * scale;
+    const hy = dy * 0.5 * scale;
     const xA = Math.round(cx - hx);
     const yA = Math.round(cy - hy);
     const xB = Math.round(cx + hx);
@@ -58662,6 +59207,131 @@ function _updateAxisDebugLine(
     img.drawLine(xA, yA, xB, yB, color | 0);
     spr.x = (x0 + x1) * 0.5;
     spr.y = (y0 + y1) * 0.5;
+}
+
+function _hookshotOverlayFrameIndexFromCarrier(spr: Sprite): number {
+    if (!spr) return -1;
+    const overlay: any = (spr as any).__heHookWeaponOverlay;
+    const frame: any = overlay ? overlay.frame : null;
+    if (!frame) return -1;
+    const raw = (frame.name !== undefined) ? frame.name : frame.index;
+    if (typeof raw === "number" && Number.isFinite(raw)) return raw | 0;
+    if (typeof raw === "string") {
+        const n = parseInt(raw, 10);
+        if (Number.isFinite(n)) return n | 0;
+    }
+    return -1;
+}
+
+function _hookshotFrameForCarrier(
+    hero: Sprite,
+    weaponId: string,
+    carrier?: Sprite | null
+): HookshotWeaponFrame | null {
+    if (carrier) {
+        const idx = _hookshotOverlayFrameIndexFromCarrier(carrier);
+        if (idx >= 0) {
+            const hit = __hookshotFrameByIndex[idx | 0];
+            if (hit) return hit;
+        }
+    }
+    const wid = String(weaponId || "").trim().toLowerCase();
+    if (!wid) return null;
+    const variant =
+        (sprites.readDataString(hero, HERO_DATA_WEAPON_AGILITY_VARIANT) || "").trim().toLowerCase() || "base";
+    return (
+        __hookshotFrameByWeaponVariant[`${wid}|${variant}`] ||
+        __hookshotFrameByWeaponVariant[`${wid}|base`] ||
+        __hookshotFrameByWeaponVariant[`${wid}|*`] ||
+        null
+    );
+}
+
+function _updateHookWeaponAxisDebugForCarrier(heroIndex: number, carrier: Sprite | null | undefined): void {
+    if (!_agiCometAlignVisEnabled(heroIndex)) {
+        if (carrier) _destroyAxisDebugSprite(carrier, AGI_HOOK_WPN_AXIS_DEBUG_SPR_KEY);
+        return;
+    }
+    if (!carrier || (carrier.flags & sprites.Flag.Destroyed)) return;
+    const overlay: any = (carrier as any).__heHookWeaponOverlay;
+    if (!overlay || !overlay.active) {
+        _destroyAxisDebugSprite(carrier, AGI_HOOK_WPN_AXIS_DEBUG_SPR_KEY);
+        return;
+    }
+    const frameIdx = _hookshotOverlayFrameIndexFromCarrier(carrier);
+    const frame = frameIdx >= 0 ? __hookshotFrameByIndex[frameIdx] : null;
+    if (!frame) {
+        _destroyAxisDebugSprite(carrier, AGI_HOOK_WPN_AXIS_DEBUG_SPR_KEY);
+        return;
+    }
+    const rot = (typeof overlay.rotation === "number" && Number.isFinite(overlay.rotation)) ? overlay.rotation : 0;
+    const buttX = Number(frame.buttX || 0);
+    const buttY = Number(frame.buttY || 0);
+    const tipX = Number(frame.tipX || 0);
+    const tipY = Number(frame.tipY || 0);
+    const dxLocal = tipX - buttX;
+    const dyLocal = tipY - buttY;
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+    const dxWorld = (dxLocal * cos) - (dyLocal * sin);
+    const dyWorld = (dxLocal * sin) + (dyLocal * cos);
+    const x0 = carrier.x;
+    const y0 = carrier.y;
+    const x1 = x0 + dxWorld;
+    const y1 = y0 + dyWorld;
+    _updateAxisDebugLine(
+        carrier,
+        AGI_HOOK_WPN_AXIS_DEBUG_SPR_KEY,
+        x0,
+        y0,
+        x1,
+        y1,
+        AGI_HOOK_WPN_AXIS_DEBUG_COLOR,
+        (carrier.z | 0) + (WPN_AURA_DEBUG_Z_BOOST | 0) + 4
+    );
+}
+
+function _weaponAxisFromMask(
+    info: WeaponFgInfo,
+    nx: number,
+    ny: number
+): { x0: number; y0: number; x1: number; y1: number } | null {
+    if (!info) return null;
+    const len = Math.hypot(nx, ny);
+    if (!(len > 0)) return null;
+    const dx = nx / len;
+    const dy = ny / len;
+    const sx = -dy;
+    const sy = dx;
+    const shape =
+        _getWeaponMaskShape(info, 0) ||
+        _getWeaponMaskShape(info, 1) ||
+        _getWeaponMaskShape(info, 2);
+    if (!shape || !shape.offsets || shape.offsets.length === 0) return null;
+    const baseLocalX = (info.offX || 0);
+    const baseLocalY = (info.offY || 0);
+    let minDot = 1e9;
+    let maxDot = -1e9;
+    let sideSum = 0;
+    let count = 0;
+    const off = shape.offsets;
+    for (let i = 0; i < off.length; i += 2) {
+        const lx = baseLocalX + off[i];
+        const ly = baseLocalY + off[i + 1];
+        const dot = (lx * dx) + (ly * dy);
+        const side = (lx * sx) + (ly * sy);
+        if (dot < minDot) minDot = dot;
+        if (dot > maxDot) maxDot = dot;
+        sideSum += side;
+        count++;
+    }
+    if (!count || minDot > maxDot) return null;
+    const sideAvg = sideSum / Math.max(1, count);
+    const x0 = (dx * minDot) + (sx * sideAvg);
+    const y0 = (dy * minDot) + (sy * sideAvg);
+    const x1 = (dx * maxDot) + (sx * sideAvg);
+    const y1 = (dy * maxDot) + (sy * sideAvg);
+    return { x0, y0, x1, y1 };
 }
 
 function _updateWeaponAxisDebugForHero(
@@ -58681,11 +59351,18 @@ function _updateWeaponAxisDebugForHero(
         _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY);
         return;
     }
-    const len = Math.max(1, weaponLen | 0);
-    const x0 = baseX;
-    const y0 = baseY;
-    const x1 = baseX + (nx * len);
-    const y1 = baseY + (ny * len);
+    const info = _getHeroWeaponFgInfo(hero);
+    const axis = info ? _weaponAxisFromMask(info, nx, ny) : null;
+    let x0 = baseX;
+    let y0 = baseY;
+    let x1 = baseX + (nx * Math.max(1, weaponLen | 0));
+    let y1 = baseY + (ny * Math.max(1, weaponLen | 0));
+    if (axis) {
+        x0 = hero.x + axis.x0;
+        y0 = hero.y + axis.y0;
+        x1 = hero.x + axis.x1;
+        y1 = hero.y + axis.y1;
+    }
     _updateAxisDebugLine(
         hero,
         AGI_WPN_AXIS_DEBUG_SPR_KEY,
@@ -62765,6 +63442,7 @@ function _agiHookRetireWeaponCarrier(st: AgiHookshotState): void {
         st.hookWeapon = null
         return
     }
+    _destroyAxisDebugSprite(spr, AGI_HOOK_WPN_AXIS_DEBUG_SPR_KEY);
     sprites.setDataString(spr, AGI_HOOK_WPN_ID_KEY, "")
     sprites.setDataString(spr, AGI_HOOK_WPN_PHASE_KEY, "")
     sprites.setDataNumber(spr, AGI_HOOK_WPN_ROTATE_KEY, 0)
@@ -63073,6 +63751,33 @@ function _agiHookHandBase(hero: Sprite, nx: number, ny: number): { x: number; y:
     return { x: hero.x + (off.ox | 0), y: hero.y + (off.oy | 0) + sideOffY }
 }
 
+function _agiHookAimBase(hero: Sprite, nx: number, ny: number): { x: number; y: number } {
+    const info = _getHeroWeaponFgInfo(hero)
+    if (info) {
+        const dirName = sprites.readDataString(hero, HERO_DATA.DIR) || sprites.readDataString(hero, "dir") || ""
+        const dirVec = _dirStringToVector(dirName)
+        let ax = (dirVec.nx | 0)
+        let ay = (dirVec.ny | 0)
+        if (ax && ay) {
+            const card = _enemyDirFromVector(ax, ay)
+            const cardVec = _dirStringToVector(card)
+            ax = cardVec.nx | 0
+            ay = cardVec.ny | 0
+        }
+        if (!ax && !ay) {
+            ax = nx
+            ay = ny
+        }
+        const axis = _weaponAxisFromMask(info, ax, ay)
+        if (axis) {
+            const cx = (axis.x0 + axis.x1) * 0.5
+            const cy = (axis.y0 + axis.y1) * 0.5
+            return { x: hero.x + cx, y: hero.y + cy }
+        }
+    }
+    return _agiHookHandBase(hero, nx, ny)
+}
+
 function _agiHookBuildSpearImage(hero: Sprite, nx: number, ny: number, heroIndex: number, element: number): {
     img: Image; minX: number; maxX: number; minY: number; maxY: number; length: number; sideHalf: number
 } {
@@ -63208,10 +63913,28 @@ function _agiHookUpdateWeaponCarrier(
     const spr = _agiHookEnsureWeaponCarrier(st, hero)
     const dirKey = AGI_HOOK_WPN_DIR_FORCE
     const buttDist = Math.max(0, (tipDist | 0) - (weaponLen | 0))
-    const buttX = baseX + nx * buttDist
-    const buttY = baseY + ny * buttDist
-    spr.x = buttX
-    spr.y = buttY
+    const origin = _agiHookAimBase(hero, nx, ny)
+    const pivotX = origin.x + nx * buttDist
+    const pivotY = origin.y + ny * buttDist
+    let carrierX = baseX + nx * buttDist
+    let carrierY = baseY + ny * buttDist
+    const frame = _hookshotFrameForCarrier(hero, weaponId, spr)
+    if (frame) {
+        const angleMdeg = _agiHookNormalizeAngleMdeg(st.aimAngleMdeg | 0)
+        const rot = ((90000 - angleMdeg) * Math.PI) / 180000
+        const buttX = Number.isFinite(frame.buttX) ? frame.buttX : 0
+        const buttY = Number.isFinite(frame.buttY) ? frame.buttY : 0
+        const cos = Math.cos(rot)
+        const sin = Math.sin(rot)
+        const dx = (buttX * cos) - (buttY * sin)
+        const dy = (buttX * sin) + (buttY * cos)
+        if (Number.isFinite(dx) && Number.isFinite(dy)) {
+            carrierX = pivotX + dx
+            carrierY = pivotY + dy
+        }
+    }
+    spr.x = carrierX
+    spr.y = carrierY
     spr.z = hero.z + (AGI_HOOKSHOT_SPEAR_Z_BIAS | 0)
     spr.setFlag(SpriteFlag.Ghost, true)
     spr.setFlag(SpriteFlag.Invisible, true)
@@ -63222,6 +63945,7 @@ function _agiHookUpdateWeaponCarrier(
     sprites.setDataNumber(spr, AGI_HOOK_WPN_ANGLE_MDEG_KEY, _agiHookNormalizeAngleMdeg(st.aimAngleMdeg | 0))
     sprites.setDataNumber(spr, AGI_HOOK_WPN_ROTATE_KEY, 1)
     sprites.setDataNumber(spr, AGI_HOOK_WPN_HERO_INDEX_KEY, heroIndex | 0)
+    _updateHookWeaponAxisDebugForCarrier(heroIndex | 0, spr);
 }
 
 function _agiHookEnsureCometSprite(st: AgiHookshotState, hero: Sprite, heroIndex: number, element: number, isGhost: boolean): Sprite {
@@ -63300,6 +64024,8 @@ function _agiHookUpdateCometSprite(
     if (preActive && preT <= 0) {
         fx.setFlag(SpriteFlag.Invisible, true)
         _setAgilityCometAurasVisible(fx, false)
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY)
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY)
         return
     }
 
@@ -63397,6 +64123,8 @@ function _agiHookUpdateCometSprite(
     if (alpha <= 0.01 || scale <= 0.01) {
         fx.setFlag(SpriteFlag.Invisible, true)
         _setAgilityCometAurasVisible(fx, false)
+        _destroyAxisDebugSprite(hero, AGI_WPN_AXIS_DEBUG_SPR_KEY)
+        _destroyAxisDebugSprite(fx, AGI_COMET_AXIS_DEBUG_SPR_KEY)
         return
     }
 
@@ -64598,7 +65326,7 @@ function updateAgilityHookshotAll(nowMs: number): void {
             const nyAim = aimDir.ny || 0
             const nxVis = visDir.nx || 1
             const nyVis = visDir.ny || 0
-            const base = _agiHookHandBase(hero, nxAim, nyAim)
+            const base = _agiHookAimBase(hero, nxAim, nyAim)
             const weaponLen = _agiHookWeaponLength(hero, nxAim, nyAim)
             const tipHalf = _agiHookTipHalf(hero, nxAim, nyAim, hi)
             const reachExtra = Math.max(0, st.reachExtra | 0)

@@ -4,7 +4,7 @@
 //   import { ... } from "../../studentSystemsHooks";
 //
 // If a student needs a missing hook, they should:
-// - Add a request to src/student/<Name>/HOOK_REQUESTS.md
+// - Add a request to src/student/<Name>/<Name>Needs.md
 // - Optionally call requestHook(...) below in their code
 //
 // Do NOT edit core files from student folders.
@@ -13,6 +13,14 @@ import { getPropSpec, registerPropSpec, type PropSpec } from "./propSpecs";
 import { PROP_VISUALS_BY_NAME, registerPropVisual } from "./tileAtlas";
 
 export * from "./studentSdk";
+export type {
+    StudentDebugApi,
+    StudentDebugContext,
+    StudentDebugDefinition,
+    StudentDebugModule,
+    StudentDebugHeroSpawnOptions,
+    StudentDebugProfileHeroOptions,
+} from "./studentDebugApi";
 
 // ---------------------------------------------------------------------------
 // Helpers
@@ -315,6 +323,44 @@ export function registerItem(def: StudentItemDefinition): string {
 
 export function listItems(): StudentItemDefinition[] {
     return listStudentItems();
+}
+
+export type InventoryItem = StudentItemDefinition;
+
+export function registerInventoryItem(def: InventoryItem): string {
+    return registerStudentItem(def);
+}
+
+export function listInventoryItems(): InventoryItem[] {
+    return listStudentItems();
+}
+
+export type InventoryHookContext = {
+    itemId?: string;
+    count?: number;
+    petId?: string;
+    hero?: any;
+    pet?: any;
+    target?: any;
+    now?: number;
+    data?: any;
+};
+
+export type InventoryHook = StudentProfileGate & {
+    onItemUse?: (ctx: InventoryHookContext) => void;
+    onPetFeed?: (ctx: InventoryHookContext) => void;
+    onPetHeal?: (ctx: InventoryHookContext) => void;
+    onPetHatch?: (ctx: InventoryHookContext) => void;
+};
+
+let _inventoryHooks: InventoryHook | null = null;
+
+export function registerInventoryHooks(hooks: InventoryHook): void {
+    _inventoryHooks = { ...hooks };
+}
+
+export function getInventoryHooks(): InventoryHook | null {
+    return _inventoryHooks ? { ..._inventoryHooks } : null;
 }
 
 export type StudentDropEntry = {
@@ -710,6 +756,152 @@ export function registerQuestHooks(hooks: QuestHooks): void {
 
 export function getQuestHooks(): QuestHooks | null {
     return _questHooks ? { ..._questHooks } : null;
+}
+
+// ---------------------------------------------------------------------------
+// Pet system (Elizabeth + Lourdes + Alan)
+// ---------------------------------------------------------------------------
+
+export type PetAnimSet = {
+    idle?: string;
+    walk?: string;
+    hurt?: string;
+    interact?: string;
+    ride?: string;
+    sit?: string;
+    climb?: string;
+    extra?: Record<string, string>;
+};
+
+export type PetAtlas = {
+    id: string;
+    textureKey: string;
+    anims?: PetAnimSet;
+    data?: any;
+};
+
+const _petAtlases = new Map<string, PetAtlas>();
+
+export function registerPetAtlas(def: PetAtlas): string {
+    return _registerInMap(_petAtlases, def);
+}
+
+export function listPetAtlases(): PetAtlas[] {
+    return _listFromMap(_petAtlases);
+}
+
+export function getPetAtlas(id: string): PetAtlas | null {
+    const key = String(id || "").trim();
+    if (!key) return null;
+    return _petAtlases.get(key) || null;
+}
+
+export type PetBehavior = {
+    id: string;
+    petId: string;
+    onSpawn?: (ctx: any) => void;
+    onUpdate?: (ctx: any) => void;
+    onDamage?: (ctx: any) => void;
+    onHeal?: (ctx: any) => void;
+    onMount?: (ctx: any) => void;
+    onUnmount?: (ctx: any) => void;
+    data?: any;
+};
+
+const _petBehaviors = new Map<string, PetBehavior>();
+
+export function registerPetBehavior(def: PetBehavior): string {
+    const id = String(def?.id || "").trim();
+    const petId = String(def?.petId || "").trim();
+    if (!id || !petId) return "";
+    _petBehaviors.set(id, { ...def, id, petId });
+    return id;
+}
+
+export function listPetBehaviors(): PetBehavior[] {
+    return _listFromMap(_petBehaviors);
+}
+
+export function listPetBehaviorsForPet(petId: string): PetBehavior[] {
+    const key = String(petId || "").trim();
+    if (!key) return [];
+    return Array.from(_petBehaviors.values()).filter((def) => def && def.petId === key);
+}
+
+export type PetStats = {
+    id: string;
+    baseHp?: number;
+    baseAtk?: number;
+    growthHp?: number;
+    growthAtk?: number;
+    maxLevel?: number;
+    data?: any;
+};
+
+const _petStats = new Map<string, PetStats>();
+
+export function registerPetStats(def: PetStats): string {
+    return _registerInMap(_petStats, def);
+}
+
+export function listPetStats(): PetStats[] {
+    return _listFromMap(_petStats);
+}
+
+export function getPetStats(id: string): PetStats | null {
+    const key = String(id || "").trim();
+    if (!key) return null;
+    return _petStats.get(key) || null;
+}
+
+export type PetAcquisition = {
+    id: string;
+    petId: string;
+    kind: "egg" | "summon" | "quest" | "drop";
+    condition?: string;
+    data?: any;
+};
+
+const _petAcquisitions = new Map<string, PetAcquisition>();
+
+export function registerPetAcquisition(def: PetAcquisition): string {
+    const id = String(def?.id || "").trim();
+    const petId = String(def?.petId || "").trim();
+    if (!id || !petId) return "";
+    _petAcquisitions.set(id, { ...def, id, petId });
+    return id;
+}
+
+export function listPetAcquisitions(): PetAcquisition[] {
+    return _listFromMap(_petAcquisitions);
+}
+
+export function listPetAcquisitionsForPet(petId: string): PetAcquisition[] {
+    const key = String(petId || "").trim();
+    if (!key) return [];
+    return Array.from(_petAcquisitions.values()).filter((def) => def && def.petId === key);
+}
+
+export type AllyDef = {
+    id: string;
+    kind: "pet" | "summon" | "monster";
+    data?: any;
+};
+
+const _allyDefs = new Map<string, AllyDef>();
+
+export function registerAlly(def: AllyDef): string {
+    return _registerInMap(_allyDefs, def);
+}
+
+export function listAllies(): AllyDef[] {
+    return _listFromMap(_allyDefs);
+}
+
+export function getAlly(id: string): AllyDef | null {
+    const key = String(id || "").trim();
+    if (!key) return null;
+    return _allyDefs.get(key) || null;
 }
 
 // ---------------------------------------------------------------------------

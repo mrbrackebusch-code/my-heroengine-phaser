@@ -1,4 +1,26 @@
 {
-  "maintainers": [],
-  "owners": {}
+  "maintainers": [
+    "mrbrackebusch-code"
+  ],
+  "owners": {
+    "dmaradia": "Daniel",
+    "Scooperd00per": "Jason",
+    "kindalqn": "Alan",
+    "gorillagorillagorillaa": "Abraham",
+    "placeholder-addisyn": "Addisyn",
+    "placeholder-angel": "Angel",
+    "GhostSparks101": "ChrisP",
+    "slushy-maker": "ChrisS",
+    "puffypenguin5043": "Cortez",
+    "placeholder-elizabeth": "Elizabeth",
+    "placeholder-esau": "Esau",
+    "hannadelamou93-lgtm": "Hanna",
+    "Jordyn352": "Jordyn",
+    "placeholder-khaliyah": "Khaliyah",
+    "nooneshome27": "Kyle",
+    "placeholder-lourdes": "Lourdes",
+    "lkdyfame": "Marcel",
+    "mehki86": "Mehki",
+    "placeholder-nixie": "Nixie"
+  }
 }

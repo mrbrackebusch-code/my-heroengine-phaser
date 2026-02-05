@@ -73,7 +73,7 @@ export const DEBUG_AGI_SQUARE_COMET_LOG_VERBOSE = false;
 export const DEBUG_AGI_COMET_ALIGN_LOGS = false;
 export const DEBUG_AGI_COMET_ALIGN_LOG_THROTTLE_MS = 160;
 export const DEBUG_AGI_COMET_ALIGN_LOG_VERBOSE = false;
-export const DEBUG_AGI_COMET_ALIGN_VIS = false; // Draw weapon bounds + tip for comet alignment debugging.
+export const DEBUG_AGI_COMET_ALIGN_VIS = true; // Draw weapon bounds + tip for comet alignment debugging.
 export const DEBUG_AGI_COMET_ALIGN_VIS_HERO_INDEX = -1; // -1 = all heroes
 export const DEBUG_AGI_COMET_ALIGN_VIS_TIP_R = 6;
 
@@ -123,9 +123,9 @@ export const DEBUG_FORCE_HALL_OF_ENEMIES = false; // Force hall floor kind for e
 export const DEBUG_EFFECTS_HALL_ON_START = false; // Start run in effects hall (debug VFX layout).
 export const DEBUG_EFFECTS_HALL_LOGS = false; // Log effects hall texture frames (debug).
 export const DEBUG_EFFECTS_HALL_TRACE = false; // Auto-capture effects hall trace samples to file.
-export const DEBUG_EFFECTS_HALL_ONLY_ROWS = false; // Only spawn the 10-row test lanes (suppress other hall effects).
+export const DEBUG_EFFECTS_HALL_ONLY_ROWS = true; // Only spawn the 10-row test lanes (suppress other hall effects).
 export const DEBUG_EFFECTS_HALL_ONLY_POISON = false; // Only spawn poison clouds in effects hall (skip dust).
-export const DEBUG_EFFECTS_HALL_ONLY_DUST = false; // Only spawn dust clouds in effects hall (skip poison).
+export const DEBUG_EFFECTS_HALL_ONLY_DUST = true; // Only spawn dust clouds in effects hall (skip poison).
 export const DEBUG_EFFECTS_HALL_FREEZE_WORLD = false; // Pause non-hall dungeon ticks while trace is active.
 export const DEBUG_EFFECTS_HALL_TRACE_LITE = false; // Set true to reduce trace payload/cost (skip heavy bounds/mask work).
 export const DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE = 0; // >0 to override trace interval (ms).
