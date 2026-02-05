@@ -14101,7 +14101,14 @@ function _syncVisibilityAndDebugTail(
     // ------------------------------------------------------------
     const shouldBeVisible = forceVisible ? true : (!hasInvisibleFlag && !autoHideByPixels && !hideBase);
     native.visible = shouldBeVisible;
-    native.alpha = shouldBeVisible ? (hasEffectAlpha ? effectAlphaNum : 1) : 0;
+    const keepAlphaWhenHidden =
+        (role === "EFFECT") && ((dataAny.__hallMaskKeepAlpha as any) | 0) !== 0;
+    if (!shouldBeVisible && keepAlphaWhenHidden) {
+        // Keep alpha for bitmap masking even though the sprite is hidden.
+        native.alpha = hasEffectAlpha ? effectAlphaNum : 1;
+    } else {
+        native.alpha = shouldBeVisible ? (hasEffectAlpha ? effectAlphaNum : 1) : 0;
+    }
 
     if (shouldLogHero) {
         console.log(

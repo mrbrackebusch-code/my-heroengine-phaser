@@ -19,6 +19,11 @@ This repository hosts a Phaser + HeroEngine integration. Keep debug/logging cent
 - Avoid touching `assets/` or `src/generated/` unless explicitly requested. If generation is needed, use the scripts in `scripts/`.
 - Keep changes scoped to the request; avoid refactors that aren’t asked for.
 
+## Student Folder Boundary (Ironclad)
+- For the maintainer and Codex: do NOT edit anything inside named student folders under `src/student/<Name>/` after initial creation unless explicitly directed to do so.
+- Top-level repo docs (e.g., `STUDENTS.md`, `STUDENT_SYSTEMS_GROUPS.md`, `copilot.md`, `DEBUG_FLAGS.md`, `AGENTS.md`) are maintainer-owned and may be edited as needed.
+- The maintainer/Codex edit surface and the student/AI edit surface are intentionally separate and must never overlap.
+
 ## Runs / Tests
 - Ask before running long or destructive commands.
 

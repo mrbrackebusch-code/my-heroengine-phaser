@@ -23,7 +23,7 @@ import { preloadHookshotThrustSheet } from "./hookshotWeaponAtlas";
 import { AURA_RADII } from "./auraConfig";
 import { preloadStudentAssets } from "./studentAssets";
 import { initStudentSystems } from "./studentSystems";
-import { applyStudentPropDefinitions } from "./studentSystemsHooks";
+import { applyStudentPropDefinitions, getStudentBossHooks, isProfileAllowed } from "./studentSystemsHooks";
 import "./studentAutoLoad";
 
 
@@ -1800,17 +1800,22 @@ async create() {
 private ensureWorldTileRenderer(atlas: TileAtlas) {
     if (this.tileRenderer) return this.tileRenderer;
 
+    const tileValueIsWall = (v: number) => {
+        return v === 1 || v === 2;
+    };
+
     const tileValueToFamily = (v: number) => {
         const g: any = globalThis as any;
         const base = (g.__floorBaseFamily as any) || "ground_light";
         const wall = (g.__floorWallFamily as any) || "chasm_light";
-        if (v === 1 || v === 2) return wall;
+        if (tileValueIsWall(v)) return wall;
         return base;
     };
 
     this.tileRenderer = new WorldTileRenderer(this, atlas, {
         debugLocal: true,
         tileValueToFamily,
+        tileValueIsWall,
     });
     try { (globalThis as any).__heTileRenderer = this.tileRenderer; } catch { }
 
@@ -2375,9 +2380,67 @@ private _startBossIntro(evt: any): void {
     const targetY = (evt?.y != null ? (evt.y | 0) : cam.midPoint?.y || 0);
     const monsterId = String(evt?.monsterId || "").trim();
 
+    const dispatchBossIntroHook = (phase: "start" | "end"): void => {
+        const hooks = getStudentBossHooks();
+        if (!hooks) return;
+        const g: any = globalThis as any;
+        const profiles: string[] = [];
+        const connected = g && g.__netProfileConnected;
+        if (connected && typeof connected === "object") {
+            for (const key of Object.keys(connected)) {
+                if (connected[key]) profiles.push(String(key || ""));
+            }
+        }
+        const local =
+            (typeof g?.__localHeroProfileName === "string" && g.__localHeroProfileName.trim())
+                ? g.__localHeroProfileName.trim()
+                : ((typeof g?.__netHelloProfile === "string" && g.__netHelloProfile.trim())
+                    ? g.__netHelloProfile.trim()
+                    : "");
+        if (!profiles.length && local) profiles.push(local);
+        const profile = profiles.length ? String(profiles[0] || "") : "";
+        let allowed = false;
+        if (profile) allowed = isProfileAllowed(hooks, profile);
+        else if (profiles.length) allowed = profiles.some((p) => isProfileAllowed(hooks, p));
+        else allowed = isProfileAllowed(hooks, "");
+        if (!allowed) return;
+
+        const floorIndex = (typeof internals.getFloorIndex === "function") ? (internals.getFloorIndex() | 0) : ((evt?.floorIndex | 0) || 0);
+        const floorKind = (typeof internals.getFloorKind === "function") ? String(internals.getFloorKind() || "") : "";
+        let nowMs = 0;
+        try {
+            const gg: any = (globalThis as any).game;
+            if (gg && typeof gg.runtime === "function") nowMs = gg.runtime() | 0;
+        } catch { }
+        if (!nowMs) nowMs = (this.time?.now | 0) || 0;
+
+        const ctx = {
+            now: nowMs | 0,
+            monsterId,
+            floorIndex,
+            floorKind,
+            x: targetX | 0,
+            y: targetY | 0,
+            profile,
+            profiles: profiles.length ? profiles.slice() : undefined,
+            data: (evt as any)?.data,
+        };
+
+        if (phase === "start") {
+            if (typeof hooks.onBossIntroStart === "function") {
+                try { hooks.onBossIntroStart(ctx); } catch { }
+            }
+        } else {
+            if (typeof hooks.onBossIntroEnd === "function") {
+                try { hooks.onBossIntroEnd(ctx); } catch { }
+            }
+        }
+    };
+
     const startBossSequence = () => {
         try { internals.setBossIntroHeroLock?.(true); } catch { }
         try { internals.setEnginePaused?.(true, "bossIntro"); } catch { }
+        dispatchBossIntroHook("start");
 
         let bossNative: any = null;
         if (monsterId) {
@@ -2422,6 +2485,7 @@ private _startBossIntro(evt: any): void {
             try { cam.stopFollow(); } catch { }
             if (restoreFollow) this._updateCameraFollowLocalHero();
             try { internals.setBossIntroHeroLock?.(false); } catch { }
+            dispatchBossIntroHook("end");
         };
 
         const getRuntimeNow = (): number => {

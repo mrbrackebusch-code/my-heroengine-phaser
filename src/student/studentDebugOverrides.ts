@@ -10,6 +10,10 @@ export type StudentDebugOverrides = {
     propInteractLogs?: boolean;
     trapLogs?: boolean;
     shrineOverlayLogs?: boolean;
+    bossOverrideMove?: boolean;
+    bossOverridePhase?: boolean;
+    bossOverrideDamage?: boolean;
+    bossOverrideSpawn?: boolean;
 };
 
 export const STUDENT_DEBUG_OVERRIDES: StudentDebugOverrides = {
@@ -21,4 +25,8 @@ export const STUDENT_DEBUG_OVERRIDES: StudentDebugOverrides = {
     propInteractLogs: false,
     trapLogs: false,
     shrineOverlayLogs: false,
+    bossOverrideMove: false,
+    bossOverridePhase: false,
+    bossOverrideDamage: false,
+    bossOverrideSpawn: false,
 };

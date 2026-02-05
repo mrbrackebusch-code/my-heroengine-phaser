@@ -120,6 +120,10 @@ Registry + helper utilities live in:
 Use it to register named presets and spawn effects through helpers rather than
 hardcoding effect spawns in gameplay code.
 
+## 8a) Core Presets (available)
+
+- `poisonCloud`: lightweight masked cloud using `smokeSoftenedTransitioned grayscale 128x128` + `waves2 texture grayscale 256x256`. Used by slime boss poison hazards.
+
 ## 9) Debug VFX Gallery
 
 Enable `DEBUG_VFX_GALLERY` (and related flags) to show a grid of effect sheets

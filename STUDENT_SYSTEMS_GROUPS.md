@@ -3,7 +3,7 @@
 This document breaks the student-facing systems into focused work groups. Each group has a clear scope, required hooks, and dependencies. Use each group as a dedicated chat topic.
 
 Group 1 (Core Hook Surface) is owned here and is the foundation for all others.
-Groups 2–9 are defined below with more exact deliverables so you can copy-paste them into separate chats.
+Groups 2–11 are defined below with more exact deliverables so you can copy-paste them into separate chats.
 
 ---
 
@@ -396,6 +396,69 @@ registerAlly(def: AllyDef): string
 - Group 2 (overlays for pet/inventory UI)
 - Group 4 (items/drops/harvestables)
 - Combat pipeline (pet/allies vs monsters)
+
+---
+
+## Group 11 — Boss Hooks + Phase Registry
+**Purpose**
+- Boss lifecycle hooks, phase registry, and debug-gated overrides for complex boss logic.
+
+**Deliverables**
+- Boss phase registry (per monsterId)
+- Boss lifecycle hooks (spawn, intro, move phases, hurt, defeat, phase changes)
+- Boss observation hooks (intro jump, move picked, barrage/poison/charge events)
+- Debug-gated overrides for move/phase/damage/spawn
+
+**Minimum API (expected)**
+```ts
+type BossPhase = {
+  id: string;
+  minHpPct?: number;
+  maxHpPct?: number;
+  moveWeights?: Record<string, number>;
+  data?: any;
+};
+
+type BossPhaseConfig = {
+  monsterId: string;
+  phases: BossPhase[];
+  defaultPhaseId?: string;
+  data?: any;
+};
+
+registerBossPhaseConfig(def: BossPhaseConfig): string
+getStudentBossPhaseConfig(monsterId: string): BossPhaseConfig | null
+
+type BossHooks = {
+  onBossSpawned?: (ctx: any) => void;
+  onBossIntroQueued?: (ctx: any) => void;
+  onBossIntroStart?: (ctx: any) => void;
+  onBossIntroEnd?: (ctx: any) => void;
+  onBossIntroJumpStart?: (ctx: any) => void;
+  onBossIntroJumpLand?: (ctx: any) => void;
+  onBossEngaged?: (ctx: any) => void;
+  onBossMovePicked?: (ctx: any) => void;
+  onBossMovePhase?: (ctx: any) => void;
+  onBossBarrageVolley?: (ctx: any) => void;
+  onBossPoisonRing?: (ctx: any) => void;
+  onBossChargeHit?: (ctx: any) => void;
+  onBossHurt?: (ctx: any) => void;
+  onBossPhaseChanged?: (ctx: any) => void;
+  onBossDefeated?: (ctx: any) => void;
+
+  // Debug-only overrides (gated by student debug flags)
+  pickBossMove?: (ctx: any) => string | null;
+  overrideBossPhase?: (ctx: any) => string | null;
+  overrideBossDamage?: (ctx: any) => number | null;
+  overrideBossSpawnStats?: (ctx: any) => any;
+};
+
+registerStudentBossHooks(hooks: BossHooks): void
+```
+
+**Dependencies**
+- Core combat pipeline (enemy spawn/AI/damage)
+- Debug flag overrides in `src/student/studentDebugOverrides.ts`
 
 ---
 

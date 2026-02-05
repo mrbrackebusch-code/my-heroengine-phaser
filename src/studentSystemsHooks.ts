@@ -10,7 +10,7 @@
 // Do NOT edit core files from student folders.
 
 import { getPropSpec, registerPropSpec, type PropSpec } from "./propSpecs";
-import { PROP_VISUALS_BY_NAME, registerPropVisual } from "./tileAtlas";
+import { PROP_VISUALS_BY_NAME, registerPropVisual, TERRAIN_AUTOTILES, type TerrainKind, type TileFamily } from "./tileAtlas";
 
 export * from "./studentSdk";
 export type {
@@ -85,6 +85,44 @@ function _clonePropSpec(base: PropSpec, name: string, action?: string): PropSpec
     }
 
     return next;
+}
+
+function _terrainLabel(id: string): string {
+    return String(id || "").replace(/_/g, " ").trim();
+}
+
+export type StudentTerrainFamilyOption = {
+    id: TileFamily;
+    kind: TerrainKind;
+    label: string;
+};
+
+export function listStudentTerrainFamilies(): StudentTerrainFamilyOption[] {
+    return TERRAIN_AUTOTILES.map((def) => ({
+        id: def.id as TileFamily,
+        kind: def.kind as TerrainKind,
+        label: _terrainLabel(def.id),
+    }));
+}
+
+export function listStudentFloorFamilies(): StudentTerrainFamilyOption[] {
+    return TERRAIN_AUTOTILES
+        .filter((def) => def.kind === "ground" || def.kind === "water")
+        .map((def) => ({
+            id: def.id as TileFamily,
+            kind: def.kind as TerrainKind,
+            label: _terrainLabel(def.id),
+        }));
+}
+
+export function listStudentWallFamilies(): StudentTerrainFamilyOption[] {
+    return TERRAIN_AUTOTILES
+        .filter((def) => def.kind === "chasm" || def.kind === "hedge")
+        .map((def) => ({
+            id: def.id as TileFamily,
+            kind: def.kind as TerrainKind,
+            label: _terrainLabel(def.id),
+        }));
 }
 
 // ---------------------------------------------------------------------------
@@ -756,6 +794,291 @@ export function registerQuestHooks(hooks: QuestHooks): void {
 
 export function getQuestHooks(): QuestHooks | null {
     return _questHooks ? { ..._questHooks } : null;
+}
+
+// ---------------------------------------------------------------------------
+// Maze system
+// ---------------------------------------------------------------------------
+
+export type StudentMazeCellValue = number | "empty" | "wall" | "bridge" | boolean | null | undefined;
+
+export type StudentMazeTheme = {
+    baseFamily?: TileFamily;
+    wallFamily?: TileFamily;
+    palette?: string;
+    textureSeed?: number;
+};
+
+export type StudentMazeTrapMode = "kill" | "block";
+
+export type StudentMazeTrapPlacement = {
+    r: number;
+    c: number;
+    kind?: "trap" | "shrine";
+    propBase?: string;
+    trapId?: string;
+    mode?: StudentMazeTrapMode;
+    data?: any;
+};
+
+export type StudentMazeGrid = {
+    cells: StudentMazeCellValue[][];
+    rows?: number;
+    cols?: number;
+    start?: { r: number; c: number };
+    exit?: { r: number; c: number };
+    theme?: StudentMazeTheme;
+    traps?: StudentMazeTrapPlacement[];
+    data?: any;
+};
+
+export type StudentMazeContext = {
+    floorIndex: number;
+    floorKind: string;
+    rows: number;
+    cols: number;
+    profiles?: string[];
+    profile?: string;
+    seed?: number;
+    data?: any;
+};
+
+export type StudentMazeDefinition = {
+    id: string;
+    name?: string;
+    description?: string;
+    grid?: StudentMazeGrid;
+    generate?: (ctx: StudentMazeContext) => StudentMazeGrid | null;
+    tags?: string[];
+    data?: any;
+};
+
+const _mazeDefs = new Map<string, StudentMazeDefinition>();
+
+export function registerStudentMaze(def: StudentMazeDefinition): string {
+    return _registerInMap(_mazeDefs, def);
+}
+
+export function listStudentMazes(): StudentMazeDefinition[] {
+    return _listFromMap(_mazeDefs);
+}
+
+export function getStudentMaze(id: string): StudentMazeDefinition | null {
+    const key = String(id || "").trim();
+    if (!key) return null;
+    return _mazeDefs.get(key) || null;
+}
+
+export type StudentMazeHooks = StudentProfileGate & {
+    getMazeIdForFloor?: (ctx: StudentMazeContext) => string | null;
+    generateMaze?: (ctx: StudentMazeContext) => StudentMazeGrid | null;
+    onMazeReady?: (ctx: StudentMazeContext & { mazeId?: string; grid: StudentMazeGrid }) => void;
+};
+
+let _mazeHooks: StudentMazeHooks | null = null;
+
+export function registerStudentMazeHooks(hooks: StudentMazeHooks): void {
+    _mazeHooks = { ...hooks };
+}
+
+export function getStudentMazeHooks(): StudentMazeHooks | null {
+    return _mazeHooks ? { ..._mazeHooks } : null;
+}
+
+// ---------------------------------------------------------------------------
+// Boss system
+// ---------------------------------------------------------------------------
+
+export type StudentBossPhase = {
+    id: string;
+    minHpPct?: number;
+    maxHpPct?: number;
+    label?: string;
+    tags?: string[];
+    moveWeights?: Record<string, number>;
+    data?: any;
+};
+
+export type StudentBossPhaseConfig = {
+    monsterId: string;
+    name?: string;
+    description?: string;
+    phases: StudentBossPhase[];
+    defaultPhaseId?: string;
+    data?: any;
+};
+
+const _bossPhaseConfigs = new Map<string, StudentBossPhaseConfig>();
+
+function _normalizeBossPhaseConfig(def: StudentBossPhaseConfig): StudentBossPhaseConfig | null {
+    const monsterId = _normalizeMonsterId(def?.monsterId || "");
+    if (!monsterId) return null;
+    const rawPhases = Array.isArray(def?.phases) ? def.phases : [];
+    const phases: StudentBossPhase[] = [];
+    for (let i = 0; i < rawPhases.length; i++) {
+        const phase = rawPhases[i];
+        if (!phase) continue;
+        const id = String(phase.id || "").trim();
+        if (!id) continue;
+        phases.push({ ...phase, id });
+    }
+    if (phases.length === 0) return null;
+    return {
+        ...def,
+        monsterId,
+        phases,
+        defaultPhaseId: def?.defaultPhaseId ? String(def.defaultPhaseId || "").trim() : undefined,
+    };
+}
+
+export function registerStudentBossPhaseConfig(def: StudentBossPhaseConfig): string {
+    const normalized = _normalizeBossPhaseConfig(def);
+    if (!normalized) return "";
+    _bossPhaseConfigs.set(normalized.monsterId, normalized);
+    return normalized.monsterId;
+}
+
+export function listStudentBossPhaseConfigs(): StudentBossPhaseConfig[] {
+    return _listFromMap(_bossPhaseConfigs);
+}
+
+export function getStudentBossPhaseConfig(monsterId: string): StudentBossPhaseConfig | null {
+    const key = _normalizeMonsterId(monsterId || "");
+    if (!key) return null;
+    return _bossPhaseConfigs.get(key) || null;
+}
+
+export function registerBossPhaseConfig(def: StudentBossPhaseConfig): string {
+    return registerStudentBossPhaseConfig(def);
+}
+
+export function listBossPhaseConfigs(): StudentBossPhaseConfig[] {
+    return listStudentBossPhaseConfigs();
+}
+
+export type BossMovePhase = "idle" | "telegraph" | "exec" | "recover";
+
+export type StudentBossContext = {
+    now?: number;
+    monsterId: string;
+    enemy?: any;
+    eIndex?: number;
+    hp?: number;
+    maxHp?: number;
+    hpPct?: number;
+    floorIndex?: number;
+    floorKind?: string;
+    profile?: string;
+    profiles?: string[];
+    phaseId?: string;
+    phase?: StudentBossPhase | null;
+    data?: any;
+};
+
+export type StudentBossMoveContext = StudentBossContext & {
+    moveId?: string;
+    movePhase?: BossMovePhase;
+    movePhaseIndex?: number;
+};
+
+export type StudentBossMovePickContext = StudentBossContext & {
+    candidates?: Array<{ id: string; weight: number }>;
+    chosenId?: string;
+};
+
+export type StudentBossIntroJumpContext = StudentBossContext & {
+    fromX?: number;
+    fromY?: number;
+    toX?: number;
+    toY?: number;
+    startMs?: number;
+    landAtMs?: number;
+    endMs?: number;
+};
+
+export type StudentBossBarrageContext = StudentBossContext & {
+    shotCount?: number;
+    targetCount?: number;
+    clustered?: boolean;
+    targets?: Array<{ x: number; y: number }>;
+};
+
+export type StudentBossPoisonRingContext = StudentBossContext & {
+    centerR?: number;
+    centerC?: number;
+    radius?: number;
+};
+
+export type StudentBossChargeHitContext = StudentBossContext & {
+    heroIndex?: number;
+    hero?: any;
+    damage?: number;
+};
+
+export type StudentBossDamageContext = StudentBossContext & {
+    baseDamage: number;
+    damage: number;
+    sourceHeroIndex?: number;
+    sourceHero?: any;
+    family?: number;
+    element?: number;
+    button?: string;
+    sourceTag?: string;
+};
+
+export type StudentBossSpawnStats = {
+    maxHp?: number;
+    speed?: number;
+    touchDamage?: number;
+    regenPct?: number;
+    advanceRangePx?: number;
+    projectileId?: string;
+    attackIntervalMs?: number;
+    attackRatePct?: number;
+    scale?: number;
+};
+
+export type StudentBossSpawnContext = StudentBossContext & {
+    stats?: StudentBossSpawnStats;
+};
+
+export type StudentBossPhaseOverrideContext = StudentBossContext & {
+    defaultPhaseId?: string;
+    defaultPhase?: StudentBossPhase | null;
+};
+
+export type StudentBossHooks = StudentProfileGate & {
+    onBossSpawned?: (ctx: StudentBossContext) => void;
+    onBossIntroQueued?: (ctx: StudentBossContext) => void;
+    onBossIntroStart?: (ctx: StudentBossContext) => void;
+    onBossIntroEnd?: (ctx: StudentBossContext) => void;
+    onBossIntroJumpStart?: (ctx: StudentBossIntroJumpContext) => void;
+    onBossIntroJumpLand?: (ctx: StudentBossIntroJumpContext) => void;
+    onBossEngaged?: (ctx: StudentBossContext) => void;
+    onBossMovePicked?: (ctx: StudentBossMovePickContext) => void;
+    onBossMovePhase?: (ctx: StudentBossMoveContext) => void;
+    onBossBarrageVolley?: (ctx: StudentBossBarrageContext) => void;
+    onBossPoisonRing?: (ctx: StudentBossPoisonRingContext) => void;
+    onBossChargeHit?: (ctx: StudentBossChargeHitContext) => void;
+    onBossHurt?: (ctx: StudentBossDamageContext) => void;
+    onBossPhaseChanged?: (ctx: StudentBossContext & { prevPhaseId?: string }) => void;
+    onBossDefeated?: (ctx: StudentBossContext & { killerHi?: number }) => void;
+
+    // Debug-only override hooks (gated by boss override debug flags in core).
+    pickBossMove?: (ctx: StudentBossMovePickContext) => string | null | undefined;
+    overrideBossPhase?: (ctx: StudentBossPhaseOverrideContext) => string | null | undefined;
+    overrideBossDamage?: (ctx: StudentBossDamageContext) => number | null | undefined;
+    overrideBossSpawnStats?: (ctx: StudentBossSpawnContext) => Partial<StudentBossSpawnStats> | null | undefined;
+};
+
+let _bossHooks: StudentBossHooks | null = null;
+
+export function registerStudentBossHooks(hooks: StudentBossHooks): void {
+    _bossHooks = { ...hooks };
+}
+
+export function getStudentBossHooks(): StudentBossHooks | null {
+    return _bossHooks ? { ..._bossHooks } : null;
 }
 
 // ---------------------------------------------------------------------------
