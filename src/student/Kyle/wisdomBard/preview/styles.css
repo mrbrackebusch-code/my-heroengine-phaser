@@ -1,0 +1,36 @@
+/* Simple styling for the Bard preview */
+body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial; background:#111217; color:#e6eef6; margin:0; height:100vh; display:flex; align-items:center; justify-content:center}
+.wrap{width:420px}
+h2{margin:6px 0 8px 0; font-weight:600; text-align:center}
+.play-area{position:relative; height:60vh; width:360px; margin:0 auto 12px auto; background:#0b0b10; border-radius:6px; display:grid; grid-template-columns:repeat(4,1fr); overflow:hidden; box-shadow:0 8px 30px rgba(0,0,0,0.6)}
+.lane{position:relative; border-left:1px solid rgba(255,255,255,0.02); display:flex; align-items:flex-start; justify-content:center}
+.lane-label{position:absolute; top:6px; left:6px; opacity:0.35; font-size:14px}
+.hit-line{position:absolute; left:0; right:0; height:8px; background:linear-gradient(90deg, rgba(255,255,255,0.04), rgba(255,255,255,0.02)); bottom:14%; pointer-events:none}
+.note{position:absolute; top:0; left:50%; transform:translate(-50%,0); width:44px; height:44px; border-radius:8px; background:#66c2ff; display:flex; align-items:center; justify-content:center; font-weight:700; box-shadow:0 6px 18px rgba(0,0,0,0.6); color:#042233}
+.note.hit{background:#7fff7f; box-shadow:0 8px 26px rgba(127,255,127,0.12)}
+.controls{display:flex; gap:12px; align-items:center; justify-content:center; margin-bottom:8px}
+button{padding:8px 12px; border-radius:6px; border:0; background:#1f2937; color:#e6eef6; cursor:pointer}
+.instructions{font-size:13px; color:#a9b3bf; text-align:center}
+.status{margin-left:8px; color:#9fdcff}
+
+/* Floating judgement/score text */
+.floating-text{position:absolute; pointer-events:none; left:50%; top:50%; transform:translate(-50%,-50%); font-weight:700; color:#fff; text-shadow:0 6px 18px rgba(0,0,0,0.6);}
+.floating-text.judgement{font-size:18px; letter-spacing:1px; animation:pop 520ms cubic-bezier(.2,.9,.38,1);} 
+.floating-text.delta{font-size:14px; margin-top:4px; opacity:0.95; animation:floatUp 900ms ease-out forwards}
+
+@keyframes pop{0%{transform:translate(-50%,8px) scale(.9); opacity:0}40%{transform:translate(-50%,-8px) scale(1.06); opacity:1}100%{transform:translate(-50%,-18px) scale(1); opacity:1}}
+@keyframes floatUp{0%{transform:translate(-50%,0); opacity:1}100%{transform:translate(-50%,-46px); opacity:0}}
+
+.floating-text.sick{color:#7fff7f}
+.floating-text.great{color:#9fdcff}
+.floating-text.good{color:#ffd36b}
+.floating-text.bad{color:#ff9f9f}
+.floating-text.miss{color:#ff6b6b}
+
+/* End-of-song overlay */
+.end-overlay{position:fixed; left:0; top:0; right:0; bottom:0; display:flex; align-items:center; justify-content:center; pointer-events:none}
+.end-overlay .card{background:rgba(3,6,12,0.9); padding:28px 34px; border-radius:12px; box-shadow:0 20px 60px rgba(0,0,0,0.6); text-align:center}
+.end-overlay h1{font-size:40px; margin:0 0 8px 0; color:#fff}
+.end-overlay p{margin:0; color:#cbd7e6}
+
+
