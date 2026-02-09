@@ -1,4 +1,4 @@
-import { registerQuest, registerQuestSource, type QuestDefinition, type QuestSource } from "../../studentSystemsHooks";
+import { registerQuest, registerQuestSource, registerMonsterHooks, type QuestDefinition, type QuestSource } from "../../studentSystemsHooks";
 
 // Define the slime elimination quest
 const slimeHuntQuest: QuestDefinition = {
@@ -71,3 +71,15 @@ const slimeHuntSource: QuestSource = {
 
 // Register the quest source
 registerQuestSource(slimeHuntSource);
+
+// Register monster hooks for visual effects and quest tracking
+registerMonsterHooks({
+    onMonsterDefeated: (ctx: any, monsterId: string, x: number, y: number) => {
+        if (monsterId === "slime") {
+            // Spawn light effect at defeat location
+            // TODO: Implement light effect spawning using spawnEffect API once available
+            // spawnEffect("light", x, y, { duration: 1000 });
+            // TODO: Increment quest progress for slimeHunt quest
+        }
+    },
+});
