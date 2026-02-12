@@ -35,6 +35,7 @@ import {
   DEBUG_PROP_FOCUS_AURA_WORLD_MARKER,
   DEBUG_PAD_SINK_PROP_LOGS,
   DEBUG_TILEMAP_AUDIT,
+  DEBUG_TILEMAP_AUDIT_CONSOLE,
   DEBUG_TILEMAP_GLUE,
   LOG_PROP_FOCUS_AURA_PIXEL_PROBE_ONCE,
   LOG_PROP_FOCUS_AURA_RENDER_ONCE,
@@ -4896,6 +4897,18 @@ private _propPlaceOneAnchor(
   const depthBiasTiles = (vis.depthBiasTiles ?? 0);
   const depthBias = ((vis.depthBias ?? 0) | 0) + ((depthBiasTiles * st.tileSize * WORLD_DEPTH_Y_SCALE) | 0);
 
+  // Optional vertical crop cutoff (world Y) for sink effects (base bottom + N px).
+  const cropCutoffOffsetY = (typeof (vis as any).cropCutoffOffsetYPx === "number")
+    ? ((vis as any).cropCutoffOffsetYPx | 0)
+    : null;
+  let cropBaseBottomY: number | null = null;
+  let cropCutoffY: number | null = null;
+  if (cropCutoffOffsetY != null) {
+    const baseOffY = ((vis.offsetYPx ?? 0) | 0);
+    cropBaseBottomY = (((anchorR | 0) * (st.tileSize | 0) + (st.tileSize | 0) + baseOffY) | 0);
+    cropCutoffY = ((cropBaseBottomY + (cropCutoffOffsetY | 0)) | 0);
+  }
+
   const { baseRef, usedState } = this._propResolveBaseRef(vis, parsed, cols);
 
   const animKey = this._propResolveAnimKey(vis, parsed, usedState, wTiles, hTiles, textureKey, cols);
@@ -5026,6 +5039,9 @@ private _propPlaceOneAnchor(
       baseRefCol: baseRef.col | 0,
       offsetX: instOffX | 0,
       offsetY: instOffY | 0,
+      cropCutoffOffsetY: (cropCutoffOffsetY != null) ? (cropCutoffOffsetY | 0) : null,
+      cropBaseBottomY: (cropBaseBottomY != null) ? (cropBaseBottomY | 0) : null,
+      cropCutoffY: (cropCutoffY != null) ? (cropCutoffY | 0) : null,
 
       objs,
       vis,
@@ -5049,6 +5065,7 @@ private _propPlaceOneAnchor(
       focusAuraPngUrl: "",
       focusAuraFrameIndices: null,
     };
+    this._propApplyCropForInstance(st.instByAnchor[anchorKey]);
     return;
   }
 
@@ -5212,6 +5229,9 @@ private _propPlaceOneAnchor(
     baseRefCol: baseRef.col | 0,
     offsetX: instOffX | 0,
     offsetY: instOffY | 0,
+    cropCutoffOffsetY: (cropCutoffOffsetY != null) ? (cropCutoffOffsetY | 0) : null,
+    cropBaseBottomY: (cropBaseBottomY != null) ? (cropBaseBottomY | 0) : null,
+    cropCutoffY: (cropCutoffY != null) ? (cropCutoffY | 0) : null,
 
     objs,
     vis,
@@ -5236,6 +5256,7 @@ private _propPlaceOneAnchor(
     focusAuraPngUrl: primaryAura ? primaryAura.auraPngUrl : "",
     focusAuraFrameIndices: primaryAura ? primaryAura.frameIndices : null,
   };
+  this._propApplyCropForInstance(st.instByAnchor[anchorKey]);
 }
 
 private _propReapplyFocusAuraCache(): void {
@@ -5306,6 +5327,11 @@ private _propShiftDisplayObj(obj: any, dx: number, dy: number, dd: number): void
     obj.x = nextX;
     obj.y = nextY;
   }
+  try {
+    if (typeof (obj as any).__cropBaseY === "number") {
+      (obj as any).__cropBaseY = (((obj as any).__cropBaseY | 0) + (dy | 0)) | 0;
+    }
+  } catch { /* ignore */ }
   const curDepth = (obj.depth ?? 0) | 0;
   const nextDepth = (curDepth + (dd | 0)) | 0;
   try {
@@ -5356,6 +5382,8 @@ private _debugPadPillarInstances(reason: string): void {
 
 private _debugTilemapAuditTilesets(reason: string): void {
   if (!DEBUG_TILEMAP_AUDIT) return;
+  if (!DEBUG_TILEMAP_AUDIT_CONSOLE) return;
+  if (!DEBUG_TILEMAP_AUDIT_CONSOLE) return;
   const anyThis: any = this as any;
   const keys = this._gidRanges.map(r => r.textureKey);
   const mageGid = this._firstGidByTextureKey["tiles.magecity"];
@@ -5377,6 +5405,7 @@ private _debugTilemapAuditTilesets(reason: string): void {
 
 private _debugTilemapAuditDecals(reason: string, decalNameGrid: string[][], rows: number, cols: number): void {
   if (!DEBUG_TILEMAP_AUDIT) return;
+  if (!DEBUG_TILEMAP_AUDIT_CONSOLE) return;
   const anyThis: any = this as any;
   const texKeys: Record<string, 1> = Object.create(null);
   let trialCells = 0;
@@ -5434,6 +5463,7 @@ private _debugTilemapAuditDecals(reason: string, decalNameGrid: string[][], rows
 
 private _debugTilemapAuditProps(reason: string): void {
   if (!DEBUG_TILEMAP_AUDIT) return;
+  if (!DEBUG_TILEMAP_AUDIT_CONSOLE) return;
   const anyThis: any = this as any;
   const instByAnchor: Record<string, any> = anyThis.__propInstancesByAnchor || Object.create(null);
   let total = 0;
@@ -5519,6 +5549,74 @@ private _propUpdateOffsetForInstance(inst: any, nextOffX: number, nextOffY: numb
       } catch { /* ignore */ }
     }
   }
+
+  // Re-apply vertical crop if this prop uses a cutoff (pad/pillar sink).
+  this._propApplyCropForInstance(inst);
+}
+
+private _propApplyCropForInstance(inst: any): void {
+  if (!inst) return;
+  const cutoffY = (typeof inst.cropCutoffY === "number") ? (inst.cropCutoffY | 0) : null;
+  if (cutoffY == null) return;
+  const objs: any[] = Array.isArray(inst.objs) ? inst.objs : [];
+  for (let i = 0; i < objs.length; i++) {
+    this._propApplyVerticalCropToObj(objs[i], cutoffY | 0);
+  }
+}
+
+private _propApplyVerticalCropToObj(obj: any, cutoffY: number): void {
+  if (!obj) return;
+  const baseH = (typeof (obj as any).__cropBaseDisplayH === "number")
+    ? (obj as any).__cropBaseDisplayH
+    : (obj.displayHeight ?? 0);
+  const baseW = (typeof (obj as any).__cropBaseDisplayW === "number")
+    ? (obj as any).__cropBaseDisplayW
+    : (obj.displayWidth ?? 0);
+  if (!(baseH > 0) || !(baseW > 0)) return;
+
+  if (typeof (obj as any).__cropBaseDisplayH !== "number") {
+    (obj as any).__cropBaseDisplayH = baseH;
+    (obj as any).__cropBaseDisplayW = baseW;
+  }
+  if (typeof (obj as any).__cropBaseY !== "number") {
+    (obj as any).__cropBaseY = (obj.y ?? 0);
+  }
+  if (typeof (obj as any).__cropBaseVisible !== "boolean") {
+    (obj as any).__cropBaseVisible = (obj.visible !== false);
+  }
+
+  const baseY = (obj as any).__cropBaseY ?? (obj.y ?? 0);
+  const topY = (baseY - (baseH / 2));
+  let visH = (cutoffY - topY);
+
+  const baseVisible = ((obj as any).__cropBaseVisible !== false);
+  if (!baseVisible) return;
+
+  if (visH <= 0.5) {
+    try { obj.setVisible?.(false); } catch { obj.visible = false; }
+    return;
+  }
+
+  if (visH >= (baseH - 0.5)) {
+    try { obj.setVisible?.(true); } catch { obj.visible = true; }
+    try { obj.setCrop?.(); } catch { /* ignore */ }
+    obj.displayHeight = baseH;
+    obj.displayWidth = baseW;
+    obj.y = baseY;
+    return;
+  }
+
+  visH = Math.min(baseH, Math.max(1, visH));
+  const frameW = (obj.frame?.cutWidth ?? obj.frame?.width ?? baseW) | 0;
+  const frameH = (obj.frame?.cutHeight ?? obj.frame?.height ?? baseH) | 0;
+  const ratio = (baseH > 0) ? (visH / baseH) : 0;
+  const cropH = Math.max(1, Math.round(frameH * ratio));
+
+  try { obj.setVisible?.(true); } catch { obj.visible = true; }
+  try { obj.setCrop?.(0, 0, frameW, cropH); } catch { /* ignore */ }
+  obj.displayHeight = visH;
+  obj.displayWidth = baseW;
+  obj.y = (topY + (visH / 2));
 }
 
 syncPropGridByName(propNameGrid: string[][]): void {

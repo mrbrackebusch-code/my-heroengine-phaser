@@ -1228,6 +1228,34 @@ export function getAlly(id: string): AllyDef | null {
 }
 
 // ---------------------------------------------------------------------------
+// Relic effect handlers (ChrisS)
+// ---------------------------------------------------------------------------
+
+export type StudentRelicEffectHandler = {
+    effectKey: string;
+    modifyMoveStats?: (ctx: any) => void;
+    onHitEnemy?: (ctx: any) => void;
+    beforeHeroDamage?: (ctx: any) => void;
+    afterHeroDamage?: (ctx: any) => void;
+    onEnemyKilled?: (ctx: any) => void;
+    modifyMoveSpeed?: (ctx: any) => void;
+    onFloorEnter?: (ctx: any) => void;
+    onFloorExit?: (ctx: any) => void;
+};
+
+const _studentRelicEffects = new Map<string, StudentRelicEffectHandler>();
+
+export function registerStudentRelicEffectHandler(handler: StudentRelicEffectHandler): void {
+    const effectKey = String(handler?.effectKey || "").trim();
+    if (!effectKey) return;
+    _studentRelicEffects.set(effectKey, { ...handler, effectKey });
+}
+
+export function listStudentRelicEffectHandlers(): StudentRelicEffectHandler[] {
+    return Array.from(_studentRelicEffects.values());
+}
+
+// ---------------------------------------------------------------------------
 // Hook requests
 // ---------------------------------------------------------------------------
 

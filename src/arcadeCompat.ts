@@ -13544,6 +13544,19 @@ function _syncEffectPath(
         glueAny.applyEffectAnimationForSprite(effectSprite);
     }
 
+    if (hasAlignBottom && Number.isFinite(alignBottomY) && alignBottomY > 0) {
+        const dh = Number.isFinite(nativeAny.displayHeight) ? Number(nativeAny.displayHeight) : 0;
+        let h = dh;
+        if (!(h > 0)) {
+            const frameH = (nativeAny.frame && (nativeAny.frame.cutHeight ?? nativeAny.frame.height)) ? (nativeAny.frame.cutHeight ?? nativeAny.frame.height) : 0;
+            const scaleY = Number.isFinite(nativeAny.scaleY) ? Number(nativeAny.scaleY) : 1;
+            h = (frameH > 0) ? (frameH * scaleY) : 0;
+        }
+        if (h > 0) {
+            nativeAny.y = Number(alignBottomY) - (h * 0.5);
+        }
+    }
+
     if (hasMaskInvert) {
         nativeAny.__effectMaskInvert = maskInvert;
     }

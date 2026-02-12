@@ -1,0 +1,1217 @@
+{
+  "type": "heAgilityDumpV1",
+  "createdAt": 1770383554210,
+  "runtimeMs": 38385,
+  "reason": "auto",
+  "run": {
+    "id": "agi-mlawmvoo22aw",
+    "startedAtRt": 311,
+    "movesMax": 3,
+    "movesCompleted": 3,
+    "done": 1
+  },
+  "settings": {
+    "tickIntervalMs": 120,
+    "maxSamplesPerMove": 160,
+    "maxEventsPerMove": 600
+  },
+  "moves": [
+    {
+      "id": 1,
+      "kind": "hook",
+      "heroIndex": 0,
+      "startedAt": 1770383548212,
+      "startedAtRt": 32382,
+      "endedAt": 1770383548620,
+      "endedAtRt": 32790,
+      "meta": {
+        "pid": 1,
+        "name": "LongBlond",
+        "comboMode": 0,
+        "phaseName": "thrust",
+        "phasePart": "windup"
+      },
+      "events": [
+        {
+          "t": 1770383548212,
+          "rt": 32387,
+          "tag": "MOVE_START",
+          "hi": 0,
+          "moveId": 1,
+          "data": {
+            "kind": "hook"
+          }
+        },
+        {
+          "t": 1770383548212,
+          "rt": 32387,
+          "tag": "HOOK_STATE",
+          "hi": 0,
+          "moveId": 1,
+          "data": {
+            "from": 0,
+            "to": 1
+          }
+        },
+        {
+          "t": 1770383548212,
+          "rt": 32387,
+          "tag": "PHASE",
+          "hi": 0,
+          "moveId": 1,
+          "data": {
+            "from": "idle",
+            "to": "thrust"
+          }
+        },
+        {
+          "t": 1770383548212,
+          "rt": 32387,
+          "tag": "PHASE_PART",
+          "hi": 0,
+          "moveId": 1,
+          "data": {
+            "from": "",
+            "to": "windup"
+          }
+        },
+        {
+          "t": 1770383548620,
+          "rt": 32795,
+          "tag": "HOOK_STATE",
+          "hi": 0,
+          "moveId": 1,
+          "data": {
+            "from": 1,
+            "to": 0
+          }
+        },
+        {
+          "t": 1770383548620,
+          "rt": 32795,
+          "tag": "PHASE_PART",
+          "hi": 0,
+          "moveId": 1,
+          "data": {
+            "from": "windup",
+            "to": "forward"
+          }
+        },
+        {
+          "t": 1770383548620,
+          "rt": 32795,
+          "tag": "MOVE_END",
+          "hi": 0,
+          "moveId": 1,
+          "data": {
+            "reason": "hook_done"
+          }
+        }
+      ],
+      "samples": [
+        {
+          "t": 1770383548212,
+          "rt": 32382,
+          "hi": 0,
+          "moveId": 1,
+          "kind": "hook",
+          "dir": {
+            "nx": 1,
+            "ny": 0,
+            "src": "hook"
+          },
+          "hero": {
+            "x": 1137,
+            "y": 899,
+            "vx": 0,
+            "vy": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "animHold": 0
+          },
+          "phase": {
+            "actionKind": "agility_thrust",
+            "actionSeq": 2,
+            "phaseName": "thrust",
+            "phaseProg": 0,
+            "partName": "windup",
+            "partProg": 0
+          },
+          "agi": {
+            "state": 0,
+            "hookState": 1,
+            "dashUntil": 33263,
+            "lungeStart": 32783,
+            "lungeEnd": 32983,
+            "animTotal": 800,
+            "comboMode": 0,
+            "execSeq": 0
+          },
+          "weapon": {
+            "info": null,
+            "axisLocal": null,
+            "axisWorld": null,
+            "axisLen": 0
+          },
+          "projectile": null,
+          "squareComet": {
+            "base": null,
+            "fill": null,
+            "axis": null,
+            "fillExpect": null
+          },
+          "normalComet": {
+            "base": null,
+            "axis": null
+          },
+          "hook": {
+            "state": 1,
+            "aimAngleMdeg": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "tipDist": 0,
+            "weaponLen": 0,
+            "maxDist": 0,
+            "element": 2,
+            "timingPosX1000": 0,
+            "timingPendingAdd": 0,
+            "timingIsExec": 0,
+            "comet": null,
+            "aimComet": null,
+            "axis": null
+          }
+        },
+        {
+          "t": 1770383548397,
+          "rt": 32569,
+          "hi": 0,
+          "moveId": 1,
+          "kind": "hook",
+          "dir": {
+            "nx": 1,
+            "ny": 0,
+            "src": "hook"
+          },
+          "hero": {
+            "x": 1137,
+            "y": 899,
+            "vx": 0,
+            "vy": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "animHold": 0
+          },
+          "phase": {
+            "actionKind": "agility_thrust",
+            "actionSeq": 2,
+            "phaseName": "thrust",
+            "phaseProg": 238,
+            "partName": "windup",
+            "partProg": 476
+          },
+          "agi": {
+            "state": 0,
+            "hookState": 1,
+            "dashUntil": 33263,
+            "lungeStart": 32783,
+            "lungeEnd": 32983,
+            "animTotal": 800,
+            "comboMode": 0,
+            "execSeq": 0
+          },
+          "weapon": {
+            "info": {
+              "texKey": "__MISSING",
+              "frameName": "__BASE",
+              "offX": -1137,
+              "offY": -899,
+              "originX": 0.5,
+              "originY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "flipX": 0,
+              "flipY": 0
+            },
+            "axisLocal": {
+              "x0": -1152.6000000000006,
+              "y0": -899.3000000000156,
+              "x1": -1121.6000000000006,
+              "y1": -899.3000000000156
+            },
+            "axisWorld": {
+              "x0": -15,
+              "y0": 0.4999999999852207,
+              "x1": 16,
+              "y1": 0.4999999999852207
+            },
+            "axisLen": 31
+          },
+          "projectile": null,
+          "squareComet": {
+            "base": null,
+            "fill": null,
+            "axis": null,
+            "fillExpect": null
+          },
+          "normalComet": {
+            "base": null,
+            "axis": null
+          },
+          "hook": {
+            "state": 1,
+            "aimAngleMdeg": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "tipDist": 0,
+            "weaponLen": 0,
+            "maxDist": 0,
+            "element": 2,
+            "timingPosX1000": 0,
+            "timingPendingAdd": 0,
+            "timingIsExec": 0,
+            "comet": null,
+            "aimComet": null,
+            "axis": null
+          }
+        },
+        {
+          "t": 1770383548563,
+          "rt": 32730,
+          "hi": 0,
+          "moveId": 1,
+          "kind": "hook",
+          "dir": {
+            "nx": 1,
+            "ny": 0,
+            "src": "hook"
+          },
+          "hero": {
+            "x": 1137,
+            "y": 899,
+            "vx": 0,
+            "vy": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "animHold": 0
+          },
+          "phase": {
+            "actionKind": "agility_thrust",
+            "actionSeq": 2,
+            "phaseName": "thrust",
+            "phaseProg": 444,
+            "partName": "windup",
+            "partProg": 888
+          },
+          "agi": {
+            "state": 0,
+            "hookState": 1,
+            "dashUntil": 33263,
+            "lungeStart": 32783,
+            "lungeEnd": 32983,
+            "animTotal": 800,
+            "comboMode": 0,
+            "execSeq": 0
+          },
+          "weapon": {
+            "info": {
+              "texKey": "t192__polearm__longspear__thrust__fg__vbase",
+              "frameName": "29",
+              "offX": 0,
+              "offY": 0,
+              "originX": 0.5,
+              "originY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "flipX": 0,
+              "flipY": 0
+            },
+            "axisLocal": {
+              "x0": -13,
+              "y0": 13,
+              "x1": 71,
+              "y1": 13
+            },
+            "axisWorld": {
+              "x0": 1124.6000000000006,
+              "y0": 912.8000000000009,
+              "x1": 1208.6000000000006,
+              "y1": 912.8000000000009
+            },
+            "axisLen": 84
+          },
+          "projectile": null,
+          "squareComet": {
+            "base": null,
+            "fill": null,
+            "axis": null,
+            "fillExpect": null
+          },
+          "normalComet": {
+            "base": null,
+            "axis": null
+          },
+          "hook": {
+            "state": 1,
+            "aimAngleMdeg": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "tipDist": 0,
+            "weaponLen": 0,
+            "maxDist": 0,
+            "element": 2,
+            "timingPosX1000": 0,
+            "timingPendingAdd": 0,
+            "timingIsExec": 0,
+            "comet": null,
+            "aimComet": null,
+            "axis": null
+          }
+        }
+      ],
+      "lastSampleMs": 32730
+    },
+    {
+      "id": 2,
+      "kind": "hook",
+      "heroIndex": 0,
+      "startedAt": 1770383550848,
+      "startedAtRt": 35018,
+      "endedAt": 1770383551275,
+      "endedAtRt": 35449,
+      "meta": {
+        "pid": 1,
+        "name": "LongBlond",
+        "comboMode": 0,
+        "phaseName": "thrust",
+        "phasePart": "windup"
+      },
+      "events": [
+        {
+          "t": 1770383550848,
+          "rt": 35023,
+          "tag": "MOVE_START",
+          "hi": 0,
+          "moveId": 2,
+          "data": {
+            "kind": "hook"
+          }
+        },
+        {
+          "t": 1770383550848,
+          "rt": 35023,
+          "tag": "HOOK_STATE",
+          "hi": 0,
+          "moveId": 2,
+          "data": {
+            "from": 0,
+            "to": 1
+          }
+        },
+        {
+          "t": 1770383550848,
+          "rt": 35023,
+          "tag": "PHASE",
+          "hi": 0,
+          "moveId": 2,
+          "data": {
+            "from": "idle",
+            "to": "thrust"
+          }
+        },
+        {
+          "t": 1770383550848,
+          "rt": 35023,
+          "tag": "PHASE_PART",
+          "hi": 0,
+          "moveId": 2,
+          "data": {
+            "from": "",
+            "to": "windup"
+          }
+        },
+        {
+          "t": 1770383551275,
+          "rt": 35450,
+          "tag": "HOOK_STATE",
+          "hi": 0,
+          "moveId": 2,
+          "data": {
+            "from": 1,
+            "to": 0
+          }
+        },
+        {
+          "t": 1770383551275,
+          "rt": 35450,
+          "tag": "PHASE_PART",
+          "hi": 0,
+          "moveId": 2,
+          "data": {
+            "from": "windup",
+            "to": "forward"
+          }
+        },
+        {
+          "t": 1770383551275,
+          "rt": 35450,
+          "tag": "MOVE_END",
+          "hi": 0,
+          "moveId": 2,
+          "data": {
+            "reason": "hook_done"
+          }
+        }
+      ],
+      "samples": [
+        {
+          "t": 1770383550848,
+          "rt": 35018,
+          "hi": 0,
+          "moveId": 2,
+          "kind": "hook",
+          "dir": {
+            "nx": 1,
+            "ny": 0,
+            "src": "hook"
+          },
+          "hero": {
+            "x": 1410,
+            "y": 899,
+            "vx": 0,
+            "vy": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "animHold": 0
+          },
+          "phase": {
+            "actionKind": "agility_thrust",
+            "actionSeq": 3,
+            "phaseName": "thrust",
+            "phaseProg": 0,
+            "partName": "windup",
+            "partProg": 0
+          },
+          "agi": {
+            "state": 0,
+            "hookState": 1,
+            "dashUntil": 35900,
+            "lungeStart": 35418,
+            "lungeEnd": 35618,
+            "animTotal": 800,
+            "comboMode": 0,
+            "execSeq": 0
+          },
+          "weapon": {
+            "info": {
+              "texKey": "t192__polearm__longspear__thrust__fg__vbase",
+              "frameName": "31",
+              "offX": 0,
+              "offY": 0,
+              "originX": 0.5,
+              "originY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "flipX": 0,
+              "flipY": 0
+            },
+            "axisLocal": {
+              "x0": -23,
+              "y0": 13,
+              "x1": 61,
+              "y1": 13
+            },
+            "axisWorld": {
+              "x0": 1387.5000000000002,
+              "y0": 912.8000000000009,
+              "x1": 1471.5000000000002,
+              "y1": 912.8000000000009
+            },
+            "axisLen": 84
+          },
+          "projectile": null,
+          "squareComet": {
+            "base": null,
+            "fill": null,
+            "axis": null,
+            "fillExpect": null
+          },
+          "normalComet": {
+            "base": null,
+            "axis": null
+          },
+          "hook": {
+            "state": 1,
+            "aimAngleMdeg": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "tipDist": 0,
+            "weaponLen": 0,
+            "maxDist": 0,
+            "element": 2,
+            "timingPosX1000": 0,
+            "timingPendingAdd": 0,
+            "timingIsExec": 0,
+            "comet": null,
+            "aimComet": null,
+            "axis": null
+          }
+        },
+        {
+          "t": 1770383550998,
+          "rt": 35172,
+          "hi": 0,
+          "moveId": 2,
+          "kind": "hook",
+          "dir": {
+            "nx": 1,
+            "ny": 0,
+            "src": "hook"
+          },
+          "hero": {
+            "x": 1410,
+            "y": 899,
+            "vx": 0,
+            "vy": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "animHold": 0
+          },
+          "phase": {
+            "actionKind": "agility_thrust",
+            "actionSeq": 3,
+            "phaseName": "thrust",
+            "phaseProg": 197,
+            "partName": "windup",
+            "partProg": 394
+          },
+          "agi": {
+            "state": 0,
+            "hookState": 1,
+            "dashUntil": 35900,
+            "lungeStart": 35418,
+            "lungeEnd": 35618,
+            "animTotal": 800,
+            "comboMode": 0,
+            "execSeq": 0
+          },
+          "weapon": {
+            "info": {
+              "texKey": "t192__polearm__longspear__thrust__fg__vbase",
+              "frameName": "31",
+              "offX": -215,
+              "offY": 0,
+              "originX": 0.5,
+              "originY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "flipX": 0,
+              "flipY": 0
+            },
+            "axisLocal": {
+              "x0": -238.39999999999986,
+              "y0": 13,
+              "x1": -154.39999999999986,
+              "y1": 13
+            },
+            "axisWorld": {
+              "x0": 1172.1000000000004,
+              "y0": 912.8000000000009,
+              "x1": 1256.1000000000004,
+              "y1": 912.8000000000009
+            },
+            "axisLen": 84
+          },
+          "projectile": null,
+          "squareComet": {
+            "base": null,
+            "fill": null,
+            "axis": null,
+            "fillExpect": null
+          },
+          "normalComet": {
+            "base": null,
+            "axis": null
+          },
+          "hook": {
+            "state": 1,
+            "aimAngleMdeg": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "tipDist": 0,
+            "weaponLen": 0,
+            "maxDist": 0,
+            "element": 2,
+            "timingPosX1000": 0,
+            "timingPendingAdd": 0,
+            "timingIsExec": 0,
+            "comet": null,
+            "aimComet": null,
+            "axis": null
+          }
+        },
+        {
+          "t": 1770383551135,
+          "rt": 35301,
+          "hi": 0,
+          "moveId": 2,
+          "kind": "hook",
+          "dir": {
+            "nx": 1,
+            "ny": 0,
+            "src": "hook"
+          },
+          "hero": {
+            "x": 1410,
+            "y": 899,
+            "vx": 0,
+            "vy": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "animHold": 0
+          },
+          "phase": {
+            "actionKind": "agility_thrust",
+            "actionSeq": 3,
+            "phaseName": "thrust",
+            "phaseProg": 362,
+            "partName": "windup",
+            "partProg": 724
+          },
+          "agi": {
+            "state": 0,
+            "hookState": 1,
+            "dashUntil": 35900,
+            "lungeStart": 35418,
+            "lungeEnd": 35618,
+            "animTotal": 800,
+            "comboMode": 0,
+            "execSeq": 0
+          },
+          "weapon": {
+            "info": {
+              "texKey": "t192__tools__whip__thrust__fg__vbase",
+              "frameName": "26",
+              "offX": 0,
+              "offY": 0,
+              "originX": 0.5,
+              "originY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "flipX": 0,
+              "flipY": 0
+            },
+            "axisLocal": {
+              "x0": -65,
+              "y0": 2.044817927170868,
+              "x1": 20,
+              "y1": 2.044817927170868
+            },
+            "axisWorld": {
+              "x0": 1345.5000000000002,
+              "y0": 901.8448179271718,
+              "x1": 1430.5000000000002,
+              "y1": 901.8448179271718
+            },
+            "axisLen": 85
+          },
+          "projectile": null,
+          "squareComet": {
+            "base": null,
+            "fill": null,
+            "axis": null,
+            "fillExpect": null
+          },
+          "normalComet": {
+            "base": null,
+            "axis": null
+          },
+          "hook": {
+            "state": 1,
+            "aimAngleMdeg": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "tipDist": 0,
+            "weaponLen": 0,
+            "maxDist": 0,
+            "element": 2,
+            "timingPosX1000": 0,
+            "timingPendingAdd": 0,
+            "timingIsExec": 0,
+            "comet": null,
+            "aimComet": null,
+            "axis": null
+          }
+        },
+        {
+          "t": 1770383551275,
+          "rt": 35449,
+          "hi": 0,
+          "moveId": 2,
+          "kind": "hook",
+          "dir": {
+            "nx": 1,
+            "ny": 0,
+            "src": "hook"
+          },
+          "hero": {
+            "x": 1410,
+            "y": 899,
+            "vx": 235,
+            "vy": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "animHold": 0
+          },
+          "phase": {
+            "actionKind": "agility_thrust",
+            "actionSeq": 3,
+            "phaseName": "thrust",
+            "phaseProg": 551,
+            "partName": "forward",
+            "partProg": 158
+          },
+          "agi": {
+            "state": 0,
+            "hookState": 0,
+            "dashUntil": 35900,
+            "lungeStart": 35418,
+            "lungeEnd": 35618,
+            "animTotal": 800,
+            "comboMode": 0,
+            "execSeq": 0
+          },
+          "weapon": {
+            "info": {
+              "texKey": "t192__tools__whip__thrust__fg__vbase",
+              "frameName": "29",
+              "offX": 0,
+              "offY": 0,
+              "originX": 0.5,
+              "originY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "flipX": 0,
+              "flipY": 0
+            },
+            "axisLocal": {
+              "x0": 17,
+              "y0": -2.361244019138756,
+              "x1": 87,
+              "y1": -2.361244019138756
+            },
+            "axisWorld": {
+              "x0": 1427.5000000000002,
+              "y0": 897.4387559808621,
+              "x1": 1497.5000000000002,
+              "y1": 897.4387559808621
+            },
+            "axisLen": 70
+          },
+          "projectile": null,
+          "squareComet": {
+            "base": null,
+            "fill": null,
+            "axis": null,
+            "fillExpect": null
+          },
+          "normalComet": {
+            "base": null,
+            "axis": null
+          },
+          "hook": {
+            "state": 0,
+            "aimAngleMdeg": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "tipDist": 0,
+            "weaponLen": 0,
+            "maxDist": 0,
+            "element": 2,
+            "timingPosX1000": 0,
+            "timingPendingAdd": 0,
+            "timingIsExec": 0,
+            "comet": null,
+            "aimComet": null,
+            "axis": null
+          }
+        }
+      ],
+      "lastSampleMs": 35449
+    },
+    {
+      "id": 3,
+      "kind": "hook",
+      "heroIndex": 0,
+      "startedAt": 1770383553712,
+      "startedAtRt": 37878,
+      "endedAt": 1770383554210,
+      "endedAtRt": 38375,
+      "meta": {
+        "pid": 1,
+        "name": "LongBlond",
+        "comboMode": 0,
+        "phaseName": "thrust",
+        "phasePart": "windup"
+      },
+      "events": [
+        {
+          "t": 1770383553712,
+          "rt": 37887,
+          "tag": "MOVE_START",
+          "hi": 0,
+          "moveId": 3,
+          "data": {
+            "kind": "hook"
+          }
+        },
+        {
+          "t": 1770383553712,
+          "rt": 37887,
+          "tag": "HOOK_STATE",
+          "hi": 0,
+          "moveId": 3,
+          "data": {
+            "from": 0,
+            "to": 1
+          }
+        },
+        {
+          "t": 1770383553712,
+          "rt": 37887,
+          "tag": "PHASE",
+          "hi": 0,
+          "moveId": 3,
+          "data": {
+            "from": "idle",
+            "to": "thrust"
+          }
+        },
+        {
+          "t": 1770383553712,
+          "rt": 37887,
+          "tag": "PHASE_PART",
+          "hi": 0,
+          "moveId": 3,
+          "data": {
+            "from": "",
+            "to": "windup"
+          }
+        },
+        {
+          "t": 1770383554210,
+          "rt": 38385,
+          "tag": "HOOK_STATE",
+          "hi": 0,
+          "moveId": 3,
+          "data": {
+            "from": 1,
+            "to": 0
+          }
+        },
+        {
+          "t": 1770383554210,
+          "rt": 38385,
+          "tag": "PHASE_PART",
+          "hi": 0,
+          "moveId": 3,
+          "data": {
+            "from": "windup",
+            "to": "forward"
+          }
+        },
+        {
+          "t": 1770383554210,
+          "rt": 38385,
+          "tag": "MOVE_END",
+          "hi": 0,
+          "moveId": 3,
+          "data": {
+            "reason": "hook_done"
+          }
+        }
+      ],
+      "samples": [
+        {
+          "t": 1770383553712,
+          "rt": 37878,
+          "hi": 0,
+          "moveId": 3,
+          "kind": "hook",
+          "dir": {
+            "nx": 1,
+            "ny": 0,
+            "src": "hook"
+          },
+          "hero": {
+            "x": 1644,
+            "y": 899,
+            "vx": 0,
+            "vy": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "animHold": 0
+          },
+          "phase": {
+            "actionKind": "agility_thrust",
+            "actionSeq": 4,
+            "phaseName": "thrust",
+            "phaseProg": 0,
+            "partName": "windup",
+            "partProg": 0
+          },
+          "agi": {
+            "state": 0,
+            "hookState": 1,
+            "dashUntil": 38758,
+            "lungeStart": 38278,
+            "lungeEnd": 38478,
+            "animTotal": 800,
+            "comboMode": 0,
+            "execSeq": 0
+          },
+          "weapon": {
+            "info": {
+              "texKey": "t192__tools__whip__thrust__fg__vbase",
+              "frameName": "31",
+              "offX": 0,
+              "offY": 0,
+              "originX": 0.5,
+              "originY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "flipX": 0,
+              "flipY": 0
+            },
+            "axisLocal": {
+              "x0": -18,
+              "y0": 9.802439024390244,
+              "x1": 93,
+              "y1": 9.802439024390244
+            },
+            "axisWorld": {
+              "x0": 1626.4299999999998,
+              "y0": 909.6024390243911,
+              "x1": 1737.4299999999998,
+              "y1": 909.6024390243911
+            },
+            "axisLen": 111
+          },
+          "projectile": null,
+          "squareComet": {
+            "base": null,
+            "fill": null,
+            "axis": null,
+            "fillExpect": null
+          },
+          "normalComet": {
+            "base": null,
+            "axis": null
+          },
+          "hook": {
+            "state": 1,
+            "aimAngleMdeg": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "tipDist": 0,
+            "weaponLen": 0,
+            "maxDist": 0,
+            "element": 2,
+            "timingPosX1000": 0,
+            "timingPendingAdd": 0,
+            "timingIsExec": 0,
+            "comet": null,
+            "aimComet": null,
+            "axis": null
+          }
+        },
+        {
+          "t": 1770383553967,
+          "rt": 38142,
+          "hi": 0,
+          "moveId": 3,
+          "kind": "hook",
+          "dir": {
+            "nx": 1,
+            "ny": 0,
+            "src": "hook"
+          },
+          "hero": {
+            "x": 1644,
+            "y": 899,
+            "vx": 0,
+            "vy": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "animHold": 0
+          },
+          "phase": {
+            "actionKind": "agility_thrust",
+            "actionSeq": 4,
+            "phaseName": "thrust",
+            "phaseProg": 337,
+            "partName": "windup",
+            "partProg": 675
+          },
+          "agi": {
+            "state": 0,
+            "hookState": 1,
+            "dashUntil": 38758,
+            "lungeStart": 38278,
+            "lungeEnd": 38478,
+            "animTotal": 800,
+            "comboMode": 0,
+            "execSeq": 0
+          },
+          "weapon": {
+            "info": {
+              "texKey": "t192__tools__whip__thrust__fg__vbase",
+              "frameName": "31",
+              "offX": -187,
+              "offY": 0,
+              "originX": 0.5,
+              "originY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "flipX": 0,
+              "flipY": 0
+            },
+            "axisLocal": {
+              "x0": -205.39999999999986,
+              "y0": 9.802439024390244,
+              "x1": -94.39999999999986,
+              "y1": 9.802439024390244
+            },
+            "axisWorld": {
+              "x0": 1439.03,
+              "y0": 909.6024390243911,
+              "x1": 1550.03,
+              "y1": 909.6024390243911
+            },
+            "axisLen": 111
+          },
+          "projectile": null,
+          "squareComet": {
+            "base": null,
+            "fill": null,
+            "axis": null,
+            "fillExpect": null
+          },
+          "normalComet": {
+            "base": null,
+            "axis": null
+          },
+          "hook": {
+            "state": 1,
+            "aimAngleMdeg": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "tipDist": 0,
+            "weaponLen": 0,
+            "maxDist": 0,
+            "element": 2,
+            "timingPosX1000": 0,
+            "timingPendingAdd": 0,
+            "timingIsExec": 0,
+            "comet": null,
+            "aimComet": null,
+            "axis": null
+          }
+        },
+        {
+          "t": 1770383554210,
+          "rt": 38375,
+          "hi": 0,
+          "moveId": 3,
+          "kind": "hook",
+          "dir": {
+            "nx": 1,
+            "ny": 0,
+            "src": "hook"
+          },
+          "hero": {
+            "x": 1644,
+            "y": 899,
+            "vx": 230,
+            "vy": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "animHold": 0
+          },
+          "phase": {
+            "actionKind": "agility_thrust",
+            "actionSeq": 4,
+            "phaseName": "thrust",
+            "phaseProg": 636,
+            "partName": "forward",
+            "partProg": 496
+          },
+          "agi": {
+            "state": 0,
+            "hookState": 0,
+            "dashUntil": 38758,
+            "lungeStart": 38278,
+            "lungeEnd": 38478,
+            "animTotal": 800,
+            "comboMode": 0,
+            "execSeq": 0
+          },
+          "weapon": {
+            "info": {
+              "texKey": "t192__polearm__dragonspear__thrust__fg__vbase",
+              "frameName": "29",
+              "offX": 0,
+              "offY": 0,
+              "originX": 0.5,
+              "originY": 0.5,
+              "scaleX": 1,
+              "scaleY": 1,
+              "flipX": 0,
+              "flipY": 0
+            },
+            "axisLocal": {
+              "x0": -15,
+              "y0": 13.018018018018019,
+              "x1": 77,
+              "y1": 13.018018018018019
+            },
+            "axisWorld": {
+              "x0": 1629.4299999999998,
+              "y0": 912.8180180180188,
+              "x1": 1721.4299999999998,
+              "y1": 912.8180180180188
+            },
+            "axisLen": 92
+          },
+          "projectile": null,
+          "squareComet": {
+            "base": null,
+            "fill": null,
+            "axis": null,
+            "fillExpect": null
+          },
+          "normalComet": {
+            "base": null,
+            "axis": null
+          },
+          "hook": {
+            "state": 0,
+            "aimAngleMdeg": 0,
+            "dirX": 1,
+            "dirY": 0,
+            "tipDist": 0,
+            "weaponLen": 0,
+            "maxDist": 0,
+            "element": 2,
+            "timingPosX1000": 0,
+            "timingPendingAdd": 0,
+            "timingIsExec": 0,
+            "comet": null,
+            "aimComet": null,
+            "axis": null
+          }
+        }
+      ],
+      "lastSampleMs": 38375
+    }
+  ]
+}
