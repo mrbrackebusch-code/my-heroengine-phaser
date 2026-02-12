@@ -79,3 +79,15 @@
   export function spawnEffect(effectId: string, x: number, y: number, options?: { duration?: number; scale?: number; alpha?: number }): void;
   ```
 - **Requested By**: ChrisP
+
+## Request: Title Granting API
+
+- **ID**: titleGrantApi
+- **Summary**: Allow quests and students to grant persistent player titles as rewards.
+- **Details**: Need an API to grant a named title to the player (and persist it). Quests should be able to include a title in their reward payload (e.g., `reward.xp` or `reward.data.title`) and the engine should handle assigning and displaying the title.
+- **Suggested Signature**:
+  ```typescript
+  // Add to studentSystemsHooks or StudentApi
+  export function grantPlayerTitle(ctx: any, titleId: string, opts?: { notify?: boolean }): void;
+  ```
+- **Requested By**: ChrisP

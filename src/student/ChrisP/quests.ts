@@ -1,4 +1,4 @@
-import { registerQuest, registerQuestSource, registerMonsterHooks, type QuestDefinition, type QuestSource } from "../../studentSystemsHooks";
+import { registerQuest, registerQuestSource, requestHook, type QuestDefinition, type QuestSource } from "../../studentSystemsHooks";
 
 // Define the slime elimination quest
 const slimeHuntQuest: QuestDefinition = {
@@ -57,29 +57,56 @@ const bossLevelQuest: QuestDefinition = {
     repeatable: false,
 };
 
+// Define the 20-slime exterminator quest (title reward requested)
+const slimeExterminatorQuest: QuestDefinition = {
+    id: "slimeExterminator",
+    title: "Slime Exterminator",
+    description: "Eliminate 20 slimes to earn the title 'Slime Exterminator'.",
+    objectives: [
+        {
+            id: "defeatTwentySlimes",
+            kind: "defeat",
+            targetId: "slime",
+            count: 20,
+        },
+    ],
+    reward: {
+        data: { title: "Slime Exterminator" }, // Placeholder until title grant hook exists
+    },
+    repeatable: false,
+};
+
 // Register the quests
 registerQuest(slimeHuntQuest);
 registerQuest(wisdomAbilityQuest);
 registerQuest(bossLevelQuest);
+registerQuest(slimeExterminatorQuest);
 
 // Define a quest source (e.g., available automatically or from an NPC)
 const slimeHuntSource: QuestSource = {
     id: "slimeHuntSource",
     kind: "auto", // Automatically available, or change to "npc" if tied to an NPC
-    questIds: ["slimeHunt", "wisdomAbilityUse", "beatBossLevel"],
+    questIds: ["slimeHunt", "wisdomAbilityUse", "beatBossLevel", "slimeExterminator"],
 };
 
 // Register the quest source
 registerQuestSource(slimeHuntSource);
 
-// Register monster hooks for visual effects and quest tracking
-registerMonsterHooks({
-    onMonsterDefeated: (ctx: any, monsterId: string, x: number, y: number) => {
-        if (monsterId === "slime") {
-            // Spawn light effect at defeat location
-            // TODO: Implement light effect spawning using spawnEffect API once available
-            // spawnEffect("light", x, y, { duration: 1000 });
-            // TODO: Increment quest progress for slimeHunt quest
-        }
-    },
+// We cannot call `registerMonsterHooks` because that hook is not implemented
+// in the core. Registering a runtime hook here would cause an import error.
+// Instead, request the hook from the maintainer so they can implement it.
+requestHook({
+    id: "monsterDefeatHook",
+    summary: "Add onMonsterDefeated hook to notify students when a monster dies",
+    details: "Students need a callback fired when monsters are defeated so quests can track defeats and spawn visual effects at the death location.",
+    suggestedSignature: "export type MonsterHooks = StudentProfileGate & { onMonsterDefeated?: (ctx: any, monsterId: string, x: number, y: number) => void; }; export function registerMonsterHooks(hooks: MonsterHooks): void; export function getMonsterHooks(): MonsterHooks | null;",
+    requestedBy: "ChrisP",
+});
+
+requestHook({
+    id: "spawnEffectApi",
+    summary: "Provide spawnEffect API for students to spawn effects",
+    details: "Students need an API to spawn visual effects (lights, particles) at world positions. This will be used by quests and debug pages.",
+    suggestedSignature: "export function spawnEffect(effectId: string, x: number, y: number, options?: { duration?: number; scale?: number; alpha?: number }): void;",
+    requestedBy: "ChrisP",
 });
