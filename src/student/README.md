@@ -47,6 +47,10 @@ Student debug flags (safe to edit)
   - propInteractLogs -> prop interact logs
   - trapLogs -> trap prompt/effect logs
   - shrineOverlayLogs -> shrine overlay logs
+  - bossOverrideMove -> boss move override hook (debug)
+  - bossOverridePhase -> boss phase override hook (debug)
+  - bossOverrideDamage -> boss damage override hook (debug)
+  - bossOverrideSpawn -> boss spawn override hook (debug)
 
 Student debug sandbox (blank canvas)
 - Start the dev server, then open: debug.html?student=<Name> (or ?profile=<Name>)

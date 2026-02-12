@@ -1798,13 +1798,17 @@ function defaultTileValueToFamily(v: number): TileFamily | "" {
     // const TILE_WALL  = 1
     // const TILE_BRIDGE = 2
 
-    if (v === 1 || v === 2) {
+    if (defaultTileValueIsWall(v)) {
         // walls → chasm rim family
         return "chasm_light";
     }
 
     // everything else → light-brown dirt
     return "ground_light";
+}
+
+function defaultTileValueIsWall(v: number): boolean {
+    return v === 1 || v === 2;
 }
 
 function isChasmLikeFamily(family: TileFamily | ""): boolean {
@@ -1971,6 +1975,11 @@ export interface WorldTileRendererOptions {
      * If omitted, a simple default implementation is used.
      */
     tileValueToFamily?: (v: number) => TileFamily | "";
+    /**
+     * Optional predicate that marks which tile values are walls.
+     * If omitted, a simple default implementation is used (v === 1 || v === 2).
+     */
+    tileValueIsWall?: (v: number) => boolean;
 }
 
 export class WorldTileRenderer {
@@ -1993,6 +2002,7 @@ export class WorldTileRenderer {
   private _gidRanges: Array<{ textureKey: string; firstGid: number; lastExclusive: number }> = [];
   private _lastGrid: number[][] | null = null;
   private _lastValueToFamily: ((v: number) => TileFamily | "") | null = null;
+  private _lastValueIsWall: ((v: number) => boolean) | null = null;
   private _lastGridSig = 0;
 
   constructor(scene: Phaser.Scene, atlas: TileAtlas, opts: WorldTileRendererOptions) {
@@ -3491,21 +3501,22 @@ private _analyzeGridForRender(
   grid: number[][],
   rows: number,
   cols: number,
-  valueToFamily: (v: number) => TileFamily | ""
+  valueToFamily: (v: number) => TileFamily | "",
+  valueIsWall: (v: number) => boolean
 ): {
   rawWalls: number;
   rawFloors: number;
   rawSig: number;
-  famChasmCells: number;
-  famNonChasmCells: number;
+  wallCells: number;
+  floorCells: number;
   fallbackFloorFamily: TileFamily;
 } {
   let rawWalls = 0;
   let rawFloors = 0;
   let rawSig = 0;
 
-  let famChasmCells = 0;
-  let famNonChasmCells = 0;
+  let wallCells = 0;
+  let floorCells = 0;
 
   let fallbackFloorFamily: TileFamily = "ground_light";
   let fallbackFound = false;
@@ -3516,23 +3527,24 @@ private _analyzeGridForRender(
 
     for (let c = 0; c < cols; c++) {
       const v = (row[c] | 0);
-      if (v === 1) rawWalls++;
+      const isWall = valueIsWall(v);
+      if (isWall) rawWalls++;
       else rawFloors++;
 
       rawSig = (((rawSig << 5) - rawSig) + v + ((r + 1) * 131) + ((c + 1) * 17)) | 0;
 
       const fam = valueToFamily(v);
-      if (fam && isChasmLikeFamily(fam as TileFamily)) famChasmCells++;
-      else famNonChasmCells++;
+      if (isWall) wallCells++;
+      else floorCells++;
 
-      if (!fallbackFound && fam && !isChasmLikeFamily(fam as TileFamily)) {
+      if (!fallbackFound && !isWall && fam) {
         fallbackFloorFamily = fam as TileFamily;
         fallbackFound = true;
       }
     }
   }
 
-  return { rawWalls, rawFloors, rawSig, famChasmCells, famNonChasmCells, fallbackFloorFamily };
+  return { rawWalls, rawFloors, rawSig, wallCells, floorCells, fallbackFloorFamily };
 }
 
 private _paintFloorUnderlayEverywhere(
@@ -3540,6 +3552,7 @@ private _paintFloorUnderlayEverywhere(
   rows: number,
   cols: number,
   valueToFamily: (v: number) => TileFamily | "",
+  valueIsWall: (v: number) => boolean,
   fallbackFloorFamily: TileFamily,
   seedSalt: number
 ): void {
@@ -3551,10 +3564,11 @@ private _paintFloorUnderlayEverywhere(
 
     for (let c = 0; c < cols; c++) {
       const v = (row[c] | 0);
+      const isWall = valueIsWall(v);
       const fam0 = valueToFamily(v);
 
       const floorFamily =
-        (fam0 && !isChasmLikeFamily(fam0 as TileFamily)) ? (fam0 as TileFamily) : fallbackFloorFamily;
+        (!isWall && fam0) ? (fam0 as TileFamily) : fallbackFloorFamily;
 
       const seed = _mixSeed(seedSalt | 0, r | 0, c | 0, _hashString(floorFamily), _hashString("center"));
       const def =
@@ -3574,6 +3588,7 @@ private _paintChasmLike(
   rows: number,
   cols: number,
   valueToFamily: (v: number) => TileFamily | "",
+  valueIsWall: (v: number) => boolean,
   seedSalt: number
 ): void {
   if (!this.chasmLayer || !this.chasmOverlayLayer) return;
@@ -3584,8 +3599,9 @@ private _paintChasmLike(
 
     for (let c = 0; c < cols; c++) {
       const v = (row[c] | 0);
+      if (!valueIsWall(v)) continue;
       const family = valueToFamily(v);
-      if (!family || !isChasmLikeFamily(family as TileFamily)) continue;
+      if (!family) continue;
 
       const mask = computeNeighborMask(grid, r, c, family as TileFamily, valueToFamily);
       const shape: AutoShape = autoShapeFromMask(mask);
@@ -3652,6 +3668,7 @@ private _paintChasmLike(
 syncFromEngineGrid(grid: number[][], opts?: { variantSeed?: number }): void {
   const localDebug = this.opts.debugLocal ?? true;
   const valueToFamily = this.opts.tileValueToFamily ?? defaultTileValueToFamily;
+  const valueIsWall = this.opts.tileValueIsWall ?? defaultTileValueIsWall;
 
   if (!Array.isArray(grid) || grid.length === 0 || !Array.isArray(grid[0])) {
     logTiles(localDebug, "[tileMapGlue] syncFromEngineGrid: empty/malformed grid");
@@ -3675,18 +3692,19 @@ syncFromEngineGrid(grid: number[][], opts?: { variantSeed?: number }): void {
   this.chasmLayer.fill(-1);
   this.chasmOverlayLayer.fill(-1);
 
-  const stats = this._analyzeGridForRender(grid, rows, cols, valueToFamily);
+  const stats = this._analyzeGridForRender(grid, rows, cols, valueToFamily, valueIsWall);
   const seedOverride =
     (opts && typeof opts.variantSeed === "number" && Number.isFinite(opts.variantSeed))
       ? (opts.variantSeed | 0)
       : 0;
   const seedSalt = (seedOverride !== 0) ? (seedOverride | 0) : (stats.rawSig | 0);
 
-  this._paintFloorUnderlayEverywhere(grid, rows, cols, valueToFamily, stats.fallbackFloorFamily, seedSalt);
-  this._paintChasmLike(grid, rows, cols, valueToFamily, seedSalt);
+  this._paintFloorUnderlayEverywhere(grid, rows, cols, valueToFamily, valueIsWall, stats.fallbackFloorFamily, seedSalt);
+  this._paintChasmLike(grid, rows, cols, valueToFamily, valueIsWall, seedSalt);
 
   this._lastGrid = grid;
   this._lastValueToFamily = valueToFamily;
+  this._lastValueIsWall = valueIsWall;
   this._lastGridSig = seedSalt | 0;
 
   // stash last snapshot for other debug consumers if needed
@@ -3709,8 +3727,8 @@ syncFromEngineGrid(grid: number[][], opts?: { variantSeed?: number }): void {
       rawWalls: stats.rawWalls,
       rawFloors: stats.rawFloors,
       rawSig: stats.rawSig,
-      famChasmCells: stats.famChasmCells,
-      famNonChasmCells: stats.famNonChasmCells,
+      wallCells: stats.wallCells,
+      floorCells: stats.floorCells,
       tilesets: this._gidRanges.map(r => `${r.textureKey}@${r.firstGid}-${r.lastExclusive - 1}`).join(", "),
     });
   }
@@ -3750,10 +3768,11 @@ syncFromEngineGrid(grid: number[][], opts?: { variantSeed?: number }): void {
   private _applyAutoDecorDecals(decalNameGrid: string[][], rows: number, cols: number): void {
     if (!DECAL_AUTO_ENABLED) return;
     if (!this.decalLayer) return;
-    if (!this._lastGrid || !this._lastValueToFamily) return;
+    if (!this._lastGrid || !this._lastValueToFamily || !this._lastValueIsWall) return;
 
     const grid = this._lastGrid;
     const valueToFamily = this._lastValueToFamily;
+    const valueIsWall = this._lastValueIsWall;
     const seedSalt = this._lastGridSig | 0;
     // If decor sync sends an empty grid, still scatter based on the base grid size.
     const autoRows = ((rows | 0) > 0) ? (rows | 0) : (grid.length | 0);
@@ -3770,8 +3789,10 @@ syncFromEngineGrid(grid: number[][], opts?: { variantSeed?: number }): void {
       for (let c = 0; c < colMax; c++) {
         if (c < margin || c >= (colMax - margin)) continue;
         if (decalRow && decalRow[c]) continue;
-        const family = valueToFamily(row[c] | 0);
-        if (!family || isChasmLikeFamily(family as TileFamily)) continue;
+        const v = row[c] | 0;
+        if (valueIsWall(v)) continue;
+        const family = valueToFamily(v);
+        if (!family) continue;
         const seed = _mixSeed(seedSalt | 0, r | 0, c | 0, _hashString(family), _hashString("decor_scatter"));
         if (((seed | 0) % 1000) >= (DECAL_AUTO_DENSITY_PER_1000 | 0)) continue;
         const deco = this.atlas.getDecorByIndex(family as TileFamily, seed | 0);

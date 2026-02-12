@@ -50,3 +50,32 @@
   export function getLevelHooks(): LevelHooks | null;
   ```
 - **Requested By**: ChrisP
+
+## Request: Monster Defeat Tracking Hook
+
+- **ID**: monsterDefeatHook
+- **Summary**: Add a hook to track when monsters are defeated, for quest objectives like defeating slimes.
+- **Details**: Need a callback like `onMonsterDefeated(ctx: any, monsterId: string, x: number, y: number)` that fires when a monster is killed. This would allow quests to increment progress for defeat objectives, and enable visual effects like lights on defeat.
+- **Suggested Signature**:
+  ```typescript
+  export type MonsterHooks = StudentProfileGate & {
+      onMonsterDefeated?: (ctx: any, monsterId: string, x: number, y: number) => void;
+  };
+
+  // Registration function
+  export function registerMonsterHooks(hooks: MonsterHooks): void;
+  export function getMonsterHooks(): MonsterHooks | null;
+  ```
+- **Requested By**: ChrisP
+
+## Request: Visual Effect Spawning API
+
+- **ID**: spawnEffectApi
+- **Summary**: Provide an API for students to spawn visual effects at specific positions.
+- **Details**: Need a function like `spawnEffect(effectId: string, x: number, y: number, options?: any)` to spawn effects like lights, particles, etc. This would enable visual feedback for events like monster defeats.
+- **Suggested Signature**:
+  ```typescript
+  // Add to StudentApi or a new effects API
+  export function spawnEffect(effectId: string, x: number, y: number, options?: { duration?: number; scale?: number; alpha?: number }): void;
+  ```
+- **Requested By**: ChrisP

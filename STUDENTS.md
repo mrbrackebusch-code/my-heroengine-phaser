@@ -18,12 +18,28 @@ Student SDK (safe hooks)
 - props: registerSpec, registerVisual, registerDecal
 - npc/prop registry: registerStudentNpc, listStudentNpcs, registerStudentNpcInteractHandler; registerStudentProp, listStudentProps, registerStudentPropInteractHandler
 - traps: registerDefinition
+- maze: registerStudentMaze, listStudentMazes, getStudentMaze, registerStudentMazeHooks
+- terrain: listStudentTerrainFamilies, listStudentFloorFamilies, listStudentWallFamilies
+- bosses: registerBossPhaseConfig, listBossPhaseConfigs, getStudentBossPhaseConfig, registerStudentBossHooks (boss lifecycle + move/phase hooks + intro jump/move pick/barrage/poison/charge observation; debug-gated overrides)
 - pets/inventory: registerPetAtlas, listPetAtlases, registerPetBehavior, listPetBehaviors, registerPetStats, listPetStats, registerPetAcquisition, listPetAcquisitions, registerInventoryItem, registerInventoryHooks, registerAlly
 - relics: register (adds to core relic catalog)
 - vfx: register (adds to VFX registry)
 - ui: createOverlay, getOverlay, removeOverlay
 - debug: setStartFloor (optional start floor override for your profile)
 - Prefer importing from src/studentSystemsHooks.ts for all hooks.
+
+**Maze Options**
+- `listStudentTerrainFamilies()` returns all terrain families with `id`, `kind`, and a label.
+- `listStudentFloorFamilies()` filters to floor families (ground + water).
+- `listStudentWallFamilies()` filters to wall families (chasm + hedge).
+- Maze grids can include `theme` with `baseFamily`, `wallFamily`, `palette`, and `textureSeed`.
+- Maze grids can include `traps`, a list of `{ r, c, kind, mode, propBase, trapId }`.
+- Trap coordinates `r`/`c` are 0-based tile indices into the maze grid.
+- `kind` values: `trap` or `shrine` (default `trap`).
+- `mode` values: `kill` or `block` (default `kill`).
+- `propBase` overrides the prop art (defaults to `fire_totem` for traps, `shrine` for shrines).
+- `trapId` forces a specific Blockly puzzle id (optional).
+- When `traps` has entries, default trap/shrine spawns are skipped for that floor.
 
 Notes
 - Keys are automatically namespaced per student. Use the returned key for references.
@@ -45,6 +61,17 @@ Debug flags (student-friendly)
   - propInteractLogs -> prop interact logs
   - trapLogs -> trap prompt/effect logs
   - shrineOverlayLogs -> shrine overlay logs
+  - bossOverrideMove -> boss move override hook (debug)
+  - bossOverridePhase -> boss phase override hook (debug)
+  - bossOverrideDamage -> boss damage override hook (debug)
+  - bossOverrideSpawn -> boss spawn override hook (debug)
+
+Boss hooks (phase registry + overrides)
+- Register per-boss phase configs with `registerBossPhaseConfig({ monsterId, phases })`.
+- Phases use `minHpPct`/`maxHpPct` ranges; optional `moveWeights` can bias move selection.
+- Register lifecycle hooks with `registerStudentBossHooks({ ... })`.
+- Observation hooks: `onBossIntroJumpStart`, `onBossIntroJumpLand`, `onBossMovePicked`, `onBossBarrageVolley`, `onBossPoisonRing`, `onBossChargeHit`.
+- Override hooks (`pickBossMove`, `overrideBossPhase`, `overrideBossDamage`, `overrideBossSpawnStats`) only run when the corresponding boss override debug flags are enabled in `src/student/studentDebugOverrides.ts`.
 
 Student debug sandbox (blank canvas)
 - Start the dev server, then open: debug.html?student=<Name> (or ?profile=<Name>)
@@ -72,6 +99,28 @@ Assets
 - Student assets live inside your folder (top level or an assets/ subfolder).
 - Use assets.registerTileSheet for prop/decal sheets so tileAtlas can resolve frame columns.
 - If a prop must collide, it MUST use aura/mask collision data. For new art, ask the maintainer to generate aura masks and set requireAura: true in registerTileSheet.
+- Student monster sheets must be registered in `src/student/<Name>/assets/registry.js` (or `.mjs`). The game does NOT auto-discover monster PNGs.
+- Each registry entry uses the same monster filename format as core (id + WxH + ULDR + tokens like `w=`, `a1=`, `d=` and `drows=`).
+- Monster PNGs live in `src/student/<Name>/assets/enemies/monsters/` (or `.../bosses/`), and the filename must exactly match the `name` you register (minus `.png`).
+- Generate monster auras inside your folder with `npm run gen-monster-auras` and `npm run gen-monster-feet` (creates `auras/` next to your sheets).
+- Do not place student monster art in `assets/enemies/*`; keep it under your student folder.
+
+Example registry (src/student/<Name>/assets/registry.js)
+```js
+export const monsterSheets = [
+  {
+    name: "squirrel 32x32 ULDR w=4 a1=3 drows=0",
+    url: new URL("./enemies/monsters/squirrel 32x32 ULDR w=4 a1=3 drows=0.png", import.meta.url),
+  },
+];
+
+export const bossSheets = [
+  {
+    name: "ogre king 96x96 ULDR w=4 a1=4 drows=1",
+    url: new URL("./enemies/bosses/ogre king 96x96 ULDR w=4 a1=4 drows=1.png", import.meta.url),
+  },
+];
+```
 
 How to start a system
 - Create a new folder inside your name folder (example: src/student/Kyle/Crafting/).

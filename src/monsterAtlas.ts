@@ -3,6 +3,7 @@ import type Phaser from "phaser";
 import { DEBUG_MONSTER_SHEET_PARSE, DEBUG_MONSTER_SPRITES } from "./debugFlags";
 import { AURA_RADII, auraKey, auraSuffix } from "./auraConfig";
 import { queueSpritesheetOnce } from "./loaderCache";
+import { loadStudentAssetRegistries, listStudentMonsterSheets } from "./studentAssetRegistry";
 
 export type Dir = "up" | "down" | "left" | "right";
 export type Phase = "walk" | "attack" | "death";
@@ -56,6 +57,14 @@ const monsterAuraPngs = {
         "../assets/enemies/bosses/auras/*.png",
         { as: "url", eager: true }
     ),
+    ...import.meta.glob(
+        "./student/**/assets/enemies/monsters/auras/*.png",
+        { as: "url", eager: true }
+    ),
+    ...import.meta.glob(
+        "./student/**/assets/enemies/bosses/auras/*.png",
+        { as: "url", eager: true }
+    ),
 } as Record<string, string>;
 
 interface ParsedSheet {
@@ -72,6 +81,7 @@ interface ParsedSheet {
     url: string;
     sourcePath: string;
     skip: boolean;
+    priority?: number;
 }
 
 const DIR_LETTERS = new Set(["U", "D", "L", "R", "N", "E", "S", "W"]);
@@ -223,7 +233,7 @@ function parseMonsterFilename(baseName: string, url: string, sourcePath: string)
     };
 }
 
-const PARSED_SHEETS: ParsedSheet[] = [];
+const CORE_PARSED_SHEETS: ParsedSheet[] = [];
 
 type FrameOverride = {
     phase: Phase;
@@ -250,7 +260,38 @@ for (const [path, url] of Object.entries(monsterPngs)) {
     if (!parsed) {
         throw new Error(`[monsterAtlas.parse] invalid monster sheet filename: ${path}`);
     }
-    PARSED_SHEETS.push(parsed);
+    CORE_PARSED_SHEETS.push(parsed);
+}
+
+function _parseStudentMonsterSheets(): ParsedSheet[] {
+    loadStudentAssetRegistries();
+    const entries = listStudentMonsterSheets();
+    if (!entries.length) return [];
+    const out: ParsedSheet[] = [];
+    for (const entry of entries) {
+        const baseName = String(entry?.name || "").trim();
+        const url = String(entry?.url || "").trim();
+        if (!baseName || !url) continue;
+        const parsed = parseMonsterFilename(baseName, url, entry.source || baseName);
+        if (!parsed) continue;
+        const sourcePath = (entry.group === "bosses")
+            ? `student/bosses/${baseName}`
+            : (entry.source || url || baseName);
+        out.push({
+            ...parsed,
+            textureKey: baseName,
+            url,
+            sourcePath,
+            skip: false,
+            priority: 1,
+        });
+    }
+    return out;
+}
+
+function _listAllParsedSheets(): ParsedSheet[] {
+    const student = _parseStudentMonsterSheets();
+    return student.length ? CORE_PARSED_SHEETS.concat(student) : CORE_PARSED_SHEETS.slice();
 }
 
 function buildFrameEmptyCache(
@@ -581,11 +622,11 @@ function fillMissingPhases(set: MonsterAnimSet): void {
 
 export function preloadMonsterSheets(scene: Phaser.Scene): void {
     if (DEBUG_MONSTER_SPRITES) {
-    console.log("[monsterAtlas.preloadMonsterSheets] sheets to load:",
-        PARSED_SHEETS.map(s =>
-            `${s.textureKey} (id="${s.id}", ${s.width}x${s.height}, skip=${!!s.skip})`
-        )
-    );
+        console.log("[monsterAtlas.preloadMonsterSheets] sheets to load:",
+            _listAllParsedSheets().map(s =>
+                `${s.textureKey} (id="${s.id}", ${s.width}x${s.height}, skip=${!!s.skip})`
+            )
+        );
     }
 
     // Build aura lookup by baseName (filename without .png) from aura subfolders.
@@ -599,7 +640,8 @@ export function preloadMonsterSheets(scene: Phaser.Scene): void {
     
     const missingAuras: string[] = [];
 
-    for (const sheet of PARSED_SHEETS) {
+    const sheets = _listAllParsedSheets();
+    for (const sheet of sheets) {
         if (sheet.skip) continue;
 
         queueSpritesheetOnce(
@@ -658,7 +700,8 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
         auraUrlByBase.set(base, url);
     }
 
-    for (const sheet of PARSED_SHEETS) {
+    const sheets = _listAllParsedSheets();
+    for (const sheet of sheets) {
         if (sheet.skip) continue;
         let list = byMonster.get(sheet.id);
         if (!list) {
@@ -673,6 +716,9 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
     for (const [id, sheets] of byMonster.entries()) {
 
         const orderedSheets = sheets.slice().sort((a, b) => {
+            const pa = (a.priority || 0) | 0;
+            const pb = (b.priority || 0) | 0;
+            if (pa !== pb) return pb - pa;
             const scoreA = (a.walkFrames | 0) + (a.attackFrames.length * 10) + ((a.deathRows | 0) * 5);
             const scoreB = (b.walkFrames | 0) + (b.attackFrames.length * 10) + ((b.deathRows | 0) * 5);
             return scoreB - scoreA;
@@ -680,7 +726,9 @@ export function buildMonsterAtlas(scene: Phaser.Scene): MonsterAtlas {
 
         const sheet = orderedSheets[0];
         if (!sheet) {
-            console.warn("[monsterAtlas.build] no usable sheets for monster id:", id, "sheets=", sheets.map(s => s.textureKey));
+            if (DEBUG_MONSTER_SHEET_PARSE) {
+                console.warn("[monsterAtlas.build] no usable sheets for monster id:", id, "sheets=", sheets.map(s => s.textureKey));
+            }
             continue;
         }
 

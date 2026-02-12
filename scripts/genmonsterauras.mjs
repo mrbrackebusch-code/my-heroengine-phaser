@@ -7,9 +7,11 @@
 import fs from "node:fs";
 import path from "node:path";
 import { PNG } from "pngjs";
+import { fileURLToPath, pathToFileURL } from "node:url";
 
 const ROOT = process.cwd();
-const MONSTER_DIRS = [
+const STUDENT_ROOT = path.join(ROOT, "src", "student");
+const CORE_MONSTER_DIRS = [
   path.join(ROOT, "assets", "enemies", "monsters"),
   path.join(ROOT, "assets", "enemies", "bosses"),
 ];
@@ -17,6 +19,8 @@ const OUT_SUBDIR = "auras";
 const DEFAULT_RADII = [0, 1, 2, 3];
 const args = process.argv.slice(2);
 const FRAME_DIM_RE = /(\d+)\s*x\s*(\d+)/i;
+
+const MONSTER_DIRS = CORE_MONSTER_DIRS.slice();
 
 // Default: avoid rewriting existing auras (toggle here)
 const DEFAULT_SKIP_EXISTING = true;
@@ -77,6 +81,65 @@ function listPngs(dir) {
   };
   walk(dir);
   return out.sort();
+}
+
+function findStudentRegistryFiles() {
+  const out = [];
+  if (!fs.existsSync(STUDENT_ROOT)) return out;
+  const students = fs.readdirSync(STUDENT_ROOT, { withFileTypes: true });
+  for (const ent of students) {
+    if (!ent.isDirectory()) continue;
+    const base = path.join(STUDENT_ROOT, ent.name, "assets");
+    const jsPath = path.join(base, "registry.js");
+    const mjsPath = path.join(base, "registry.mjs");
+    if (fs.existsSync(jsPath)) out.push(jsPath);
+    if (fs.existsSync(mjsPath)) out.push(mjsPath);
+  }
+  return out.sort();
+}
+
+function readRegistryModule(mod) {
+  if (!mod) return {};
+  if (mod.default && typeof mod.default === "object") return mod.default;
+  return mod;
+}
+
+function normalizeEntryUrl(raw, sourceFile) {
+  if (!raw) return null;
+  if (raw instanceof URL) return raw;
+  const s = String(raw || "").trim();
+  if (!s) return null;
+  if (/^file:/i.test(s) || /^https?:/i.test(s)) return new URL(s);
+  return new URL(s, pathToFileURL(sourceFile));
+}
+
+async function loadStudentMonsterEntries() {
+  const files = findStudentRegistryFiles();
+  /** @type {{ name: string; filePath: string; source: string }[]} */
+  const out = [];
+  for (const file of files) {
+    const mod = await import(pathToFileURL(file).href);
+    const reg = readRegistryModule(mod);
+    const monsters = reg.monsterSheets || reg.monsters || [];
+    const bosses = reg.bossSheets || reg.bosses || [];
+
+    const addEntries = (list) => {
+      if (!Array.isArray(list)) return;
+      for (const entry of list) {
+        const name = String(entry?.name || "").trim();
+        const url = normalizeEntryUrl(entry?.url, file);
+        if (!name || !url) {
+          throw new Error(`[mon-auras] Invalid registry entry (missing name/url) source=${file}`);
+        }
+        const filePath = fileURLToPath(url);
+        out.push({ name, filePath, source: file });
+      }
+    };
+
+    addEntries(monsters);
+    addEntries(bosses);
+  }
+  return out;
 }
 
 function parseFrameSizeFromName(filePath) {
@@ -203,6 +266,17 @@ async function main() {
   for (const dir of MONSTER_DIRS) {
     const files = listPngs(dir);
     for (const file of files) inputs.push({ file, dir });
+  }
+  const studentEntries = await loadStudentMonsterEntries();
+  for (const entry of studentEntries) {
+    const baseName = path.basename(entry.filePath, ".png");
+    if (baseName !== entry.name) {
+      throw new Error(`[mon-auras] registry name mismatch: name="${entry.name}" file="${baseName}" source=${entry.source}`);
+    }
+    if (!fs.existsSync(entry.filePath)) {
+      throw new Error(`[mon-auras] missing registered monster file: ${entry.filePath}`);
+    }
+    inputs.push({ file: entry.filePath, dir: path.dirname(entry.filePath) });
   }
   if (inputs.length === 0) {
     console.error(`[mon-auras] No monster PNGs found in: ${MONSTER_DIRS.join(", ")}`);
