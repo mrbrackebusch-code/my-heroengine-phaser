@@ -1,4 +1,4 @@
-import { SongSpec } from './MusicEngine';
+import type { SongSpec } from './MusicEngine.js';
 
 export const exampleSong: SongSpec = {
   tempo: 120,

@@ -1,4 +1,5 @@
-import { Song, estimateComplexity } from './songData';
+import type { Song } from './songData';
+import { estimateComplexity } from './songData';
 import { Minigame, type ActiveNote } from './minigame';
 import type { HitResult, PerformanceStats } from './scoreCalculator';
 

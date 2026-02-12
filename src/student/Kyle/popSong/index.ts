@@ -1,11 +1,11 @@
-import { MusicEngine } from './MusicEngine';
-import { exampleSong } from './exampleSong';
+import { MusicEngine } from './MusicEngine.js';
+import { exampleSong } from './exampleSong.js';
 
 export const engine = new MusicEngine();
 
 export async function initAndPlayExample() {
   await engine.initAudioOnce();
-  engine.loadSong(exampleSong);
+  await engine.loadSong(exampleSong);
   engine.play();
 }
 

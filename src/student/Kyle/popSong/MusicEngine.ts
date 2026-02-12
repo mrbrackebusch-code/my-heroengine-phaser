@@ -1,6 +1,7 @@
 import * as Tone from 'tone';
+import { createInstrumentKit, disposeInstrumentKit, type InstrumentKit } from './SoundDesign.js';
 
-export type SongSpec = {
+export interface SongSpec {
   tempo: number;
   key: string;
   scale: 'major' | 'minor';
@@ -8,11 +9,12 @@ export type SongSpec = {
   structure: string[];
   sections: Record<string, any>;
   instruments?: Record<string, string>;
-};
+}
 
 export class MusicEngine {
   private songSpec?: SongSpec;
   private sequences: Array<any> = [];
+  private instrumentKit?: InstrumentKit;
   private started = false;
 
   async initAudioOnce(): Promise<void> {
@@ -23,46 +25,31 @@ export class MusicEngine {
     }
   }
 
-  loadSong(spec: SongSpec) {
+  async loadSong(spec: SongSpec) {
     this.stop();
     this.songSpec = spec;
+
+    // Create or reuse instrument kit
+    if (!this.instrumentKit) {
+      this.instrumentKit = await createInstrumentKit();
+    }
+
+    const kit = this.instrumentKit;
+
     Tone.Transport.cancel();
     Tone.Transport.bpm.value = spec.tempo || 120;
 
-    // Build simple instruments
-    const melodySynth = new Tone.MonoSynth({
-      oscillator: { type: 'sawtooth' },
-      envelope: { attack: 0.01, decay: 0.1, sustain: 0.3, release: 0.3 },
-    }).toDestination();
-
-    const chordsSynth = new Tone.PolySynth(Tone.Synth, {
-      oscillator: { type: 'triangle' },
-      envelope: { attack: 0.1, decay: 0.2, sustain: 0.6, release: 0.8 },
-    }).toDestination();
-
-    const kick = new Tone.MembraneSynth().toDestination();
-    const snare = new Tone.NoiseSynth({
-      noise: { type: 'white' },
-      envelope: { attack: 0.001, decay: 0.2, sustain: 0 },
-    }).toDestination();
-    const hat = new Tone.MetalSynth({ frequency: 800, envelope: { attack: 0.001, decay: 0.08, release: 0.01 } }).toDestination();
-
-    // We'll expand each track into Parts scheduled on the Transport
     const firstSectionName = spec.structure[0];
     const section = spec.sections[firstSectionName];
 
     // --- Drums: 16-step grid patterns ---
     const drumSteps = this.resolveDrumPattern(section?.drums?.pattern || 'POP_BASIC');
-    const drumEvents = drumSteps.map((hit, i) => {
-      return { time: `${Math.floor(i / 16)}:${(i % 16) / 4}:0`, stepIndex: i, hit };
-    });
 
-    // Simpler: use a 16-step Sequence looping at '16n'
     const drumSeq = new Tone.Sequence((time, step) => {
       const hit = drumSteps[Number(step) % drumSteps.length];
-      if (hit === 'K') kick.triggerAttackRelease('C2', '8n', time);
-      else if (hit === 'S') snare.triggerAttackRelease('8n', time);
-      else if (hit === 'H') hat.triggerAttackRelease('16n', time);
+      if (hit === 'K') kit.kick.triggerAttackRelease('C1', '8n', time);
+      else if (hit === 'S') kit.snare.triggerAttackRelease('8n', time);
+      else if (hit === 'H') kit.hihat.triggerAttackRelease('16n', time);
     }, drumSteps.map((_, i) => i), '16n');
     drumSeq.start(0);
 
@@ -83,16 +70,16 @@ export class MusicEngine {
       if ((section?.chords?.pattern || '').includes('STRUM')) {
         // schedule root->third->fifth at 8n offsets
         const [r, t, f] = chordsArray[chordIdx];
-        Tone.Transport.schedule((time) => chordsSynth.triggerAttackRelease(r, '8n', time, 0.8), measureStart);
-        Tone.Transport.schedule((time) => chordsSynth.triggerAttackRelease(t, '8n', time, 0.8), `${measureStart} + 8n`);
-        Tone.Transport.schedule((time) => chordsSynth.triggerAttackRelease(f, '8n', time, 0.8), `${measureStart} + 4n`);
+        Tone.Transport.schedule((time) => kit.chordsSynth.triggerAttackRelease(r, '8n', time, 0.8), measureStart);
+        Tone.Transport.schedule((time) => kit.chordsSynth.triggerAttackRelease(t, '8n', time, 0.8), `${measureStart} + 8n`);
+        Tone.Transport.schedule((time) => kit.chordsSynth.triggerAttackRelease(f, '8n', time, 0.8), `${measureStart} + 4n`);
       }
     }
 
     // If not using STRUM pattern, play full triad at measure start
     if (!((section?.chords?.pattern || '').includes('STRUM'))) {
       for (const ev of chordEvents) {
-        Tone.Transport.schedule((time) => chordsSynth.triggerAttackRelease(ev.pitches, '1m', time, 0.7), ev.time);
+        Tone.Transport.schedule((time) => kit.chordsSynth.triggerAttackRelease(ev.pitches, '1m', time, 0.7), ev.time);
       }
     }
 
@@ -131,7 +118,7 @@ export class MusicEngine {
     // Schedule melody events
     for (const ev of melodyEvents) {
       if (ev.note) {
-        Tone.Transport.schedule((time) => melodySynth.triggerAttackRelease(ev.note as string, ev.dur, time, 0.9), ev.time);
+        Tone.Transport.schedule((time) => kit.melodySynth.triggerAttackRelease(ev.note as string, ev.dur, time, 0.9), ev.time);
       }
     }
 
@@ -161,10 +148,14 @@ export class MusicEngine {
       try { s.dispose?.(); } catch (e) {}
     }
     this.sequences = [];
+    if (this.instrumentKit) {
+      disposeInstrumentKit(this.instrumentKit);
+      this.instrumentKit = undefined;
+    }
   }
 
   getPlayhead(): string {
-    return Tone.Transport.position;
+    return Tone.Transport.position as string;
   }
 
   // --- Helpers: scale / chord generation ---

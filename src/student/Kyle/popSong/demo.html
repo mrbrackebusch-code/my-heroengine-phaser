@@ -29,7 +29,7 @@
       startBtn.addEventListener('click', async () => {
         status.textContent = 'Loading module...';
         try {
-          const mod = await import('/src/student/Kyle/popSong/index.ts');
+          const mod = await import('./index.ts');
           status.textContent = 'Initializing audio... (user gesture)';
           await mod.initAndPlayExample();
           status.textContent = 'Playing example song';
@@ -40,13 +40,13 @@
       });
 
       pauseBtn.addEventListener('click', async () => {
-        const mod = await import('/src/student/Kyle/popSong/index.ts');
+        const mod = await import('./index.ts');
         mod.engine.pause?.();
         status.textContent = 'Paused';
       });
 
       stopBtn.addEventListener('click', async () => {
-        const mod = await import('/src/student/Kyle/popSong/index.ts');
+        const mod = await import('./index.ts');
         mod.engine.stop?.();
         status.textContent = 'Stopped';
       });
