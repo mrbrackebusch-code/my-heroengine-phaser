@@ -7,7 +7,7 @@
 // Type-only shim: WorldSnapshot type is defined in arcadeCompat.ts; we keep this file decoupled.
 
 import {
-    DEBUG_EFFECTS_HALL_LOGS,
+    DEBUG_EFFECTS_HALL_TRACE_LOGS,
     DEBUG_NET,
     DEBUG_NET_IDENTITY,
     DEBUG_NET_SNAPSHOT,
@@ -759,7 +759,7 @@ class NetworkClient {
 
         return new Promise((resolve) => {
             const reasonTag = (typeof reason === "string") ? reason : "";
-            if (DEBUG_EFFECTS_HALL_LOGS && (reasonTag.indexOf("trace-proof") >= 0 || reasonTag.indexOf("effects-hall-trace") >= 0)) {
+            if (DEBUG_EFFECTS_HALL_TRACE_LOGS && (reasonTag.indexOf("trace-proof") >= 0 || reasonTag.indexOf("effects-hall-trace") >= 0)) {
                 let approxBytes = -1;
                 try { approxBytes = JSON.stringify(payload).length | 0; } catch { approxBytes = -1; }
                 console.log(
@@ -772,7 +772,7 @@ class NetworkClient {
             const timeout = setTimeout(() => {
                 if (this.debugDumpResolvers.has(requestId)) {
                     this.debugDumpResolvers.delete(requestId);
-                    if (DEBUG_EFFECTS_HALL_LOGS && (reasonTag.indexOf("trace-proof") >= 0 || reasonTag.indexOf("effects-hall-trace") >= 0)) {
+                    if (DEBUG_EFFECTS_HALL_TRACE_LOGS && (reasonTag.indexOf("trace-proof") >= 0 || reasonTag.indexOf("effects-hall-trace") >= 0)) {
                         console.log("[NET][DEBUGDUMP][TIMEOUT] id=" + requestId + " reason=" + reasonTag);
                     }
                     resolve({ ok: false, reason: "timeout" });
@@ -781,7 +781,7 @@ class NetworkClient {
 
             this.debugDumpResolvers.set(requestId, (res: any) => {
                 clearTimeout(timeout);
-                if (DEBUG_EFFECTS_HALL_LOGS && (reasonTag.indexOf("trace-proof") >= 0 || reasonTag.indexOf("effects-hall-trace") >= 0)) {
+                if (DEBUG_EFFECTS_HALL_TRACE_LOGS && (reasonTag.indexOf("trace-proof") >= 0 || reasonTag.indexOf("effects-hall-trace") >= 0)) {
                     const ok = res && typeof res.ok === "boolean" ? res.ok : null;
                     const rr = res && typeof res.reason === "string" ? res.reason : "";
                     const file = res && typeof res.file === "string" ? res.file : "";
@@ -1551,7 +1551,7 @@ private onPlayerState(msg: Extract<NetMessage, { type: "playerState" }>) {
         if (resolver) {
             this.debugDumpResolvers.delete(msg.requestId);
             resolver(msg);
-        } else if (DEBUG_EFFECTS_HALL_LOGS) {
+        } else if (DEBUG_EFFECTS_HALL_TRACE_LOGS) {
             const ok = msg && typeof msg.ok === "boolean" ? msg.ok : null;
             const rr = msg && typeof msg.reason === "string" ? msg.reason : "";
             const file = msg && typeof msg.file === "string" ? msg.file : "";

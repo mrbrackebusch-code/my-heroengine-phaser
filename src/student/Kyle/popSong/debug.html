@@ -1,0 +1,97 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <title>PopSong Debug Test</title>
+  <style>
+    body { font-family: monospace; padding: 20px; background: #f0f0f0; }
+    #log { background: white; padding: 20px; border-radius: 4px; white-space: pre-wrap; font-size: 12px; line-height: 1.5; max-height: 60vh; overflow-y: auto; border: 1px solid #ccc; }
+    button { padding: 8px 16px; margin: 10px 10px 10px 0; cursor: pointer; font-size: 14px; }
+  </style>
+</head>
+<body>
+  <h1>PopSong Debug Test</h1>
+  <button onclick="testModules()">Test Module Imports</button>
+  <button onclick="clearLog()">Clear</button>
+  <div id="log">Debug output will appear here...</div>
+
+  <script type="module">
+    window.clearLog = () => {
+      document.getElementById('log').textContent = '';
+    };
+
+    function log(msg) {
+      const el = document.getElementById('log');
+      el.textContent += '[' + new Date().toLocaleTimeString() + '] ' + msg + '\n';
+      el.scrollTop = el.scrollHeight;
+    }
+
+    window.testModules = async () => {
+      log('=== Starting Module Test ===');
+      
+      try {
+        log('1. Importing Tone.js...');
+        const Tone = await import('https://cdn.jsdelivr.net/npm/tone@14.8.49/build/Tone.js');
+        log('   ✓ Tone.js loaded: ' + Object.keys(Tone).slice(0, 5).join(', ') + '...');
+      } catch (e) {
+        log('   ✗ Tone.js failed: ' + e.message);
+        return;
+      }
+
+      try {
+        log('2. Importing SoundDesign.js...');
+        const SoundDesign = await import('./SoundDesign.js');
+        log('   ✓ SoundDesign exports: ' + Object.keys(SoundDesign).join(', '));
+      } catch (e) {
+        log('   ✗ SoundDesign failed: ' + e.message);
+        return;
+      }
+
+      try {
+        log('3. Importing exampleSong.js...');
+        const exampleSongMod = await import('./exampleSong.js');
+        log('   ✓ exampleSong loaded');
+        log('   Song tempo: ' + exampleSongMod.exampleSong.tempo);
+        log('   Song key: ' + exampleSongMod.exampleSong.key);
+      } catch (e) {
+        log('   ✗ exampleSong failed: ' + e.message);
+        log('   Stack: ' + e.stack);
+        return;
+      }
+
+      try {
+        log('4. Importing MusicEngine.js...');
+        const MusicEngineMod = await import('./MusicEngine.js');
+        log('   ✓ MusicEngine exports: ' + Object.keys(MusicEngineMod).join(', '));
+        
+        log('5. Creating MusicEngine instance...');
+        const engine = new MusicEngineMod.MusicEngine();
+        log('   ✓ Engine created');
+        
+        log('6. Calling initAudioOnce...');
+        await engine.initAudioOnce();
+        log('   ✓ Audio initialized');
+        
+        log('7. Loading song...');
+        await engine.loadSong(exampleSongMod.exampleSong);
+        log('   ✓ Song loaded');
+        
+        log('8. Playing...');
+        engine.play();
+        log('   ✓ Playing! Check your speakers.');
+        
+        setTimeout(() => {
+          engine.stop();
+          log('   ✓ Stopped after 5 seconds');
+        }, 5000);
+        
+      } catch (e) {
+        log('   ✗ Error: ' + e.message);
+        log('   Stack: ' + e.stack);
+      }
+    };
+
+    log('Debug test loaded. Click "Test Module Imports" to run.');
+  </script>
+</body>
+</html>

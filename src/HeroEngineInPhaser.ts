@@ -72,6 +72,12 @@ import {
     DEBUG_AGI_COMET_ALIGN_VIS,
     DEBUG_AGI_COMET_ALIGN_VIS_HERO_INDEX,
     DEBUG_AGI_COMET_ALIGN_VIS_TIP_R,
+    DEBUG_AGI_DUMP,
+    DEBUG_AGI_DUMP_AUTO_DUMP,
+    DEBUG_AGI_DUMP_MOVES_MAX,
+    DEBUG_AGI_DUMP_TICK_INTERVAL_MS,
+    DEBUG_AGI_DUMP_MAX_SAMPLES_PER_MOVE,
+    DEBUG_AGI_DUMP_MAX_EVENTS_PER_MOVE,
     DEBUG_AGI_COMBO,
     DEBUG_AGI_COMBO_BUILD,
     DEBUG_AGI_COMBO_EXIT,
@@ -107,6 +113,8 @@ import {
     DEBUG_DUNGEON_LOGS,
     DEBUG_EFFECTS_HALL_ON_START,
     DEBUG_EFFECTS_HALL_LOGS,
+    DEBUG_EFFECTS_HALL_TRACE_LOGS,
+    DEBUG_EFFECTS_HALL_FRAME_LOGS,
     DEBUG_EFFECTS_HALL_TRACE,
     DEBUG_EFFECTS_HALL_TRACE_LITE,
     DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE,
@@ -147,6 +155,7 @@ import {
     DEBUG_TOWER_TRIAL_SIM,
     DEBUG_TRAP_LOGS,
     DEBUG_TILEMAP_AUDIT,
+    DEBUG_TILEMAP_AUDIT_CONSOLE,
     DEBUG_TILEMAP_AUDIT_DUMP,
     DEBUG_FORCE_TEST_WORLD_KIND,
     DEBUG_FORCE_TEST_WORLD_LOG,
@@ -173,6 +182,7 @@ import {
     DEBUG_SHRINE_OVERLAY_LOGS,
     DEBUG_SHOP_LOGS,
     DEBUG_DEBUG_DUMP,
+    DEBUG_DEBUG_DUMP_MANUAL,
     DEBUG_SAVE_TRACE,
     DEBUG_SPECIAL_PHASE_LOG_ONCE,
     DEBUG_STATUE_PEDESTAL,
@@ -181,6 +191,10 @@ import {
     DEBUG_STR_PROJECTILE_METRICS,
     DEBUG_STR_PROJECTILE_FRAMES,
     DEBUG_STR_PROJECTILE_FRAMES_THROTTLE_MS,
+    DEBUG_STR_TRACE,
+    DEBUG_STR_TRACE_AUTO_DUMP,
+    DEBUG_STR_TRACE_MAX,
+    DEBUG_STR_TRACE_DUMP_COOLDOWN_MS,
     DEBUG_STUDENT_SYSTEMS_LOGS,
     DEBUG_UI_LOGS,
     DEBUG_UIAPI_LOGS,
@@ -1040,6 +1054,8 @@ namespace HeroEngine {
         if (_started) return;
 
         _started = true;
+
+        _heAgilityDumpReset("start");
 
 
 
@@ -2604,6 +2620,34 @@ function _spawnStrengthArcFxForProj(
             " outlineOk=" + outlineOk
         );
     }
+    if (_heStrengthTraceCanLog()) {
+        const moveId = sprites.readDataNumber(proj, STR_TRACE_MOVE_ID_KEY) | 0;
+        const data = {
+            hi: heroIndex | 0,
+            projId: (proj as any).id | 0,
+            moveId: moveId | 0,
+            elem: element | 0,
+            dir: dir || "",
+            showFill: showFill ? 1 : 0,
+            mask: STR_ARC_SKIN_ID,
+            fill: fillSkinId || "",
+            fillDir: (fillDir || dir || ""),
+            fillAlpha: STR_ARC_FILL_ALPHA,
+            fillTint: fillTint | 0,
+            edge: edgeSkinId || "",
+            edgeDir: (edgeDir || dir || ""),
+            edgeAura: edgeAuraSkinId || "",
+            aura: auraSkinIds.slice(0),
+            outline: outlineId || "",
+            outlineAlpha: STR_ARC_OUTLINE_ALPHA,
+            softHalo: STR_ARC_SOFT_HALO_ENABLED ? 1 : 0,
+            softHaloAlpha: STR_ARC_SOFT_HALO_ALPHA,
+            softHaloBlend: STR_ARC_SOFT_HALO_BLEND || "",
+            zBase: zBase | 0
+        };
+        _heStrengthTraceLastArcFx = data;
+        _heStrengthTracePush("ARC_FX_SPAWN", data);
+    }
 }
 
 function _updateStrengthArcFxForProj(
@@ -2771,7 +2815,9 @@ function _updateStrengthArcFxForProj(
     maskFx.y = posY;
     maskFx.z = (hero.z | 0) + 12;
 
-    if (DEBUG_STR_PROJECTILE_METRICS && _wpnTraceShouldLog(proj, nowMs | 0)) {
+    const shouldConsoleSize = DEBUG_STR_PROJECTILE_METRICS && _wpnTraceShouldLog(proj, nowMs | 0);
+    const shouldTraceSize = _heStrengthTraceCanLog();
+    if (shouldConsoleSize || shouldTraceSize) {
         const atlas = _getEffectAtlasAny();
         const resolved = atlas ? _resolveEffectEntry(atlas, STR_ARC_SKIN_ID, "") : null;
         const frameW = resolved?.frameW ? (resolved.frameW | 0) : 0;
@@ -2789,24 +2835,49 @@ function _updateStrengthArcFxForProj(
         const lastStamp = sprites.readDataString(proj, STR_ARC_SIZE_LOG_KEY) || "";
         if (stamp !== lastStamp) {
             sprites.setDataString(proj, STR_ARC_SIZE_LOG_KEY, stamp);
-            console.log(
-                "[STR][ARC][SIZE]" +
-                " hero=" + (heroIndex | 0) +
-                " seg=" + segName +
-                " col=" + (frameCol | 0) +
-                " raw=" + (rawFrame | 0) +
-                " frame=" + (frameIdx | 0) +
-                " scale=" + scale.toFixed(3) +
-                " slashScale=" + slashScale.toFixed(3) +
-                " frameW=" + (frameW | 0) +
-                " frameH=" + (frameH | 0) +
-                " bboxW=" + (bboxW | 0) +
-                " bboxH=" + (bboxH | 0) +
-                " capPx=" + (capPx | 0) +
-                " step=" + (step ? step.toFixed(3) : "0") +
-                " scaledW=" + (scaledW | 0) +
-                " scaledH=" + (scaledH | 0)
-            );
+            if (shouldConsoleSize) {
+                console.log(
+                    "[STR][ARC][SIZE]" +
+                    " hero=" + (heroIndex | 0) +
+                    " seg=" + segName +
+                    " col=" + (frameCol | 0) +
+                    " raw=" + (rawFrame | 0) +
+                    " frame=" + (frameIdx | 0) +
+                    " scale=" + scale.toFixed(3) +
+                    " slashScale=" + slashScale.toFixed(3) +
+                    " frameW=" + (frameW | 0) +
+                    " frameH=" + (frameH | 0) +
+                    " bboxW=" + (bboxW | 0) +
+                    " bboxH=" + (bboxH | 0) +
+                    " capPx=" + (capPx | 0) +
+                    " step=" + (step ? step.toFixed(3) : "0") +
+                    " scaledW=" + (scaledW | 0) +
+                    " scaledH=" + (scaledH | 0)
+                );
+            }
+            if (shouldTraceSize) {
+                const moveId = sprites.readDataNumber(proj, STR_TRACE_MOVE_ID_KEY) | 0;
+                const data = {
+                    hi: heroIndex | 0,
+                    projId: (proj as any).id | 0,
+                    moveId: moveId | 0,
+                    seg: segName || "",
+                    col: frameCol | 0,
+                    raw: rawFrame | 0,
+                    frame: frameIdx | 0,
+                    scale: +scale.toFixed(4),
+                    slashScale: +slashScale.toFixed(4),
+                    frameW: frameW | 0,
+                    frameH: frameH | 0,
+                    bboxW: bboxW | 0,
+                    bboxH: bboxH | 0,
+                    capPx: capPx | 0,
+                    step: step ? +step.toFixed(4) : 0,
+                    scaledW: scaledW | 0,
+                    scaledH: scaledH | 0
+                };
+                _heStrengthTracePush("ARC_SIZE", data);
+            }
         }
     }
 
@@ -14385,10 +14456,15 @@ const HALL_DUST_MASK_FPS_DEFAULT = 3.2
 const HALL_DUST_MASK2_FPS_DEFAULT = 2.7
 const HALL_DUST_RISE_START_SCALE_X = 2.8
 const HALL_DUST_RISE_START_SCALE_Y = 0.12
-const HALL_DUST_RISE_MS = 2500
+const HALL_DUST_RISE_MS = 4000
 const HALL_DUST_RISE_LOOP_MS = HALL_DUST_RISE_MS * 2
+const HALL_DUST_FADE_MS = 1000
 const HALL_DUST_RISE_END_SCALE_X = 1.1
 const HALL_DUST_RISE_END_SCALE_Y = 0.5
+const HALL_DUST_PAD_BASE_OFFSET_PX = 2
+const HALL_DUST_PILLAR_BASE_OFFSET_PX = 32
+const HALL_DUST_PAD_SINK_PX = 32
+const HALL_DUST_PILLAR_SINK_PX = 64
 const HALL_DUST_FILL_FPS = 28
 const HALL_DUST_CLUSTER_FILL_ALPHA = 1
 
@@ -14413,6 +14489,7 @@ let _dunPadSinkDustFillFx: Sprite[] = []
 let _dunPadSinkDustMaskFx: Sprite | null = null
 let _dunEffectsHallFx: Sprite[] = []
 let _dunEffectsHallNativeFx: any[] = []
+let _dunEffectsHallDecor: Sprite[] = []
 
 
 
@@ -16701,6 +16778,7 @@ function _dunSpawnExitPad(): void {
     _dunPadSinkDustMaskFx = null
     _dunEffectsHallFx = []
     _dunEffectsHallNativeFx = []
+    _dunEffectsHallDecor = []
 
     _dunTeleportCommitAtMs = 0
 
@@ -20498,8 +20576,9 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
 	            lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
 	            paletteKey: "dust",
 	            maskSkinId: DUST_CLOUD_GEOMETRY_SKIN_ID,
-	            dustRise: true,
-	            dustRiseMs: 2500,
+            dustRise: true,
+            dustFadeMs: HALL_DUST_FADE_MS,
+            dustRiseMs: HALL_DUST_RISE_MS,
 	            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
 	            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
 	            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
@@ -20565,8 +20644,9 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
 	            paletteKey: "dust",
 	            maskSkinId: DUST_CLOUD_GEOMETRY_SKIN_ID,
 	            smokeAnim: "alive",
-	            dustRise: true,
-	            dustRiseMs: 2500,
+            dustRise: true,
+            dustFadeMs: HALL_DUST_FADE_MS,
+            dustRiseMs: HALL_DUST_RISE_MS,
 	            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
 	            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
 	            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
@@ -20636,8 +20716,9 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
 	            demoFadeMs: HALL_DEMO_FADE_MS | 0,
 	            paletteKey: "dust",
 	            maskSkinId: DUST_CLOUD_GEOMETRY_SKIN_ID,
-	            dustRise: true,
-	            dustRiseMs: 2500,
+            dustRise: true,
+            dustFadeMs: HALL_DUST_FADE_MS,
+            dustRiseMs: HALL_DUST_RISE_MS,
 	            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
 	            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
 	            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
@@ -20721,8 +20802,9 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
 	            maskSkinId: DUST_CLOUD_GEOMETRY_SKIN_ID,
 	            noDemo: true,
 	            doubleMask: false,
-	            dustRise: true,
-	            dustRiseMs: 2500,
+            dustRise: true,
+            dustFadeMs: HALL_DUST_FADE_MS,
+            dustRiseMs: HALL_DUST_RISE_MS,
 	            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
 	            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
 	            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
@@ -20774,13 +20856,13 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
             const baseMaskScale = _effectPickScaleForRadius(DUST_CLOUD_GEOMETRY_SKIN_ID, "", baseMaskRadius | 0)
             const clusterCfg = [
                 // Center (largest): steady rise/fall, no stagger.
-                { dxFrac: 0, dyFrac: 0.22, regionScale: 1.0, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 1, rotDeg: 0, fillOffset: 0, maskScaleMult: 1, maskFpsMult: HALL_DUST_MASK_FPS_BASE, maskFrameOffset: 0, maskFrameStartPct: 0, maskFrameReverse: false, maskFlipX: false, maskFlipY: false, riseJitterPct: 0, riseJitterPhase: 0, maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_FLOOR_CENTER },
+                { dxFrac: 0, dyFrac: 0.22, regionScale: 1.0, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 1, rotDeg: 0, fillOffset: 0, maskScaleMult: 1, maskFpsMult: HALL_DUST_MASK_FPS_BASE, maskFrameOffset: 0, maskFrameStartPct: 0, maskFrameReverse: false, maskFlipX: false, maskFlipY: false, riseJitterPct: 0, riseJitterPhase: 0, riseLiftPx: 0, maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_FLOOR_CENTER },
                 // Left (larger) explodes early, then eases.
-                { dxFrac: -0.35, dyFrac: 0.10, regionScale: 0.7, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 7, maskScaleMult: 1, maskFpsMult: HALL_DUST_MASK_FPS_LARGE, maskFrameOffset: 0, maskFrameStartPct: HALL_DUST_MASK_START_LARGE_PCT, maskFrameReverse: true, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.03, riseJitterPhase: 0.8, maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_FLOOR_OUTER },
+                { dxFrac: -0.35, dyFrac: 0.10, regionScale: 0.7, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 7, maskScaleMult: 1, maskFpsMult: HALL_DUST_MASK_FPS_LARGE, maskFrameOffset: 0, maskFrameStartPct: HALL_DUST_MASK_START_LARGE_PCT, maskFrameReverse: true, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.03, riseJitterPhase: 0.8, riseLiftPx: 8, maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_FLOOR_OUTER },
                 // Right (medium) explodes later, with a top burst.
-                { dxFrac: 0.30, dyFrac: 0.14, regionScale: 0.55, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 13, maskScaleMult: 1, maskFpsMult: HALL_DUST_MASK_FPS_MEDIUM, maskFrameOffset: 0, maskFrameStartPct: HALL_DUST_MASK_START_MEDIUM_PCT, maskFrameReverse: false, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.04, riseJitterPhase: 2.1, maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_FLOOR_OUTER },
+                { dxFrac: 0.30, dyFrac: 0.14, regionScale: 0.55, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 13, maskScaleMult: 1, maskFpsMult: HALL_DUST_MASK_FPS_MEDIUM, maskFrameOffset: 0, maskFrameStartPct: HALL_DUST_MASK_START_MEDIUM_PCT, maskFrameReverse: false, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.04, riseJitterPhase: 2.1, riseLiftPx: 12, maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_FLOOR_OUTER },
                 // Front small (top) pops last.
-                { dxFrac: 0.20, dyFrac: 0.30, regionScale: 0.35, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 19, maskScaleMult: 1.0, maskFpsMult: HALL_DUST_MASK_FPS_SMALL, maskFrameOffset: 0, maskFrameStartPct: HALL_DUST_MASK_START_LARGE_PCT, maskFrameReverse: true, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.05, riseJitterPhase: 3.7, maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_FLOOR_OUTER },
+                { dxFrac: 0.20, dyFrac: 0.30, regionScale: 0.35, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 19, maskScaleMult: 1.0, maskFpsMult: HALL_DUST_MASK_FPS_SMALL, maskFrameOffset: 0, maskFrameStartPct: HALL_DUST_MASK_START_LARGE_PCT, maskFrameReverse: true, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.05, riseJitterPhase: 3.7, riseLiftPx: 16, maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_FLOOR_OUTER },
             ]
             const setCenter = Math.idiv((dustSets.length | 0) - 1, 2)
             for (let s = 0; s < dustSets.length; s++) {
@@ -20829,6 +20911,7 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
                         hideGeometry: false,
                         maskOccludeSelf: true,
                         dustRise: true,
+                        dustFadeMs: HALL_DUST_FADE_MS,
                         dustFade: false,
                         dustRiseStartMs: (dustRiseStart | 0),
                         dustRiseMs: c.riseMs,
@@ -20840,6 +20923,12 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
                         dustRiseEasePow: (c as any).riseEasePow,
                         dustRiseJitterPct: (c as any).riseJitterPct,
                         dustRiseJitterPhase: (c as any).riseJitterPhase,
+                        dustRiseLiftPx: (c as any).riseLiftPx,
+                        spawnPadPillar: i === 0,
+                        padBaseOffsetPx: HALL_DUST_PAD_BASE_OFFSET_PX,
+                        pillarBaseOffsetPx: HALL_DUST_PILLAR_BASE_OFFSET_PX,
+                        padSinkPx: HALL_DUST_PAD_SINK_PX,
+                        pillarSinkPx: HALL_DUST_PILLAR_SINK_PX,
                         dustCenterX: setX,
                         dustCenterY: clusterY,
                         dustOffsetX: dx,
@@ -21035,7 +21124,7 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
 	                dustRise: true,
 	                dustFade: false,
 	                dustRiseStartMs: nowMs | 0,
-	                dustRiseMs: Math.round(2500 + ((1 - t) * 2500)),
+	                dustRiseMs: Math.round(HALL_DUST_RISE_MS + ((1 - t) * HALL_DUST_RISE_MS)),
 	                dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
 	                dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
 	                dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X + (t * 0.2),
@@ -21153,6 +21242,15 @@ function _dunClearEffectsHall(): void {
             }
         }
         _dunEffectsHallNativeFx = []
+    }
+    if (_dunEffectsHallDecor && _dunEffectsHallDecor.length > 0) {
+        for (let i = 0; i < _dunEffectsHallDecor.length; i++) {
+            const decor = _dunEffectsHallDecor[i]
+            if (decor && !(decor.flags & sprites.Flag.Destroyed)) {
+                try { decor.destroy() } catch { }
+            }
+        }
+        _dunEffectsHallDecor = []
     }
 }
 
@@ -21425,6 +21523,13 @@ type DebugCloudConfig = {
     dustRiseScaleMult?: number
     dustRiseJitterPct?: number
     dustRiseJitterPhase?: number
+    dustRiseLiftPx?: number
+    dustFadeMs?: number
+    spawnPadPillar?: boolean
+    padBaseOffsetPx?: number
+    pillarBaseOffsetPx?: number
+    padSinkPx?: number
+    pillarSinkPx?: number
     fillFrameOffset?: number
     regionMinW?: number
     regionMinH?: number
@@ -21677,6 +21782,8 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         if (Number.isFinite(wobbleAmp)) sprites.setDataNumber(mfx, "__hallFpsWobbleAmp", Number(wobbleAmp))
         if (Number.isFinite(wobblePeriod)) sprites.setDataNumber(mfx, "__hallFpsWobblePeriod", Number(wobblePeriod))
         if (Number.isFinite(cfg.maskFrameOffset)) sprites.setDataNumber(mfx, "__hallMaskFrameOffset", Number(cfg.maskFrameOffset))
+        if (Number.isFinite(cfg.dustRiseLiftPx)) sprites.setDataNumber(mfx, "__hallDustRiseLiftPx", Number(cfg.dustRiseLiftPx))
+        if (Number.isFinite(cfg.dustFadeMs)) sprites.setDataNumber(mfx, "__hallDustFadeMs", Number(cfg.dustFadeMs))
         mfx.x = cx | 0
         mfx.y = cy | 0
         mfx.z = 1000
@@ -21700,6 +21807,10 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         _applySmokeAnim(maskOpts, (cfg.smokeAnim || "alive") as any)
         if (cloudTint) maskOpts.tint = cloudTint | 0
         applyEffectToSprite(mfx, maskSkin, maskOpts)
+        if (cfg.dustRise) {
+            const baseAlpha = sprites.readDataNumber(mfx, EFFECT_ALPHA_DATA_KEY)
+            if (Number.isFinite(baseAlpha)) sprites.setDataNumber(mfx, "__hallDustBaseAlpha", Number(baseAlpha))
+        }
         _applyHallMaskFrameOverrides(mfx, maskSkin, cfg)
         if (maskOccludeSelf) {
             // Self-mask through the occlusion composite (via __heMaskNativeOverride on this sprite).
@@ -21742,6 +21853,54 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
     const maskFx2 = cfg.doubleMask
         ? makeMask("mask2", cfg.mask2RotateSpeedRadPerMs, cfg.mask2RotateBaseRad, cfg.mask2FpsMult, cfg.mask2FpsWobbleAmp, cfg.mask2FpsWobblePeriodMs)
         : null
+    if (cfg.spawnPadPillar && maskFx) {
+        const tile = WORLD_TILE_SIZE | 0
+        const spawnX = Number.isFinite(cfg.dustCenterX) ? (cfg.dustCenterX as number) : (cx | 0)
+        const spawnY = Number.isFinite(cfg.dustCenterY) ? (cfg.dustCenterY as number) : (cy | 0)
+        const tr = Math.max(0, Math.idiv(spawnY | 0, tile) | 0)
+        const tc = Math.max(0, Math.idiv(spawnX | 0, tile) | 0)
+        const baseX = _dunColToX(tc) | 0
+        const baseY = _dunRowToY(tr) | 0
+        const offX = (spawnX | 0) - baseX
+        const offY = (spawnY | 0) - baseY
+        const padBaseOffset = Number.isFinite(cfg.padBaseOffsetPx) ? Number(cfg.padBaseOffsetPx) : (HALL_DUST_PAD_BASE_OFFSET_PX | 0)
+        const pillarBaseOffset = Number.isFinite(cfg.pillarBaseOffsetPx) ? Number(cfg.pillarBaseOffsetPx) : (HALL_DUST_PILLAR_BASE_OFFSET_PX | 0)
+        const pad = _dunDecor_spawnAtTile({
+            name: "telepad",
+            role: DECOR_ROLE.TRIGGER,
+            tileR: tr,
+            tileC: tc,
+            pxW: (tile * 5) | 0,
+            pxH: (tile * 2) | 0,
+            offX,
+            offY
+        })
+        const pillar = _dunDecor_spawnAtTile({
+            name: "stairs_statue",
+            role: DECOR_ROLE.TRIGGER,
+            tileR: tr,
+            tileC: tc,
+            pxW: tile | 0,
+            pxH: (tile * 3) | 0,
+            offX,
+            offY
+        })
+        sprites.setDataSprite(maskFx, "__hallPadDecor", pad as any)
+        sprites.setDataSprite(maskFx, "__hallPillarDecor", pillar as any)
+        sprites.setDataNumber(maskFx, "__hallPadBaseOffsetPx", padBaseOffset)
+        sprites.setDataNumber(maskFx, "__hallPillarBaseOffsetPx", pillarBaseOffset)
+        sprites.setDataNumber(maskFx, "__hallPadSinkPx", Number.isFinite(cfg.padSinkPx) ? Number(cfg.padSinkPx) : (HALL_DUST_PAD_SINK_PX | 0))
+        sprites.setDataNumber(maskFx, "__hallPillarSinkPx", Number.isFinite(cfg.pillarSinkPx) ? Number(cfg.pillarSinkPx) : (HALL_DUST_PILLAR_SINK_PX | 0))
+        sprites.setDataNumber(pad, "__hallDecorBaseOffX", offX | 0)
+        sprites.setDataNumber(pillar, "__hallDecorBaseOffX", offX | 0)
+        sprites.setDataNumber(pad, "__hallDecorBaseOffY", offY | 0)
+        sprites.setDataNumber(pillar, "__hallDecorBaseOffY", offY | 0)
+        sprites.setDataNumber(pad, "__hallDecorH", (tile * 2) | 0)
+        sprites.setDataNumber(pillar, "__hallDecorH", (tile * 3) | 0)
+        sprites.setDataNumber(pad, "__hallDecorCenterBiasY", Math.round(tile * 0.5) | 0)
+        sprites.setDataNumber(pillar, "__hallDecorCenterBiasY", (tile * -1) | 0)
+        _dunEffectsHallDecor.push(pad, pillar)
+    }
     const geomAlpha = Number.isFinite(cfg.geometryAlpha)
         ? Math.max(0, Math.min(1, Number(cfg.geometryAlpha)))
         : NaN
@@ -21785,6 +21944,7 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         copyNum("__hallDustRiseEasePow")
         copyNum("__hallDustRiseJitterPct")
         copyNum("__hallDustRiseJitterPhase")
+        copyNum("__hallDustFadeMs")
         copyNum("__hallDustCenterX")
         copyNum("__hallDustCenterY")
         copyNum("__hallDustOffsetX")
@@ -21804,6 +21964,10 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         _applySmokeAnim(gopts, (cfg.smokeAnim || "alive") as any)
         if (cloudTint) gopts.tint = cloudTint | 0
         applyEffectToSprite(gfx, maskSkin, gopts)
+        if (cfg.dustRise) {
+            const baseAlpha = sprites.readDataNumber(gfx, EFFECT_ALPHA_DATA_KEY)
+            if (Number.isFinite(baseAlpha)) sprites.setDataNumber(gfx, "__hallDustBaseAlpha", Number(baseAlpha))
+        }
         _applyHallMaskFrameOverrides(gfx, maskSkin, cfg)
         sprites.setDataSprite(gfx, EFFECT_MASK_SPRITE_REF_DATA_KEY, maskFx as any)
         sprites.setDataNumber(gfx, EFFECT_MASK_INVERT_DATA_KEY, 0)
@@ -21837,6 +22001,7 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(maskFx, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
         if (Number.isFinite(cfg.dustRiseJitterPct)) sprites.setDataNumber(maskFx, "__hallDustRiseJitterPct", Number(cfg.dustRiseJitterPct))
         if (Number.isFinite(cfg.dustRiseJitterPhase)) sprites.setDataNumber(maskFx, "__hallDustRiseJitterPhase", Number(cfg.dustRiseJitterPhase))
+        if (Number.isFinite(cfg.dustFadeMs)) sprites.setDataNumber(maskFx, "__hallDustFadeMs", Number(cfg.dustFadeMs))
         sprites.setDataNumber(maskFx, "__hallDustCenterX", dcx)
         sprites.setDataNumber(maskFx, "__hallDustCenterY", dcy)
         sprites.setDataNumber(maskFx, "__hallDustOffsetX", dox)
@@ -21867,6 +22032,7 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(maskFx2, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
         if (Number.isFinite(cfg.dustRiseJitterPct)) sprites.setDataNumber(maskFx2, "__hallDustRiseJitterPct", Number(cfg.dustRiseJitterPct))
         if (Number.isFinite(cfg.dustRiseJitterPhase)) sprites.setDataNumber(maskFx2, "__hallDustRiseJitterPhase", Number(cfg.dustRiseJitterPhase))
+        if (Number.isFinite(cfg.dustFadeMs)) sprites.setDataNumber(maskFx2, "__hallDustFadeMs", Number(cfg.dustFadeMs))
         sprites.setDataNumber(maskFx2, "__hallDustCenterX", dcx)
         sprites.setDataNumber(maskFx2, "__hallDustCenterY", dcy)
         sprites.setDataNumber(maskFx2, "__hallDustOffsetX", dox)
@@ -21909,26 +22075,27 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
             if (Number.isFinite(wobbleAmp)) sprites.setDataNumber(ofx, "__hallFpsWobbleAmp", Number(wobbleAmp))
             if (Number.isFinite(wobblePeriod)) sprites.setDataNumber(ofx, "__hallFpsWobblePeriod", Number(wobblePeriod))
             if (Number.isFinite(cfg.maskFrameOffset)) sprites.setDataNumber(ofx, "__hallMaskFrameOffset", Number(cfg.maskFrameOffset))
-            if (cfg.dustRise) {
-                const riseMult = Number.isFinite(cfg.dustRiseScaleMult)
-                    ? Math.max(0.05, Number(cfg.dustRiseScaleMult))
-                    : 1
-                sprites.setDataNumber(ofx, "__hallDustRise", 1)
-                if (Number.isFinite(cfg.dustRiseStartMs)) sprites.setDataNumber(ofx, "__hallDustRiseStart", Number(cfg.dustRiseStartMs))
-                if (Number.isFinite(cfg.dustRiseMs)) sprites.setDataNumber(ofx, "__hallDustRiseMs", Number(cfg.dustRiseMs))
-                sprites.setDataNumber(ofx, "__hallDustRiseScaleMult", riseMult)
-                if (Number.isFinite(cfg.dustRiseStartScaleX)) sprites.setDataNumber(ofx, "__hallDustRiseStartScaleX", Number(cfg.dustRiseStartScaleX))
-                if (Number.isFinite(cfg.dustRiseStartScaleY)) sprites.setDataNumber(ofx, "__hallDustRiseStartScaleY", Number(cfg.dustRiseStartScaleY))
-                if (Number.isFinite(cfg.dustRiseEndScaleX)) sprites.setDataNumber(ofx, "__hallDustRiseEndScaleX", Number(cfg.dustRiseEndScaleX))
-                if (Number.isFinite(cfg.dustRiseEndScaleY)) sprites.setDataNumber(ofx, "__hallDustRiseEndScaleY", Number(cfg.dustRiseEndScaleY))
-                if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(ofx, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
-                if (Number.isFinite(cfg.dustRiseJitterPct)) sprites.setDataNumber(ofx, "__hallDustRiseJitterPct", Number(cfg.dustRiseJitterPct))
-                if (Number.isFinite(cfg.dustRiseJitterPhase)) sprites.setDataNumber(ofx, "__hallDustRiseJitterPhase", Number(cfg.dustRiseJitterPhase))
-                if (Number.isFinite(cfg.dustCenterX)) sprites.setDataNumber(ofx, "__hallDustCenterX", Number(cfg.dustCenterX))
-                if (Number.isFinite(cfg.dustCenterY)) sprites.setDataNumber(ofx, "__hallDustCenterY", Number(cfg.dustCenterY))
-                if (Number.isFinite(cfg.dustOffsetX)) sprites.setDataNumber(ofx, "__hallDustOffsetX", Number(cfg.dustOffsetX))
-                if (Number.isFinite(cfg.dustOffsetY)) sprites.setDataNumber(ofx, "__hallDustOffsetY", Number(cfg.dustOffsetY))
-            }
+        if (cfg.dustRise) {
+            const riseMult = Number.isFinite(cfg.dustRiseScaleMult)
+                ? Math.max(0.05, Number(cfg.dustRiseScaleMult))
+                : 1
+            sprites.setDataNumber(ofx, "__hallDustRise", 1)
+            if (Number.isFinite(cfg.dustRiseStartMs)) sprites.setDataNumber(ofx, "__hallDustRiseStart", Number(cfg.dustRiseStartMs))
+            if (Number.isFinite(cfg.dustRiseMs)) sprites.setDataNumber(ofx, "__hallDustRiseMs", Number(cfg.dustRiseMs))
+            sprites.setDataNumber(ofx, "__hallDustRiseScaleMult", riseMult)
+            if (Number.isFinite(cfg.dustRiseStartScaleX)) sprites.setDataNumber(ofx, "__hallDustRiseStartScaleX", Number(cfg.dustRiseStartScaleX))
+            if (Number.isFinite(cfg.dustRiseStartScaleY)) sprites.setDataNumber(ofx, "__hallDustRiseStartScaleY", Number(cfg.dustRiseStartScaleY))
+            if (Number.isFinite(cfg.dustRiseEndScaleX)) sprites.setDataNumber(ofx, "__hallDustRiseEndScaleX", Number(cfg.dustRiseEndScaleX))
+            if (Number.isFinite(cfg.dustRiseEndScaleY)) sprites.setDataNumber(ofx, "__hallDustRiseEndScaleY", Number(cfg.dustRiseEndScaleY))
+            if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(ofx, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
+            if (Number.isFinite(cfg.dustRiseJitterPct)) sprites.setDataNumber(ofx, "__hallDustRiseJitterPct", Number(cfg.dustRiseJitterPct))
+            if (Number.isFinite(cfg.dustRiseJitterPhase)) sprites.setDataNumber(ofx, "__hallDustRiseJitterPhase", Number(cfg.dustRiseJitterPhase))
+            if (Number.isFinite(cfg.dustFadeMs)) sprites.setDataNumber(ofx, "__hallDustFadeMs", Number(cfg.dustFadeMs))
+            if (Number.isFinite(cfg.dustCenterX)) sprites.setDataNumber(ofx, "__hallDustCenterX", Number(cfg.dustCenterX))
+            if (Number.isFinite(cfg.dustCenterY)) sprites.setDataNumber(ofx, "__hallDustCenterY", Number(cfg.dustCenterY))
+            if (Number.isFinite(cfg.dustOffsetX)) sprites.setDataNumber(ofx, "__hallDustOffsetX", Number(cfg.dustOffsetX))
+            if (Number.isFinite(cfg.dustOffsetY)) sprites.setDataNumber(ofx, "__hallDustOffsetY", Number(cfg.dustOffsetY))
+        }
             const opts: EffectApplyOpts = {
                 alpha: Math.max(0, Math.min(1, borderAlpha)),
                 scale: maskScale,
@@ -21942,6 +22109,10 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
             _applySmokeAnim(opts, (cfg.smokeAnim || "alive") as any)
             if (borderTint) opts.tint = borderTint | 0
             applyEffectToSprite(ofx, outlineSkin, opts)
+            if (cfg.dustRise) {
+                const baseAlpha = sprites.readDataNumber(ofx, EFFECT_ALPHA_DATA_KEY)
+                if (Number.isFinite(baseAlpha)) sprites.setDataNumber(ofx, "__hallDustBaseAlpha", Number(baseAlpha))
+            }
             if (Number.isFinite(cfg.maskFrameOffset)) {
                 const atlas = _getEffectAtlasAny()
                 const resolved = atlas ? _resolveEffectEntry(atlas, outlineSkin, "") : null
@@ -22258,6 +22429,10 @@ function _dunSpawnHallEffectFill(
     }
     if (useTint) fillOpts.tint = useTint | 0
     applyEffectToSprite(fillFx, skinId, fillOpts)
+    if (cfg.dustRise) {
+        const baseAlpha = sprites.readDataNumber(fillFx, EFFECT_ALPHA_DATA_KEY)
+        if (Number.isFinite(baseAlpha)) sprites.setDataNumber(fillFx, "__hallDustBaseAlpha", Number(baseAlpha))
+    }
     if (Number.isFinite(cfg.fillFrameOffset)) {
         const atlas = _getEffectAtlasAny()
         const resolved = atlas ? _resolveEffectEntry(atlas, skinId, "") : null
@@ -23093,7 +23268,7 @@ function _dunSpawnHallTiledLayer(
                 } catch {
                     try { tileSprite.setFrame(frameId); } catch { }
                 }
-                if (DEBUG_EFFECTS_HALL_LOGS) {
+                if (DEBUG_EFFECTS_HALL_LOGS && DEBUG_EFFECTS_HALL_FRAME_LOGS) {
                     const now = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
                     const last = (tileSprite as any).__heHallTexLogAt | 0
                     if (!last || (now - last) >= (HALL_TEX_LOG_EVERY_MS | 0)) {
@@ -24222,6 +24397,7 @@ function _dunTickEffectsHall(nowMs: number): void {
             const riseMs = Number.isFinite(riseMsCfg) && (riseMsCfg | 0) > 0 ? (riseMsCfg | 0) : (HALL_DUST_RISE_MS | 0)
             const loopMs = Math.max(1, (riseMs | 0) * 2)
             const elapsed = ((now - (startMs | 0)) % loopMs)
+            const rising = elapsed <= riseMs
             let tRaw = elapsed / riseMs
             if (tRaw > 1) tRaw = 2 - tRaw
             tRaw = Math.max(0, Math.min(1, tRaw))
@@ -24266,7 +24442,8 @@ function _dunTickEffectsHall(nowMs: number): void {
             const endSx = (Number.isFinite(endSxRaw) ? Number(endSxRaw) : HALL_DUST_RISE_END_SCALE_X) * riseMult
             const endSy = (Number.isFinite(endSyRaw) ? Number(endSyRaw) : HALL_DUST_RISE_END_SCALE_Y) * riseMult
             const sy = startSy + ((endSy - startSy) * t)
-            const sx = Math.max(0.01, endSy * 2)
+            const widthT = rising ? tBase : 1
+            const sx = Math.max(0.01, endSx * (0.5 + (0.5 * widthT)))
             sprites.setDataNumber(fx, EFFECT_SCALE_X_DATA_KEY, sx)
             sprites.setDataNumber(fx, EFFECT_SCALE_Y_DATA_KEY, sy)
             // Anchor the base using alignBottom, so the bottom stays fixed while scaling.
@@ -24283,10 +24460,68 @@ function _dunTickEffectsHall(nowMs: number): void {
                 if (frameH > 0) {
                     baseBottomAnchor = spawnY + ((frameH * baseScale * startSy) * 0.5)
                     sprites.setDataNumber(fx, "__hallDustBottomY", baseBottomAnchor)
-                    sprites.setDataNumber(fx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, baseBottomAnchor)
                 }
-            } else {
-                sprites.setDataNumber(fx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, baseBottomAnchor)
+            }
+            const liftPxRaw = sprites.readDataNumber(fx, "__hallDustRiseLiftPx")
+            const liftPx = (Number.isFinite(liftPxRaw) && liftPxRaw > 0) ? Number(liftPxRaw) : 0
+            const lift = (liftPx > 0) ? (liftPx * Math.sin(Math.PI * t)) : 0
+            if (baseBottomAnchor > 0) {
+                sprites.setDataNumber(fx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, baseBottomAnchor - lift)
+            }
+            const fadeMsRaw = sprites.readDataNumber(fx, "__hallDustFadeMs")
+            const fadeMs = (Number.isFinite(fadeMsRaw) && (fadeMsRaw | 0) > 0) ? (fadeMsRaw | 0) : 0
+            let fadeAlpha = 1
+            if (fadeMs > 0) {
+                const fadeStart = Math.max(0, loopMs - fadeMs)
+                if (elapsed >= fadeStart) {
+                    const tf = Math.max(0, Math.min(1, (elapsed - fadeStart) / Math.max(1, fadeMs)))
+                    fadeAlpha = Math.max(0, Math.min(1, 1 - tf))
+                }
+            }
+            sprites.setDataNumber(fx, "__hallDustFadeAlpha", fadeAlpha)
+            if (fadeMs > 0) {
+                let baseAlpha = sprites.readDataNumber(fx, "__hallDustBaseAlpha")
+                if (!Number.isFinite(baseAlpha)) {
+                    baseAlpha = sprites.readDataNumber(fx, EFFECT_ALPHA_DATA_KEY)
+                    if (Number.isFinite(baseAlpha)) sprites.setDataNumber(fx, "__hallDustBaseAlpha", Number(baseAlpha))
+                }
+                if (Number.isFinite(baseAlpha)) {
+                    sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, Number(baseAlpha) * fadeAlpha)))
+                }
+            }
+
+            const bottomNow = (baseBottomAnchor > 0) ? (baseBottomAnchor - lift) : 0
+            const padDecor = sprites.readDataSprite(fx, "__hallPadDecor") as Sprite | null
+            if (padDecor && bottomNow > 0) {
+                const baseOffX = sprites.readDataNumber(padDecor, "__hallDecorBaseOffX") | 0
+                const baseOffY = sprites.readDataNumber(padDecor, "__hallDecorBaseOffY") | 0
+                const decorH = sprites.readDataNumber(padDecor, "__hallDecorH") | 0
+                const centerBiasY = sprites.readDataNumber(padDecor, "__hallDecorCenterBiasY") | 0
+                const baseOffset = sprites.readDataNumber(fx, "__hallPadBaseOffsetPx")
+                const sinkMax = sprites.readDataNumber(fx, "__hallPadSinkPx")
+                const baseY = (_dunRowToY(sprites.readDataNumber(padDecor, "decorTileR") | 0) | 0)
+                    + (Number.isFinite(baseOffY) ? (baseOffY | 0) : 0)
+                    + (Number.isFinite(centerBiasY) ? (centerBiasY | 0) : 0)
+                const sinkPx = Number.isFinite(sinkMax) ? Math.round(Number(sinkMax) * t) : 0
+                const desiredBase = (bottomNow - (Number.isFinite(baseOffset) ? Number(baseOffset) : 0)) + sinkPx
+                const nextOffY = Math.round(desiredBase - (baseY + (decorH / 2)))
+                _dunDecor_setOffset(padDecor, baseOffX | 0, nextOffY | 0)
+            }
+            const pillarDecor = sprites.readDataSprite(fx, "__hallPillarDecor") as Sprite | null
+            if (pillarDecor && bottomNow > 0) {
+                const baseOffX = sprites.readDataNumber(pillarDecor, "__hallDecorBaseOffX") | 0
+                const baseOffY = sprites.readDataNumber(pillarDecor, "__hallDecorBaseOffY") | 0
+                const decorH = sprites.readDataNumber(pillarDecor, "__hallDecorH") | 0
+                const centerBiasY = sprites.readDataNumber(pillarDecor, "__hallDecorCenterBiasY") | 0
+                const baseOffset = sprites.readDataNumber(fx, "__hallPillarBaseOffsetPx")
+                const sinkMax = sprites.readDataNumber(fx, "__hallPillarSinkPx")
+                const baseY = (_dunRowToY(sprites.readDataNumber(pillarDecor, "decorTileR") | 0) | 0)
+                    + (Number.isFinite(baseOffY) ? (baseOffY | 0) : 0)
+                    + (Number.isFinite(centerBiasY) ? (centerBiasY | 0) : 0)
+                const sinkPx = Number.isFinite(sinkMax) ? Math.round(Number(sinkMax) * t) : 0
+                const desiredBase = (bottomNow - (Number.isFinite(baseOffset) ? Number(baseOffset) : 0)) + sinkPx
+                const nextOffY = Math.round(desiredBase - (baseY + (decorH / 2)))
+                _dunDecor_setOffset(pillarDecor, baseOffX | 0, nextOffY | 0)
             }
 
             // Constrain smoke animation to stable frames, then fade after the scale cycle completes.
@@ -24339,8 +24574,10 @@ function _dunTickEffectsHall(nowMs: number): void {
             const n2: any = src2 && (src2 as any).native
             const atlas = _getEffectAtlasAny()
             const g2: any = globalThis as any
-            const sc = g2 ? g2.__phaserScene : null
-            if (atlas && sc && n1 && n2) {
+            const sc = (n1 && (n1.scene as any)) || (g2 ? g2.__phaserScene : null)
+            const texMgrDefault = (n1 && n1.texture && n1.texture.manager) ? n1.texture.manager
+                : ((n2 && n2.texture && n2.texture.manager) ? n2.texture.manager : (sc ? sc.textures : null))
+            if (atlas && n1 && n2 && texMgrDefault) {
                 try {
                     const lastUnion = sprites.readDataNumber(fx, "__hallUnionUpdateAt") || 0
                     const unionFps = sprites.readDataNumber(src1, EFFECT_FPS_DATA_KEY)
@@ -24362,7 +24599,8 @@ function _dunTickEffectsHall(nowMs: number): void {
                         const nativeFrame = native && native.frame ? (native.frame.name ?? native.frame.index ?? null) : null
                         const frameId = _heResolveFrameIdForTrace(resolved, nativeFrame, frameIndex, frameIndexRaw)
                         if (frameId == null) return null
-                        const tex = sc.textures.get(resolved.textureKey)
+                        const texMgr = (native && native.texture && native.texture.manager) ? native.texture.manager : texMgrDefault
+                        const tex = texMgr ? texMgr.get(resolved.textureKey) : null
                         const f = tex ? tex.get(frameId | 0) : null
                         if (!f || !f.source || !f.source.image) return null
                         return { resolved, frame: f, img: f.source.image, frameId: frameId | 0 }
@@ -24562,8 +24800,9 @@ function _dunTickEffectsHall(nowMs: number): void {
             const n1: any = src1 && (src1 as any).native
             const atlas = _getEffectAtlasAny()
             const g2: any = globalThis as any
-            const sc = g2 ? g2.__phaserScene : null
-            if (sc && n1) {
+            const sc = (n1 && (n1.scene as any)) || (g2 ? g2.__phaserScene : null)
+            const texMgrDefault = (n1 && n1.texture && n1.texture.manager) ? n1.texture.manager : (sc ? sc.textures : null)
+            if (n1 && texMgrDefault) {
                 try {
                     const lastOcclude = sprites.readDataNumber(fx, "__hallOccludeUpdateAt") || 0
                     const occFps = sprites.readDataNumber(src1, EFFECT_FPS_DATA_KEY)
@@ -24589,7 +24828,8 @@ function _dunTickEffectsHall(nowMs: number): void {
                                 const nativeFrame = native && native.frame ? (native.frame.name ?? native.frame.index ?? null) : null
                                 const frameId = _heResolveFrameIdForTrace(resolved, nativeFrame, frameIndex, frameIndexRaw)
                                 if (frameId != null) {
-                                    const tex = sc.textures.get(resolved.textureKey)
+                                    const texMgr = (native && native.texture && native.texture.manager) ? native.texture.manager : texMgrDefault
+                                    const tex = texMgr ? texMgr.get(resolved.textureKey) : null
                                     const f = tex ? tex.get(frameId | 0) : null
                                     if (f && f.source && f.source.image) {
                                         return { resolved, frame: f, img: f.source.image, frameId: frameId | 0 }
@@ -24671,6 +24911,7 @@ function _dunTickEffectsHall(nowMs: number): void {
                     occlude.tctx1.drawImage(r1.img, r1.frame.cutX, r1.frame.cutY, r1.frame.cutWidth, r1.frame.cutHeight, 0, 0, fw, fh)
                     occlude.tctx2.setTransform(1, 0, 0, 1, 0, 0)
                     occlude.tctx2.clearRect(0, 0, ow, oh)
+                    occlude.tctx2.globalAlpha = 1
                     for (let i = 0; i < frontEntries.length; i++) {
                         const fe = frontEntries[i]
                         const s2 = fe.sprite
@@ -24700,10 +24941,13 @@ function _dunTickEffectsHall(nowMs: number): void {
                         const rx = s2x / s1x
                         const ry = s2y / s1y
                         const rot = rot2 - rot1
+                        const fade2Raw = sprites.readDataNumber(s2, "__hallDustFadeAlpha")
+                        const fade2 = Number.isFinite(fade2Raw) ? Math.max(0, Math.min(1, Number(fade2Raw))) : 1
                         occlude.tctx2.save()
                         occlude.tctx2.translate(cx + dxl, cy + dyl)
                         if (rot) occlude.tctx2.rotate(rot)
                         if (rx !== 1 || ry !== 1) occlude.tctx2.scale(rx, ry)
+                        occlude.tctx2.globalAlpha = fade2
                         const f2w = (fe.frame.cutWidth ?? fe.frame.width ?? fw) | 0
                         const f2h = (fe.frame.cutHeight ?? fe.frame.height ?? fh) | 0
                         occlude.tctx2.drawImage(
@@ -24719,6 +24963,7 @@ function _dunTickEffectsHall(nowMs: number): void {
                         )
                         occlude.tctx2.restore()
                     }
+                    occlude.tctx2.globalAlpha = 1
                     if ((occlude.canvasTex && typeof occlude.canvasTex.resize === "function") && ((occlude.canvasTex.width | 0) !== (ow | 0) || (occlude.canvasTex.height | 0) !== (oh | 0))) {
                         try { occlude.canvasTex.resize(ow | 0, oh | 0) } catch { }
                     }
@@ -24941,6 +25186,19 @@ function _dunTickEffectsHall(nowMs: number): void {
                     const dispH = (frameH > 0) ? (frameH * baseScaleFx * axisYFx) : 0
                     if (dispH > 0) {
                         fx.y = Number(bottom) - (dispH * 0.5)
+                    }
+                }
+            }
+            if (alignSource && maskHasDustRise) {
+                const fadeRaw = sprites.readDataNumber(alignSource, "__hallDustFadeAlpha")
+                if (Number.isFinite(fadeRaw)) {
+                    let baseAlpha = sprites.readDataNumber(fx, "__hallDustBaseAlpha")
+                    if (!Number.isFinite(baseAlpha)) {
+                        baseAlpha = sprites.readDataNumber(fx, EFFECT_ALPHA_DATA_KEY)
+                        if (Number.isFinite(baseAlpha)) sprites.setDataNumber(fx, "__hallDustBaseAlpha", Number(baseAlpha))
+                    }
+                    if (Number.isFinite(baseAlpha)) {
+                        sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, Number(baseAlpha) * Number(fadeRaw))))
                     }
                 }
             }
@@ -29943,7 +30201,7 @@ function _stampCliffRimOnMap(): void {
         set(r | 0, right | 0, DECAL_CLIFF_RIM_EDGE_E)
     }
 
-    if (DEBUG_TILEMAP_AUDIT) {
+    if (DEBUG_TILEMAP_AUDIT && DEBUG_TILEMAP_AUDIT_CONSOLE) {
         let count = 0
         let minR = 999999
         let maxR = -1
@@ -30146,7 +30404,7 @@ function _dunStampEntranceTower(): void {
         }
     }
 
-    if (DEBUG_TILEMAP_AUDIT) {
+    if (DEBUG_TILEMAP_AUDIT && DEBUG_TILEMAP_AUDIT_CONSOLE) {
         let count = 0
         let minR = 999999
         let maxR = -1
@@ -30419,6 +30677,7 @@ function _shopTrialArenaStampDecals(r0: number, c0: number, h: number, w: number
 
 function _shopTrialArenaAudit(reason: string): void {
     if (!DEBUG_TILEMAP_AUDIT) return
+    if (!DEBUG_TILEMAP_AUDIT_CONSOLE) return
 
     const r0 = _shopTrialAreaR | 0
     const c0 = _shopTrialAreaC | 0
@@ -42588,7 +42847,7 @@ function initWorldDecorPostPass(): void {
 
     }
 
-    if (DEBUG_TILEMAP_AUDIT) {
+    if (DEBUG_TILEMAP_AUDIT && DEBUG_TILEMAP_AUDIT_CONSOLE) {
         const stats = _auditDecalRangeStats(DECAL_CLIFF_RIM_NW_TL, DECAL_CLIFF_RIM_EDGE_E)
         const boxH = (stats.maxR >= stats.minR) ? ((stats.maxR - stats.minR + 1) | 0) : 0
         const boxW = (stats.maxC >= stats.minC) ? ((stats.maxC - stats.minC + 1) | 0) : 0
@@ -42599,7 +42858,7 @@ function initWorldDecorPostPass(): void {
         )
     }
     _stampCliffRimOnMap()
-    if (DEBUG_TILEMAP_AUDIT) {
+    if (DEBUG_TILEMAP_AUDIT && DEBUG_TILEMAP_AUDIT_CONSOLE) {
         const stats = _auditDecalRangeStats(DECAL_CLIFF_RIM_NW_TL, DECAL_CLIFF_RIM_EDGE_E)
         const boxH = (stats.maxR >= stats.minR) ? ((stats.maxR - stats.minR + 1) | 0) : 0
         const boxW = (stats.maxC >= stats.minC) ? ((stats.maxC - stats.minC + 1) | 0) : 0
@@ -43219,7 +43478,12 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
             (prevR | 0) !== (nextR | 0) ||
             (prevC | 0) !== (nextC | 0) ||
             String(prevName || "") !== String(nextName || "");
-        if (focusChanged) _heQueueVisualDump("focus-change", 200)
+        if (focusChanged) {
+            if ((prevActive | 0) === 1 && (want | 0) === 0) {
+                _hePropsAnimOverride = { r: prevR | 0, c: prevC | 0, name: String(prevName || "") }
+                _heQueueVisualDump("props-anim", 200)
+            }
+        }
     }
 
     _dunAuditDumpFloorOnEntry()
@@ -43473,12 +43737,6 @@ function _dunAuditDumpFloorOnEntry(): void {
     _tilemapAuditDumpLatest = entry
     _tilemapAuditDumpHistory.push(entry)
     if (_tilemapAuditDumpHistory.length > 30) _tilemapAuditDumpHistory.shift()
-
-    const g: any = globalThis as any
-    const fn = g && g.__heDebugDumpToFile
-    if (typeof fn === "function") {
-        try { fn("tilemap-audit") } catch { }
-    }
     _heQueueVisualDump("tilemap-visual-entry", 1200)
 }
 
@@ -54951,11 +55209,39 @@ function updateStrengthChargingAllHeroes(nowMs: number): void {
         const minHoldUntil = (startMs | 0) + (prepMs | 0)
 
         if (!held) {
-            // If release happens before hold begins, treat as a tap: no charge.
-            if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD)) {
+            const heldFlag = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD);
+            let arcDegBefore = 0;
+            if (!heldFlag) {
+                if (_heStrengthTraceCanLog()) {
+                    arcDegBefore = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0;
+                }
+                // If release happens before hold begins, treat as a tap: no charge.
                 sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
             }
-            if (STR_CHARGE_ALLOW_TAP_RELEASE || (nowMs | 0) >= (minHoldUntil | 0)) {
+            const allowRelease = STR_CHARGE_ALLOW_TAP_RELEASE || (nowMs | 0) >= (minHoldUntil | 0);
+            if (allowRelease) {
+                if (_heStrengthTraceCanLog()) {
+                    const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+                    const data = {
+                        hi: heroIndex | 0,
+                        pid: ownerId | 0,
+                        moveId: moveId | 0,
+                        btnId: btnId | 0,
+                        heldInput: 0,
+                        heldFlag: heldFlag ? 1 : 0,
+                        now: nowMs | 0,
+                        startMs: startMs | 0,
+                        maxMs: maxMs | 0,
+                        prepMs: prepMs | 0,
+                        minHoldUntil: minHoldUntil | 0,
+                        allowTapRelease: STR_CHARGE_ALLOW_TAP_RELEASE ? 1 : 0,
+                        arcDegBefore: arcDegBefore | 0,
+                        arcDegAfter: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0,
+                        state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+                    };
+                    if (!heldFlag) _heStrengthTraceLastTapRelease = data;
+                    _heStrengthTracePush("CHARGE_RELEASE_INPUT", data);
+                }
                 releaseStrengthCharge(heroIndex, hero, nowMs)
             }
         }
@@ -54999,7 +55285,25 @@ function beginStrengthCharge(
 
 ): void {
 
-    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) {
+        if (_heStrengthTraceCanLog()) {
+            const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+            const btnId = encodeIntentToStrBtnId(button);
+            const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+            const data = {
+                hi: heroIndex | 0,
+                pid: ownerId | 0,
+                moveId: sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0,
+                btn: button || "",
+                btnId: btnId | 0,
+                heldInput: heldInput ? 1 : 0,
+                anim: animKey || "",
+                state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+            };
+            _heStrengthTracePush("CHARGE_BEGIN_SKIP_ALREADY_CHARGING", data);
+        }
+        return;
+    }
 
 
 
@@ -55007,7 +55311,22 @@ function beginStrengthCharge(
 
     const btnId = encodeIntentToStrBtnId(button)
 
-    if (btnId === 0) return
+    if (btnId === 0) {
+        if (_heStrengthTraceCanLog()) {
+            const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+            const data = {
+                hi: heroIndex | 0,
+                pid: ownerId | 0,
+                moveId: sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0,
+                btn: button || "",
+                btnId: 0,
+                anim: animKey || "",
+                state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+            };
+            _heStrengthTracePush("CHARGE_BEGIN_SKIP_BAD_BTN", data);
+        }
+        return;
+    }
 
 
 
@@ -55124,6 +55443,32 @@ function beginStrengthCharge(
     // ? Visible prep part, then hold part (transition happens in updateStrengthChargeForHero)
 
     let prepMs = _strengthPrepMsFromFrames(maxMs | 0)
+
+    if (_heStrengthTraceCanLog()) {
+        const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+        const heldInput = isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0);
+        const holdMsRaw = ((maxMs | 0) - (prepMs | 0)) | 0;
+        const holdMs = Math.max(1, holdMsRaw | 0) | 0;
+        const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+        const data = {
+            hi: heroIndex | 0,
+            pid: ownerId | 0,
+            moveId: moveId | 0,
+            btn: button || "",
+            btnId: btnId | 0,
+            heldInput: heldInput ? 1 : 0,
+            now: now | 0,
+            maxMs: maxMs | 0,
+            prepMs: prepMs | 0,
+            holdMs: holdMs | 0,
+            arcMaxDeg: arcMaxDeg | 0,
+            reachPx: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_REACH_PX) | 0,
+            anim: animKey || "",
+            state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+        };
+        _heStrengthTraceLastChargeBegin = data;
+        _heStrengthTracePush("CHARGE_BEGIN", data);
+    }
 
 
 
@@ -55541,6 +55886,29 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
 
         if (ppNow !== "charging") {
 
+            if (_heStrengthTraceCanLog()) {
+                const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+                const btnId = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_BTN) | 0;
+                const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+                const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+                const data = {
+                    hi: heroIndex | 0,
+                    pid: ownerId | 0,
+                    moveId: moveId | 0,
+                    btnId: btnId | 0,
+                    heldInput: heldInput ? 1 : 0,
+                    now: nowMs | 0,
+                    startMs: startMs | 0,
+                    holdStartMs: holdStart | 0,
+                    prepMs: prepMs | 0,
+                    holdMs: holdMs | 0,
+                    arcDeg: arcDeg | 0,
+                    arcMaxDeg: arcMaxDeg | 0,
+                    state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+                };
+                _heStrengthTracePush("CHARGE_HOLD_BEGIN", data);
+            }
+
             _animKeys_setPhasePart(
 
                 heroIndex,
@@ -55687,6 +56055,11 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
     const wasHolding = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD);
+    const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+    const btnId = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_BTN) | 0;
+    const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+    const chargeStartMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0;
+    const chargeMaxMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0;
     sprites.setDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY, wasHolding ? 1 : 0);
     const holdCol = STR_SWING_WINDUP_FRAME_COLS[STR_SWING_WINDUP_FRAME_COLS.length - 1] | 0;
     sprites.setDataNumber(hero, STR_SWING_START_COL_KEY, wasHolding ? ((holdCol + 1) | 0) : 0);
@@ -55707,7 +56080,8 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
     // Snapshot arc BEFORE clearing charge state
 
-    let arcDeg = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0
+    const arcDegRaw = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0
+    let arcDeg = arcDegRaw | 0
 
 
 
@@ -55728,6 +56102,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     const minArcDeg = Math.max(1, Math.idiv(arcMaxDeg0, 36)) | 0 // 360->10
 
     if (arcDeg < minArcDeg) arcDeg = minArcDeg
+    const arcDegClamped = arcDeg | 0
 
 
 
@@ -56033,6 +56408,39 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
     callHeroAnim(heroIndex, "slash", swingDurationMs)
 
+    if (_heStrengthTraceCanLog()) {
+        const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+        const data = {
+            hi: heroIndex | 0,
+            pid: ownerId | 0,
+            moveId: moveId | 0,
+            btn: button || "",
+            btnId: btnId | 0,
+            heldInput: heldInput ? 1 : 0,
+            wasHolding: wasHolding ? 1 : 0,
+            chargeStartMs: chargeStartMs | 0,
+            chargeMaxMs: chargeMaxMs | 0,
+            arcDegRaw: arcDegRaw | 0,
+            arcDeg: arcDegClamped | 0,
+            arcMaxDeg: arcMaxDeg0 | 0,
+            minArcDeg: minArcDeg | 0,
+            swingMs: swingDurationMs | 0,
+            reachExtraPx: reachExtraPx | 0,
+            dmg: dmg | 0,
+            slowPct: slowPct | 0,
+            slowDurationMs: slowDurationMs | 0,
+            weakenPct: weakenPct | 0,
+            weakenDurationMs: weakenDurationMs | 0,
+            knockbackPct: knockbackPct | 0,
+            element: el | 0,
+            traits: traitsFinal.slice(0),
+            stats: stats.slice(0),
+            state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+        };
+        _heStrengthTraceLastRelease = data;
+        _heStrengthTracePush("CHARGE_RELEASE", data);
+    }
+
 
 
     _dbgMovePipe("STR_RELEASE", heroIndex, hero, now, `arcDeg=${arcDeg} swingMs=${swingDurationMs} dmg=${dmg}`)
@@ -56085,6 +56493,12 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     sprites.setDataNumber(hero, STR_PEND_SWING_ACTIVE_KEY, 0)
     sprites.setDataNumber(hero, STR_PEND_SWING_SPAWN_AT_MS_KEY, 0)
 
+    if (_heStrengthTraceCanLog()) {
+        _heStrengthTraceMovesCompleted = Math.min(HE_STRENGTH_TRACE_MAX_MOVES | 0, (_heStrengthTraceMovesCompleted | 0) + 1);
+    }
+    _heStrengthTraceNotifyDoneIfNeeded();
+    sprites.setDataNumber(hero, STR_TRACE_MOVE_ID_KEY, 0);
+
 
 
     // ------------------------------------------------------------
@@ -56122,6 +56536,30 @@ function cancelStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): v
     if (!hero) return
 
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+    if (_heStrengthTraceCanLog()) {
+        const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+        const btnId = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_BTN) | 0;
+        const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+        const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+        const data = {
+            hi: heroIndex | 0,
+            pid: ownerId | 0,
+            moveId: moveId | 0,
+            btnId: btnId | 0,
+            heldInput: heldInput ? 1 : 0,
+            now: nowMs | 0,
+            chargeStartMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0,
+            chargeMaxMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0,
+            arcDeg: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0,
+            arcMaxDeg: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG) | 0,
+            state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+        };
+        _heStrengthTraceLastCancel = data;
+        _heStrengthTracePush("CHARGE_CANCEL", data);
+        _heStrengthTraceMovesCompleted = Math.min(HE_STRENGTH_TRACE_MAX_MOVES | 0, (_heStrengthTraceMovesCompleted | 0) + 1);
+    }
+    _heStrengthTraceNotifyDoneIfNeeded();
+    sprites.setDataNumber(hero, STR_TRACE_MOVE_ID_KEY, 0);
     _destroyStrengthChargeTrail(heroIndex, hero)
 
 
@@ -56395,7 +56833,26 @@ function executeStrengthMove(
 
     // Ignore retriggers while charging
 
-    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+    const alreadyCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING);
+    if (alreadyCharging) {
+        if (_heStrengthTraceCanLog()) {
+            const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+            const btnId = encodeIntentToStrBtnId(button);
+            const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+            const data = {
+                hi: heroIndex | 0,
+                pid: ownerId | 0,
+                moveId: sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0,
+                btn: button || "",
+                btnId: btnId | 0,
+                heldInput: heldInput ? 1 : 0,
+                anim: animKey || "",
+                state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+            };
+            _heStrengthTracePush("MOVE_SKIP_ALREADY_CHARGING", data);
+        }
+        return;
+    }
 
 
 
@@ -56412,6 +56869,30 @@ function executeStrengthMove(
     const element = traits[OUT.ELEMENT] | 0
 
     const traitsRaw: MoveTraits = [0, t1Raw, t2Raw, t3Raw, t4Raw, element]
+
+    if (_heStrengthTraceCanLog()) {
+        const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+        const btnId = encodeIntentToStrBtnId(button);
+        const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+        const moveId = (_heStrengthTraceMovesStarted | 0) + 1;
+        _heStrengthTraceMovesStarted = moveId | 0;
+        sprites.setDataNumber(hero, STR_TRACE_MOVE_ID_KEY, moveId | 0);
+        const data = {
+            hi: heroIndex | 0,
+            pid: ownerId | 0,
+            moveId: moveId | 0,
+            btn: button || "",
+            btnId: btnId | 0,
+            heldInput: heldInput ? 1 : 0,
+            anim: animKey || "",
+            traits: traits.slice(0),
+            traitsRaw: traitsRaw.slice(0),
+            stats: stats.slice(0),
+            state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+        };
+        _heStrengthTraceLastMoveStart = data;
+        _heStrengthTracePush("MOVE_BEGIN", data);
+    }
 
 
 
@@ -56661,6 +57142,32 @@ function spawnStrengthSwingProjectile(
         const spawnSide = (arcSide: number, sharedHit: boolean): Sprite => {
             const img0 = _getEffectDummyImage();
             const proj = sprites.create(img0, SpriteKind.HeroWeapon);
+            if (_heStrengthTraceCanLog()) {
+                const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+                const data = {
+                    hi: heroIndex | 0,
+                    projId: (proj as any).id | 0,
+                    moveId: moveId | 0,
+                    side: arcSide | 0,
+                    sharedHit: sharedHit ? 1 : 0,
+                    element: element | 0,
+                    totalArcDeg: totalArcDeg | 0,
+                    swingMs: swingDuration | 0,
+                    reachExtraPx: reachExtraPx | 0,
+                    innerR: inner0 | 0,
+                    frontStartR: frontStartR | 0,
+                    reachFromInner: reachFromInner | 0,
+                    outerR: outerR | 0,
+                    dir: dirKey || "",
+                    nx: +nx.toFixed(4),
+                    ny: +ny.toFixed(4),
+                    travelFrames: travelFrames | 0,
+                    travelFrameMs: travelFrameMs | 0
+                };
+                sprites.setDataNumber(proj, STR_TRACE_MOVE_ID_KEY, moveId | 0);
+                _heStrengthTraceLastProjectile = data;
+                _heStrengthTracePush("PROJ_SPAWN", data);
+            }
             sprites.setDataNumber(proj, PROJ_DATA.TEX_W, img0.width | 0);
             sprites.setDataNumber(proj, PROJ_DATA.TEX_H, img0.height | 0);
 
@@ -56762,6 +57269,32 @@ function spawnStrengthSwingProjectile(
     const spawnSide = (arcSide: number, sharedHit: boolean): Sprite => {
         const img0 = _createStrengthTraceImage(outerR)
         const proj = sprites.create(img0, SpriteKind.HeroWeapon)
+        if (_heStrengthTraceCanLog()) {
+            const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+            const data = {
+                hi: heroIndex | 0,
+                projId: (proj as any).id | 0,
+                moveId: moveId | 0,
+                side: arcSide | 0,
+                sharedHit: sharedHit ? 1 : 0,
+                element: element | 0,
+                totalArcDeg: totalArcDeg | 0,
+                swingMs: swingDuration | 0,
+                reachExtraPx: reachExtraPx | 0,
+                innerR: inner0 | 0,
+                frontStartR: frontStartR | 0,
+                reachFromInner: reachFromInner | 0,
+                outerR: outerR | 0,
+                dir: dirKey || "",
+                nx: +nx.toFixed(4),
+                ny: +ny.toFixed(4),
+                travelFrames: travelFrames | 0,
+                travelFrameMs: travelFrameMs | 0
+            };
+            sprites.setDataNumber(proj, STR_TRACE_MOVE_ID_KEY, moveId | 0);
+            _heStrengthTraceLastProjectile = data;
+            _heStrengthTracePush("PROJ_SPAWN", data);
+        }
         sprites.setDataNumber(proj, PROJ_DATA.TEX_W, img0.width | 0)
         sprites.setDataNumber(proj, PROJ_DATA.TEX_H, img0.height | 0)
 
@@ -86987,6 +87520,7 @@ if (SHOP_MODE_ACTIVE) {
 
     updateAgilityHookshotAll(now)
     updateAgilityThrustMotionAll(now)
+    _heAgilityDumpTick(now)
 
 
 
@@ -93777,6 +94311,812 @@ function _heDebugTraceInternal(tag: any, data?: any): void {
     }
 }
 
+type StrengthTraceEvent = {
+    t: number;
+    rt: number;
+    tag: string;
+    data: any;
+};
+
+const HE_STRENGTH_TRACE_REASON_PREFIX = "strength";
+const HE_STRENGTH_TRACE_MAX_MOVES = 3;
+const STR_TRACE_MOVE_ID_KEY = "strTraceMoveId";
+let _heStrengthTraceMovesStarted = 0;
+let _heStrengthTraceMovesCompleted = 0;
+let _heStrengthTraceRunId = "";
+let _heStrengthTraceRunStartMs = 0;
+let _heStrengthTraceLastDumpMs = 0;
+let _heStrengthTraceLastMoveStart: any = null;
+let _heStrengthTraceLastChargeBegin: any = null;
+let _heStrengthTraceLastRelease: any = null;
+let _heStrengthTraceLastCancel: any = null;
+let _heStrengthTraceLastTapRelease: any = null;
+let _heStrengthTraceLastProjectile: any = null;
+let _heStrengthTraceLastArcFx: any = null;
+let _heStrengthTraceDoneNotified = false;
+
+function _heGetStrengthTraceBuffer(): StrengthTraceEvent[] {
+    const g: any = globalThis as any;
+    if (g && Array.isArray(g.__heStrengthTraceBuffer)) return g.__heStrengthTraceBuffer;
+    const arr: StrengthTraceEvent[] = [];
+    if (g) g.__heStrengthTraceBuffer = arr;
+    return arr;
+}
+
+function _heStrengthTraceRecord(tag: string, data?: any): void {
+    const buf = _heGetStrengthTraceBuffer();
+    let runtimeMs = 0;
+    try {
+        if (typeof game !== "undefined" && game && typeof game.runtime === "function") {
+            runtimeMs = game.runtime() | 0;
+        }
+    } catch { }
+    buf.push({
+        t: Date.now(),
+        rt: runtimeMs | 0,
+        tag: String(tag || ""),
+        data: (data === undefined) ? null : data
+    });
+    const max = Math.max(1, DEBUG_STR_TRACE_MAX | 0);
+    if (buf.length > max) buf.splice(0, buf.length - max);
+}
+
+function _heStrengthTraceCanLog(): boolean {
+    return DEBUG_STR_TRACE && ((_heStrengthTraceMovesCompleted | 0) < HE_STRENGTH_TRACE_MAX_MOVES);
+}
+
+function _heStrengthTraceNotifyDoneIfNeeded(): void {
+    if (!DEBUG_STR_TRACE) return;
+    if (_heStrengthTraceDoneNotified) return;
+    if ((_heStrengthTraceMovesCompleted | 0) < (HE_STRENGTH_TRACE_MAX_MOVES | 0)) return;
+    _heStrengthTraceDoneNotified = true;
+    let runtimeMs = 0;
+    try {
+        if (typeof game !== "undefined" && game && typeof game.runtime === "function") {
+            runtimeMs = game.runtime() | 0;
+        }
+    } catch { }
+    const tag = HE_STRENGTH_TRACE_REASON_PREFIX + ":auto";
+    const file = "debugdump_strength.json";
+    let bytes = 0;
+    let ok = 1;
+    try {
+        const payload = _heBuildStrengthDebugDump("done");
+        const text = JSON.stringify(payload);
+        bytes = text ? (text.length | 0) : 0;
+    } catch {
+        ok = 0;
+        bytes = 0;
+    }
+    const g: any = globalThis as any;
+    const host = (g && typeof g.__isHost === "boolean") ? (g.__isHost ? 1 : 0) : 0;
+    const net: any = g && g.__net;
+    let ws = 0;
+    if (net) {
+        if (typeof net.ws !== "undefined") ws = net.ws ? 1 : 0;
+        else ws = 1;
+    }
+    const moves = `${_heStrengthTraceMovesCompleted | 0}/${HE_STRENGTH_TRACE_MAX_MOVES | 0}`;
+    console.log(
+        "[STR][DUMP]" +
+        " done=1" +
+        " ok=" + (ok | 0) +
+        " reason=limit" +
+        " file=" + file +
+        " tag=" + tag +
+        " rtMs=" + (runtimeMs | 0) +
+        " timeoutMs=0" +
+        " bytes=" + (bytes | 0) +
+        " host=" + (host | 0) +
+        " ws=" + (ws | 0) +
+        " moves=" + moves +
+        " runId=" + (_heStrengthTraceRunId || "")
+    );
+}
+
+function _heStrengthTraceInitIfNeeded(reasonTag: string): void {
+    if (!DEBUG_STR_TRACE) return;
+    if (_heStrengthTraceRunId) return;
+    const g: any = globalThis as any;
+    _heStrengthTraceRunId = "str-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    _heStrengthTraceRunStartMs = 0;
+    _heStrengthTraceMovesStarted = 0;
+    _heStrengthTraceMovesCompleted = 0;
+    _heStrengthTraceDoneNotified = false;
+    try {
+        if (typeof game !== "undefined" && game && typeof game.runtime === "function") {
+            _heStrengthTraceRunStartMs = game.runtime() | 0;
+        }
+    } catch { }
+    const buf = _heGetStrengthTraceBuffer();
+    buf.length = 0;
+    if (g) {
+        g.__heStrengthTraceMeta = {
+            runId: _heStrengthTraceRunId,
+            startedAt: Date.now(),
+            startedAtRt: _heStrengthTraceRunStartMs | 0,
+            maxMoves: HE_STRENGTH_TRACE_MAX_MOVES | 0
+        };
+    }
+    _heStrengthTraceRecord("RUN_START", { reason: String(reasonTag || ""), runId: _heStrengthTraceRunId });
+}
+
+function _heStrengthTracePush(tag: string, data?: any): void {
+    if (!_heStrengthTraceCanLog()) return;
+    _heStrengthTraceInitIfNeeded(String(tag || ""));
+    _heStrengthTraceRecord(String(tag || ""), data);
+    _heStrengthTraceDump(String(tag || ""));
+}
+
+function _heStrengthTraceHeroState(hi: number, hero: Sprite): any {
+    const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+    const btnId = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_BTN) | 0;
+    const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+    return {
+        hi: hi | 0,
+        pid: ownerId | 0,
+        name: sprites.readDataString(hero, HERO_DATA.NAME) || "",
+        x: hero.x | 0,
+        y: hero.y | 0,
+        actionKind: sprites.readDataString(hero, HERO_DATA.ActionKind) || "",
+        phaseName: sprites.readDataString(hero, HERO_DATA.PhaseName) || "",
+        phasePart: sprites.readDataString(hero, HERO_DATA.PhasePartName) || "",
+        phaseProg: sprites.readDataNumber(hero, HERO_DATA.PhaseProgressInt) | 0,
+        phasePartProg: sprites.readDataNumber(hero, HERO_DATA.PhasePartProgress) | 0,
+        strCharging: sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING) ? 1 : 0,
+        strChargeHeld: sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD) ? 1 : 0,
+        strChargeBtn: btnId | 0,
+        strChargeHeldInput: heldInput ? 1 : 0,
+        strChargeStartMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0,
+        strChargeLastMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS) | 0,
+        strChargeMaxMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0,
+        strChargeArcDeg: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0,
+        strChargeArcMaxDeg: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG) | 0,
+        strChargeReachPx: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_REACH_PX) | 0,
+        strSwingSkipWindup: sprites.readDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY) | 0,
+        strSwingStartCol: sprites.readDataNumber(hero, STR_SWING_START_COL_KEY) | 0,
+        strTraceMoveId: sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0,
+        strSegName: sprites.readDataString(hero, STR_SEG_NAME_KEY) || "",
+        strSegStartMs: sprites.readDataNumber(hero, STR_SEG_START_MS_KEY) | 0,
+        strSegDurMs: sprites.readDataNumber(hero, STR_SEG_DUR_MS_KEY) | 0,
+        strSegProg: sprites.readDataNumber(hero, STR_SEG_PROGRESS_INT_KEY) | 0,
+        payload: {
+            family: sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_FAMILY) | 0,
+            btn: sprites.readDataString(hero, HERO_DATA.STR_PAYLOAD_BTNSTR) || "",
+            t1: sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T1) | 0,
+            t2: sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T2) | 0,
+            t3: sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T3) | 0,
+            t4: sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T4) | 0,
+            el: sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL) | 0,
+            anim: sprites.readDataString(hero, HERO_DATA.STR_PAYLOAD_ANIM) || "",
+        }
+    };
+}
+
+function _heBuildStrengthDebugDump(reason?: string): any {
+    const g: any = globalThis as any;
+    let runtimeMs = 0;
+    try { runtimeMs = game.runtime() | 0; } catch { }
+    const heroStates: any[] = [];
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi];
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue;
+        heroStates.push(_heStrengthTraceHeroState(hi | 0, hero));
+    }
+    const buf = _heGetStrengthTraceBuffer();
+    return {
+        type: "heStrengthDumpV1",
+        createdAt: Date.now(),
+        runtimeMs: runtimeMs | 0,
+        reason: String(reason || ""),
+        host: g && typeof g.__isHost === "boolean" ? !!g.__isHost : null,
+        run: {
+            id: _heStrengthTraceRunId,
+            startedAtRt: _heStrengthTraceRunStartMs | 0,
+            maxMoves: HE_STRENGTH_TRACE_MAX_MOVES | 0,
+            movesStarted: _heStrengthTraceMovesStarted | 0,
+            movesCompleted: _heStrengthTraceMovesCompleted | 0
+        },
+        settings: {
+            chargeAllowTapRelease: STR_CHARGE_ALLOW_TAP_RELEASE ? 1 : 0,
+            swingWindupCols: STR_SWING_WINDUP_FRAME_COLS.slice(0),
+            swingForwardCols: STR_SWING_FORWARD_FRAME_COLS.slice(0),
+            swingReturnCols: STR_SWING_RETURN_FRAME_COLS.slice(0),
+            swingWindupMs: (STR_SWING_WINDUP_FRAME_MS || []).slice(0),
+            swingForwardMs: (STR_SWING_FORWARD_FRAME_MS || []).slice(0),
+            swingReturnMs: (STR_SWING_RETURN_FRAME_MS || []).slice(0),
+        },
+        last: {
+            moveStart: _heStrengthTraceLastMoveStart,
+            chargeBegin: _heStrengthTraceLastChargeBegin,
+            release: _heStrengthTraceLastRelease,
+            cancel: _heStrengthTraceLastCancel,
+            tapRelease: _heStrengthTraceLastTapRelease,
+            projectile: _heStrengthTraceLastProjectile,
+            arcFx: _heStrengthTraceLastArcFx,
+        },
+        heroes: heroStates,
+        events: buf.slice(0)
+    };
+}
+
+function _heStrengthTraceDump(reason?: string): void {
+    if (!_heStrengthTraceCanLog()) return;
+    if (!DEBUG_STR_TRACE_AUTO_DUMP) return;
+    if (!DEBUG_DEBUG_DUMP) return;
+    _heStrengthTraceInitIfNeeded(String(reason || ""));
+    const now = (typeof game !== "undefined" && game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0);
+    const cooldown = Math.max(0, DEBUG_STR_TRACE_DUMP_COOLDOWN_MS | 0);
+    if (cooldown > 0 && (_heStrengthTraceLastDumpMs | 0) > 0 && (now - (_heStrengthTraceLastDumpMs | 0)) < cooldown) return;
+    _heStrengthTraceLastDumpMs = now | 0;
+    const g: any = globalThis as any;
+    const net: any = g && g.__net;
+    if (!net || typeof net.sendDebugDump !== "function") return;
+    const payload = _heBuildStrengthDebugDump(reason);
+    const reasonTag = HE_STRENGTH_TRACE_REASON_PREFIX + (reason ? (":" + String(reason || "")) : "");
+    try { net.sendDebugDump(payload, reasonTag); } catch { /* ignore */ }
+}
+
+// ------------------------------------------------------------------
+// AGILITY DUMP (separate file, machine-readable)
+// ------------------------------------------------------------------
+
+type AgiDumpEvent = {
+    t: number;
+    rt: number;
+    tag: string;
+    hi: number;
+    moveId: number;
+    data: any;
+};
+
+type AgiDumpMove = {
+    id: number;
+    kind: string;
+    heroIndex: number;
+    startedAt: number;
+    startedAtRt: number;
+    endedAt: number | null;
+    endedAtRt: number | null;
+    meta: any;
+    events: AgiDumpEvent[];
+    samples: any[];
+    lastSampleMs: number;
+};
+
+const HE_AGI_DUMP_REASON_PREFIX = "agility";
+let _heAgiDumpRunId = "";
+let _heAgiDumpRunStartMs = 0;
+let _heAgiDumpMoveSeq = 0;
+let _heAgiDumpMoves: AgiDumpMove[] = [];
+let _heAgiDumpActiveByHero: { [k: number]: AgiDumpMove } = Object.create(null);
+let _heAgiDumpLastStateByHero: { [k: number]: { agi: number; hook: number; phase: string; part: string } } = Object.create(null);
+let _heAgiDumpMovesCompleted = 0;
+let _heAgiDumpDone = false;
+let _heAgiDumpSent = false;
+
+function _heAgilityDumpReset(reason?: string): void {
+    if (!DEBUG_AGI_DUMP) return;
+    const g: any = globalThis as any;
+    _heAgiDumpRunId = "agi-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    _heAgiDumpRunStartMs = 0;
+    try { _heAgiDumpRunStartMs = game.runtime() | 0; } catch { }
+    _heAgiDumpMoveSeq = 0;
+    _heAgiDumpMoves = [];
+    _heAgiDumpActiveByHero = Object.create(null);
+    _heAgiDumpLastStateByHero = Object.create(null);
+    _heAgiDumpMovesCompleted = 0;
+    _heAgiDumpDone = false;
+    _heAgiDumpSent = false;
+    if (g) {
+        g.__heAgilityDumpMeta = {
+            runId: _heAgiDumpRunId,
+            startedAt: Date.now(),
+            startedAtRt: _heAgiDumpRunStartMs | 0,
+            reason: String(reason || "")
+        };
+    }
+}
+
+function _heAgilityDumpInitIfNeeded(reason?: string): void {
+    if (!DEBUG_AGI_DUMP) return;
+    if (_heAgiDumpRunId) return;
+    _heAgilityDumpReset(reason);
+}
+
+function _heAgilityDumpRecordEvent(move: AgiDumpMove, tag: string, data?: any): void {
+    if (!move) return;
+    const max = Math.max(1, DEBUG_AGI_DUMP_MAX_EVENTS_PER_MOVE | 0);
+    if (move.events.length >= max) return;
+    let rt = 0;
+    try { rt = game.runtime() | 0; } catch { }
+    move.events.push({
+        t: Date.now(),
+        rt: rt | 0,
+        tag: String(tag || ""),
+        hi: move.heroIndex | 0,
+        moveId: move.id | 0,
+        data: (data === undefined) ? null : data
+    });
+}
+
+function _heAgilityDumpStartMove(heroIndex: number, hero: Sprite, kind: string, nowMs: number): AgiDumpMove | null {
+    const maxMoves = Math.max(1, DEBUG_AGI_DUMP_MOVES_MAX | 0);
+    if (_heAgiDumpMoves.length >= maxMoves) return null;
+    const move: AgiDumpMove = {
+        id: (++_heAgiDumpMoveSeq) | 0,
+        kind: String(kind || ""),
+        heroIndex: heroIndex | 0,
+        startedAt: Date.now(),
+        startedAtRt: nowMs | 0,
+        endedAt: null,
+        endedAtRt: null,
+        meta: {
+            pid: sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0,
+            name: sprites.readDataString(hero, HERO_DATA.NAME) || "",
+            comboMode: sprites.readDataNumber(hero, HERO_DATA.AGI_COMBO_MODE) | 0,
+            phaseName: sprites.readDataString(hero, HERO_DATA.PhaseName) || "",
+            phasePart: sprites.readDataString(hero, HERO_DATA.PhasePartName) || "",
+        },
+        events: [],
+        samples: [],
+        lastSampleMs: 0
+    };
+    _heAgiDumpMoves.push(move);
+    _heAgiDumpActiveByHero[heroIndex | 0] = move;
+    _heAgilityDumpRecordEvent(move, "MOVE_START", { kind: move.kind });
+    return move;
+}
+
+function _heAgilityDumpEndMove(move: AgiDumpMove, nowMs: number, reason?: string): void {
+    if (!move || move.endedAtRt != null) return;
+    move.endedAt = Date.now();
+    move.endedAtRt = nowMs | 0;
+    _heAgilityDumpRecordEvent(move, "MOVE_END", { reason: String(reason || "") });
+    _heAgiDumpMovesCompleted = (_heAgiDumpMovesCompleted + 1) | 0;
+    if (_heAgiDumpMovesCompleted >= (DEBUG_AGI_DUMP_MOVES_MAX | 0)) {
+        _heAgiDumpDone = true;
+    }
+}
+
+function _heAgilityDumpResolveDir(
+    heroIndex: number,
+    hero: Sprite,
+    proj: Sprite | null,
+    hookState: AgiHookshotState | null
+): { nx: number; ny: number; src: string } {
+    let nx = 0;
+    let ny = 0;
+    let src = "none";
+    if (hookState) {
+        nx = hookState.dirX || 0;
+        ny = hookState.dirY || 0;
+        if (nx || ny) src = "hook";
+    }
+    if ((!nx && !ny) && proj) {
+        nx = sprites.readDataNumber(proj, PROJ_DATA.DIR_X) || 0;
+        ny = sprites.readDataNumber(proj, PROJ_DATA.DIR_Y) || 0;
+        if (nx || ny) src = "proj";
+    }
+    if (!nx && !ny) {
+        const aim = getAimVectorForHero(heroIndex);
+        nx = aim[0];
+        ny = aim[1];
+        if (nx || ny) src = "aim";
+    }
+    if (!nx && !ny) {
+        nx = _getHeroFacingX(heroIndex) || 1;
+        ny = _getHeroFacingY(heroIndex) || 0;
+        src = "facing";
+    }
+    let m = Math.sqrt(nx * nx + ny * ny);
+    if (m < 1e-6) {
+        nx = 1;
+        ny = 0;
+        m = 1;
+    }
+    return { nx: nx / m, ny: ny / m, src };
+}
+
+function _heAgilityDumpWeaponAxis(hero: Sprite, nx: number, ny: number): any {
+    const info = _getHeroWeaponFgInfo(hero);
+    const axisLocal = info ? _weaponAxisFromMask(info, nx, ny) : null;
+    const axisWorld = axisLocal
+        ? {
+            x0: (hero.x + axisLocal.x0),
+            y0: (hero.y + axisLocal.y0),
+            x1: (hero.x + axisLocal.x1),
+            y1: (hero.y + axisLocal.y1)
+        }
+        : null;
+    const axisLen = axisWorld
+        ? Math.hypot((axisWorld.x1 - axisWorld.x0), (axisWorld.y1 - axisWorld.y0))
+        : 0;
+    return {
+        info: info ? {
+            texKey: info.texKey,
+            frameName: info.frameName,
+            offX: info.offX | 0,
+            offY: info.offY | 0,
+            originX: Number.isFinite(info.originX) ? Number(info.originX) : 0.5,
+            originY: Number.isFinite(info.originY) ? Number(info.originY) : 0.5,
+            scaleX: Number.isFinite(info.scaleX) ? Number(info.scaleX) : 1,
+            scaleY: Number.isFinite(info.scaleY) ? Number(info.scaleY) : 1,
+            flipX: info.flipX ? 1 : 0,
+            flipY: info.flipY ? 1 : 0
+        } : null,
+        axisLocal,
+        axisWorld,
+        axisLen: Number.isFinite(axisLen) ? Number(axisLen) : 0
+    };
+}
+
+function _heAgilityDumpResolveRawFrame(fx: Sprite): number {
+    if (!fx) return 0;
+    const frameIndex = sprites.readDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY);
+    const frameIndexRaw = sprites.readDataNumber(fx, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY) | 0;
+    if (frameIndexRaw) return frameIndex | 0;
+    const skin = sprites.readDataString(fx, "effectSkin") || "";
+    const dir = sprites.readDataString(fx, "effectDir") || "";
+    const atlas = _getEffectAtlasAny();
+    const resolved = (atlas && skin) ? _resolveEffectEntry(atlas, skin, dir || "") : null;
+    const frames = resolved && resolved.frameIndices ? resolved.frameIndices : null;
+    if (frames && Number.isFinite(frameIndex) && (frameIndex | 0) >= 0 && (frameIndex | 0) < frames.length) {
+        return frames[frameIndex | 0] | 0;
+    }
+    return frameIndex | 0;
+}
+
+function _heAgilityDumpCometAxisFromFx(fx: Sprite, rawFrame: number): any {
+    if (!fx) return null;
+    const skin = sprites.readDataString(fx, "effectSkin") || "";
+    const tipOffset = _agiCometTipOffsetForRaw(skin, rawFrame | 0);
+    const tailOffset = _agiCometTailOffsetForRaw(skin, rawFrame | 0);
+    if (!tipOffset && !tailOffset) return null;
+    let dxLocal = 0;
+    let dyLocal = 0;
+    if (tipOffset && tailOffset) {
+        dxLocal = (tipOffset.dx || 0) - (tailOffset.dx || 0);
+        dyLocal = (tipOffset.dy || 0) - (tailOffset.dy || 0);
+    } else if (tipOffset) {
+        dxLocal = tipOffset.dx || 0;
+        dyLocal = tipOffset.dy || 0;
+    } else {
+        dxLocal = 0;
+        dyLocal = 0;
+    }
+    const scale = sprites.readDataNumber(fx, EFFECT_SCALE_DATA_KEY);
+    const scaleX = sprites.readDataNumber(fx, EFFECT_SCALE_X_DATA_KEY);
+    const scaleY = sprites.readDataNumber(fx, EFFECT_SCALE_Y_DATA_KEY);
+    const sx = Number.isFinite(scaleX) && scaleX > 0 ? scaleX : (Number.isFinite(scale) && scale > 0 ? scale : 1);
+    const sy = Number.isFinite(scaleY) && scaleY > 0 ? scaleY : (Number.isFinite(scale) && scale > 0 ? scale : 1);
+    const s = (Number.isFinite(scale) && scale > 0) ? scale : 1;
+    const dxScaled = dxLocal * s * sx;
+    const dyScaled = dyLocal * s * sy;
+    const rot = sprites.readDataNumber(fx, EFFECT_ROT_DATA_KEY) || 0;
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+    const dxWorld = (dxScaled * cos) - (dyScaled * sin);
+    const dyWorld = (dxScaled * sin) + (dyScaled * cos);
+    const tipX = fx.x;
+    const tipY = fx.y;
+    const tailX = tipX - dxWorld;
+    const tailY = tipY - dyWorld;
+    return {
+        tipX: Number(tipX),
+        tipY: Number(tipY),
+        tailX: Number(tailX),
+        tailY: Number(tailY),
+        dxWorld: Number(dxWorld),
+        dyWorld: Number(dyWorld),
+        rawFrame: rawFrame | 0
+    };
+}
+
+function _heAgilityDumpSquareFillExpect(
+    hero: Sprite,
+    element: number,
+    nx: number,
+    ny: number,
+    maskFx: Sprite | null
+): any {
+    const elem = _heroBodyEffectElement(hero, element | 0) | 0;
+    const dir = _enemyDirFromVector(nx, ny);
+    const pick = _agiCometElementTexturePick(elem | 0, dir || "");
+    const atlas = _getEffectAtlasAny();
+    const resolved = (atlas && pick && pick.skinId) ? _resolveEffectEntry(atlas, pick.skinId, pick.dir || "") : null;
+    const g: any = globalThis as any;
+    const sc: any = g ? g.__phaserScene : null;
+    const texKey = resolved ? String(resolved.textureKey || "") : "";
+    const texExists = !!(sc && sc.textures && typeof sc.textures.exists === "function" && texKey && sc.textures.exists(texKey));
+    const maskHasSource = maskFx ? _effectSpriteHasFrameSource(maskFx) : false;
+    let reason = "";
+    if (!pick || !pick.skinId) reason = "no_pick";
+    else if (!resolved) reason = "no_resolve";
+    else if (!texExists) reason = "no_texture";
+    else if (!maskHasSource) reason = "mask_no_source";
+    return {
+        elem: elem | 0,
+        dir,
+        pickSkin: pick ? (pick.skinId || "") : "",
+        pickDir: pick && pick.dir ? (pick.dir || "") : "",
+        resolved: resolved ? 1 : 0,
+        texKey,
+        texExists: texExists ? 1 : 0,
+        maskHasSource: maskHasSource ? 1 : 0,
+        reason
+    };
+}
+
+function _heAgilityDumpEffectInfo(s: Sprite | null): any {
+    if (!s || (s.flags & sprites.Flag.Destroyed)) return null;
+    const atlas = _getEffectAtlasAny();
+    const g: any = globalThis as any;
+    const sc: any = g ? g.__phaserScene : null;
+    const stride = 2;
+    const alphaMin = 0.05;
+    return _heBuildEffectTraceInfo(s, atlas, sc, stride, alphaMin, true);
+}
+
+function _heAgilityDumpBuildSample(
+    move: AgiDumpMove,
+    heroIndex: number,
+    hero: Sprite,
+    nowMs: number
+): any {
+    const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0;
+    const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0;
+    const hookSt = agiHookshotStateByHeroIndex[heroIndex] || null;
+    let proj: Sprite | null = null;
+    for (let i = 0; i < heroProjectiles.length; i++) {
+        const p = heroProjectiles[i];
+        if (!p || (p.flags & sprites.Flag.Destroyed)) continue;
+        if ((sprites.readDataNumber(p, PROJ_DATA.FAMILY) | 0) !== (FAMILY.AGILITY | 0)) continue;
+        if ((sprites.readDataNumber(p, PROJ_DATA.HERO_INDEX) | 0) !== (heroIndex | 0)) continue;
+        proj = p;
+        break;
+    }
+    const dir = _heAgilityDumpResolveDir(heroIndex, hero, proj, hookSt);
+    const weaponAxis = _heAgilityDumpWeaponAxis(hero, dir.nx, dir.ny);
+    const squareFx = proj ? sprites.readDataSprite(proj, AGI_SQUARE_COMET_FX_KEY) : null;
+    const squareFillFx = proj ? sprites.readDataSprite(proj, AGI_SQUARE_COMET_FILL_FX_KEY) : null;
+    const normalFx = proj ? sprites.readDataSprite(proj, AGI_COMET_FX_KEY) : null;
+    const hookComet = hookSt ? (hookSt.comet || null) : null;
+    const hookAimComet = hookSt ? (hookSt.aimComet || null) : null;
+    const squareRaw = squareFx ? _heAgilityDumpResolveRawFrame(squareFx) : 0;
+    const normalRaw = normalFx ? _heAgilityDumpResolveRawFrame(normalFx) : 0;
+    const hookRaw = hookComet ? _heAgilityDumpResolveRawFrame(hookComet) : 0;
+    const squareAxis = squareFx ? _heAgilityDumpCometAxisFromFx(squareFx, squareRaw | 0) : null;
+    const normalAxis = normalFx ? _heAgilityDumpCometAxisFromFx(normalFx, normalRaw | 0) : null;
+    const hookAxis = hookComet ? _heAgilityDumpCometAxisFromFx(hookComet, hookRaw | 0) : null;
+    const elementNow = proj ? (sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0) : (hookSt ? (hookSt.element | 0) : 0);
+    const fillExpect = squareFx ? _heAgilityDumpSquareFillExpect(hero, elementNow | 0, dir.nx, dir.ny, squareFx) : null;
+    return {
+        t: Date.now(),
+        rt: nowMs | 0,
+        hi: heroIndex | 0,
+        moveId: move.id | 0,
+        kind: move.kind,
+        dir: { nx: Number(dir.nx), ny: Number(dir.ny), src: dir.src },
+        hero: {
+            x: hero.x | 0,
+            y: hero.y | 0,
+            vx: hero.vx | 0,
+            vy: hero.vy | 0,
+            dirX: _getHeroFacingX(heroIndex) | 0,
+            dirY: _getHeroFacingY(heroIndex) | 0,
+            animHold: sprites.readDataNumber(hero, HERO_DATA.ANIM_HOLD) | 0
+        },
+        phase: {
+            actionKind: sprites.readDataString(hero, HERO_DATA.ActionKind) || "",
+            actionSeq: sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0,
+            phaseName: sprites.readDataString(hero, HERO_DATA.PhaseName) || "",
+            phaseProg: sprites.readDataNumber(hero, HERO_DATA.PhaseProgressInt) | 0,
+            partName: sprites.readDataString(hero, HERO_DATA.PhasePartName) || "",
+            partProg: sprites.readDataNumber(hero, HERO_DATA.PhasePartProgress) | 0
+        },
+        agi: {
+            state: agiState | 0,
+            hookState: hookState | 0,
+            dashUntil: sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0,
+            lungeStart: sprites.readDataNumber(hero, HERO_DATA.AgilityLungeStartMs) | 0,
+            lungeEnd: sprites.readDataNumber(hero, HERO_DATA.AgilityLungeEndMs) | 0,
+            animTotal: sprites.readDataNumber(hero, HERO_DATA.AgilityAnimTotalMs) | 0,
+            comboMode: sprites.readDataNumber(hero, HERO_DATA.AGI_COMBO_MODE) | 0,
+            execSeq: sprites.readDataNumber(hero, HERO_DATA.AGI_EXECUTE_SEQ) | 0
+        },
+        weapon: weaponAxis,
+        projectile: proj ? {
+            id: (proj as any).id | 0,
+            element: sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0,
+            dirX: sprites.readDataNumber(proj, PROJ_DATA.DIR_X),
+            dirY: sprites.readDataNumber(proj, PROJ_DATA.DIR_Y),
+            startMs: sprites.readDataNumber(proj, PROJ_DATA.START_TIME) | 0,
+            dashMs: sprites.readDataNumber(proj, PROJ_DATA.DASH_MS) | 0,
+            reachT: sprites.readDataNumber(proj, PROJ_DATA.REACH_T) | 0,
+            maxReach: sprites.readDataNumber(proj, PROJ_DATA.MAX_REACH) | 0,
+            arrowLen: sprites.readDataNumber(proj, PROJ_DATA.ARROW_LEN) | 0,
+            moveType: sprites.readDataString(proj, PROJ_DATA.MOVE_TYPE) || ""
+        } : null,
+        squareComet: {
+            base: _heAgilityDumpEffectInfo(squareFx),
+            fill: _heAgilityDumpEffectInfo(squareFillFx),
+            axis: squareAxis,
+            fillExpect
+        },
+        normalComet: {
+            base: _heAgilityDumpEffectInfo(normalFx),
+            axis: normalAxis
+        },
+        hook: hookSt ? {
+            state: hookSt.state | 0,
+            aimAngleMdeg: hookSt.aimAngleMdeg | 0,
+            dirX: hookSt.dirX | 0,
+            dirY: hookSt.dirY | 0,
+            tipDist: hookSt.tipDist | 0,
+            weaponLen: hookSt.weaponLen | 0,
+            maxDist: hookSt.maxDist | 0,
+            element: hookSt.element | 0,
+            timingPosX1000: hookSt.timingPosX1000 | 0,
+            timingPendingAdd: hookSt.timingPendingAdd | 0,
+            timingIsExec: hookSt.timingIsExec | 0,
+            comet: _heAgilityDumpEffectInfo(hookComet),
+            aimComet: _heAgilityDumpEffectInfo(hookAimComet),
+            axis: hookAxis
+        } : null
+    };
+}
+
+function _heBuildAgilityDump(reason?: string): any {
+    let runtimeMs = 0;
+    try { runtimeMs = game.runtime() | 0; } catch { }
+    return {
+        type: "heAgilityDumpV1",
+        createdAt: Date.now(),
+        runtimeMs: runtimeMs | 0,
+        reason: String(reason || ""),
+        run: {
+            id: _heAgiDumpRunId,
+            startedAtRt: _heAgiDumpRunStartMs | 0,
+            movesMax: DEBUG_AGI_DUMP_MOVES_MAX | 0,
+            movesCompleted: _heAgiDumpMovesCompleted | 0,
+            done: _heAgiDumpDone ? 1 : 0
+        },
+        settings: {
+            tickIntervalMs: DEBUG_AGI_DUMP_TICK_INTERVAL_MS | 0,
+            maxSamplesPerMove: DEBUG_AGI_DUMP_MAX_SAMPLES_PER_MOVE | 0,
+            maxEventsPerMove: DEBUG_AGI_DUMP_MAX_EVENTS_PER_MOVE | 0
+        },
+        moves: _heAgiDumpMoves.slice(0)
+    };
+}
+
+function _heAgilityDumpToFile(reason?: string): void {
+    if (!DEBUG_AGI_DUMP) return;
+    if (!DEBUG_DEBUG_DUMP) return;
+    const g: any = globalThis as any;
+    const net: any = g && g.__net;
+    if (!net || typeof net.sendDebugDump !== "function") return;
+    const payload = _heBuildAgilityDump(reason);
+    const reasonTag = HE_AGI_DUMP_REASON_PREFIX + (reason ? (":" + String(reason || "")) : "");
+    let approxBytes = -1;
+    try { approxBytes = JSON.stringify(payload).length | 0; } catch { approxBytes = -1; }
+    const host = (g && typeof g.__isHost === "boolean") ? (g.__isHost ? 1 : 0) : -1;
+    const wsState = (net && net.ws && typeof net.ws.readyState === "number") ? (net.ws.readyState | 0) : -1;
+    let startRt = 0;
+    try { startRt = game.runtime() | 0; } catch { startRt = 0; }
+    const timeoutMs = 15000;
+    try {
+        const p = net.sendDebugDump(payload, reasonTag);
+        if (p && typeof p.then === "function") {
+            p.then((res: any) => {
+                if (!DEBUG_AGI_DUMP) return;
+                const ok = (res && typeof res.ok === "boolean") ? res.ok : null;
+                const rr = (res && typeof res.reason === "string") ? res.reason : "";
+                const file = (res && typeof res.file === "string") ? res.file : "";
+                let endRt = 0;
+                try { endRt = game.runtime() | 0; } catch { endRt = 0; }
+                const dur = (endRt > 0 && startRt > 0) ? (endRt - startRt) : 0;
+                // Single completion line for dump status.
+                // eslint-disable-next-line no-console
+                console.log(
+                    "[AGI][DUMP] done=1 ok=" + ok +
+                    " reason=" + rr +
+                    " file=" + file +
+                    " tag=" + reasonTag +
+                    " rtMs=" + (dur | 0) +
+                    " timeoutMs=" + (timeoutMs | 0) +
+                    " bytes=" + (approxBytes | 0) +
+                    " host=" + host +
+                    " ws=" + (wsState | 0) +
+                    " moves=" + (_heAgiDumpMovesCompleted | 0) + "/" + (DEBUG_AGI_DUMP_MOVES_MAX | 0) +
+                    " runId=" + (_heAgiDumpRunId || "")
+                );
+            }).catch(() => {
+                if (!DEBUG_AGI_DUMP) return;
+                // eslint-disable-next-line no-console
+                console.log(
+                    "[AGI][DUMP] done=1 ok=0 reason=promise" +
+                    " tag=" + reasonTag +
+                    " timeoutMs=" + (timeoutMs | 0) +
+                    " bytes=" + (approxBytes | 0) +
+                    " host=" + host +
+                    " ws=" + (wsState | 0) +
+                    " moves=" + (_heAgiDumpMovesCompleted | 0) + "/" + (DEBUG_AGI_DUMP_MOVES_MAX | 0) +
+                    " runId=" + (_heAgiDumpRunId || "")
+                );
+            });
+        }
+    } catch { /* ignore */ }
+}
+
+function _heAgilityDumpTick(nowMs: number): void {
+    if (!DEBUG_AGI_DUMP) return;
+    _heAgilityDumpInitIfNeeded("tick");
+    if (_heAgiDumpDone) {
+        if (DEBUG_AGI_DUMP_AUTO_DUMP && !_heAgiDumpSent) {
+            _heAgiDumpSent = true;
+            _heAgilityDumpToFile("auto");
+        }
+        return;
+    }
+    const maxMoves = Math.max(1, DEBUG_AGI_DUMP_MOVES_MAX | 0);
+    const interval = Math.max(1, DEBUG_AGI_DUMP_TICK_INTERVAL_MS | 0);
+    const maxSamples = Math.max(1, DEBUG_AGI_DUMP_MAX_SAMPLES_PER_MOVE | 0);
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi];
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue;
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0;
+        const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0;
+        const last = _heAgiDumpLastStateByHero[hi] || { agi: -1, hook: -1, phase: "", part: "" };
+        let move = _heAgiDumpActiveByHero[hi] || null;
+        if (!move && _heAgiDumpMoves.length < maxMoves) {
+            if ((hookState | 0) !== AGI_HOOK_STATE.NONE && (last.hook | 0) === AGI_HOOK_STATE.NONE) {
+                move = _heAgilityDumpStartMove(hi, hero, "hook", nowMs | 0);
+            } else if ((agiState | 0) === AGI_STATE.EXECUTING && (last.agi | 0) !== AGI_STATE.EXECUTING && (hookState | 0) === AGI_HOOK_STATE.NONE) {
+                move = _heAgilityDumpStartMove(hi, hero, "dash", nowMs | 0);
+            }
+        }
+        if (move) {
+            if ((agiState | 0) !== (last.agi | 0)) {
+                _heAgilityDumpRecordEvent(move, "AGI_STATE", { from: last.agi | 0, to: agiState | 0 });
+            }
+            if ((hookState | 0) !== (last.hook | 0)) {
+                _heAgilityDumpRecordEvent(move, "HOOK_STATE", { from: last.hook | 0, to: hookState | 0 });
+            }
+            const ph = sprites.readDataString(hero, HERO_DATA.PhaseName) || "";
+            const pp = sprites.readDataString(hero, HERO_DATA.PhasePartName) || "";
+            if (ph !== last.phase) {
+                _heAgilityDumpRecordEvent(move, "PHASE", { from: last.phase || "", to: ph });
+            }
+            if (pp !== last.part) {
+                _heAgilityDumpRecordEvent(move, "PHASE_PART", { from: last.part || "", to: pp });
+            }
+            if ((nowMs | 0) - (move.lastSampleMs | 0) >= interval && move.samples.length < maxSamples) {
+                move.lastSampleMs = nowMs | 0;
+                move.samples.push(_heAgilityDumpBuildSample(move, hi, hero, nowMs | 0));
+            }
+            if (move.kind === "dash" && (agiState | 0) === AGI_STATE.NONE && (last.agi | 0) === AGI_STATE.EXECUTING) {
+                _heAgilityDumpEndMove(move, nowMs | 0, "dash_done");
+                delete _heAgiDumpActiveByHero[hi];
+            } else if (move.kind === "hook" && (hookState | 0) === AGI_HOOK_STATE.NONE && (last.hook | 0) !== AGI_HOOK_STATE.NONE) {
+                _heAgilityDumpEndMove(move, nowMs | 0, "hook_done");
+                delete _heAgiDumpActiveByHero[hi];
+            }
+        }
+        _heAgiDumpLastStateByHero[hi] = {
+            agi: agiState | 0,
+            hook: hookState | 0,
+            phase: sprites.readDataString(hero, HERO_DATA.PhaseName) || "",
+            part: sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+        };
+    }
+    if (_heAgiDumpDone && DEBUG_AGI_DUMP_AUTO_DUMP && !_heAgiDumpSent) {
+        _heAgiDumpSent = true;
+        _heAgilityDumpToFile("auto");
+    }
+}
+
 const HE_EFFECTS_DUMP_DELAY_MS = 1200
 const HE_TRACE_PROOF_HOLD_MS = 15000
 const HE_EFFECTS_HALL_TRACE_INTERVAL_MS = (DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE && DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE > 0)
@@ -93840,6 +95180,7 @@ const _heMaskedBoundsCacheOrder: string[] = []
 
 function _heQueueEffectsDump(reason: string, delayMs?: number): void {
     if (!DEBUG_DEBUG_DUMP || !DEBUG_EFFECTS_DUMP) return
+    if (_heEffectsDumpDone) return
     const now = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
     const delay = (delayMs != null ? delayMs : HE_EFFECTS_DUMP_DELAY_MS) | 0
     const when = (now + Math.max(0, delay)) | 0
@@ -93853,7 +95194,7 @@ function _heQueueEffectsDump(reason: string, delayMs?: number): void {
     _heEffectsDumpReason = reasonTag
     if (force) {
         _heDebugDumpHoldUntilMs = (now + HE_TRACE_PROOF_HOLD_MS) | 0
-        if (DEBUG_EFFECTS_HALL_LOGS) {
+        if (DEBUG_EFFECTS_HALL_TRACE_LOGS) {
             console.log(
                 "[VFX][HALL][TRACE][DUMP] queued reason=" + reasonTag + " when=" + (_heEffectsDumpQueuedMs | 0)
             )
@@ -93873,46 +95214,44 @@ function _heNoteEffectApplied(): void {
 
 function _heEffectsDumpTick(nowMs: number): void {
     if (!DEBUG_DEBUG_DUMP || !DEBUG_EFFECTS_DUMP) return
+    if (_heEffectsDumpDone) return
     if (_heEffectsDumpQueuedMs <= 0) return
     if (_heEffectsDumpInFlight) return
     const now = nowMs | 0
     if (now < (_heEffectsDumpQueuedMs | 0)) return
-    const g: any = globalThis as any
-    const fn = g && g.__heDebugDumpToFile
-    if (typeof fn !== "function") {
-        _heEffectsDumpQueuedMs = 0
-        _heEffectsDumpReason = ""
-        return
-    }
     _heEffectsDumpInFlight = true
     const reason = _heEffectsDumpReason || "effects"
-    if (DEBUG_EFFECTS_HALL_LOGS && reason.indexOf("trace-proof") >= 0) {
+    if (DEBUG_EFFECTS_HALL_TRACE_LOGS && reason.indexOf("trace-proof") >= 0) {
         console.log("[VFX][HALL][TRACE][DUMP] fire reason=" + reason)
     }
     let p: any = null
-    try { p = fn(reason) } catch { p = null }
+    _heEffectsDumpDone = true
+    try { p = _heSendDebugDump(reason) } catch { p = null }
     _heEffectsDumpQueuedMs = 0
     _heEffectsDumpReason = ""
     if (p && typeof p.then === "function") {
         p.then((res: any) => {
-            if (DEBUG_EFFECTS_HALL_LOGS && reason.indexOf("trace-proof") >= 0) {
+            if (DEBUG_EFFECTS_HALL_TRACE_LOGS && reason.indexOf("trace-proof") >= 0) {
                 const ok = res && typeof res.ok === "boolean" ? res.ok : null
                 const r = res && typeof res.reason === "string" ? res.reason : ""
                 const file = res && typeof res.file === "string" ? res.file : ""
                 console.log("[VFX][HALL][TRACE][DUMP] done ok=" + ok + " reason=" + r + " file=" + file)
             }
             _heEffectsDumpInFlight = false
+            _heEffectsDumpDone = true
         }).catch((err: any) => {
-            if (DEBUG_EFFECTS_HALL_LOGS && reason.indexOf("trace-proof") >= 0) {
+            if (DEBUG_EFFECTS_HALL_TRACE_LOGS && reason.indexOf("trace-proof") >= 0) {
                 console.log("[VFX][HALL][TRACE][DUMP] fail err=" + String(err || ""))
             }
             _heEffectsDumpInFlight = false
+            _heEffectsDumpDone = true
         })
     } else {
-        if (DEBUG_EFFECTS_HALL_LOGS && reason.indexOf("trace-proof") >= 0) {
+        if (DEBUG_EFFECTS_HALL_TRACE_LOGS && reason.indexOf("trace-proof") >= 0) {
             console.log("[VFX][HALL][TRACE][DUMP] done sync")
         }
         _heEffectsDumpInFlight = false
+        _heEffectsDumpDone = true
     }
 }
 
@@ -93924,7 +95263,7 @@ function _heStartEffectsHallTraceNow(nowMs: number): void {
     _heEffectsHallTraceNextMs = (now + HE_EFFECTS_HALL_TRACE_START_DELAY_MS) | 0
     _heEffectsHallTraceEndMs = (now + HE_EFFECTS_HALL_TRACE_START_DELAY_MS + HE_EFFECTS_HALL_TRACE_DURATION_MS) | 0
     _heEffectsHallTraceSamples = []
-    if (DEBUG_EFFECTS_HALL_LOGS) {
+    if (DEBUG_EFFECTS_HALL_TRACE_LOGS) {
         console.log("[VFX][HALL][TRACE] started")
     }
 }
@@ -93965,7 +95304,7 @@ function _heEffectsHallTraceTick(nowMs: number): void {
     if (now >= (_heEffectsHallTraceEndMs | 0)) {
         _heEffectsHallTraceActive = false
         _heEffectsHallTraceInFlight = true
-        if (DEBUG_EFFECTS_HALL_LOGS) {
+        if (DEBUG_EFFECTS_HALL_TRACE_LOGS) {
             console.log(
                 "[VFX][HALL][TRACE] completed samples=" + (_heEffectsHallTraceSamples.length | 0)
             )
@@ -93997,32 +95336,6 @@ function _heEffectsHallTraceTick(nowMs: number): void {
         } else {
             _heEffectsHallTraceInFlight = false
             _heQueueEffectsDump("trace-proof", 0)
-        }
-        const dumpFn = g && g.__heDebugDumpToFile
-        if (typeof dumpFn === "function") {
-            if (DEBUG_EFFECTS_HALL_LOGS) {
-                console.log("[VFX][HALL][TRACE][DUMP] direct fire reason=trace-proof")
-            }
-            let dp: any = null
-            try { dp = dumpFn("trace-proof") } catch { dp = null }
-            if (dp && typeof dp.then === "function") {
-                dp.then((res: any) => {
-                    if (DEBUG_EFFECTS_HALL_LOGS) {
-                        const ok = res && typeof res.ok === "boolean" ? res.ok : null
-                        const r = res && typeof res.reason === "string" ? res.reason : ""
-                        const file = res && typeof res.file === "string" ? res.file : ""
-                        console.log("[VFX][HALL][TRACE][DUMP] direct done ok=" + ok + " reason=" + r + " file=" + file)
-                    }
-                }).catch((err: any) => {
-                    if (DEBUG_EFFECTS_HALL_LOGS) {
-                        console.log("[VFX][HALL][TRACE][DUMP] direct fail err=" + String(err || ""))
-                    }
-                })
-            } else if (DEBUG_EFFECTS_HALL_LOGS) {
-                console.log("[VFX][HALL][TRACE][DUMP] direct done sync")
-            }
-        } else if (DEBUG_EFFECTS_HALL_LOGS) {
-            console.log("[VFX][HALL][TRACE][DUMP] direct missing __heDebugDumpToFile")
         }
         return
     }
@@ -95373,7 +96686,7 @@ function _heRecordScreenSnapResult(entry: any): void {
 
 function _heScreenSnapNoteError(reason?: string, err?: string): void {
     _heScreenSnapErrors = (_heScreenSnapErrors + 1) | 0
-    if (reason && DEBUG_EFFECTS_HALL_LOGS) {
+    if (reason && DEBUG_EFFECTS_HALL_TRACE_LOGS) {
         console.log(
             "[VFX][HALL][SNAP][ERR]" +
             " reason=" + reason +
@@ -95671,7 +96984,7 @@ function _heScreenSnapPumpTick(sc: any, nowMs: number): void {
     _heScreenSnapScheduled = (_heScreenSnapScheduled + 1) | 0
     _heScreenSnapLastScheduledAtMs = now | 0
     _heScreenSnapLastScheduledFrame = _heScreenSnapFrame | 0
-    if (DEBUG_EFFECTS_HALL_LOGS) {
+    if (DEBUG_EFFECTS_HALL_TRACE_LOGS) {
         console.log(
             "[VFX][HALL][SNAP][SCHEDULE]" +
             " id=" + (req.id ?? "n/a") +
@@ -96657,8 +97970,10 @@ function _heBuildDebugDump(reason?: string): any {
     const trace = traceBuf.length ? traceBuf.slice(-HE_DEBUG_TRACE_MAX) : []
 
     const isTilemapDump = reasonTag.indexOf("tilemap") >= 0
-    const isTilemapFocusDump = reasonTag.indexOf("tilemap-focus") >= 0
-    const effects = isTilemapDump ? null : _heCollectEffectsDump()
+    const isPropsAnimDump = reasonTag.indexOf("props-anim") >= 0
+    const isEffectsDump = reasonTag.indexOf("effects") >= 0
+    const wantFullDump = !isTilemapDump && !isPropsAnimDump && !isEffectsDump
+    const effects = (isEffectsDump || wantFullDump) ? _heCollectEffectsDump() : null
     if (DEBUG_TILEMAP_AUDIT_DUMP && !_tilemapAuditDumpLatest) {
         const fn = (typeof _dunBuildTilemapAuditEntry === "function") ? _dunBuildTilemapAuditEntry : null
         if (fn) {
@@ -96731,18 +98046,28 @@ function _heBuildDebugDump(reason?: string): any {
     }
     if (tilemapVisual) decorateVisual(tilemapVisual)
 
-    if (isTilemapFocusDump) {
-        const focusR = _dunInteractFocusR | 0
-        const focusC = _dunInteractFocusC | 0
+    const vfxTweak = (g && g.__heVfxTweak && typeof g.__heVfxTweak === "object")
+        ? g.__heVfxTweak
+        : null
+
+    if (isPropsAnimDump) {
+        const focusR = (_hePropsAnimOverride ? (_hePropsAnimOverride.r | 0) : (_dunInteractFocusR | 0))
+        const focusC = (_hePropsAnimOverride ? (_hePropsAnimOverride.c | 0) : (_dunInteractFocusC | 0))
+        const focusName = (_hePropsAnimOverride ? String(_hePropsAnimOverride.name || "") : String(_dunInteractFocusName || ""))
+        const focusActive = _dunInteractFocusActive ? 1 : 0
+        const propsAll: any[] = []
         const focusedProps: any[] = []
         if (tilemapVisual && Array.isArray(tilemapVisual.props)) {
             for (let i = 0; i < tilemapVisual.props.length; i++) {
                 const p = tilemapVisual.props[i]
-                if (!p || !p.anchor) continue
+                if (!p) continue
+                propsAll.push(p)
+                if (!p.anchor) continue
                 if ((p.anchor.r | 0) !== focusR || (p.anchor.c | 0) !== focusC) continue
                 focusedProps.push(p)
             }
         }
+        _hePropsAnimOverride = null
         return {
             type: "heDebugDumpV1",
             createdAt: Date.now(),
@@ -96762,23 +98087,102 @@ function _heBuildDebugDump(reason?: string): any {
                 rows: worldRows | 0,
                 cols: worldCols | 0,
             },
-            tilemapFocus: DEBUG_TILEMAP_AUDIT_DUMP ? _heBuildFocusAudit(tilemapVisual) : null,
-            tilemapVisual: tilemapVisual ? {
+            focus: {
+                active: focusActive,
+                r: focusR | 0,
+                c: focusC | 0,
+                name: focusName,
+            },
+            propsAnim: tilemapVisual ? {
                 rows: tilemapVisual.rows,
                 cols: tilemapVisual.cols,
                 tileSize: tilemapVisual.tileSize,
-                props: focusedProps,
+                props: propsAll,
+                focused: focusedProps,
+            } : {
+                rows: worldRows | 0,
+                cols: worldCols | 0,
+                tileSize: WORLD_TILE_SIZE | 0,
+                props: [],
+                focused: [],
+            },
+            propsAnimPixelProbe: DEBUG_TILEMAP_AUDIT_DUMP ? _heTilemapPixelProbeLatest : null,
+        }
+    }
+    if (isTilemapDump) {
+        return {
+            type: "heDebugDumpV1",
+            createdAt: Date.now(),
+            runtimeMs: runtimeMs | 0,
+            reason: reasonTag,
+            host: g && typeof g.__isHost === "boolean" ? !!g.__isHost : null,
+            floor: {
+                index: _dunFloorIndex | 0,
+                kind: String(_dunFloorKind || ""),
+                baseFamily: String(_dunBaseFamily || ""),
+                wallFamily: String(_dunWallFamily || ""),
+            },
+            world: {
+                worldRev: _engineWorldRev | 0,
+                decorRev: _engineDecorRev | 0,
+                tileSize: WORLD_TILE_SIZE | 0,
+                rows: worldRows | 0,
+                cols: worldCols | 0,
+            },
+            tilemapAudit: DEBUG_TILEMAP_AUDIT_DUMP ? {
+                latest: String(_tilemapAuditDumpLatest || ""),
+                history: _tilemapAuditDumpHistory.slice(0),
+                map: _dunBuildTilemapAuditStruct(),
             } : null,
+            tilemapVisual,
+            tilemapFocus: DEBUG_TILEMAP_AUDIT_DUMP ? _heBuildFocusAudit(tilemapVisual) : null,
             tilemapTimeline: DEBUG_TILEMAP_AUDIT_DUMP ? {
                 intervalMs: HE_TILEMAP_DELTA_INTERVAL_MS | 0,
-                samples: _heTilemapDeltaTimeline.slice(Math.max(0, _heTilemapDeltaTimeline.length - 30)),
+                samples: _heTilemapDeltaTimeline.slice(Math.max(0, _heTilemapDeltaTimeline.length - 60)),
             } : null,
             tilemapPixelProbe: DEBUG_TILEMAP_AUDIT_DUMP ? _heTilemapPixelProbeLatest : null,
         }
     }
-    const vfxTweak = (g && g.__heVfxTweak && typeof g.__heVfxTweak === "object")
-        ? g.__heVfxTweak
-        : null
+    if (isEffectsDump) {
+        return {
+            type: "heDebugDumpV1",
+            createdAt: Date.now(),
+            runtimeMs: runtimeMs | 0,
+            reason: reasonTag,
+            host: g && typeof g.__isHost === "boolean" ? !!g.__isHost : null,
+            floor: {
+                index: _dunFloorIndex | 0,
+                kind: String(_dunFloorKind || ""),
+            },
+            world: {
+                worldRev: _engineWorldRev | 0,
+                decorRev: _engineDecorRev | 0,
+                tileSize: WORLD_TILE_SIZE | 0,
+                rows: worldRows | 0,
+                cols: worldCols | 0,
+            },
+            effects,
+            effectsHallTrace: _heEffectsHallTraceLatest,
+            effectsHallTraceLive: (_heEffectsHallTraceSamples && _heEffectsHallTraceSamples.length)
+                ? {
+                    active: !!_heEffectsHallTraceActive,
+                    inFlight: !!_heEffectsHallTraceInFlight,
+                    startMs: _heEffectsHallTraceStartMs | 0,
+                    endMs: _heEffectsHallTraceEndMs | 0,
+                    nextMs: _heEffectsHallTraceNextMs | 0,
+                    samples: _heEffectsHallTraceSamples.slice(0)
+                }
+                : {
+                    active: !!_heEffectsHallTraceActive,
+                    inFlight: !!_heEffectsHallTraceInFlight,
+                    startMs: _heEffectsHallTraceStartMs | 0,
+                    endMs: _heEffectsHallTraceEndMs | 0,
+                    nextMs: _heEffectsHallTraceNextMs | 0,
+                    samples: []
+                },
+            vfxTweak,
+        }
+    }
     return {
         type: "heDebugDumpV1",
         createdAt: Date.now(),
@@ -96895,11 +98299,55 @@ let _heVisualDumpLastMs = 0
 let _heVisualDumpLastDecorRev = -1
 let _heVisualDumpNeedPixels = false
 let _heTilemapPixelProbeLatest: any = null
+let _heTilemapDumpDone = false
+let _hePropsAnimDumpDone = false
+let _heEffectsDumpDone = false
+let _heTraceProofDumpDone = false
+let _hePropsAnimOverride: { r: number, c: number, name: string } | null = null
+
+function _heWithTimeout(p: Promise<any>, ms: number, reasonTag: string): Promise<any> {
+    let settled = false
+    return new Promise((resolve) => {
+        const t = setTimeout(() => {
+            if (settled) return
+            settled = true
+            resolve({ ok: false, reason: reasonTag })
+        }, ms | 0)
+        p.then((res: any) => {
+            if (settled) return
+            settled = true
+            clearTimeout(t)
+            resolve(res)
+        }).catch((err: any) => {
+            if (settled) return
+            settled = true
+            clearTimeout(t)
+            resolve({ ok: false, reason: String(err || "error") })
+        })
+    })
+}
+
+function _heSendDebugDump(reason: string, payloadOverride?: any): Promise<any> {
+    if (!DEBUG_DEBUG_DUMP) return Promise.resolve({ ok: false, reason: "debug-disabled" })
+    const g: any = globalThis as any
+    if (g && typeof g.__isHost === "boolean" && !g.__isHost) {
+        return Promise.resolve({ ok: false, reason: "not-host" })
+    }
+    const net: any = g && g.__net
+    if (!net || typeof net.sendDebugDump !== "function") {
+        return Promise.resolve({ ok: false, reason: "no-net" })
+    }
+    const tag = String(reason || "")
+    const dumpTimeoutMs = tag.indexOf("trace-proof") >= 0 ? 15000 : 3000
+    const payload = payloadOverride ?? _heBuildDebugDump(reason)
+    return _heWithTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout")
+}
 
 function _heInstallDebugDumpToFile(g: any): void {
     if (!g) return
     g.__heDebugDumpToFile = function (reason?: string): Promise<any> {
-        if (!DEBUG_DEBUG_DUMP) return Promise.resolve({ ok: false, reason: "disabled" })
+        if (!DEBUG_DEBUG_DUMP) return Promise.resolve({ ok: false, reason: "debug-disabled" })
+        if (!DEBUG_DEBUG_DUMP_MANUAL) return Promise.resolve({ ok: false, reason: "manual-disabled" })
         if (g && typeof g.__isHost === "boolean" && !g.__isHost) {
             return Promise.resolve({ ok: false, reason: "not-host" })
         }
@@ -96907,30 +98355,9 @@ function _heInstallDebugDumpToFile(g: any): void {
         if (!net || typeof net.sendDebugDump !== "function") {
             return Promise.resolve({ ok: false, reason: "no-net" })
         }
-        const withTimeout = (p: Promise<any>, ms: number, reasonTag: string): Promise<any> => {
-            let settled = false
-            return new Promise((resolve) => {
-                const t = setTimeout(() => {
-                    if (settled) return
-                    settled = true
-                    resolve({ ok: false, reason: reasonTag })
-                }, ms | 0)
-                p.then((res: any) => {
-                    if (settled) return
-                    settled = true
-                    clearTimeout(t)
-                    resolve(res)
-                }).catch((err: any) => {
-                    if (settled) return
-                    settled = true
-                    clearTimeout(t)
-                    resolve({ ok: false, reason: String(err || "error") })
-                })
-            })
-        }
         const tag = String(reason || "")
         const dumpTimeoutMs = tag.indexOf("trace-proof") >= 0 ? 15000 : 3000
-        const wantPixels = DEBUG_TILEMAP_AUDIT_DUMP && tag.indexOf("tilemap-focus") >= 0
+        const wantPixels = DEBUG_TILEMAP_AUDIT_DUMP && tag.indexOf("props-anim") >= 0
         if (wantPixels) {
             let focusProbe: any = null
             try {
@@ -96939,8 +98366,9 @@ function _heInstallDebugDumpToFile(g: any): void {
                 const visual = sc && sc.registry ? sc.registry.get("__worldTileRenderer") : null
                 if (visual && typeof visual.getVisualAudit === "function") {
                     const audit: any = visual.getVisualAudit()
-                    const focusR = _dunInteractFocusR | 0
-                    const focusC = _dunInteractFocusC | 0
+                    const focusR = (_hePropsAnimOverride ? (_hePropsAnimOverride.r | 0) : (_dunInteractFocusR | 0))
+                    const focusC = (_hePropsAnimOverride ? (_hePropsAnimOverride.c | 0) : (_dunInteractFocusC | 0))
+                    const focusName = (_hePropsAnimOverride ? String(_hePropsAnimOverride.name || "") : String(_dunInteractFocusName || ""))
                     if (audit && Array.isArray(audit.props)) {
                         for (let i = 0; i < audit.props.length; i++) {
                             const p = audit.props[i]
@@ -96952,7 +98380,7 @@ function _heInstallDebugDumpToFile(g: any): void {
                                 focusProbe = {
                                     r: focusR | 0,
                                     c: focusC | 0,
-                                    name: String(_dunInteractFocusName || ""),
+                                    name: focusName,
                                     kidBounds: kid?.screenBounds ?? null,
                                 }
                             }
@@ -96998,7 +98426,7 @@ function _heInstallDebugDumpToFile(g: any): void {
                                 focusProbe.pixelSampleSupported = 0
                                 _heTilemapPixelProbeLatest = focusProbe
                                 const payload = _heBuildDebugDump(reason)
-                                withTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
+                                _heWithTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
                                     finish({ ok: false, reason: "timeout-snapshot", sent: res })
                                 })
                             }
@@ -97032,7 +98460,7 @@ function _heInstallDebugDumpToFile(g: any): void {
                                 }
                                     _heTilemapPixelProbeLatest = focusProbe
                                     const payload = _heBuildDebugDump(reason)
-                                    withTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
+                                    _heWithTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
                                         clearTimeout(timeout)
                                         finish(res)
                                     })
@@ -97040,7 +98468,7 @@ function _heInstallDebugDumpToFile(g: any): void {
                             } catch {
                                 _heTilemapPixelProbeLatest = focusProbe
                                 const payload = _heBuildDebugDump(reason)
-                                withTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
+                                _heWithTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
                                     clearTimeout(timeout)
                                     finish(res)
                                 })
@@ -97053,7 +98481,7 @@ function _heInstallDebugDumpToFile(g: any): void {
             }
         }
         const payload = _heBuildDebugDump(reason)
-        return withTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout")
+        return _heWithTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout")
     }
 }
 
@@ -97066,10 +98494,16 @@ function _heQueueVisualDump(reason: string, delayMs?: number): void {
     const when = (now + delay) | 0
     if (_heVisualDumpQueuedMs > 0 && _heVisualDumpQueuedMs <= when) return
     let tag = String(reason || "tilemap-visual")
-    if (tag.indexOf("tilemap") < 0) tag = "tilemap-" + tag
+    const isPropsAnim = tag.indexOf("props-anim") >= 0
+    if (!isPropsAnim && tag.indexOf("tilemap") < 0) tag = "tilemap-" + tag
+    if (isPropsAnim) {
+        if (_hePropsAnimDumpDone) return
+    } else {
+        if (_heTilemapDumpDone) return
+    }
     _heVisualDumpQueuedMs = when
     _heVisualDumpReason = tag
-    if (tag.indexOf("focus") >= 0) _heVisualDumpNeedPixels = true
+    if (isPropsAnim) _heVisualDumpNeedPixels = true
 }
 
 function _heHashString(s: string): number {
@@ -97495,8 +98929,8 @@ function _heVisualDumpTick(nowMs: number): void {
     try {
         if (_heVisualDumpNeedPixels && visual && typeof visual.getVisualAudit === "function") {
             const audit: any = visual.getVisualAudit()
-            const focusR = _dunInteractFocusR | 0
-            const focusC = _dunInteractFocusC | 0
+            const focusR = (_hePropsAnimOverride ? (_hePropsAnimOverride.r | 0) : (_dunInteractFocusR | 0))
+            const focusC = (_hePropsAnimOverride ? (_hePropsAnimOverride.c | 0) : (_dunInteractFocusC | 0))
             if (audit && Array.isArray(audit.props)) {
                 for (let i = 0; i < audit.props.length; i++) {
                     const p = audit.props[i]
@@ -97508,7 +98942,7 @@ function _heVisualDumpTick(nowMs: number): void {
                         focusProbe = {
                             r: focusR | 0,
                             c: focusC | 0,
-                            name: String(_dunInteractFocusName || ""),
+                            name: (_hePropsAnimOverride ? String(_hePropsAnimOverride.name || "") : String(_dunInteractFocusName || "")),
                             kidBounds: kid?.screenBounds ?? null,
                         }
                     }
@@ -97518,8 +98952,27 @@ function _heVisualDumpTick(nowMs: number): void {
         }
     } catch { focusProbe = null }
 
+    const markDone = (): void => {
+        const isPropsAnim = String(reason || "").indexOf("props-anim") >= 0
+        if (isPropsAnim) _hePropsAnimDumpDone = true
+        else _heTilemapDumpDone = true
+    }
     const sendDump = (): void => {
         let p: any = null
+        markDone()
+        const logDump = (res: any): void => {
+            if (!DEBUG_TILEMAP_AUDIT_DUMP) return
+            const tag = String(reason || "")
+            const ok = res && res.ok ? 1 : 0
+            const r = String(res?.reason || (ok ? "ok" : "error"))
+            const file = res?.file ? String(res.file || "") : "n/a"
+            const bytes = (typeof res?.bytes === "number") ? (res.bytes | 0) : -1
+            if (tag.indexOf("props-anim") >= 0) {
+                console.log(`[PROPS][ANIM][DUMP] ok=${ok} reason=${r} file=${file} bytes=${bytes}`)
+            } else if (tag.indexOf("tilemap") >= 0) {
+                console.log(`[TILEMAP][AUDIT][DUMP] ok=${ok} reason=${r} file=${file} bytes=${bytes}`)
+            }
+        }
         try {
             if (focusProbe) _heTilemapPixelProbeLatest = focusProbe
             p = net.sendDebugDump(_heBuildDebugDump(reason), reason)
@@ -97528,13 +98981,16 @@ function _heVisualDumpTick(nowMs: number): void {
             return
         }
         if (p && typeof p.then === "function") {
-            p.then(() => {
+            p.then((res: any) => {
                 _heVisualDumpInFlight = false
+                logDump(res)
             }).catch(() => {
                 _heVisualDumpInFlight = false
+                logDump({ ok: false, reason: "promise" })
             })
         } else {
             _heVisualDumpInFlight = false
+            logDump({ ok: true, reason: "sent-sync" })
         }
         _heVisualDumpNeedPixels = false
     }
@@ -97848,6 +99304,7 @@ g.__heUiCommand = function (cmd: any): any {
     }
     if (t === "debugDump") {
         if (!DEBUG_DEBUG_DUMP) return { ok: false, reason: "debug-disabled", snapshot: g.__heGetUiSnapshot(pid) }
+        if (!DEBUG_DEBUG_DUMP_MANUAL) return { ok: false, reason: "manual-disabled", snapshot: g.__heGetUiSnapshot(pid) }
         const reason = cmd && typeof cmd.reason === "string" ? cmd.reason : ""
         const fn = g && g.__heDebugDumpToFile
         if (typeof fn !== "function") {

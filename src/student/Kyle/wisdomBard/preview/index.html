@@ -1,0 +1,35 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>Bard Mode — Preview</title>
+  <link rel="stylesheet" href="styles.css" />
+</head>
+<body>
+  <div class="wrap">
+    <h2>Bard Preview</h2>
+    <div class="play-area" id="playArea">
+      <div class="lane left" data-dir="left"><div class="lane-label">←</div></div>
+      <div class="lane down" data-dir="down"><div class="lane-label">↓</div></div>
+      <div class="lane up" data-dir="up"><div class="lane-label">↑</div></div>
+      <div class="lane right" data-dir="right"><div class="lane-label">→</div></div>
+      <div class="hit-line" id="hitLine"></div>
+    </div>
+
+    <div class="controls">
+      <label for="songSelect">Song:</label>
+      <select id="songSelect"></select>
+      <button id="startBtn">Start Demo</button>
+      <span id="score">Score: 0</span>
+      <span id="status" class="status"></span>
+    </div>
+
+    <div class="instructions">
+      Use the arrow keys to hit notes when they cross the hit line. Timing window ±200ms.
+    </div>
+  </div>
+
+  <script src="preview.js"></script>
+</body>
+</html>

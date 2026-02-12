@@ -1112,13 +1112,18 @@ function handleDebugDumpMessage(ws, info, msg) {
 
   const reason = (msg && typeof msg.reason === "string") ? msg.reason : "";
   const isTilemap = (typeof reason === "string") && reason.indexOf("tilemap") >= 0;
-  const isTilemapFocus = isTilemap && reason.indexOf("tilemap-focus") >= 0;
+  const isPropsAnim = (typeof reason === "string") && reason.indexOf("props-anim") >= 0;
   const isTraceProof = (typeof reason === "string") && (reason.indexOf("trace-proof") >= 0 || reason.indexOf("effects-hall-trace") >= 0);
-  const fname = isTraceProof
-    ? "debugdump_traceproof.json"
-    : (isTilemapFocus
-      ? "debugdump_tilemap_focus.json"
-      : (isTilemap ? "debugdump_tilemap.json" : "debugdump_latest.json"));
+  const isStrength = (typeof reason === "string") && reason.indexOf("strength") >= 0;
+  const isAgility = (typeof reason === "string") && reason.indexOf("agility") >= 0;
+  const isEffects = (typeof reason === "string") && reason.indexOf("effects") >= 0;
+  let fname = "debugdump_latest.json";
+  if (isTraceProof) fname = "debugdump_traceproof.json";
+  else if (isStrength) fname = "debugdump_strength.json";
+  else if (isAgility) fname = "debugdump_agility.json";
+  else if (isPropsAnim) fname = "debugdump_props_anim.json";
+  else if (isTilemap) fname = "debugdump_tilemap.json";
+  else if (isEffects) fname = "debugdump_effects.json";
   const full = path.join(DEBUG_DUMP_DIR, fname);
   if (!full.startsWith(DEBUG_DUMP_DIR)) {
     sendJson(ws, { type: "debugDumpResult", requestId, ok: false, reason: "invalid-path" });
