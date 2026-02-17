@@ -30,11 +30,17 @@ export type PetAttackContext = {
 /**
  * Calculate base damage from pet attack stat.
  * Formula: baseAtk + (growthAtk * (level - 1)) + variance
+ * Pet damage is intentionally low—player is primary damage dealer.
+ * Pet is a *support* companion, not a solo threat.
  */
 export function calculatePetDamage(ctx: PetAttackContext): number {
     const stats = ctx.petStats || { baseAtk: 6, growthAtk: 1 };
     const level = Math.max(1, Math.min(10, ctx.currentLevel || 1));
-    const baseDmg = (stats.baseAtk || 6) + ((stats.growthAtk || 1) * (level - 1));
+    
+    // Low base damage (3 instead of 6) + modest growth
+    // At level 1: ~3 damage. At level 10: ~12 damage.
+    // Pet deals supplementary damage; player is main threat.
+    const baseDmg = (stats.baseAtk || 3) * 0.5 + ((stats.growthAtk || 1) * (level - 1));
     
     // Variance: ±20% damage
     const variance = ctx.variance ?? 0.2;
@@ -47,15 +53,17 @@ export function calculatePetDamage(ctx: PetAttackContext): number {
 /**
  * Calculate attack cooldown from pet stats.
  * Lower attack stat = longer cooldown (risk/reward).
+ * Pet attacks slowly to be a *support* damage dealer, not primary threat.
  */
 export function calculateAttackCooldown(ctx: PetAttackContext): number {
     const stats = ctx.petStats || { baseAtk: 6 };
     const level = Math.max(1, Math.min(10, ctx.currentLevel || 1));
     
-    // Base cooldown: 1500ms, reduced by 50ms per attack point
-    const baseCooldown = 1500;
-    const reduction = (stats.baseAtk || 6) * 50;
-    const cooldownMs = Math.max(300, baseCooldown - reduction - (level * 20));
+    // Base cooldown: 3000ms (3 sec), reduced by 100ms per attack point
+    // At level 1: ~2500ms (pet attacks every 2.5 sec, supporting not soloing)
+    const baseCooldown = 3000;
+    const reduction = (stats.baseAtk || 6) * 100;
+    const cooldownMs = Math.max(1000, baseCooldown - reduction - (level * 50));
     
     return cooldownMs;
 }
@@ -131,6 +139,7 @@ export function setupPetCombat(api: StudentApi): void {
                         petId,
                         petStats,
                         currentLevel: ctx.pet.level || 1,
+                        enemy: null, // Cooldown calc doesn't need enemy
                         scene: ctx.scene,
                     });
                 }
@@ -177,36 +186,74 @@ export function setupPetCombat(api: StudentApi): void {
  * Find nearby enemies for the pet to target.
  * TODO: This is a stub; core system integration needed to access enemies.
  * See AlanNeeds.md for hooks required.
+ * 
+ * ASSUMPTIONS (awaiting maintainer confirmation):
+ * - scene.data.get('enemies') returns array of active enemy sprites, OR
+ * - scene.registry.get('enemies') returns array of active enemy sprites
+ * - Enemies have .x, .y, .active, .hp (or .currentHp) properties
  */
 function _findNearbyEnemies(pet: any, scene: any): any[] {
-    if (!scene) return [];
+    if (!pet || !scene) return [];
     
-    // Placeholder: try to access enemies via scene globals or registry
+    const petX = pet.x || 0;
+    const petY = pet.y || 0;
+    const searchRadius = 200; // pixels
+    
+    // Try multiple enemy access patterns
+    let enemies: any[] = [];
+    
     try {
-        // Option 1: scene.data.get('enemies') or similar
+        // Pattern 1: scene.data.get('enemies')
         if (typeof scene.data?.get === 'function') {
-            const enemies = scene.data.get('enemies');
-            if (Array.isArray(enemies)) {
-                return enemies.filter((e: any) => e && e.active && _distTo(pet, e) < 200);
-            }
-        }
-        
-        // Option 2: scene registry
-        if (scene.registry && typeof scene.registry.get === 'function') {
-            const enemies = scene.registry.get('enemies');
-            if (Array.isArray(enemies)) {
-                return enemies.filter((e: any) => e && e.active && _distTo(pet, e) < 200);
+            const candidates = scene.data.get('enemies');
+            if (Array.isArray(candidates)) {
+                enemies = candidates;
             }
         }
     } catch (e) {}
     
-    return [];
+    // Pattern 2: scene.registry.get('enemies')
+    if (!enemies || enemies.length === 0) {
+        try {
+            if (scene.registry && typeof scene.registry.get === 'function') {
+                const candidates = scene.registry.get('enemies');
+                if (Array.isArray(candidates)) {
+                    enemies = candidates;
+                }
+            }
+        } catch (e) {}
+    }
+    
+    // Filter: active, alive, within range
+    const nearby = enemies
+        .filter((e: any) => {
+            if (!e) return false;
+            if (e.active === false) return false;
+            const hp = e.hp || e.currentHp || 0;
+            if (hp <= 0) return false;
+            const dist = Math.hypot((e.x || 0) - petX, (e.y || 0) - petY);
+            return dist <= searchRadius;
+        })
+        .sort((a: any, b: any) => {
+            // Sort by distance (closest first)
+            const distA = Math.hypot((a.x || 0) - petX, (a.y || 0) - petY);
+            const distB = Math.hypot((b.x || 0) - petX, (b.y || 0) - petY);
+            return distA - distB;
+        });
+    
+    return nearby;
 }
 
 /**
  * Execute a pet attack on target.
+ * 
+ * ASSUMPTIONS (awaiting maintainer confirmation):
+ * - target.takeDamage(dmg) OR target.damage(dmg) OR reduce target.hp directly
+ * - target.hp or target.currentHp indicates health
  */
 function _executePetAttack(pet: any, target: any, ctx: any): void {
+    if (!pet || !target) return;
+    
     const now = ctx.now || Date.now();
     
     // Calculate damage
@@ -222,29 +269,144 @@ function _executePetAttack(pet: any, target: any, ctx: any): void {
         variance: 0.2,
     });
     
-    // Apply damage to target
+    // Apply damage to target (try multiple methods for compatibility)
+    let damageApplied = false;
+    
     if (typeof target.takeDamage === 'function') {
-        target.takeDamage(dmg);
-    } else if (typeof target.damage === 'function') {
-        target.damage(dmg);
-    } else {
-        target.hp = Math.max(0, (target.hp || 0) - dmg);
+        try {
+            target.takeDamage(dmg);
+            damageApplied = true;
+        } catch (e) {}
     }
     
-    // Record attack
+    if (!damageApplied && typeof target.damage === 'function') {
+        try {
+            target.damage(dmg);
+            damageApplied = true;
+        } catch (e) {}
+    }
+    
+    if (!damageApplied) {
+        // Fallback: direct HP manipulation
+        try {
+            const currentHp = target.hp != null ? target.hp : (target.currentHp || 0);
+            target.hp = Math.max(0, currentHp - dmg);
+            damageApplied = true;
+        } catch (e) {}
+    }
+    
+    // Record attack regardless of application success (for stats)
     recordPetAttack(pet, dmg, now);
     
-    // TODO: Play attack animation (once sprites available)
-    // if (pet.play && pet.__alanAnimKey) pet.play(pet.__alanAnimKey.attack);
+    // Check if enemy is defeated (hp <= 0)
+    const enemyHp = target.hp != null ? target.hp : (target.currentHp || 0);
+    if (enemyHp <= 0) {
+        _onEnemyDefeated(pet, target, ctx);
+    }
+    
+    // TODO: Play attack animation (once Lourdes provides sprites)
+    // if (pet.play && pet.__alanAnimKey?.attack) {
+    //     pet.play(pet.__alanAnimKey.attack);
+    // }
 }
 
 /**
- * Simple distance check.
+ * Called when the pet defeats an enemy.
+ * Triggers XP gain and progression hooks (Elizabeth's domain).
+ */
+function _onEnemyDefeated(pet: any, enemy: any, ctx: any): void {
+    if (!pet) return;
+    
+    // Sanity check: ensure enemy is actually defeated
+    const enemyHp = enemy?.hp != null ? enemy.hp : (enemy?.currentHp || 0);
+    if (enemyHp > 0) return;
+    
+    // Calculate XP reward
+    const xpReward = _calculateXpReward(enemy);
+    
+    // Track in pet's XP gains array (for debugging/stats)
+    if (!pet.__alanXpGains) {
+        pet.__alanXpGains = [];
+    }
+    pet.__alanXpGains.push({
+        timestamp: ctx.now || Date.now(),
+        enemyId: enemy?.id || "unknown",
+        enemyType: enemy?.type || "enemy",
+        xpAmount: xpReward,
+    });
+    
+    // Call registered XP hook (Elizabeth's implementation)
+    if (typeof _petXpGainHook === 'function') {
+        try {
+            _petXpGainHook({
+                pet,
+                petId: "student.alan.wisp_pet",
+                xpAmount: xpReward,
+                enemyId: enemy?.id,
+                enemyType: enemy?.type,
+                scene: ctx.scene,
+                now: ctx.now,
+            });
+        } catch (e) {
+            // Silently fail; don't crash combat if XP hook has issues
+        }
+    }
+}
+
+/**
+ * Calculate XP reward from defeated enemy.
+ * Simple formula: baseXp varies by enemy type/level.
+ * TODO: Elizabeth will enhance this with difficulty scaling.
+ */
+function _calculateXpReward(enemy: any): number {
+    // Placeholder: 25 XP base, more for stronger enemies
+    const baseXp = 25;
+    const levelMultiplier = (enemy.level || 1) * 5;
+    return Math.max(10, baseXp + levelMultiplier);
+}
+
+// ============================================================================
+// XP PROGRESSION HOOK
+// ============================================================================
+
+/**
+ * Global hook for XP progression.
+ * Elizabeth's petProgression.ts will set this.
+ */
+export type PetXpGainContext = {
+    pet: any;
+    petId: string;
+    xpAmount: number;
+    enemyId?: string;
+    enemyType?: string;
+    scene?: any;
+    now?: number;
+};
+
+let _petXpGainHook: ((ctx: PetXpGainContext) => void) | null = null;
+
+/**
+ * Register XP gain hook (called by petProgression.ts).
+ */
+export function registerPetXpGainHook(hook: (ctx: PetXpGainContext) => void): void {
+    _petXpGainHook = hook;
+}
+
+/**
+ * Get current XP hook (for testing/debugging).
+ */
+export function getPetXpGainHook(): typeof _petXpGainHook {
+    return _petXpGainHook;
+}
+
+/**
+ * Simple distance check (Euclidean).
  */
 function _distTo(a: any, b: any): number {
+    if (!a || !b) return Infinity;
     const dx = (a.x || 0) - (b.x || 0);
     const dy = (a.y || 0) - (b.y || 0);
-    return Math.sqrt(dx * dx + dy * dy);
+    return Math.hypot(dx, dy);
 }
 
 export default setupPetCombat;

@@ -1,8 +1,12 @@
 # Pet System Status — Alan + Elizabeth + Lourdes
 
-**Last Updated:** Feb 5, 2026  
+**Last Updated:** Feb 17, 2026  
 **Location:** `src/student/Alan/`  
 **Repo:** All changes stay inside Alan folder; external needs documented in `AlanNeeds.md`
+
+**GUIDE DOCUMENTS:**
+- 📚 [SPRITE_INTEGRATION_GUIDE.md](SPRITE_INTEGRATION_GUIDE.md) — For Lourdes (visuals)
+- 📚 [ELIZABETH_XP_GUIDE.md](ELIZABETH_XP_GUIDE.md) — For Elizabeth (progression)
 
 ---
 
@@ -89,17 +93,42 @@ A shared pet companion system for the Alan team. Pet walks with player, fights e
   - **onSpawn:** Init combat state (`__alanCombat`: cooldown tracking)
   - **onUpdate:** Auto-target nearby enemies, attack when cooldown ready
   - Calls `target.takeDamage(dmg)` or reduces `target.hp`
+  - **On enemy defeat:** Calls `registerPetXpGainHook()` with XP reward
 
 **Combat logic:**
 - Pet automatically searches for nearby enemies (within 200px)
 - Attacks closest enemy when cooldown expires
 - Damage scales with pet level and stat growth
 - Tracks total damage & attack count per combat
+- **NEW:** Detects enemy defeat and calls XP hook (Elizabeth's domain)
+
+### ✅ `petXpSystem.ts`
+**What:** Pet XP & Leveling (Elizabeth's domain)  
+**Status:** ⚡ **READY FOR ELIZABETH** — skeleton complete, tunable, fully integrated
+**Contains:**
+- `initPetXpState(pet)` — Initialize XP tracking
+- `awardPetXp(pet, xpAmount, ctx)` — Award XP, check for level-up
+- `_levelUpPet()` — Level-up logic, stat growth
+- `_applyStatGrowth()` — Apply growth rates (baseHp, baseAtk, etc.)
+- `_calculateXpThreshold(level)` — Tunable XP progression formula
+- `setupPetXpProgression(api)` — Hook registration
+
+**Progression Reference:**
+- Formula: 100 XP base + 50 per level (tunable)
+- Level 1: 0 XP, Level 2: 100 XP, Level 10: 2700 XP total
+- Pet levels 1-10; maxLevel defined in petDefs.ts
+- Stat growth: baseHp + (growthHp × level), same for ATK
+
+**For Elizabeth:**
+- Read [ELIZABETH_XP_GUIDE.md](ELIZABETH_XP_GUIDE.md) for detailed design docs
+- Tuning constants in `_calculateXpThreshold()`: adjust baseXp & bonusPerLevel
+- Test end-to-end: award XP → level-up → verify stats grow
+- Optional: add level-up animations/VFX hooks
 
 **Files it imports from:**
-- `studentSystemsHooks.ts` (registerPetBehavior, getPetStats)
-
-**Status:** Ready draft; **blocked** on core enemy-query & damage-apply API (see AlanNeeds.md)
+- `studentSystemsHooks.ts` (registerPetXpGainHook)
+- `petCombat.ts` (PetXpGainContext)
+- `petDefs.ts` (stat bases & growth rates)
 
 ---
 
@@ -107,7 +136,8 @@ A shared pet companion system for the Alan team. Pet walks with player, fights e
 
 | Component | Owner | Notes |
 |-----------|-------|-------|
-| **Pet sprites & animations** | Lourdes | Waiting on final art; will swap texture keys in petDefs.ts once ready |
+| **Pet sprites & animations** | Lourdes | 📚 See [SPRITE_INTEGRATION_GUIDE.md](SPRITE_INTEGRATION_GUIDE.md) for exact requirements; 16 frames @ 32×32 needed |
+| **XP & leveling system** | Elizabeth | 📚 See [ELIZABETH_XP_GUIDE.md](ELIZABETH_XP_GUIDE.md); skeleton ready, tune progression formula |
 
 ---
 
@@ -115,7 +145,8 @@ A shared pet companion system for the Alan team. Pet walks with player, fights e
 
 | Component | Owner | Notes |
 |-----------|-------|-------|
-| **Pet progression (leveling, XP)** | Elizabeth | Pet can level 1–10; growth formulas built into combat. Needs XP gain triggers from core. |
+| **Pet leveling implementation** | Elizabeth | Read [ELIZABETH_XP_GUIDE.md](ELIZABETH_XP_GUIDE.md), tune `_calculateXpThreshold()`, test end-to-end |
+| **Pet sprite integration** | Lourdes | Create wisp spritesheet (16 frames @ 32×32). See [SPRITE_INTEGRATION_GUIDE.md](SPRITE_INTEGRATION_GUIDE.md) |
 | **Pet UI overlays** | *TBD* | Health bar, status icons, inventory access, feed/revive buttons. Can use `api.ui.createOverlay()`. |
 | **Debug harness** | *TBD* | Test page (debug.ts or debug.html?pet=alan) to spawn/test pet without full game. |
 
@@ -151,7 +182,8 @@ src/student/Alan/
 ├── petDefs.ts                  (pet atlas, stats, acquisition)
 ├── petBehavior.ts              (follow, retreat, wounded state)
 ├── petInventory.ts             (food, bandage, care hooks)
-├── petCombat.ts                (attack, damage, cooldown, targeting)
+├── petCombat.ts                (attack, damage, cooldown, targeting, XP hook)
+├── petXpSystem.ts              (XP tracking, leveling, stat growth) ← NEW
 ├── PET_SYSTEM_STATUS.md        (this file)
 ├── AlanNeeds.md                (external requests for maintainer)
 ├── README.md                   (general info)
@@ -204,11 +236,24 @@ src/student/Alan/
 
 ## 📞 Quick Reference for Collaborators
 
-**Alan:** Working on combat & mechanics. Check `petCombat.ts` before starting attack-related work.
+**Lourdes:** 
+- Read [SPRITE_INTEGRATION_GUIDE.md](SPRITE_INTEGRATION_GUIDE.md)
+- Create `wisp 32x32.png` (16 frames @ 32×32 px, horizontal strip)
+- Create inventory icons: `wisp_food 16x16.png`, `wisp_bandage 16x16.png`
+- Place in `assets/pets/` (or as directed)
+- Notify Alan when ready for texture key registration
 
-**Lourdes:** Working on visuals. Place sprites in `assets/pets/`. Update texture keys in `petDefs.ts` once ready. Check `petDefs.ts` for current placeholder keys.
+**Elizabeth:**
+- Read [ELIZABETH_XP_GUIDE.md](ELIZABETH_XP_GUIDE.md)
+- Tune `_calculateXpThreshold()` in petXpSystem.ts (adjust baseXp & bonusPerLevel)
+- Test progression: spawn pet → defeat enemy → verify level-up & stat growth
+- Optional: add level-up animations/VFX
 
-**Elizabeth:** Working on leveling & progression. Pet stats already support levels 1–10 with growth rates. You'll build XP tracking, level-up mechanics, stat gains. See `petDefs.ts` for baseHp, baseAtk, growthHp, growthAtk formulas.
+**Alan:**
+- Combat & XP integration complete ✅
+- Awaiting maintainer approval on AlanNeeds.md blockers
+- Will integrate Lourdes' sprites once ready
+- Available to support Elizabeth & Lourdes on questions
 
 ---
 
@@ -223,56 +268,83 @@ src/student/Alan/
 
 ## 🚀 Immediate Action Items
 
-### Alan — Combat Mechanics
+### Lourdes — Sprites & Animations ✨
+
+**START HERE:** Read [SPRITE_INTEGRATION_GUIDE.md](SPRITE_INTEGRATION_GUIDE.md) for exact specifications.
+
+**Create the spritesheet:**
+- [ ] **File:** `wisp 32x32.png` (or agreed location in `assets/pets/`)
+- [ ] **Size:** 32×32 pixels per frame (CRITICAL: WxH in filename required)
+- [ ] **Layout:** Horizontal strip, 16 frames total
+  
+**Frame breakdown:**
+- Frames 0-3: `idle` (breathing/flickering, 10 fps)
+- Frames 4-7: `walk` (moving alongside player, 10 fps)
+- Frames 8-11: `hurt` (damage reaction, 12 fps)
+- Frames 12-15: `interact` (celebration/level-up, 8 fps)
+
+**Create inventory icons:**
+- [ ] `wisp_food 16x16.png` (food item icon)
+- [ ] `wisp_bandage 16x16.png` (bandage/revive item icon)
+
+**Register textures:**
+- [ ] Notify Alan/maintainer once sprites are ready
+- [ ] Maintainer will register texture keys; Alan will update animation frame ranges in petDefs.ts if needed
+
+---
+
+### Elizabeth — XP & Leveling 📊
+
+**START HERE:** Read [ELIZABETH_XP_GUIDE.md](ELIZABETH_XP_GUIDE.md) for complete design guide.
+
+**Understand the system:**
+- [ ] Read petDefs.ts: baseHp=40, baseAtk=6, growthHp=6, growthAtk=1, maxLevel=10
+- [ ] Read petCombat.ts line ~310: how XP hook is called on enemy defeat
+- [ ] Review petXpSystem.ts skeleton functions
+
+**Tune progression:**
+- [ ] Test `_calculateXpThreshold()` formula with levels 1, 5, 10
+- [ ] Adjust `baseXp` (100) and `bonusPerLevel` (50) constants to match desired pacing
+  - Default: reaches level 5-6 per ~20-30 min play session
+  - Faster: lower constants (e.g., baseXp=75, bonusPerLevel=40)
+  - Slower: higher constants (e.g., baseXp=150, bonusPerLevel=70)
+
+**Test end-to-end:**
+- [ ] Spawn pet, verify `__alanXp` state initialized
+- [ ] Award XP manually via `awardPetXp()`, verify currentXp increases
+- [ ] Award 100+ XP, verify level-up triggered, level increments
+- [ ] Verify HP/ATK stats grow correctly on level-up
+- [ ] Award massive XP, verify pet caps at level 10
+
+**Optional enhancements:**
+- [ ] Add level-up animation callback (coordinate with Lourdes)
+- [ ] Add VFX/particle effects on level-up
+- [ ] Expose XP state to UI system (for level display, progress bar)
+
+---
+
+### Alan — Combat Integration & Blockers
+
+**DONE (Feb 17):**
 - [x] Damage calculation & scaling ✅
 - [x] Attack cooldown system ✅
 - [x] Pet behavior (follow, retreat, wounded) ✅
-- [ ] **NEXT:** Wait for Lourdes' sprites, then integrate animation keys
-- [ ] **BLOCKED:** Need core API for enemy targeting & damage (see AlanNeeds.md)
-  - Recommend: reach out to maintainer, confirm `getEnemies()` & enemy `.takeDamage()` method
-  - Once confirmed, unblock petCombat.ts `_findNearbyEnemies()` & `_executePetAttack()`
+- [x] XP gain on enemy defeat ✅
+- [x] Prepared guides for Elizabeth & Lourdes ✅
 
-### Lourdes — Visuals & Animations
-- [ ] **START HERE:** Create pet spritesheet
-  - File: `src/student/Alan/assets/pets/wisp 32x32.png` (or agreed location)
-  - Size: 32×32 px per frame (WxH naming required)
-  - Frames needed: idle, walk, hurt, interact (see petDefs.ts line ~20 for anim keys)
+**NEXT:**
+- [ ] **Contact maintainer** about blockers in AlanNeeds.md:
+  - Enemy query API (how to get active enemies from scene)
+  - Enemy damage methods (confirm `.takeDamage()` vs `.damage()`)
+  - Pet movement helper hooks (if core doesn't expose `followHero()`, `moveTo()`)
+  - Asset placement confirmation (where to put Lourdes' sprite files)
   
-- [ ] Create inventory item icons
-  - `wisp_food 16x16.png` → used by petInventory.ts as food icon
-  - `wisp_bandage 16x16.png` → used by petInventory.ts as bandage icon
-  
-- [ ] Register textures & animations
-  - In `petDefs.ts`, update `setupPetDefinitions()`:
-    - `api.assets.registerSpritesheet("wisp_spritesheet", "<path>/wisp 32x32.png", 32, 32)`
-    - `api.assets.registerImage("wisp_food_icon", "<path>/wisp_food 16x16.png")`
-    - `api.assets.registerImage("wisp_bandage_icon", "<path>/wisp_bandage 16x16.png")`
-  
-- [ ] Map animation frames
-  - In `petDefs.ts`, define anim frame data (e.g., `idle: [0,1,2]`, `walk: [3,4,5,6]`)
-  - Coordinate with Alan on which frames trigger attacks (petCombat.ts line ~280)
+- [ ] Once Lourdes provides sprites, integrate animation keys:
+  - Uncomment animation calls in petCombat.ts (line ~290)
+  - Update texture keys in petDefs.ts if needed
+  - Test attack animation playback
 
-### Elizabeth — Pet Leveling & Progression
-- [ ] **START HERE:** Understand current stat structure
-  - Read `petDefs.ts`: baseHp=40, baseAtk=6, growthHp=6, growthAtk=1, maxLevel=10
-  - Read `petCombat.ts` line ~66–80: how damage scales with level
-  
-- [ ] Design XP system
-  - XP gain triggers: enemy defeated, combat end, item use?
-  - XP to next level: fixed (e.g., 100 XP per level) or scaling?
-  - Document in a new file `petProgression.ts`
-  
-- [ ] Build progression hooks
-  - Create `setupPetProgression(api)` function
-  - Register XP tracking on pet spawn
-  - Hook into combat system (Alan's petCombat.ts) to award XP on enemy defeat
-  - Implement level-up: stat calculation, UI feedback
-  - Register with student SDK in `index.ts`
-  
-- [ ] Stat gain formula
-  - On level-up: newHp = baseHp + (growthHp × (level - 1))
-  - On level-up: newAtk = baseAtk + (growthAtk × (level - 1))
-  - (These formulas already exist; you wire the level-up trigger)
+- [ ] Optional: Create debug harness (debug.ts or debug.html?student=Alan) for testing without full game
 
 ---
 
@@ -287,8 +359,16 @@ Before you start, check this:
 
 ---
 
+**Quick Ref — Who's Doing What:**
+
+- **Alan:** Combat & XP integration complete. Wired enemy defeat → XP gain hook. Await Lourdes' sprites for animations, and confirm core enemy APIs.
+- **Lourdes:** Working on visuals. Place sprites in `assets/pets/`. Update texture keys in `petDefs.ts` once ready. Check `petDefs.ts` for current placeholder keys.
+- **Elizabeth:** Working on leveling. Skeleton in `petXpSystem.ts` is ready; flesh out `_calculateXpThreshold()`, test level-up flow, tune progression rates. Hook already registered in `index.ts`.
+
+---
+
 **Next Steps:**
 - [ ] Alan: Ping maintainer about enemy API (AlanNeeds.md #4)
 - [ ] Lourdes: Create wisp spritesheet & icons
-- [ ] Elizabeth: Read petDefs.ts & petCombat.ts, design XP progression
+- [ ] Elizabeth: Read petDefs.ts, petCombat.ts, petXpSystem.ts & flesh out progression
 - [ ] Daily: Check this file before you code
