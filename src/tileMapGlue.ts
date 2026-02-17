@@ -35,6 +35,7 @@ import {
   DEBUG_PROP_FOCUS_AURA_WORLD_MARKER,
   DEBUG_PAD_SINK_PROP_LOGS,
   DEBUG_TILEMAP_AUDIT,
+  DEBUG_TILEMAP_AUDIT_CONSOLE,
   DEBUG_TILEMAP_GLUE,
   LOG_PROP_FOCUS_AURA_PIXEL_PROBE_ONCE,
   LOG_PROP_FOCUS_AURA_RENDER_ONCE,
@@ -1798,13 +1799,17 @@ function defaultTileValueToFamily(v: number): TileFamily | "" {
     // const TILE_WALL  = 1
     // const TILE_BRIDGE = 2
 
-    if (v === 1 || v === 2) {
+    if (defaultTileValueIsWall(v)) {
         // walls → chasm rim family
         return "chasm_light";
     }
 
     // everything else → light-brown dirt
     return "ground_light";
+}
+
+function defaultTileValueIsWall(v: number): boolean {
+    return v === 1 || v === 2;
 }
 
 function isChasmLikeFamily(family: TileFamily | ""): boolean {
@@ -1971,6 +1976,11 @@ export interface WorldTileRendererOptions {
      * If omitted, a simple default implementation is used.
      */
     tileValueToFamily?: (v: number) => TileFamily | "";
+    /**
+     * Optional predicate that marks which tile values are walls.
+     * If omitted, a simple default implementation is used (v === 1 || v === 2).
+     */
+    tileValueIsWall?: (v: number) => boolean;
 }
 
 export class WorldTileRenderer {
@@ -1993,6 +2003,7 @@ export class WorldTileRenderer {
   private _gidRanges: Array<{ textureKey: string; firstGid: number; lastExclusive: number }> = [];
   private _lastGrid: number[][] | null = null;
   private _lastValueToFamily: ((v: number) => TileFamily | "") | null = null;
+  private _lastValueIsWall: ((v: number) => boolean) | null = null;
   private _lastGridSig = 0;
 
   constructor(scene: Phaser.Scene, atlas: TileAtlas, opts: WorldTileRendererOptions) {
@@ -3491,21 +3502,22 @@ private _analyzeGridForRender(
   grid: number[][],
   rows: number,
   cols: number,
-  valueToFamily: (v: number) => TileFamily | ""
+  valueToFamily: (v: number) => TileFamily | "",
+  valueIsWall: (v: number) => boolean
 ): {
   rawWalls: number;
   rawFloors: number;
   rawSig: number;
-  famChasmCells: number;
-  famNonChasmCells: number;
+  wallCells: number;
+  floorCells: number;
   fallbackFloorFamily: TileFamily;
 } {
   let rawWalls = 0;
   let rawFloors = 0;
   let rawSig = 0;
 
-  let famChasmCells = 0;
-  let famNonChasmCells = 0;
+  let wallCells = 0;
+  let floorCells = 0;
 
   let fallbackFloorFamily: TileFamily = "ground_light";
   let fallbackFound = false;
@@ -3516,23 +3528,24 @@ private _analyzeGridForRender(
 
     for (let c = 0; c < cols; c++) {
       const v = (row[c] | 0);
-      if (v === 1) rawWalls++;
+      const isWall = valueIsWall(v);
+      if (isWall) rawWalls++;
       else rawFloors++;
 
       rawSig = (((rawSig << 5) - rawSig) + v + ((r + 1) * 131) + ((c + 1) * 17)) | 0;
 
       const fam = valueToFamily(v);
-      if (fam && isChasmLikeFamily(fam as TileFamily)) famChasmCells++;
-      else famNonChasmCells++;
+      if (isWall) wallCells++;
+      else floorCells++;
 
-      if (!fallbackFound && fam && !isChasmLikeFamily(fam as TileFamily)) {
+      if (!fallbackFound && !isWall && fam) {
         fallbackFloorFamily = fam as TileFamily;
         fallbackFound = true;
       }
     }
   }
 
-  return { rawWalls, rawFloors, rawSig, famChasmCells, famNonChasmCells, fallbackFloorFamily };
+  return { rawWalls, rawFloors, rawSig, wallCells, floorCells, fallbackFloorFamily };
 }
 
 private _paintFloorUnderlayEverywhere(
@@ -3540,6 +3553,7 @@ private _paintFloorUnderlayEverywhere(
   rows: number,
   cols: number,
   valueToFamily: (v: number) => TileFamily | "",
+  valueIsWall: (v: number) => boolean,
   fallbackFloorFamily: TileFamily,
   seedSalt: number
 ): void {
@@ -3551,10 +3565,11 @@ private _paintFloorUnderlayEverywhere(
 
     for (let c = 0; c < cols; c++) {
       const v = (row[c] | 0);
+      const isWall = valueIsWall(v);
       const fam0 = valueToFamily(v);
 
       const floorFamily =
-        (fam0 && !isChasmLikeFamily(fam0 as TileFamily)) ? (fam0 as TileFamily) : fallbackFloorFamily;
+        (!isWall && fam0) ? (fam0 as TileFamily) : fallbackFloorFamily;
 
       const seed = _mixSeed(seedSalt | 0, r | 0, c | 0, _hashString(floorFamily), _hashString("center"));
       const def =
@@ -3574,6 +3589,7 @@ private _paintChasmLike(
   rows: number,
   cols: number,
   valueToFamily: (v: number) => TileFamily | "",
+  valueIsWall: (v: number) => boolean,
   seedSalt: number
 ): void {
   if (!this.chasmLayer || !this.chasmOverlayLayer) return;
@@ -3584,8 +3600,9 @@ private _paintChasmLike(
 
     for (let c = 0; c < cols; c++) {
       const v = (row[c] | 0);
+      if (!valueIsWall(v)) continue;
       const family = valueToFamily(v);
-      if (!family || !isChasmLikeFamily(family as TileFamily)) continue;
+      if (!family) continue;
 
       const mask = computeNeighborMask(grid, r, c, family as TileFamily, valueToFamily);
       const shape: AutoShape = autoShapeFromMask(mask);
@@ -3652,6 +3669,7 @@ private _paintChasmLike(
 syncFromEngineGrid(grid: number[][], opts?: { variantSeed?: number }): void {
   const localDebug = this.opts.debugLocal ?? true;
   const valueToFamily = this.opts.tileValueToFamily ?? defaultTileValueToFamily;
+  const valueIsWall = this.opts.tileValueIsWall ?? defaultTileValueIsWall;
 
   if (!Array.isArray(grid) || grid.length === 0 || !Array.isArray(grid[0])) {
     logTiles(localDebug, "[tileMapGlue] syncFromEngineGrid: empty/malformed grid");
@@ -3675,18 +3693,19 @@ syncFromEngineGrid(grid: number[][], opts?: { variantSeed?: number }): void {
   this.chasmLayer.fill(-1);
   this.chasmOverlayLayer.fill(-1);
 
-  const stats = this._analyzeGridForRender(grid, rows, cols, valueToFamily);
+  const stats = this._analyzeGridForRender(grid, rows, cols, valueToFamily, valueIsWall);
   const seedOverride =
     (opts && typeof opts.variantSeed === "number" && Number.isFinite(opts.variantSeed))
       ? (opts.variantSeed | 0)
       : 0;
   const seedSalt = (seedOverride !== 0) ? (seedOverride | 0) : (stats.rawSig | 0);
 
-  this._paintFloorUnderlayEverywhere(grid, rows, cols, valueToFamily, stats.fallbackFloorFamily, seedSalt);
-  this._paintChasmLike(grid, rows, cols, valueToFamily, seedSalt);
+  this._paintFloorUnderlayEverywhere(grid, rows, cols, valueToFamily, valueIsWall, stats.fallbackFloorFamily, seedSalt);
+  this._paintChasmLike(grid, rows, cols, valueToFamily, valueIsWall, seedSalt);
 
   this._lastGrid = grid;
   this._lastValueToFamily = valueToFamily;
+  this._lastValueIsWall = valueIsWall;
   this._lastGridSig = seedSalt | 0;
 
   // stash last snapshot for other debug consumers if needed
@@ -3709,8 +3728,8 @@ syncFromEngineGrid(grid: number[][], opts?: { variantSeed?: number }): void {
       rawWalls: stats.rawWalls,
       rawFloors: stats.rawFloors,
       rawSig: stats.rawSig,
-      famChasmCells: stats.famChasmCells,
-      famNonChasmCells: stats.famNonChasmCells,
+      wallCells: stats.wallCells,
+      floorCells: stats.floorCells,
       tilesets: this._gidRanges.map(r => `${r.textureKey}@${r.firstGid}-${r.lastExclusive - 1}`).join(", "),
     });
   }
@@ -3750,10 +3769,11 @@ syncFromEngineGrid(grid: number[][], opts?: { variantSeed?: number }): void {
   private _applyAutoDecorDecals(decalNameGrid: string[][], rows: number, cols: number): void {
     if (!DECAL_AUTO_ENABLED) return;
     if (!this.decalLayer) return;
-    if (!this._lastGrid || !this._lastValueToFamily) return;
+    if (!this._lastGrid || !this._lastValueToFamily || !this._lastValueIsWall) return;
 
     const grid = this._lastGrid;
     const valueToFamily = this._lastValueToFamily;
+    const valueIsWall = this._lastValueIsWall;
     const seedSalt = this._lastGridSig | 0;
     // If decor sync sends an empty grid, still scatter based on the base grid size.
     const autoRows = ((rows | 0) > 0) ? (rows | 0) : (grid.length | 0);
@@ -3770,8 +3790,10 @@ syncFromEngineGrid(grid: number[][], opts?: { variantSeed?: number }): void {
       for (let c = 0; c < colMax; c++) {
         if (c < margin || c >= (colMax - margin)) continue;
         if (decalRow && decalRow[c]) continue;
-        const family = valueToFamily(row[c] | 0);
-        if (!family || isChasmLikeFamily(family as TileFamily)) continue;
+        const v = row[c] | 0;
+        if (valueIsWall(v)) continue;
+        const family = valueToFamily(v);
+        if (!family) continue;
         const seed = _mixSeed(seedSalt | 0, r | 0, c | 0, _hashString(family), _hashString("decor_scatter"));
         if (((seed | 0) % 1000) >= (DECAL_AUTO_DENSITY_PER_1000 | 0)) continue;
         const deco = this.atlas.getDecorByIndex(family as TileFamily, seed | 0);
@@ -4875,6 +4897,18 @@ private _propPlaceOneAnchor(
   const depthBiasTiles = (vis.depthBiasTiles ?? 0);
   const depthBias = ((vis.depthBias ?? 0) | 0) + ((depthBiasTiles * st.tileSize * WORLD_DEPTH_Y_SCALE) | 0);
 
+  // Optional vertical crop cutoff (world Y) for sink effects (base bottom + N px).
+  const cropCutoffOffsetY = (typeof (vis as any).cropCutoffOffsetYPx === "number")
+    ? ((vis as any).cropCutoffOffsetYPx | 0)
+    : null;
+  let cropBaseBottomY: number | null = null;
+  let cropCutoffY: number | null = null;
+  if (cropCutoffOffsetY != null) {
+    const baseOffY = ((vis.offsetYPx ?? 0) | 0);
+    cropBaseBottomY = (((anchorR | 0) * (st.tileSize | 0) + (st.tileSize | 0) + baseOffY) | 0);
+    cropCutoffY = ((cropBaseBottomY + (cropCutoffOffsetY | 0)) | 0);
+  }
+
   const { baseRef, usedState } = this._propResolveBaseRef(vis, parsed, cols);
 
   const animKey = this._propResolveAnimKey(vis, parsed, usedState, wTiles, hTiles, textureKey, cols);
@@ -5005,6 +5039,9 @@ private _propPlaceOneAnchor(
       baseRefCol: baseRef.col | 0,
       offsetX: instOffX | 0,
       offsetY: instOffY | 0,
+      cropCutoffOffsetY: (cropCutoffOffsetY != null) ? (cropCutoffOffsetY | 0) : null,
+      cropBaseBottomY: (cropBaseBottomY != null) ? (cropBaseBottomY | 0) : null,
+      cropCutoffY: (cropCutoffY != null) ? (cropCutoffY | 0) : null,
 
       objs,
       vis,
@@ -5028,6 +5065,7 @@ private _propPlaceOneAnchor(
       focusAuraPngUrl: "",
       focusAuraFrameIndices: null,
     };
+    this._propApplyCropForInstance(st.instByAnchor[anchorKey]);
     return;
   }
 
@@ -5191,6 +5229,9 @@ private _propPlaceOneAnchor(
     baseRefCol: baseRef.col | 0,
     offsetX: instOffX | 0,
     offsetY: instOffY | 0,
+    cropCutoffOffsetY: (cropCutoffOffsetY != null) ? (cropCutoffOffsetY | 0) : null,
+    cropBaseBottomY: (cropBaseBottomY != null) ? (cropBaseBottomY | 0) : null,
+    cropCutoffY: (cropCutoffY != null) ? (cropCutoffY | 0) : null,
 
     objs,
     vis,
@@ -5215,6 +5256,7 @@ private _propPlaceOneAnchor(
     focusAuraPngUrl: primaryAura ? primaryAura.auraPngUrl : "",
     focusAuraFrameIndices: primaryAura ? primaryAura.frameIndices : null,
   };
+  this._propApplyCropForInstance(st.instByAnchor[anchorKey]);
 }
 
 private _propReapplyFocusAuraCache(): void {
@@ -5285,6 +5327,11 @@ private _propShiftDisplayObj(obj: any, dx: number, dy: number, dd: number): void
     obj.x = nextX;
     obj.y = nextY;
   }
+  try {
+    if (typeof (obj as any).__cropBaseY === "number") {
+      (obj as any).__cropBaseY = (((obj as any).__cropBaseY | 0) + (dy | 0)) | 0;
+    }
+  } catch { /* ignore */ }
   const curDepth = (obj.depth ?? 0) | 0;
   const nextDepth = (curDepth + (dd | 0)) | 0;
   try {
@@ -5335,6 +5382,8 @@ private _debugPadPillarInstances(reason: string): void {
 
 private _debugTilemapAuditTilesets(reason: string): void {
   if (!DEBUG_TILEMAP_AUDIT) return;
+  if (!DEBUG_TILEMAP_AUDIT_CONSOLE) return;
+  if (!DEBUG_TILEMAP_AUDIT_CONSOLE) return;
   const anyThis: any = this as any;
   const keys = this._gidRanges.map(r => r.textureKey);
   const mageGid = this._firstGidByTextureKey["tiles.magecity"];
@@ -5356,6 +5405,7 @@ private _debugTilemapAuditTilesets(reason: string): void {
 
 private _debugTilemapAuditDecals(reason: string, decalNameGrid: string[][], rows: number, cols: number): void {
   if (!DEBUG_TILEMAP_AUDIT) return;
+  if (!DEBUG_TILEMAP_AUDIT_CONSOLE) return;
   const anyThis: any = this as any;
   const texKeys: Record<string, 1> = Object.create(null);
   let trialCells = 0;
@@ -5413,6 +5463,7 @@ private _debugTilemapAuditDecals(reason: string, decalNameGrid: string[][], rows
 
 private _debugTilemapAuditProps(reason: string): void {
   if (!DEBUG_TILEMAP_AUDIT) return;
+  if (!DEBUG_TILEMAP_AUDIT_CONSOLE) return;
   const anyThis: any = this as any;
   const instByAnchor: Record<string, any> = anyThis.__propInstancesByAnchor || Object.create(null);
   let total = 0;
@@ -5498,6 +5549,74 @@ private _propUpdateOffsetForInstance(inst: any, nextOffX: number, nextOffY: numb
       } catch { /* ignore */ }
     }
   }
+
+  // Re-apply vertical crop if this prop uses a cutoff (pad/pillar sink).
+  this._propApplyCropForInstance(inst);
+}
+
+private _propApplyCropForInstance(inst: any): void {
+  if (!inst) return;
+  const cutoffY = (typeof inst.cropCutoffY === "number") ? (inst.cropCutoffY | 0) : null;
+  if (cutoffY == null) return;
+  const objs: any[] = Array.isArray(inst.objs) ? inst.objs : [];
+  for (let i = 0; i < objs.length; i++) {
+    this._propApplyVerticalCropToObj(objs[i], cutoffY | 0);
+  }
+}
+
+private _propApplyVerticalCropToObj(obj: any, cutoffY: number): void {
+  if (!obj) return;
+  const baseH = (typeof (obj as any).__cropBaseDisplayH === "number")
+    ? (obj as any).__cropBaseDisplayH
+    : (obj.displayHeight ?? 0);
+  const baseW = (typeof (obj as any).__cropBaseDisplayW === "number")
+    ? (obj as any).__cropBaseDisplayW
+    : (obj.displayWidth ?? 0);
+  if (!(baseH > 0) || !(baseW > 0)) return;
+
+  if (typeof (obj as any).__cropBaseDisplayH !== "number") {
+    (obj as any).__cropBaseDisplayH = baseH;
+    (obj as any).__cropBaseDisplayW = baseW;
+  }
+  if (typeof (obj as any).__cropBaseY !== "number") {
+    (obj as any).__cropBaseY = (obj.y ?? 0);
+  }
+  if (typeof (obj as any).__cropBaseVisible !== "boolean") {
+    (obj as any).__cropBaseVisible = (obj.visible !== false);
+  }
+
+  const baseY = (obj as any).__cropBaseY ?? (obj.y ?? 0);
+  const topY = (baseY - (baseH / 2));
+  let visH = (cutoffY - topY);
+
+  const baseVisible = ((obj as any).__cropBaseVisible !== false);
+  if (!baseVisible) return;
+
+  if (visH <= 0.5) {
+    try { obj.setVisible?.(false); } catch { obj.visible = false; }
+    return;
+  }
+
+  if (visH >= (baseH - 0.5)) {
+    try { obj.setVisible?.(true); } catch { obj.visible = true; }
+    try { obj.setCrop?.(); } catch { /* ignore */ }
+    obj.displayHeight = baseH;
+    obj.displayWidth = baseW;
+    obj.y = baseY;
+    return;
+  }
+
+  visH = Math.min(baseH, Math.max(1, visH));
+  const frameW = (obj.frame?.cutWidth ?? obj.frame?.width ?? baseW) | 0;
+  const frameH = (obj.frame?.cutHeight ?? obj.frame?.height ?? baseH) | 0;
+  const ratio = (baseH > 0) ? (visH / baseH) : 0;
+  const cropH = Math.max(1, Math.round(frameH * ratio));
+
+  try { obj.setVisible?.(true); } catch { obj.visible = true; }
+  try { obj.setCrop?.(0, 0, frameW, cropH); } catch { /* ignore */ }
+  obj.displayHeight = visH;
+  obj.displayWidth = baseW;
+  obj.y = (topY + (visH / 2));
 }
 
 syncPropGridByName(propNameGrid: string[][]): void {

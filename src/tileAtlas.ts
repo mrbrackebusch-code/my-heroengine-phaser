@@ -154,6 +154,10 @@ export interface DecorVisualRef {
     // Optional overlay effect drawn above the prop (hidden by default).
     overlay?: PropOverlaySpec;
 
+    // Optional vertical crop cutoff (world Y) = base bottom + this offset.
+    // Used for "sink into dust" visuals (pad/pillar).
+    cropCutoffOffsetYPx?: number;
+
     // Optional collision tuning for decor solids (Phaser only).
     // When set, collision uses the bottom N pixels of the frame as a base-only box.
     collisionBaseHeightPx?: number;
@@ -534,6 +538,7 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         ref: { row: 17, col: 19 },
         wTiles: 1,
         hTiles: 3,
+        cropCutoffOffsetYPx: 32,
         focusAuraPadPx: 4,
         focusAuraPadAlways: true,
     },
@@ -553,6 +558,7 @@ export const PROP_VISUALS_BY_NAME: Record<string, DecorVisualRef> = {
         ref: { row: 14, col: 12 },
         wTiles: 5,
         hTiles: 2,
+        cropCutoffOffsetYPx: 2,
     },
 
     pedestal: { atlas: "terrain_atlas", ref: { row: 14, col: 19 } },

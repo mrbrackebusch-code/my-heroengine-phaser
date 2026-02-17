@@ -15,15 +15,28 @@ import { applyStudentRelicDefinitions, applyStudentVfxPresets } from "./studentH
 import {
     dispatchStudentNpcInteract,
     dispatchStudentPropInteract,
+    getStudentBossHooks,
+    getStudentBossPhaseConfig,
     getStudentDropHooks,
+    getStudentMaze,
+    getStudentMazeHooks,
     getStudentNpc,
     getStudentProp,
     isProfileAllowed,
     listStudentDropTables,
     listStudentMonsterDrops,
+    type StudentBossPhase,
+    type StudentBossPhaseConfig,
+    type StudentBossSpawnStats,
     type StudentDropEntry,
     type StudentDropTable,
     type StudentMonsterDrop,
+    type StudentMazeContext,
+    type StudentMazeGrid,
+    type StudentMazeHooks,
+    type StudentMazeTheme,
+    type StudentMazeTrapMode,
+    type StudentMazeTrapPlacement,
 } from "./studentSystemsHooks";
 import { pickStudentDebugStartFloor } from "./studentDebug";
 import { ENEMY_EFFECT_DARKEN_PCT_DEFAULT, ENEMY_EFFECT_PALETTES } from "./vfxPalettes";
@@ -59,6 +72,12 @@ import {
     DEBUG_AGI_COMET_ALIGN_VIS,
     DEBUG_AGI_COMET_ALIGN_VIS_HERO_INDEX,
     DEBUG_AGI_COMET_ALIGN_VIS_TIP_R,
+    DEBUG_AGI_DUMP,
+    DEBUG_AGI_DUMP_AUTO_DUMP,
+    DEBUG_AGI_DUMP_MOVES_MAX,
+    DEBUG_AGI_DUMP_TICK_INTERVAL_MS,
+    DEBUG_AGI_DUMP_MAX_SAMPLES_PER_MOVE,
+    DEBUG_AGI_DUMP_MAX_EVENTS_PER_MOVE,
     DEBUG_AGI_COMBO,
     DEBUG_AGI_COMBO_BUILD,
     DEBUG_AGI_COMBO_EXIT,
@@ -85,15 +104,22 @@ import {
     DEBUG_CONTRACT_VOLATILE_PART_WINDOWS,
     DEBUG_DECOR_ENGINE_LOGS,
     DEBUG_BOSS_INTRO,
+    DEBUG_BOSS_OVERRIDE_MOVE,
+    DEBUG_BOSS_OVERRIDE_PHASE,
+    DEBUG_BOSS_OVERRIDE_DAMAGE,
+    DEBUG_BOSS_OVERRIDE_SPAWN,
     DEBUG_BOSS_PAD_DUST_PERSIST,
     DEBUG_PAD_SINK_PROP_LOGS,
     DEBUG_DUNGEON_LOGS,
     DEBUG_EFFECTS_HALL_ON_START,
     DEBUG_EFFECTS_HALL_LOGS,
+    DEBUG_EFFECTS_HALL_TRACE_LOGS,
+    DEBUG_EFFECTS_HALL_FRAME_LOGS,
     DEBUG_EFFECTS_HALL_TRACE,
     DEBUG_EFFECTS_HALL_TRACE_LITE,
     DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE,
     DEBUG_EFFECTS_HALL_TRACE_DURATION_MS_OVERRIDE,
+    DEBUG_EFFECTS_HALL_FORCE_WHITE_PALETTE,
     DEBUG_EFFECTS_HALL_FREEZE_WORLD,
     DEBUG_EFFECTS_HALL_ONLY_ROWS,
     DEBUG_EFFECTS_HALL_ONLY_POISON,
@@ -129,6 +155,7 @@ import {
     DEBUG_TOWER_TRIAL_SIM,
     DEBUG_TRAP_LOGS,
     DEBUG_TILEMAP_AUDIT,
+    DEBUG_TILEMAP_AUDIT_CONSOLE,
     DEBUG_TILEMAP_AUDIT_DUMP,
     DEBUG_FORCE_TEST_WORLD_KIND,
     DEBUG_FORCE_TEST_WORLD_LOG,
@@ -155,6 +182,7 @@ import {
     DEBUG_SHRINE_OVERLAY_LOGS,
     DEBUG_SHOP_LOGS,
     DEBUG_DEBUG_DUMP,
+    DEBUG_DEBUG_DUMP_MANUAL,
     DEBUG_SAVE_TRACE,
     DEBUG_SPECIAL_PHASE_LOG_ONCE,
     DEBUG_STATUE_PEDESTAL,
@@ -163,6 +191,10 @@ import {
     DEBUG_STR_PROJECTILE_METRICS,
     DEBUG_STR_PROJECTILE_FRAMES,
     DEBUG_STR_PROJECTILE_FRAMES_THROTTLE_MS,
+    DEBUG_STR_TRACE,
+    DEBUG_STR_TRACE_AUTO_DUMP,
+    DEBUG_STR_TRACE_MAX,
+    DEBUG_STR_TRACE_DUMP_COOLDOWN_MS,
     DEBUG_STUDENT_SYSTEMS_LOGS,
     DEBUG_UI_LOGS,
     DEBUG_UIAPI_LOGS,
@@ -1022,6 +1054,8 @@ namespace HeroEngine {
         if (_started) return;
 
         _started = true;
+
+        _heAgilityDumpReset("start");
 
 
 
@@ -2586,6 +2620,34 @@ function _spawnStrengthArcFxForProj(
             " outlineOk=" + outlineOk
         );
     }
+    if (_heStrengthTraceCanLog()) {
+        const moveId = sprites.readDataNumber(proj, STR_TRACE_MOVE_ID_KEY) | 0;
+        const data = {
+            hi: heroIndex | 0,
+            projId: (proj as any).id | 0,
+            moveId: moveId | 0,
+            elem: element | 0,
+            dir: dir || "",
+            showFill: showFill ? 1 : 0,
+            mask: STR_ARC_SKIN_ID,
+            fill: fillSkinId || "",
+            fillDir: (fillDir || dir || ""),
+            fillAlpha: STR_ARC_FILL_ALPHA,
+            fillTint: fillTint | 0,
+            edge: edgeSkinId || "",
+            edgeDir: (edgeDir || dir || ""),
+            edgeAura: edgeAuraSkinId || "",
+            aura: auraSkinIds.slice(0),
+            outline: outlineId || "",
+            outlineAlpha: STR_ARC_OUTLINE_ALPHA,
+            softHalo: STR_ARC_SOFT_HALO_ENABLED ? 1 : 0,
+            softHaloAlpha: STR_ARC_SOFT_HALO_ALPHA,
+            softHaloBlend: STR_ARC_SOFT_HALO_BLEND || "",
+            zBase: zBase | 0
+        };
+        _heStrengthTraceLastArcFx = data;
+        _heStrengthTracePush("ARC_FX_SPAWN", data);
+    }
 }
 
 function _updateStrengthArcFxForProj(
@@ -2753,7 +2815,9 @@ function _updateStrengthArcFxForProj(
     maskFx.y = posY;
     maskFx.z = (hero.z | 0) + 12;
 
-    if (DEBUG_STR_PROJECTILE_METRICS && _wpnTraceShouldLog(proj, nowMs | 0)) {
+    const shouldConsoleSize = DEBUG_STR_PROJECTILE_METRICS && _wpnTraceShouldLog(proj, nowMs | 0);
+    const shouldTraceSize = _heStrengthTraceCanLog();
+    if (shouldConsoleSize || shouldTraceSize) {
         const atlas = _getEffectAtlasAny();
         const resolved = atlas ? _resolveEffectEntry(atlas, STR_ARC_SKIN_ID, "") : null;
         const frameW = resolved?.frameW ? (resolved.frameW | 0) : 0;
@@ -2771,24 +2835,49 @@ function _updateStrengthArcFxForProj(
         const lastStamp = sprites.readDataString(proj, STR_ARC_SIZE_LOG_KEY) || "";
         if (stamp !== lastStamp) {
             sprites.setDataString(proj, STR_ARC_SIZE_LOG_KEY, stamp);
-            console.log(
-                "[STR][ARC][SIZE]" +
-                " hero=" + (heroIndex | 0) +
-                " seg=" + segName +
-                " col=" + (frameCol | 0) +
-                " raw=" + (rawFrame | 0) +
-                " frame=" + (frameIdx | 0) +
-                " scale=" + scale.toFixed(3) +
-                " slashScale=" + slashScale.toFixed(3) +
-                " frameW=" + (frameW | 0) +
-                " frameH=" + (frameH | 0) +
-                " bboxW=" + (bboxW | 0) +
-                " bboxH=" + (bboxH | 0) +
-                " capPx=" + (capPx | 0) +
-                " step=" + (step ? step.toFixed(3) : "0") +
-                " scaledW=" + (scaledW | 0) +
-                " scaledH=" + (scaledH | 0)
-            );
+            if (shouldConsoleSize) {
+                console.log(
+                    "[STR][ARC][SIZE]" +
+                    " hero=" + (heroIndex | 0) +
+                    " seg=" + segName +
+                    " col=" + (frameCol | 0) +
+                    " raw=" + (rawFrame | 0) +
+                    " frame=" + (frameIdx | 0) +
+                    " scale=" + scale.toFixed(3) +
+                    " slashScale=" + slashScale.toFixed(3) +
+                    " frameW=" + (frameW | 0) +
+                    " frameH=" + (frameH | 0) +
+                    " bboxW=" + (bboxW | 0) +
+                    " bboxH=" + (bboxH | 0) +
+                    " capPx=" + (capPx | 0) +
+                    " step=" + (step ? step.toFixed(3) : "0") +
+                    " scaledW=" + (scaledW | 0) +
+                    " scaledH=" + (scaledH | 0)
+                );
+            }
+            if (shouldTraceSize) {
+                const moveId = sprites.readDataNumber(proj, STR_TRACE_MOVE_ID_KEY) | 0;
+                const data = {
+                    hi: heroIndex | 0,
+                    projId: (proj as any).id | 0,
+                    moveId: moveId | 0,
+                    seg: segName || "",
+                    col: frameCol | 0,
+                    raw: rawFrame | 0,
+                    frame: frameIdx | 0,
+                    scale: +scale.toFixed(4),
+                    slashScale: +slashScale.toFixed(4),
+                    frameW: frameW | 0,
+                    frameH: frameH | 0,
+                    bboxW: bboxW | 0,
+                    bboxH: bboxH | 0,
+                    capPx: capPx | 0,
+                    step: step ? +step.toFixed(4) : 0,
+                    scaledW: scaledW | 0,
+                    scaledH: scaledH | 0
+                };
+                _heStrengthTracePush("ARC_SIZE", data);
+            }
         }
     }
 
@@ -11487,6 +11576,9 @@ const TRAP_TOTEM_BASE = "fire_totem"
 const TRAP_TOTEM_ELEMENT = ELEM.ELECTRIC
 const TRAP_SOLVED_KEY = "trapSolved"
 const TRAP_DISABLED_KEY = "trapDisabled"
+const TRAP_LETHAL_KEY = "trapLethal"
+const TRAP_BLOCKING_KEY = "trapBlocking"
+const TRAP_OVERRIDE_BASE_KEY = "trapBaseOverride"
 const TRAP_TOTEM_DMG_KEY = "trapTotemDmg"
 const TRAP_TOTEM_HIT_MASK_KEY = "trapTotemHitMask"
 const TRAP_TOTEM_DAMAGE = 12 // tune later
@@ -12992,8 +13084,8 @@ let __vfxRegistry: VfxRegistry | null = null
 let __vfxHelpers: VfxHelpers | null = null
 
 function _registerVfxPresets(registry: VfxRegistry, helpers: VfxHelpers): void {
+    _registerCoreVfxPresets(registry, helpers)
     applyStudentVfxPresets(registry, helpers)
-    // Presets will live here (see VFX_SYSTEM.md). Keep empty until assets are chosen.
 }
 
 function _getVfxRegistry(): VfxRegistry {
@@ -13013,6 +13105,120 @@ function _getVfxHelpers(): VfxHelpers {
     if (!__vfxRegistry) _getVfxRegistry()
     return __vfxHelpers as VfxHelpers
 }
+
+const VFX_POISON_CLOUD_ID = "poisonCloud"
+
+type PoisonCloudParams = {
+    x: number
+    y: number
+    radiusPx?: number
+    lifespanMs?: number
+    alpha?: number
+    maskAlpha?: number
+    z?: number
+}
+
+let _poisonCloudFillSkinId = ""
+let _poisonCloudFillSkinKey = ""
+
+function _registerCoreVfxPresets(registry: VfxRegistry, helpers: VfxHelpers): void {
+    registry.register(VFX_POISON_CLOUD_ID, (ctx, params) => {
+        void ctx
+        _spawnPoisonCloudPreset(params as any, helpers)
+    })
+}
+
+function _spawnPoisonCloudPreset(params: PoisonCloudParams, helpers: VfxHelpers): void {
+    if (!params) return
+    const x = Number(params.x)
+    const y = Number(params.y)
+    if (!Number.isFinite(x) || !Number.isFinite(y)) return
+    if (!CLOUD_GEOMETRY_SKIN_ID || !HALL_POISON_TEX_ID) return
+
+    const radiusRaw = (params.radiusPx != null ? Number(params.radiusPx) : NaN)
+    const radius = Number.isFinite(radiusRaw) ? Math.max(8, Math.round(radiusRaw)) : Math.max(8, Math.round((SLIME_BOSS_POISON_HAZARD_SIZE_PX | 0) * 0.6))
+    const lifeMs = Number.isFinite(params.lifespanMs as any) ? (params.lifespanMs as number) | 0 : 0
+    const baseZ = Number.isFinite(params.z as any) ? (params.z as number) | 0 : 0
+
+    const tweak = _getVfxTweak()
+    const tint = _pickEnemyPaletteMid("poison")
+
+    const palettePct = Math.max(0, Math.min(20, tweak.paletteDarkenPct || 0)) | 0
+    const opaqueFill = !!(tweak.enabled && tweak.forceOpaqueFill)
+    const skinKey = `${palettePct}|${opaqueFill ? 1 : 0}`
+    if (!_poisonCloudFillSkinId || _poisonCloudFillSkinKey !== skinKey) {
+        _poisonCloudFillSkinKey = skinKey
+        _poisonCloudFillSkinId = _hallEnsurePaletteEffect({
+            texId: HALL_POISON_TEX_ID,
+            paletteKey: "poison"
+        } as DebugCloudConfig)
+    }
+    const fillSkinId = _poisonCloudFillSkinId || HALL_POISON_TEX_ID
+    const fillTint = (fillSkinId === HALL_POISON_TEX_ID) ? (tint | 0) : 0
+
+    const maskSkin = (tweak.enabled && tweak.forceOpaqueMask)
+        ? _ensureOpaqueMaskSkin(CLOUD_GEOMETRY_SKIN_ID)
+        : CLOUD_GEOMETRY_SKIN_ID
+    const maskScale = _effectPickScaleForRadius(maskSkin, "", radius | 0)
+    const fillScale = _effectPickScaleForRadius(fillSkinId, "", radius | 0)
+
+    const baseMaskAlpha = Number.isFinite(params.maskAlpha as any)
+        ? Number(params.maskAlpha)
+        : Math.max(0.25, (HALL_POISON_MASK_ALPHA * 2))
+    const baseFillAlpha = Number.isFinite(params.alpha as any)
+        ? Number(params.alpha)
+        : Math.max(0.55, (HALL_POISON_ALPHA * 0.7))
+
+    const maskOpts: EffectApplyOpts = {
+        alpha: _vfxTweakAlpha(Math.max(0.05, Math.min(1, baseMaskAlpha)), tweak.maskAlphaMult),
+        scale: maskScale,
+        blend: "normal",
+        forceTop: true,
+        repeat: -1,
+        fps: _vfxTweakFps(8),
+        mode: "full"
+    }
+    _applySmokeAnim(maskOpts, "alive")
+    if (tint) maskOpts.tint = tint | 0
+
+    const maskFx = helpers.spawnEffect({
+        x: x | 0,
+        y: y | 0,
+        z: (baseZ | 0),
+        skinId: maskSkin,
+        opts: maskOpts,
+        kind: SpriteKind.HeroEffect,
+        lifespanMs: lifeMs > 0 ? (lifeMs | 0) : undefined
+    })
+
+    const fillOpts: EffectApplyOpts = {
+        alpha: _vfxTweakAlpha(Math.max(0.05, Math.min(1, baseFillAlpha)), tweak.alphaMult),
+        scale: fillScale,
+        blend: "normal",
+        forceTop: true,
+        repeat: -1,
+        fps: _vfxTweakFps(12),
+        mode: "projectile",
+        maskSprite: maskFx
+    }
+    if (fillTint) fillOpts.tint = fillTint | 0
+
+    helpers.spawnEffect({
+        x: x | 0,
+        y: y | 0,
+        z: ((baseZ | 0) + 1) | 0,
+        skinId: fillSkinId,
+        opts: fillOpts,
+        kind: SpriteKind.HeroEffect,
+        lifespanMs: lifeMs > 0 ? (lifeMs | 0) : undefined
+    })
+}
+
+function _spawnPoisonCloudAt(x: number, y: number, radiusPx: number, lifeMs?: number): void {
+    const reg = _getVfxRegistry()
+    reg.run(VFX_POISON_CLOUD_ID, { x: x | 0, y: y | 0, radiusPx: radiusPx | 0, lifespanMs: lifeMs })
+}
+
 const TRAP_PROMPT_INPUT_DEBOUNCE_MS = 200
 
 function _dunReadInteractAction(it: Sprite): string {
@@ -13673,6 +13879,20 @@ function _trapHandleResult(detail: any): void {
     const target = state.target
     if (!target || (target.flags & sprites.Flag.Destroyed)) return
 
+    const lethal = (sprites.readDataNumber(target, TRAP_LETHAL_KEY) | 0) !== 0;
+    if (lethal) {
+        const hi = state.heroIndex | 0
+        if (hi >= 0 && hi < heroes.length) {
+            const hero = heroes[hi]
+            if (hero && !(hero.flags & sprites.Flag.Destroyed)) {
+                const hp = sprites.readDataNumber(hero, HERO_DATA.HP) | 0
+                const maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP) | 0
+                const dmg = Math.max(1, Math.max(hp, maxHp) | 0) | 0
+                applyDamageToHeroIndex(hi, dmg | 0, { kind: "hazard", tag: "trap" })
+            }
+        }
+    }
+
     const now = game.runtime() | 0
     const attempt = recordTrapAttempt(state.instanceId, false, now)
     if (DEBUG_TRAP_LOGS) {
@@ -13687,6 +13907,16 @@ function _trapHandleResult(detail: any): void {
     if (attempt && attempt.locked) {
         sprites.setDataNumber(target, TRAP_DISABLED_KEY, 1)
         _dunSetInteractUsed(target, true)
+        const g: any = globalThis as any
+        const close = g ? g.__heCloseTrapBlocklyEditor : null
+        if (typeof close === "function") {
+            try { close() } catch { }
+        }
+        _trapClearState()
+        return
+    }
+
+    if (lethal) {
         const g: any = globalThis as any
         const close = g ? g.__heCloseTrapBlocklyEditor : null
         if (typeof close === "function") {
@@ -13714,6 +13944,8 @@ function _trapHandleSolved(detail: any): void {
         return
     }
 
+    const isBlocking = (sprites.readDataNumber(target, TRAP_BLOCKING_KEY) | 0) !== 0;
+
     if (DEBUG_TRAP_LOGS) {
         console.log("[TRAP][PROMPT] solved", {
             trapId: state.trapId,
@@ -13725,6 +13957,22 @@ function _trapHandleSolved(detail: any): void {
     _trapDispatchSolveEffect(state)
     sprites.setDataNumber(target, TRAP_SOLVED_KEY, 1)
     _dunSetInteractUsed(target, true)
+
+    if (isBlocking) {
+        const tileR = sprites.readDataNumber(target, "decorTileR") | 0
+        const tileC = sprites.readDataNumber(target, "decorTileC") | 0
+        if (tileR >= 0 && tileC >= 0) {
+            _dunCarveFloorRect(tileR | 0, tileC | 0, 1, 1)
+            const decor = _dunFindDecorAtTile(tileR | 0, tileC | 0, "")
+            if (decor && !(decor.flags & sprites.Flag.Destroyed)) {
+                decor.destroy()
+            }
+        }
+        if (!(target.flags & sprites.Flag.Destroyed)) {
+            target.destroy()
+        }
+        _engineDecorRev = (_engineDecorRev + 1) | 0
+    }
 
     const g: any = globalThis as any
     const close = g ? g.__heCloseTrapBlocklyEditor : null
@@ -13739,10 +13987,12 @@ function _trapOnPropInteract(payload: any): boolean {
     if (!payload) return false
     const name = String(payload.name || "")
     const baseName = propBaseNameFromKey(name)
-    if (!getTrapDefinitionForProp(baseName)) return false
     const it = payload.target as Sprite
     if (!it || (it.flags & sprites.Flag.Destroyed)) return false
-    if (baseName === SHRINE_BASE) {
+    const overrideBase = sprites.readDataString(it, TRAP_OVERRIDE_BASE_KEY) || ""
+    const logicBase = overrideBase || baseName
+    if (!getTrapDefinitionForProp(logicBase)) return false
+    if (logicBase === SHRINE_BASE) {
         const tileR = sprites.readDataNumber(it, "decorTileR") | 0
         const tileC = sprites.readDataNumber(it, "decorTileC") | 0
         const obsKey = _shrineObsKey(tileR | 0, tileC | 0)
@@ -13760,12 +14010,12 @@ function _trapOnPropInteract(payload: any): boolean {
             pid: payload.pid | 0,
             hi: payload.hi | 0,
             name: String(name || ""),
-            base: String(baseName || ""),
+            base: String(logicBase || ""),
             x: it.x | 0,
             y: it.y | 0,
         })
     }
-    return _trapShowPrompt(it, baseName, payload.pid | 0, payload.hi | 0)
+    return _trapShowPrompt(it, logicBase, payload.pid | 0, payload.hi | 0)
 }
 
 function _trapPromptInputTick(): void {
@@ -14111,7 +14361,9 @@ const BOSS_PAD_SINK_DUST_MASK_ALPHA_SCALE = 0.6
 const BOSS_PAD_SINK_DUST_LAYER_ALPHA = 0.82
 const BOSS_PAD_SINK_DUST_LAYER_MASK_ALPHA = 0.35
 const BOSS_PAD_SINK_DUST_FADE_MS = 3000
-const CLOUD_GEOMETRY_SKIN_ID = "smokeSoftenedTransitioned grayscale 128x128"
+    // Default geometry used for cloud masking (poison/air style). Dust uses an override.
+    const CLOUD_GEOMETRY_SKIN_ID = "smokeSoftenedTransitioned grayscale 128x128"
+    const DUST_CLOUD_GEOMETRY_SKIN_ID = "SmokeBorderedRotating grayscale 128x128"
 const CLOUD_AURA_BASE_SKIN_ID = "smoke 128x128"
 const BOSS_PAD_SINK_DUST_TEX_ID = "waves1 texture grayscale 256x256"
 const BOSS_PAD_SINK_DUST_TEX_FPS = 16
@@ -14144,10 +14396,11 @@ const BOSS_PAD_SINK_DUST_RISE_PX = 32
 const BOSS_PAD_SINK_DUST_RISE_PORTION = 1
 const BOSS_PAD_SINK_DUST_SPREAD_X_PX = 56
 const BOSS_PAD_SINK_DUST_SPREAD_Y_PX = 32
-const HALL_DUST_TEX_ID = "waves3 texture grayscale 256x256"
+const HALL_DUST_TEX_ID = "fluidExtras texture grayscale 256x256"
 const HALL_POISON_TEX_ID = "waves2 texture grayscale 256x256"
 const HALL_SHOWCASE_TEX_ID = "waves1 texture grayscale 256x256"
 const HALL_DUST_TILE_PX = 256
+const HALL_DUST_TILE_PAD_PX = 0
 const HALL_DUST_TILE_STEP_PCT = 0.85
 const HALL_POISON_TILE_PX = 256
 const HALL_POISON_TILE_STEP_PCT = 0.85
@@ -14157,6 +14410,15 @@ const HALL_DUST_ALPHA = 1
 const HALL_POISON_ALPHA = 0.9
 const HALL_SHOWCASE_ALPHA = 1
 const HALL_DUST_MASK_ALPHA = 0.2
+const HALL_DUST_MASK_ALPHA_FLOOR_CENTER = 0.7
+const HALL_DUST_MASK_ALPHA_FLOOR_OUTER = 0.9
+const HALL_DUST_MASK_FPS_BASE = 0.35
+const HALL_DUST_MASK_FPS_LARGE = HALL_DUST_MASK_FPS_BASE * 1.25
+const HALL_DUST_MASK_FPS_MEDIUM = HALL_DUST_MASK_FPS_BASE * 1.5
+const HALL_DUST_MASK_FPS_SMALL = HALL_DUST_MASK_FPS_BASE * 1.75
+const HALL_DUST_MASK_ANIM_BASE_FPS = 16
+const HALL_DUST_MASK_START_LARGE_PCT = 0.25
+const HALL_DUST_MASK_START_MEDIUM_PCT = 0.5
 const HALL_POISON_MASK_ALPHA = 0.12
 const HALL_SHOWCASE_MASK_ALPHA = 0.25
 const HALL_ALPHA_ROW_COUNT = 10
@@ -14180,7 +14442,8 @@ const HALL_DEMO_FADE_MS = 0
 const HALL_MASK_DENSITY_K = 16
 const HALL_MASK_DENSITY_GAMMA = 0.85
 const HALL_MASK_OUTLINE_ALPHA_MIN = 0
-const HALL_MASK_OCCLUDE_ALPHA_MIN = 12
+const HALL_MASK_OCCLUDE_ALPHA_MIN = 1
+const HALL_MASK_HIDE_ALPHA = 0.001
 const HALL_MASK_UNION_UPDATE_MIN_MS = 60
 const HALL_MASK_UNION_ROT_EPS_RAD = 0.005
 const HALL_MASK_UNION_OUTLINE_EVERY = 2
@@ -14193,11 +14456,17 @@ const HALL_DUST_MASK_FPS_DEFAULT = 3.2
 const HALL_DUST_MASK2_FPS_DEFAULT = 2.7
 const HALL_DUST_RISE_START_SCALE_X = 2.8
 const HALL_DUST_RISE_START_SCALE_Y = 0.12
-const HALL_DUST_RISE_MS = 2500
+const HALL_DUST_RISE_MS = 4000
 const HALL_DUST_RISE_LOOP_MS = HALL_DUST_RISE_MS * 2
+const HALL_DUST_FADE_MS = 1000
 const HALL_DUST_RISE_END_SCALE_X = 1.1
 const HALL_DUST_RISE_END_SCALE_Y = 0.5
+const HALL_DUST_PAD_BASE_OFFSET_PX = 2
+const HALL_DUST_PILLAR_BASE_OFFSET_PX = 32
+const HALL_DUST_PAD_SINK_PX = 32
+const HALL_DUST_PILLAR_SINK_PX = 64
 const HALL_DUST_FILL_FPS = 28
+const HALL_DUST_CLUSTER_FILL_ALPHA = 1
 
 
 
@@ -14220,6 +14489,7 @@ let _dunPadSinkDustFillFx: Sprite[] = []
 let _dunPadSinkDustMaskFx: Sprite | null = null
 let _dunEffectsHallFx: Sprite[] = []
 let _dunEffectsHallNativeFx: any[] = []
+let _dunEffectsHallDecor: Sprite[] = []
 
 
 
@@ -16508,6 +16778,7 @@ function _dunSpawnExitPad(): void {
     _dunPadSinkDustMaskFx = null
     _dunEffectsHallFx = []
     _dunEffectsHallNativeFx = []
+    _dunEffectsHallDecor = []
 
     _dunTeleportCommitAtMs = 0
 
@@ -16699,7 +16970,7 @@ function _dunSchedulePadSink(
 }
 
 function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
-    if (!CLOUD_GEOMETRY_SKIN_ID) return
+    if (!DUST_CLOUD_GEOMETRY_SKIN_ID) return
     if (!BOSS_PAD_SINK_DUST_TEX_ID) return
     let usingFallback = false
     let baseX = 0
@@ -16767,14 +17038,14 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
     const tileRadius = Math.max(8, Math.idiv(tilePx, 2)) | 0
     const fillScale = _effectPickScaleForRadius(BOSS_PAD_SINK_DUST_TEX_ID, "", tileRadius | 0)
     const maskRadius = Math.max(halfW | 0, Math.idiv(regionH, 2) | 0) + Math.max(4, Math.round(tile * 0.4)) | 0
-    const layerMaskScale = _effectPickScaleForRadius(CLOUD_GEOMETRY_SKIN_ID, "", maskRadius | 0)
+    const layerMaskScale = _effectPickScaleForRadius(DUST_CLOUD_GEOMETRY_SKIN_ID, "", maskRadius | 0)
     if (DEBUG_BOSS_INTRO) {
         console.log("[BOSS][INTRO][DUST] spawn", {
             baseX: baseX | 0,
             baseY: baseY | 0,
             count: total | 0,
             durationMs: durationMs | 0,
-            skin: CLOUD_GEOMETRY_SKIN_ID,
+            skin: DUST_CLOUD_GEOMETRY_SKIN_ID,
             tex: BOSS_PAD_SINK_DUST_TEX_ID,
             fallback: usingFallback ? 1 : 0
         })
@@ -16796,8 +17067,8 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
         ? ((durationMs | 0) + (fadeMs | 0))
         : 0
     const maskSkin = (tweak.enabled && tweak.forceOpaqueMask)
-        ? _ensureOpaqueMaskSkin(CLOUD_GEOMETRY_SKIN_ID)
-        : CLOUD_GEOMETRY_SKIN_ID
+        ? _ensureOpaqueMaskSkin(DUST_CLOUD_GEOMETRY_SKIN_ID)
+        : DUST_CLOUD_GEOMETRY_SKIN_ID
     const maskFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
     maskFx.setFlag(SpriteFlag.Ghost, true)
     maskFx.x = (regionMinX + Math.idiv(regionW, 2)) | 0
@@ -16867,7 +17138,7 @@ function _dunSpawnPadSinkDust(nowMs: number, durationMs: number): void {
             BOSS_PAD_SINK_DUST_MIN_RADIUS_PX | 0,
             (BOSS_PAD_SINK_DUST_RADIUS_PX | 0) + (Math.randomRange(-BOSS_PAD_SINK_DUST_RADIUS_VAR_PX, BOSS_PAD_SINK_DUST_RADIUS_VAR_PX) | 0)
         ) | 0
-        const maskScale = _effectPickScaleForRadius(CLOUD_GEOMETRY_SKIN_ID, "", radius | 0)
+        const maskScale = _effectPickScaleForRadius(DUST_CLOUD_GEOMETRY_SKIN_ID, "", radius | 0)
         const maskAlpha = DEBUG_BOSS_PAD_DUST_PERSIST
             ? alpha
             : Math.max(0.18, Math.min(0.85, alpha * BOSS_PAD_SINK_DUST_MASK_ALPHA_SCALE))
@@ -19974,6 +20245,101 @@ function _dunEnterFloor_spawnStarterFireTotem(defOverride?: TrapDefinition | nul
     }
 }
 
+function _dunHasStudentMazeTrapPlacements(): boolean {
+    return !!(_dunStudentMazeTrapPlacements && _dunStudentMazeTrapPlacements.length);
+}
+
+function _dunSpawnStudentMazeTraps(nowMs: number): void {
+    const list = _dunStudentMazeTrapPlacements;
+    if (!list || !list.length) return;
+    const rows = _dunWorldRows() | 0;
+    const cols = _dunWorldCols() | 0;
+    if (rows <= 0 || cols <= 0) return;
+
+    const now = nowMs | 0;
+
+    for (let i = 0; i < list.length; i++) {
+        const p = list[i];
+        if (!p) continue;
+        const r = p.r | 0;
+        const c = p.c | 0;
+        if (r < 0 || c < 0 || r >= rows || c >= cols) continue;
+        if (_dunIsReservedSpawnTile(r | 0, c | 0)) continue;
+        if (_dunFindDecorAtTile(r | 0, c | 0, "")) continue;
+
+        const kind = (p.kind === "shrine") ? "shrine" : "trap";
+        const mode = (p.mode === "block") ? "block" : "kill";
+        const defaultBase = (kind === "shrine") ? SHRINE_BASE : TRAP_TOTEM_BASE;
+        let artBase = String(p.propBase || "").trim();
+        if (!artBase) artBase = defaultBase;
+        const artBaseKey = propBaseNameFromKey(artBase) || artBase;
+        const trapId = String(p.trapId || "").trim();
+        let logicBase = artBaseKey;
+        if (trapId || !getTrapDefinitionForProp(artBaseKey)) {
+            logicBase = defaultBase;
+        }
+
+        _dunCarveFloorRect(r | 0, c | 0, 1, 1);
+
+        const it = _dunSpawnInteractableProp({
+            name: artBase,
+            tileR: r | 0,
+            tileC: c | 0,
+            action: INTERACT_ACTION_PROP,
+            role: (mode === "block") ? DECOR_ROLE.SOLID : DECOR_ROLE.TRIGGER,
+            pxW: WORLD_TILE_SIZE,
+            pxH: WORLD_TILE_SIZE,
+        });
+
+        if (!it || (it.flags & sprites.Flag.Destroyed)) continue;
+
+        if (mode === "block") {
+            sprites.setDataNumber(it, TRAP_BLOCKING_KEY, 1);
+        } else {
+            sprites.setDataNumber(it, TRAP_LETHAL_KEY, 1);
+        }
+
+        if (logicBase !== artBaseKey) {
+            sprites.setDataString(it, TRAP_OVERRIDE_BASE_KEY, logicBase);
+        }
+
+        if (logicBase === SHRINE_BASE) {
+            if ((_dunShrineTileR | 0) < 0 || (_dunShrineTileC | 0) < 0) {
+                _dunShrineTileR = r | 0
+                _dunShrineTileC = c | 0
+            }
+            const decor = _dunFindDecorAtTile(r | 0, c | 0, SHRINE_BASE);
+            if (decor && !(decor.flags & sprites.Flag.Destroyed)) {
+                sprites.setDataNumber(decor, SHRINE_ACTIVE_UNTIL_KEY, 0)
+                sprites.setDataNumber(decor, SHRINE_ACTIVE_START_KEY, 0)
+            }
+        }
+
+        if (logicBase === TRAP_TOTEM_BASE) {
+            if ((_dunFireTotemTileR | 0) < 0 || (_dunFireTotemTileC | 0) < 0) {
+                _dunFireTotemInteractable = it
+                _dunFireTotemTileR = r | 0
+                _dunFireTotemTileC = c | 0
+                _dunFireTotemDecor = _dunFindDecorAtTile(r | 0, c | 0, TRAP_TOTEM_BASE)
+                _dunFireTotemSetState("idle")
+                _trapTotemApplyPropTint()
+            }
+        }
+
+        const defOverride = trapId ? { propBase: logicBase, trapId } : null;
+        const instance = registerTrapPropSpawn(logicBase, _dunFloorIndex | 0, r | 0, c | 0, it, defOverride);
+        if (instance) {
+            if (instance.state === "solved") {
+                sprites.setDataNumber(it, TRAP_SOLVED_KEY, 1)
+                _dunSetInteractUsed(it, true)
+            } else if (!canAttemptTrapInstance(instance, now | 0)) {
+                sprites.setDataNumber(it, TRAP_DISABLED_KEY, 1)
+                _dunSetInteractUsed(it, true)
+            }
+        }
+    }
+}
+
 function _dunEnterFloor_spawnTrapsForFloor(nowMs: number): void {
     const def = pickTrapDefinitionForFloor(_dunFloorIndex | 0)
     if (!def) return
@@ -20197,40 +20563,42 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
     const onlyDust = !!DEBUG_EFFECTS_HALL_ONLY_DUST
 
     if (!DEBUG_EFFECTS_HALL_ONLY_ROWS) {
-        if (!onlyPoison) _dunSpawnDebugCloud(leftX, y, {
-            texId: HALL_DUST_TEX_ID,
-            tint: _pickEnemyPaletteMid("dust"),
-            tilePx: HALL_DUST_TILE_PX | 0,
-            stepPct: HALL_DUST_TILE_STEP_PCT,
-            alpha: HALL_DUST_ALPHA,
-            maskAlpha: HALL_DUST_MASK_ALPHA,
-            puffAlpha: HALL_CLOUD_PUFF_ALPHA,
-            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-            tag: "hall/dust/normal",
-            lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
-            paletteKey: "dust",
+	        if (!onlyPoison) _dunSpawnDebugCloud(leftX, y, {
+	            texId: HALL_DUST_TEX_ID,
+	            tint: _pickEnemyPaletteMid("dust"),
+	            tilePx: HALL_DUST_TILE_PX | 0,
+	            stepPct: HALL_DUST_TILE_STEP_PCT,
+	            alpha: HALL_DUST_ALPHA,
+	            maskAlpha: HALL_DUST_MASK_ALPHA,
+	            puffAlpha: HALL_CLOUD_PUFF_ALPHA,
+	            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+	            tag: "hall/dust/normal",
+	            lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+	            paletteKey: "dust",
+	            maskSkinId: DUST_CLOUD_GEOMETRY_SKIN_ID,
             dustRise: true,
-            dustRiseMs: 2500,
-            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
-            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
-            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
-            dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y,
-            borderPerMask: true,
-            borderAlpha: 1,
-            borderOutlinePx: 1,
-            borderOutlineAlphaMin: 0.5,
-            doubleMask: true,
-            maskRotateSpeedRadPerMs: 0.00005,
-            mask2RotateSpeedRadPerMs: -0.000035,
-            maskFpsMult: HALL_DUST_MASK_FPS_DEFAULT,
-            mask2FpsMult: HALL_DUST_MASK2_FPS_DEFAULT,
-            maskFpsWobbleAmp: 0.0000001,
-            maskFpsWobblePeriodMs: 7000,
-            mask2FpsWobbleAmp: 0.00000008,
-            mask2FpsWobblePeriodMs: 9000,
-            fillFps: HALL_DUST_FILL_FPS,
-            smokeAnim: "alive"
-        })
+            dustFadeMs: HALL_DUST_FADE_MS,
+            dustRiseMs: HALL_DUST_RISE_MS,
+	            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
+	            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
+	            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
+	            dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y,
+	            borderPerMask: false,
+	            borderAlpha: 0,
+	            borderOutlinePx: 0,
+	            borderOutlineAlphaMin: 0,
+	            doubleMask: false,
+	            maskRotateSpeedRadPerMs: 0,
+	            mask2RotateSpeedRadPerMs: 0,
+	            maskFpsMult: HALL_DUST_MASK_FPS_DEFAULT,
+	            mask2FpsMult: 0,
+	            maskFpsWobbleAmp: 0,
+	            maskFpsWobblePeriodMs: 0,
+	            mask2FpsWobbleAmp: 0,
+	            mask2FpsWobblePeriodMs: 0,
+	            fillFps: HALL_DUST_FILL_FPS,
+	            smokeAnim: "alive"
+	        })
 
         if (!onlyDust) _dunSpawnDebugCloud(rightX, y, {
             texId: HALL_POISON_TEX_ID,
@@ -20262,42 +20630,44 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
             smokeAnim: "alive"
         })
 
-        if (!onlyPoison) _dunSpawnDebugCloud(leftOpaqueX, y, {
-            texId: HALL_DUST_TEX_ID,
-            tint: _pickEnemyPaletteMid("dust"),
-            tilePx: HALL_DUST_TILE_PX | 0,
-            stepPct: HALL_DUST_TILE_STEP_PCT,
-            alpha: 1,
-            maskAlpha: 1,
-            puffAlpha: 1,
-            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-            tag: "hall/dust/opaque",
-            lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
-            paletteKey: "dust",
-            smokeAnim: "alive",
+	        if (!onlyPoison) _dunSpawnDebugCloud(leftOpaqueX, y, {
+	            texId: HALL_DUST_TEX_ID,
+	            tint: _pickEnemyPaletteMid("dust"),
+	            tilePx: HALL_DUST_TILE_PX | 0,
+	            stepPct: HALL_DUST_TILE_STEP_PCT,
+	            alpha: 1,
+	            maskAlpha: 1,
+	            puffAlpha: 1,
+	            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+	            tag: "hall/dust/opaque",
+	            lifespanMs: HALL_EFFECTS_LIFESPAN_MS | 0,
+	            paletteKey: "dust",
+	            maskSkinId: DUST_CLOUD_GEOMETRY_SKIN_ID,
+	            smokeAnim: "alive",
             dustRise: true,
-            dustRiseMs: 2500,
-            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
-            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
-            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
-            dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y,
-            borderPerMask: true,
-            borderAlpha: 1,
-            borderOutlinePx: 1,
-            borderOutlineAlphaMin: 0.5,
-            doubleMask: true,
-            maskRotateSpeedRadPerMs: 0.00005,
-            mask2RotateSpeedRadPerMs: -0.000035,
-            maskFpsMult: HALL_DUST_MASK_FPS_DEFAULT,
-            mask2FpsMult: HALL_DUST_MASK2_FPS_DEFAULT,
-            maskFpsWobbleAmp: 0.0000001,
-            maskFpsWobblePeriodMs: 7000,
-            mask2FpsWobbleAmp: 0.00000008,
-            mask2FpsWobblePeriodMs: 9000,
-            forceOpaqueMask: true,
-            forceOpaqueFill: true,
-            fillFps: HALL_DUST_FILL_FPS
-        })
+            dustFadeMs: HALL_DUST_FADE_MS,
+            dustRiseMs: HALL_DUST_RISE_MS,
+	            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
+	            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
+	            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
+	            dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y,
+	            borderPerMask: false,
+	            borderAlpha: 0,
+	            borderOutlinePx: 0,
+	            borderOutlineAlphaMin: 0,
+	            doubleMask: false,
+	            maskRotateSpeedRadPerMs: 0,
+	            mask2RotateSpeedRadPerMs: 0,
+	            maskFpsMult: HALL_DUST_MASK_FPS_DEFAULT,
+	            mask2FpsMult: 0,
+	            maskFpsWobbleAmp: 0,
+	            maskFpsWobblePeriodMs: 0,
+	            mask2FpsWobbleAmp: 0,
+	            mask2FpsWobblePeriodMs: 0,
+	            forceOpaqueMask: true,
+	            forceOpaqueFill: true,
+	            fillFps: HALL_DUST_FILL_FPS
+	        })
 
         if (!onlyDust) _dunSpawnDebugCloud(rightOpaqueX, y, {
             texId: HALL_POISON_TEX_ID,
@@ -20331,42 +20701,44 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
             forceOpaqueFill: true
         })
 
-        if (!onlyPoison) _dunSpawnDebugCloud(leftX, yDemo, {
-            texId: HALL_DUST_TEX_ID,
-            tint: _pickEnemyPaletteMid("dust"),
-            tilePx: HALL_DUST_TILE_PX | 0,
-            stepPct: HALL_DUST_TILE_STEP_PCT,
-            alpha: HALL_DUST_ALPHA,
-            maskAlpha: HALL_DUST_MASK_ALPHA,
-            puffAlpha: HALL_CLOUD_PUFF_ALPHA,
-            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-            tag: "hall/dust/demo",
-            demoIntroMs: HALL_DEMO_INTRO_MS | 0,
-            demoHoldMs: HALL_DEMO_HOLD_MS | 0,
-            demoFadeMs: HALL_DEMO_FADE_MS | 0,
-            paletteKey: "dust",
+	        if (!onlyPoison) _dunSpawnDebugCloud(leftX, yDemo, {
+	            texId: HALL_DUST_TEX_ID,
+	            tint: _pickEnemyPaletteMid("dust"),
+	            tilePx: HALL_DUST_TILE_PX | 0,
+	            stepPct: HALL_DUST_TILE_STEP_PCT,
+	            alpha: HALL_DUST_ALPHA,
+	            maskAlpha: HALL_DUST_MASK_ALPHA,
+	            puffAlpha: HALL_CLOUD_PUFF_ALPHA,
+	            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+	            tag: "hall/dust/demo",
+	            demoIntroMs: HALL_DEMO_INTRO_MS | 0,
+	            demoHoldMs: HALL_DEMO_HOLD_MS | 0,
+	            demoFadeMs: HALL_DEMO_FADE_MS | 0,
+	            paletteKey: "dust",
+	            maskSkinId: DUST_CLOUD_GEOMETRY_SKIN_ID,
             dustRise: true,
-            dustRiseMs: 2500,
-            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
-            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
-            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
-            dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y,
-            borderPerMask: true,
-            borderAlpha: 1,
-            borderOutlinePx: 1,
-            borderOutlineAlphaMin: 0.5,
-            doubleMask: true,
-            maskRotateSpeedRadPerMs: 0.00005,
-            mask2RotateSpeedRadPerMs: -0.000035,
-            maskFpsMult: HALL_DUST_MASK_FPS_DEFAULT,
-            mask2FpsMult: HALL_DUST_MASK2_FPS_DEFAULT,
-            maskFpsWobbleAmp: 0.0000001,
-            maskFpsWobblePeriodMs: 7000,
-            mask2FpsWobbleAmp: 0.00000008,
-            mask2FpsWobblePeriodMs: 9000,
-            fillFps: HALL_DUST_FILL_FPS,
-            smokeAnim: "alive"
-        })
+            dustFadeMs: HALL_DUST_FADE_MS,
+            dustRiseMs: HALL_DUST_RISE_MS,
+	            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
+	            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
+	            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
+	            dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y,
+	            borderPerMask: false,
+	            borderAlpha: 0,
+	            borderOutlinePx: 0,
+	            borderOutlineAlphaMin: 0,
+	            doubleMask: false,
+	            maskRotateSpeedRadPerMs: 0,
+	            mask2RotateSpeedRadPerMs: 0,
+	            maskFpsMult: HALL_DUST_MASK_FPS_DEFAULT,
+	            mask2FpsMult: 0,
+	            maskFpsWobbleAmp: 0,
+	            maskFpsWobblePeriodMs: 0,
+	            mask2FpsWobbleAmp: 0,
+	            mask2FpsWobblePeriodMs: 0,
+	            fillFps: HALL_DUST_FILL_FPS,
+	            smokeAnim: "alive"
+	        })
 
         if (!onlyDust) _dunSpawnDebugCloud(rightX, yDemo, {
             texId: HALL_POISON_TEX_ID,
@@ -20414,42 +20786,44 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
             smokeAnim: "alive"
         })
 
-        if (!onlyPoison) _dunSpawnDebugCloud(baseX, yStatic, {
-            texId: HALL_DUST_TEX_ID,
-            tint: _pickEnemyPaletteMid("dust"),
-            tilePx: HALL_DUST_TILE_PX | 0,
-            stepPct: HALL_DUST_TILE_STEP_PCT,
-            alpha: HALL_DUST_ALPHA,
-            maskAlpha: HALL_DUST_MASK_ALPHA,
-            puffAlpha: HALL_CLOUD_PUFF_ALPHA,
-            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
-            tag: "hall/dust/static",
-            lifespanMs: 0,
-            dustFade: false,
-            paletteKey: "dust",
-            noDemo: true,
-            doubleMask: true,
+	        if (!onlyPoison) _dunSpawnDebugCloud(baseX, yStatic, {
+	            texId: HALL_DUST_TEX_ID,
+	            tint: _pickEnemyPaletteMid("dust"),
+	            tilePx: HALL_DUST_TILE_PX | 0,
+	            stepPct: HALL_DUST_TILE_STEP_PCT,
+	            alpha: HALL_DUST_ALPHA,
+	            maskAlpha: HALL_DUST_MASK_ALPHA,
+	            puffAlpha: HALL_CLOUD_PUFF_ALPHA,
+	            puffCount: HALL_CLOUD_PUFF_COUNT | 0,
+	            tag: "hall/dust/static",
+	            lifespanMs: 0,
+	            dustFade: false,
+	            paletteKey: "dust",
+	            maskSkinId: DUST_CLOUD_GEOMETRY_SKIN_ID,
+	            noDemo: true,
+	            doubleMask: false,
             dustRise: true,
-            dustRiseMs: 2500,
-            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
-            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
-            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
-            dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y,
-            borderPerMask: true,
-            borderAlpha: 1,
-            borderOutlinePx: 1,
-            borderOutlineAlphaMin: 0.5,
-            maskRotateSpeedRadPerMs: 0.00005,
-            mask2RotateSpeedRadPerMs: -0.000035,
-            maskFpsMult: HALL_DUST_MASK_FPS_DEFAULT,
-            mask2FpsMult: HALL_DUST_MASK2_FPS_DEFAULT,
-            maskFpsWobbleAmp: 1.8,
-            maskFpsWobblePeriodMs: 7000,
-            mask2FpsWobbleAmp: 1.4,
-            mask2FpsWobblePeriodMs: 9000,
-            fillFps: HALL_DUST_FILL_FPS,
-            smokeAnim: "alive"
-        })
+            dustFadeMs: HALL_DUST_FADE_MS,
+            dustRiseMs: HALL_DUST_RISE_MS,
+	            dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
+	            dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
+	            dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X,
+	            dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y,
+	            borderPerMask: false,
+	            borderAlpha: 0,
+	            borderOutlinePx: 0,
+	            borderOutlineAlphaMin: 0,
+	            maskRotateSpeedRadPerMs: 0,
+	            mask2RotateSpeedRadPerMs: 0,
+	            maskFpsMult: HALL_DUST_MASK_FPS_DEFAULT,
+	            mask2FpsMult: 0,
+	            maskFpsWobbleAmp: 0,
+	            maskFpsWobblePeriodMs: 0,
+	            mask2FpsWobbleAmp: 0,
+	            mask2FpsWobblePeriodMs: 0,
+	            fillFps: HALL_DUST_FILL_FPS,
+	            smokeAnim: "alive"
+	        })
     }
 
     const worldCols = (_engineWorldTileMap && _engineWorldTileMap[0]) ? (_engineWorldTileMap[0].length | 0) : 0
@@ -20469,103 +20843,167 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
             const clusterX = (baseX | 0)
             const dustRiseStart = (nowMs | 0)
             const dustRiseMs = HALL_DUST_RISE_MS | 0
+            const setSpacing = Math.max(260, Math.round((HALL_CLOUD_WIDTH_PX | 0) * 1.35)) | 0
+            const dustSets = [
+                { key: "left", texId: "waves3 texture grayscale 256x256", traceSkip: false, clamp: [0.5, 0.6, 0.7, 0.8] },
+                { key: "center", texId: "waves3 texture grayscale 256x256", traceSkip: false, clamp: [0.6, 0.7, 0.8, 0.9] },
+                { key: "right", texId: "waves3 texture grayscale 256x256", traceSkip: false, clamp: [0.7, 0.8, 0.9, 1.0] }
+            ]
+            // The built-in scale picker is step-quantized (0.25/0.5/1/2/3). For the dust cluster we want
+            // smooth, predictable relative sizing (large != medium), so we compute a per-cloud maskScaleMult
+            // that compensates for quantization while keeping the intended regionScale ratios.
+            const baseMaskRadius = Math.max(Math.idiv(HALL_CLOUD_WIDTH_PX | 0, 2) | 0, Math.idiv(HALL_CLOUD_HEIGHT_PX | 0, 2) | 0) + 18
+            const baseMaskScale = _effectPickScaleForRadius(DUST_CLOUD_GEOMETRY_SKIN_ID, "", baseMaskRadius | 0)
             const clusterCfg = [
                 // Center (largest): steady rise/fall, no stagger.
-                { dxFrac: 0, dyFrac: 0.22, regionScale: 1.0, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 1, rotDeg: 0, fillOffset: 0, maskScaleMult: 1, maskFpsMult: 0.35, maskFrameOffset: 0, maskFlipX: false, maskFlipY: false, riseJitterPct: 0, riseJitterPhase: 0 },
+                { dxFrac: 0, dyFrac: 0.22, regionScale: 1.0, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 1, rotDeg: 0, fillOffset: 0, maskScaleMult: 1, maskFpsMult: HALL_DUST_MASK_FPS_BASE, maskFrameOffset: 0, maskFrameStartPct: 0, maskFrameReverse: false, maskFlipX: false, maskFlipY: false, riseJitterPct: 0, riseJitterPhase: 0, riseLiftPx: 0, maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_FLOOR_CENTER },
                 // Left (larger) explodes early, then eases.
-                { dxFrac: -0.35, dyFrac: 0.10, regionScale: 0.7, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 7, maskScaleMult: 1, maskFpsMult: 0.42, maskFrameOffset: 8, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.03, riseJitterPhase: 0.8 },
+                { dxFrac: -0.35, dyFrac: 0.10, regionScale: 0.7, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 7, maskScaleMult: 1, maskFpsMult: HALL_DUST_MASK_FPS_LARGE, maskFrameOffset: 0, maskFrameStartPct: HALL_DUST_MASK_START_LARGE_PCT, maskFrameReverse: true, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.03, riseJitterPhase: 0.8, riseLiftPx: 8, maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_FLOOR_OUTER },
                 // Right (medium) explodes later, with a top burst.
-                { dxFrac: 0.30, dyFrac: 0.14, regionScale: 0.55, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 13, maskScaleMult: 1, maskFpsMult: 0.4, maskFrameOffset: 16, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.04, riseJitterPhase: 2.1 },
+                { dxFrac: 0.30, dyFrac: 0.14, regionScale: 0.55, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 13, maskScaleMult: 1, maskFpsMult: HALL_DUST_MASK_FPS_MEDIUM, maskFrameOffset: 0, maskFrameStartPct: HALL_DUST_MASK_START_MEDIUM_PCT, maskFrameReverse: false, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.04, riseJitterPhase: 2.1, riseLiftPx: 12, maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_FLOOR_OUTER },
                 // Front small (top) pops last.
-                { dxFrac: 0.20, dyFrac: 0.30, regionScale: 0.35, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 19, maskScaleMult: 1.0, maskFpsMult: 0.38, maskFrameOffset: 24, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.05, riseJitterPhase: 3.7 },
+                { dxFrac: 0.20, dyFrac: 0.30, regionScale: 0.35, riseMs: dustRiseMs, endY: 0.7, endX: 1.2, riseEasePow: 2, rotDeg: 0, fillOffset: 19, maskScaleMult: 1.0, maskFpsMult: HALL_DUST_MASK_FPS_SMALL, maskFrameOffset: 0, maskFrameStartPct: HALL_DUST_MASK_START_LARGE_PCT, maskFrameReverse: true, maskFlipX: false, maskFlipY: false, riseJitterPct: 0.05, riseJitterPhase: 3.7, riseLiftPx: 16, maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_FLOOR_OUTER },
             ]
-            for (let i = 0; i < clusterCfg.length; i++) {
-                const c = clusterCfg[i]
-                const sizeX = (HALL_CLOUD_WIDTH_PX | 0) * c.regionScale
-                const sizeY = (HALL_CLOUD_HEIGHT_PX | 0) * c.regionScale
-                const dx = Math.round(sizeX * c.dxFrac)
-                const dy = Math.round(sizeY * c.dyFrac)
-                const rotRad = (Number(c.rotDeg) * Math.PI) / 180
-                _dunSpawnDebugCloud((clusterX + (dx | 0)) | 0, (clusterY + (dy | 0)) | 0, {
-                    texId: HALL_DUST_TEX_ID,
-                    tint: _pickEnemyPaletteMid("dust"),
-                    tilePx: HALL_DUST_TILE_PX | 0,
-                    stepPct: HALL_DUST_TILE_STEP_PCT,
-                    alpha: HALL_DUST_ALPHA,
-                    maskAlpha: HALL_DUST_MASK_ALPHA,
-                    puffAlpha: 0,
-                    puffCount: 0,
-                    tag: `hall/dust/cluster/${i}`,
-                    paletteKey: "dust",
-                    noDemo: true,
-                    hideGeometry: false,
-                    dustRise: true,
-                    dustFade: false,
-                    dustRiseStartMs: (dustRiseStart | 0),
-                    dustRiseMs: c.riseMs,
-                    dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
-                    dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
-                    dustRiseEndScaleX: c.endX,
-                    dustRiseEndScaleY: c.endY,
-                    dustRiseScaleMult: c.regionScale,
-                    dustRiseEasePow: (c as any).riseEasePow,
-                    dustRiseJitterPct: (c as any).riseJitterPct,
-                    dustRiseJitterPhase: (c as any).riseJitterPhase,
-                    dustCenterX: clusterX,
-                    dustCenterY: clusterY,
-                    dustOffsetX: dx,
-                    dustOffsetY: dy,
-                    borderPerMask: true,
-                    borderAlpha: 1,
-                    borderTint: 0xffffff,
-                    borderOutlinePx: 1,
-                    borderOutlineAlphaMin: HALL_DUST_BORDER_ALPHA_MIN,
-                    maskRotateSpeedRadPerMs: 0,
-                    maskRotateBaseRad: rotRad,
-                    doubleMask: false,
-                    maskFpsMult: Number.isFinite(c.maskFpsMult as any) ? Number(c.maskFpsMult) : HALL_DUST_MASK_FPS_DEFAULT,
-                    mask2FpsMult: 0,
-                    maskFpsWobbleAmp: 0,
-                    maskFpsWobblePeriodMs: 0,
-                    mask2FpsWobbleAmp: 0,
-                    mask2FpsWobblePeriodMs: 0,
-                    fillAlphaSplit: 0.5,
-                    fillFps: HALL_DUST_FILL_FPS,
-                    regionScale: c.regionScale,
-                    regionMinW: 64,
-                    regionMinH: 64,
-                    maskScaleMult: c.maskScaleMult,
-                    fillFrameOffset: c.fillOffset,
-                    maskFrameOffset: (c as any).maskFrameOffset,
-                    maskFlipX: !!(c as any).maskFlipX,
-                    maskFlipY: !!(c as any).maskFlipY,
-                    maskAlphaMinClamp: HALL_DUST_MASK_ALPHA_MIN
-                })
+            const setCenter = Math.idiv((dustSets.length | 0) - 1, 2)
+            for (let s = 0; s < dustSets.length; s++) {
+                const set = dustSets[s]
+                const setX = (clusterX + (((s - setCenter) | 0) * (setSpacing | 0))) | 0
+                const setTag = `hall/dust/${set.key}`
+                for (let i = 0; i < clusterCfg.length; i++) {
+                    const c = clusterCfg[i]
+                    const sizeX = (HALL_CLOUD_WIDTH_PX | 0) * c.regionScale
+                    const sizeY = (HALL_CLOUD_HEIGHT_PX | 0) * c.regionScale
+                    const dx = Math.round(sizeX * c.dxFrac)
+                    const dy = Math.round(sizeY * c.dyFrac)
+                    const rotRad = (Number(c.rotDeg) * Math.PI) / 180
+                    const regionW = Math.max(64, Math.round((HALL_CLOUD_WIDTH_PX | 0) * c.regionScale)) | 0
+                    const regionH = Math.max(64, Math.round((HALL_CLOUD_HEIGHT_PX | 0) * c.regionScale)) | 0
+                    const maskRadius = Math.max(Math.idiv(regionW, 2) | 0, Math.idiv(regionH, 2) | 0) + 18
+                    const rawScale = _effectPickScaleForRadius(DUST_CLOUD_GEOMETRY_SKIN_ID, "", maskRadius | 0)
+                    const targetScale = (Number.isFinite(baseMaskScale) && baseMaskScale > 0 ? Number(baseMaskScale) : 1) * c.regionScale
+                    const quantFixMult = (Number.isFinite(rawScale) && rawScale > 0) ? (targetScale / Number(rawScale)) : 1
+                    const maskScaleMult = Math.max(0.2, Math.min(4, quantFixMult * (Number.isFinite((c as any).maskScaleMult) ? Number((c as any).maskScaleMult) : 1)))
+                    const clampList = Array.isArray((set as any).clamp) ? (set as any).clamp : null
+                    const clampVal = clampList && Number.isFinite(clampList[i])
+                        ? Number(clampList[i])
+                        : (Number.isFinite((c as any).maskAlphaMinClamp) ? Number((c as any).maskAlphaMinClamp) : 0)
+                    _dunSpawnDebugCloud((setX + (dx | 0)) | 0, (clusterY + (dy | 0)) | 0, {
+                        texId: set.texId,
+                        tint: _pickEnemyPaletteMid("dust"),
+                        tilePx: HALL_DUST_TILE_PX | 0,
+                        stepPct: HALL_DUST_TILE_STEP_PCT,
+                        alpha: HALL_DUST_CLUSTER_FILL_ALPHA,
+                        // Use the baked "bordered" geometry sheet for the visible silhouette, so keep it visible.
+                        // The fill is still masked by geometry/occlusion; this alpha is purely the geometry sprite draw.
+                        maskAlpha: 1,
+                        // Clamp geometry alpha per-sprite so fill remains visible while preserving silhouette.
+                        forceOpaqueMask: false,
+                        // Make geometry barely visible so the fill dominates during debugging.
+                        geometryAlpha: 0.02,
+                        puffAlpha: 0,
+                        puffCount: 0,
+                        tag: `${setTag}/cluster/${i}`,
+                        traceSkip: !!set.traceSkip,
+                        paletteKey: "dust",
+                        maskSkinId: DUST_CLOUD_GEOMETRY_SKIN_ID,
+                        noDemo: true,
+                        // Use the bordered geometry as the visible silhouette and occlude it like the fill.
+                        hideGeometry: false,
+                        maskOccludeSelf: true,
+                        dustRise: true,
+                        dustFadeMs: HALL_DUST_FADE_MS,
+                        dustFade: false,
+                        dustRiseStartMs: (dustRiseStart | 0),
+                        dustRiseMs: c.riseMs,
+                        dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
+                        dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
+                        dustRiseEndScaleX: c.endX,
+                        dustRiseEndScaleY: c.endY,
+                        dustRiseScaleMult: 1,
+                        dustRiseEasePow: (c as any).riseEasePow,
+                        dustRiseJitterPct: (c as any).riseJitterPct,
+                        dustRiseJitterPhase: (c as any).riseJitterPhase,
+                        dustRiseLiftPx: (c as any).riseLiftPx,
+                        spawnPadPillar: i === 0,
+                        padBaseOffsetPx: HALL_DUST_PAD_BASE_OFFSET_PX,
+                        pillarBaseOffsetPx: HALL_DUST_PILLAR_BASE_OFFSET_PX,
+                        padSinkPx: HALL_DUST_PAD_SINK_PX,
+                        pillarSinkPx: HALL_DUST_PILLAR_SINK_PX,
+                        dustCenterX: setX,
+                        dustCenterY: clusterY,
+                        dustOffsetX: dx,
+                        dustOffsetY: dy,
+                        borderPerMask: false,
+                        borderAlpha: 0,
+                        borderTint: 0,
+                        borderOutlinePx: 0,
+                        borderOutlineAlphaMin: 0,
+                        maskRotateSpeedRadPerMs: 0,
+                        maskRotateBaseRad: 0,
+                        doubleMask: false,
+                        maskFpsMult: Number.isFinite(c.maskFpsMult as any) ? Number(c.maskFpsMult) : HALL_DUST_MASK_FPS_DEFAULT,
+                        mask2FpsMult: 0,
+                        maskFpsWobbleAmp: 0,
+                        maskFpsWobblePeriodMs: 0,
+                        mask2FpsWobbleAmp: 0,
+                        mask2FpsWobblePeriodMs: 0,
+                        fillAlphaSplit: 0.5,
+                        fillFps: HALL_DUST_FILL_FPS,
+                        useTiledFill: true,
+                        // Debug: make the fill fully opaque so masking problems are obvious.
+                        forceOpaqueFill: true,
+                        regionScale: c.regionScale,
+                        regionMinW: 64,
+                        regionMinH: 64,
+                        maskScaleMult,
+                        fillFrameOffset: c.fillOffset,
+                        maskFrameOffset: (c as any).maskFrameOffset,
+                        maskFlipX: !!(c as any).maskFlipX,
+                        maskFlipY: !!(c as any).maskFlipY,
+                        // Use the authored alpha as-is (this sheet already has a clean boundary + border in alpha).
+                        // Clamping/alpha-flooring here destroys the border definition.
+                        maskAlphaMinClamp: clampVal
+                    })
+                }
             }
             // Ensure back layers are occluded by any front layers (all clusters above in depth).
-            const clusterMasks: Record<number, Sprite> = Object.create(null)
-            const clusterIndices: number[] = []
+            const clusterMasks: Record<string, Record<number, Sprite>> = Object.create(null)
+            const clusterIndices: Record<string, number[]> = Object.create(null)
             for (let i = 0; i < _dunEffectsHallFx.length; i++) {
                 const fx = _dunEffectsHallFx[i]
                 if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
                 const tag = sprites.readDataString(fx, "__hallTag") || ""
-                const m = /^hall\/dust\/cluster\/(\d+)\|mask$/.exec(tag)
-                if (!m || !m[1]) continue
-                const idx = Number(m[1]) | 0
+                const m = /^hall\/dust\/([^/]+)\/cluster\/(\d+)\|mask$/.exec(tag)
+                if (!m || !m[1] || !m[2]) continue
+                const setKey = String(m[1] || "")
+                const idx = Number(m[2]) | 0
                 if (!(idx >= 0)) continue
-                clusterMasks[idx] = fx
-                clusterIndices.push(idx)
+                let setMasks = clusterMasks[setKey]
+                if (!setMasks) {
+                    setMasks = Object.create(null)
+                    clusterMasks[setKey] = setMasks
+                }
+                let setList = clusterIndices[setKey]
+                if (!setList) {
+                    setList = []
+                    clusterIndices[setKey] = setList
+                }
+                setMasks[idx] = fx
+                setList.push(idx)
             }
-            if (clusterIndices.length) {
-                clusterIndices.sort((a, b) => a - b)
-                for (let i = 0; i < clusterIndices.length; i++) {
-                    const idx = clusterIndices[i]
-                    const backMask = clusterMasks[idx]
+            for (const setKey in clusterIndices) {
+                const setList = clusterIndices[setKey]
+                const setMasks = clusterMasks[setKey]
+                if (!setList || !setList.length || !setMasks) continue
+                setList.sort((a, b) => a - b)
+                for (let i = 0; i < setList.length; i++) {
+                    const idx = setList[i]
+                    const backMask = setMasks[idx]
                     if (!backMask) continue
                     const frontMasks: Sprite[] = []
-                    for (let j = i + 1; j < clusterIndices.length; j++) {
-                        const fidx = clusterIndices[j]
-                        const fm = clusterMasks[fidx]
+                    for (let j = i + 1; j < setList.length; j++) {
+                        const fidx = setList[j]
+                        const fm = setMasks[fidx]
                         if (fm) frontMasks.push(fm)
                     }
                     const anyFx: any = backMask as any
@@ -20573,8 +21011,10 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
                     const sc = g ? g.__phaserScene : null
                     const atlas = _getEffectAtlasAny()
                     if (sc && sc.textures && atlas) {
-                        const skin = (sprites.readDataString(backMask, "effectSkin") || "").trim()
-                        const dir = (sprites.readDataString(backMask, "effectDir") || "").trim()
+                        const occSkin = (sprites.readDataString(backMask, "__hallOccSkin") || "").trim()
+                        const occDir = (sprites.readDataString(backMask, "__hallOccDir") || "").trim()
+                        const skin = (occSkin || (sprites.readDataString(backMask, "effectSkin") || "")).trim()
+                        const dir = (occDir || (sprites.readDataString(backMask, "effectDir") || "")).trim()
                         const resolved = skin ? _resolveEffectEntry(atlas, skin, dir || "") : null
                         const fw = resolved ? (resolved.frameW | 0) : 0
                         const fh = resolved ? (resolved.frameH | 0) : 0
@@ -20601,48 +21041,6 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
                                         maskImage.setVisible(false)
                                         maskImage.setOrigin(0.5, 0.5)
                                         ;(maskImage as any).__heMaskNativeOverride = maskImage
-                                        const frontKey = `effects.hallocclude.front.${(backMask.id | 0)}.${fw}x${fh}`
-                                        const frontTex = sc.textures.exists(frontKey)
-                                            ? sc.textures.get(frontKey)
-                                            : sc.textures.createCanvas(frontKey, fw, fh)
-                                        const frontCtx = frontTex ? frontTex.getContext() : null
-                                        if (frontCtx && frontTex) {
-                                            try { frontCtx.clearRect(0, 0, fw, fh) } catch { }
-                                            frontTex.refresh()
-                                        }
-                                        const borderKey = `effects.hallocclude.border.${(backMask.id | 0)}.${fw}x${fh}`
-                                        const borderTex = sc.textures.exists(borderKey)
-                                            ? sc.textures.get(borderKey)
-                                            : sc.textures.createCanvas(borderKey, fw, fh)
-                                        const borderCtx = borderTex ? borderTex.getContext() : null
-                                        if (borderCtx && borderTex) {
-                                            try { borderCtx.clearRect(0, 0, fw, fh) } catch { }
-                                            borderTex.refresh()
-                                        }
-                                        const frontMaskImage = frontTex ? sc.add.image(backMask.x, backMask.y, frontTex.key) : null
-                                        if (frontMaskImage) {
-                                            frontMaskImage.setVisible(false)
-                                            frontMaskImage.setOrigin(0.5, 0.5)
-                                            ;(frontMaskImage as any).__heMaskNativeOverride = frontMaskImage
-                                        }
-                                        const frontMaskSprite = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
-                                        frontMaskSprite.setFlag(SpriteFlag.Ghost, true)
-                                        frontMaskSprite.setFlag(SpriteFlag.Invisible, true)
-                                        frontMaskSprite.x = backMask.x
-                                        frontMaskSprite.y = backMask.y
-                                        ;(frontMaskSprite as any).__heMaskNativeOverride = frontMaskImage
-                                        const borderMaskImage = borderTex ? sc.add.image(backMask.x, backMask.y, borderTex.key) : null
-                                        if (borderMaskImage) {
-                                            borderMaskImage.setVisible(false)
-                                            borderMaskImage.setOrigin(0.5, 0.5)
-                                            ;(borderMaskImage as any).__heMaskNativeOverride = borderMaskImage
-                                        }
-                                        const borderMaskSprite = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
-                                        borderMaskSprite.setFlag(SpriteFlag.Ghost, true)
-                                        borderMaskSprite.setFlag(SpriteFlag.Invisible, true)
-                                        borderMaskSprite.x = backMask.x
-                                        borderMaskSprite.y = backMask.y
-                                        ;(borderMaskSprite as any).__heMaskNativeOverride = borderMaskImage
                                         anyFx.__hallMaskOcclude = {
                                             canvasTex,
                                             ctx,
@@ -20654,25 +21052,39 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
                                             frameH: fh,
                                             src1: backMask,
                                             src2List: frontMasks.slice(),
-                                            maskImage,
-                                            frontCanvasTex: frontTex,
-                                            frontCtx,
-                                            frontMaskImage,
-                                            frontMaskSprite,
-                                            borderCanvasTex: borderTex,
-                                            borderCtx,
-                                            borderMaskImage,
-                                            borderMaskSprite
+                                            maskImage
                                         }
-                                        if (frontMasks.length) {
-                                            anyFx.__heMaskNativeOverride = maskImage
-                                        }
+                                        // Always drive masking from the canvas-composited mask image.
+                                        // Even when there are no front masks (no occlusion), this keeps a single
+                                        // deterministic mask path and lets us hide the geometry sprite safely.
+                                        anyFx.__heMaskNativeOverride = maskImage
                                     }
                                 }
                             } else if (anyFx.__hallMaskOcclude) {
                                 anyFx.__hallMaskOcclude.src2List = frontMasks.slice()
-                                if (frontMasks.length && anyFx.__hallMaskOcclude.maskImage) {
+                                if (anyFx.__hallMaskOcclude.maskImage) {
                                     anyFx.__heMaskNativeOverride = anyFx.__hallMaskOcclude.maskImage
+                                }
+                            }
+                            // Ensure any hall tile fills that target this mask are updated to the occlusion mask.
+                            if (anyFx.__heMaskNativeOverride && sc && typeof sc.add === "function") {
+                                const baseTag = sprites.readDataString(backMask, "__hallTag") || ""
+                                const tileTag = baseTag ? `${baseTag.replace(/\\|mask$/, "")}|tile` : ""
+                                for (let k = 0; k < _dunEffectsHallNativeFx.length; k++) {
+                                    const entry = _dunEffectsHallNativeFx[k]
+                                    const tile: any = entry && entry.sprite
+                                    if (!tile || tile.destroyed) continue
+                                    const tag = tile.__heHallTag || ""
+                                    if (!tileTag || tag !== tileTag) continue
+                                    try {
+                                        if (typeof anyFx.__heMaskNativeOverride.createBitmapMask === "function") {
+                                            const mask = anyFx.__heMaskNativeOverride.createBitmapMask()
+                                            tile.setMask(mask)
+                                        }
+                                    } catch { }
+                                    tile.__heMaskSpriteId = String((backMask.id | 0))
+                                    tile.__heMaskSpriteTag = baseTag
+                                    tile.__heMaskSpriteRef = anyFx.__heMaskNativeOverride
                                 }
                             }
                         }
@@ -20695,36 +21107,37 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
             const alphaPoison = HALL_POISON_ALPHA * alphaScalePoison
             const labelDust = "a" + Number(alphaDust).toFixed(2) + " f" + Number(speedScaleDust).toFixed(2)
             const labelPoison = "a" + Number(alphaPoison).toFixed(2) + " f" + Number(speedScalePoison).toFixed(2)
-            if (!onlyPoison && !skipAlphaRow) _dunSpawnDebugCloud(x | 0, yTop | 0, {
-                texId: HALL_DUST_TEX_ID,
-                tint: _pickEnemyPaletteMid("dust"),
-                tilePx: HALL_DUST_TILE_PX | 0,
-                stepPct: HALL_DUST_TILE_STEP_PCT,
-                alpha: alphaDust,
-                maskAlpha: HALL_DUST_MASK_ALPHA,
-                puffAlpha: 0,
-                puffCount: 0,
-                tag: `hall/alpha/dust/${i}`,
-                paletteKey: "dust",
-                noDemo: true,
-                hideGeometry: false,
-                dustRise: true,
-                dustFade: false,
-                dustRiseStartMs: nowMs | 0,
-                dustRiseMs: Math.round(2500 + ((1 - t) * 2500)),
-                dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
-                dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
-                dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X + (t * 0.2),
-                dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y + (t * 0.15),
-                borderPerMask: true,
-                borderAlpha: borderAlpha,
-                borderOutlinePx: 1,
-                borderOutlineAlphaMin: 0.5,
-                maskRotateSpeedRadPerMs: 0,
-                maskRotateBaseRad: 0,
-                doubleMask: false,
-                maskFpsMult: speedScaleDust,
-                mask2FpsMult: 0,
+	            if (!onlyPoison && !skipAlphaRow) _dunSpawnDebugCloud(x | 0, yTop | 0, {
+	                texId: HALL_DUST_TEX_ID,
+	                tint: _pickEnemyPaletteMid("dust"),
+	                tilePx: HALL_DUST_TILE_PX | 0,
+	                stepPct: HALL_DUST_TILE_STEP_PCT,
+	                alpha: alphaDust,
+	                maskAlpha: HALL_DUST_MASK_ALPHA,
+	                puffAlpha: 0,
+	                puffCount: 0,
+	                tag: `hall/alpha/dust/${i}`,
+	                paletteKey: "dust",
+	                maskSkinId: DUST_CLOUD_GEOMETRY_SKIN_ID,
+	                noDemo: true,
+	                hideGeometry: false,
+	                dustRise: true,
+	                dustFade: false,
+	                dustRiseStartMs: nowMs | 0,
+	                dustRiseMs: Math.round(HALL_DUST_RISE_MS + ((1 - t) * HALL_DUST_RISE_MS)),
+	                dustRiseStartScaleX: HALL_DUST_RISE_START_SCALE_X,
+	                dustRiseStartScaleY: HALL_DUST_RISE_START_SCALE_Y,
+	                dustRiseEndScaleX: HALL_DUST_RISE_END_SCALE_X + (t * 0.2),
+	                dustRiseEndScaleY: HALL_DUST_RISE_END_SCALE_Y + (t * 0.15),
+	                borderPerMask: false,
+	                borderAlpha: 0,
+	                borderOutlinePx: 0,
+	                borderOutlineAlphaMin: 0,
+	                maskRotateSpeedRadPerMs: 0,
+	                maskRotateBaseRad: 0,
+	                doubleMask: false,
+	                maskFpsMult: speedScaleDust,
+	                mask2FpsMult: 0,
                 maskFpsWobbleAmp: 0,
                 maskFpsWobblePeriodMs: 0,
                 mask2FpsWobbleAmp: 0,
@@ -20777,9 +21190,43 @@ function _dunEnterFloor_spawnEffectsHall(nowMs: number): void {
 }
 
 function _dunClearEffectsHall(): void {
+    const g: any = (globalThis as any)
+    const sc: any = g ? g.__phaserScene : null
     if (_dunEffectsHallFx && _dunEffectsHallFx.length > 0) {
         for (let i = 0; i < _dunEffectsHallFx.length; i++) {
             const fx = _dunEffectsHallFx[i]
+            const anyFx: any = fx as any
+            // Effects hall spawns some Phaser-native helper objects (CanvasTextures + Images)
+            // for mask composition/occlusion; those are not children of the arcade sprite and
+            // must be cleaned up explicitly to avoid leaks/artifacts across reruns.
+            try {
+                const occ: any = anyFx && anyFx.__hallMaskOcclude ? anyFx.__hallMaskOcclude : null
+                if (occ) {
+                    try { occ.maskImage?.destroy?.() } catch { }
+                    try { occ.frontMaskImage?.destroy?.() } catch { }
+                    try { occ.borderMaskImage?.destroy?.() } catch { }
+                    try { occ.frontMaskSprite?.destroy?.() } catch { }
+                    try { occ.borderMaskSprite?.destroy?.() } catch { }
+                    if (sc && sc.textures) {
+                        try { if (occ.canvasTex?.key) sc.textures.remove(occ.canvasTex.key) } catch { }
+                        try { if (occ.frontCanvasTex?.key) sc.textures.remove(occ.frontCanvasTex.key) } catch { }
+                        try { if (occ.borderCanvasTex?.key) sc.textures.remove(occ.borderCanvasTex.key) } catch { }
+                    }
+                    try { anyFx.__hallMaskOcclude = null } catch { }
+                }
+                const union: any = anyFx && anyFx.__hallMaskUnion ? anyFx.__hallMaskUnion : null
+                if (union) {
+                    try { union.maskImage?.destroy?.() } catch { }
+                    try { union.outlineImage?.destroy?.() } catch { }
+                    if (sc && sc.textures) {
+                        try { if (union.canvasTex?.key) sc.textures.remove(union.canvasTex.key) } catch { }
+                        try { if (union.outlineTex?.key) sc.textures.remove(union.outlineTex.key) } catch { }
+                    }
+                    try { anyFx.__hallMaskUnion = null } catch { }
+                    try { anyFx.__hallMaskUnionOutline = null } catch { }
+                    try { anyFx.__hallMaskUnionActive = 0 } catch { }
+                }
+            } catch { }
             if (fx && !(fx.flags & sprites.Flag.Destroyed)) fx.destroy()
         }
         _dunEffectsHallFx = []
@@ -20795,6 +21242,15 @@ function _dunClearEffectsHall(): void {
             }
         }
         _dunEffectsHallNativeFx = []
+    }
+    if (_dunEffectsHallDecor && _dunEffectsHallDecor.length > 0) {
+        for (let i = 0; i < _dunEffectsHallDecor.length; i++) {
+            const decor = _dunEffectsHallDecor[i]
+            if (decor && !(decor.flags & sprites.Flag.Destroyed)) {
+                try { decor.destroy() } catch { }
+            }
+        }
+        _dunEffectsHallDecor = []
     }
 }
 
@@ -20844,6 +21300,12 @@ function _blendPaletteColor(a: number, b: number, aWeight: number): number {
 
 function _resolveEnemyPalette(key: string, paletteSet: any): number[] | null {
     if (!paletteSet || !key) return null
+    if (DEBUG_EFFECTS_HALL_FORCE_WHITE_PALETTE) {
+        const base = (paletteSet && paletteSet[key]) || (paletteSet && paletteSet.earth) || []
+        const count = (base && base.length) ? (base.length | 0) : 6
+        const white = new Array(Math.max(1, count)).fill(0xffffff)
+        return white
+    }
     if (key !== "dust") {
         const palette = paletteSet[key] as number[] | undefined
         return palette && palette.length ? palette : null
@@ -20857,7 +21319,8 @@ function _resolveEnemyPalette(key: string, paletteSet: any): number[] | null {
     const cached = _dustPaletteCache[cacheKey]
     if (cached && cached.length === count) return cached
     const mix: number[] = []
-    const earthWeight = 0.4
+    // Favor air (wind) palette; keep a lighter earth influence for dust.
+    const earthWeight = 0.25
     for (let i = 0; i < count; i++) {
         mix.push(_blendPaletteColor(earth[i] | 0, base[i] | 0, earthWeight))
     }
@@ -21005,6 +21468,10 @@ type DebugCloudConfig = {
     puffAlpha: number
     puffCount: number
     tag?: string
+    traceSkip?: boolean
+    // Optional override for the geometry sheet used as the mask (and visible geometry, if enabled).
+    // Used to keep dust geometry independent of poison geometry.
+    maskSkinId?: string
     hideGeometry?: boolean
     borderAura?: 1 | 2 | 3
     borderInnerAura?: 1 | 2 | 3
@@ -21023,17 +21490,16 @@ type DebugCloudConfig = {
     demoHoldMs?: number
     demoFadeMs?: number
     paletteKey?: "earth" | "poison" | "dust"
-    enforcePaletteOnGeometry?: boolean
-    maskAlphaScale?: number
-    maskAlphaMinClamp?: number
-    probeKey?: string
-    probeValue?: number
+	    enforcePaletteOnGeometry?: boolean
+	    maskAlphaScale?: number
+	    maskAlphaMinClamp?: number
+	    probeKey?: string
+	    probeValue?: number
     noDemo?: boolean
-    smokeAnim?: "alive" | "aliveSlow" | "fade" | "static"
-    forceOpaqueMask?: boolean
-    forceOpaqueFill?: boolean
-    maskAlphaMinClamp?: number
-    maskRotateSpeedRadPerMs?: number
+	    smokeAnim?: "alive" | "aliveSlow" | "fade" | "static"
+	    forceOpaqueMask?: boolean
+	    forceOpaqueFill?: boolean
+	    maskRotateSpeedRadPerMs?: number
     maskRotateBaseRad?: number
     maskFpsMult?: number
     maskFpsWobbleAmp?: number
@@ -21057,6 +21523,13 @@ type DebugCloudConfig = {
     dustRiseScaleMult?: number
     dustRiseJitterPct?: number
     dustRiseJitterPhase?: number
+    dustRiseLiftPx?: number
+    dustFadeMs?: number
+    spawnPadPillar?: boolean
+    padBaseOffsetPx?: number
+    pillarBaseOffsetPx?: number
+    padSinkPx?: number
+    pillarSinkPx?: number
     fillFrameOffset?: number
     regionMinW?: number
     regionMinH?: number
@@ -21066,11 +21539,19 @@ type DebugCloudConfig = {
     dustOffsetY?: number
     fillAlphaSplit?: number
     fillFps?: number
+    useTiledFill?: boolean
     regionScale?: number
     maskScaleMult?: number
     maskFrameOffset?: number
+    maskFrameStartPct?: number
+    maskFrameReverse?: boolean
     maskFlipX?: boolean
     maskFlipY?: boolean
+    // Optional: separate visible geometry alpha (when mask should remain fully opaque for fill).
+    geometryAlpha?: number
+    // When true, the geometry sprite is visible and must be occluded by front masks.
+    // This sets the geometry sprite to use the occlusion mask path (self-masked via __heMaskNativeOverride).
+    maskOccludeSelf?: boolean
 }
 
 type VfxTweakState = {
@@ -21195,6 +21676,35 @@ function _applySmokeAnim(opts: EffectApplyOpts, mode: "alive" | "aliveSlow" | "f
     opts.fps = _vfxTweakFps(SMOKE_ANIM_ALIVE_FPS | 0)
 }
 
+function _applyHallMaskFrameOverrides(fx: Sprite, skinId: string, cfg: DebugCloudConfig): void {
+    if (!fx || !skinId || !cfg) return
+    const atlas = _getEffectAtlasAny()
+    if (!atlas) return
+    const resolved = _resolveEffectEntry(atlas, skinId, "")
+    const frames = resolved && resolved.frameIndices ? resolved.frameIndices : null
+    if (!frames || frames.length <= 1) return
+    const len = frames.length | 0
+    let offset = Number.isFinite(cfg.maskFrameOffset) ? (cfg.maskFrameOffset as number) : NaN
+    if (!Number.isFinite(offset) && Number.isFinite(cfg.maskFrameStartPct)) {
+        const pct = Math.max(0, Math.min(0.99, Number(cfg.maskFrameStartPct)))
+        offset = Math.floor(len * pct)
+    }
+    if (!Number.isFinite(offset)) offset = 0
+    offset = ((offset % len) + len) % len
+    let list: number[] | null = null
+    if (offset !== 0 || cfg.maskFrameReverse) {
+        list = []
+        for (let i = 0; i < len; i++) list.push((i + (offset | 0)) % len)
+        if (cfg.maskFrameReverse) list.reverse()
+    }
+    if (list && list.length) {
+        sprites.setDataString(fx, EFFECT_FRAME_LIST_DATA_KEY, list.join(","))
+        sprites.setDataNumber(fx, EFFECT_FRAME_LIST_IS_RAW_DATA_KEY, 0)
+        sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY, list[0] | 0)
+        sprites.setDataNumber(fx, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY, 0)
+    }
+}
+
 function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): void {
     if (!CLOUD_GEOMETRY_SKIN_ID) return
     if (!cfg || !cfg.texId) return
@@ -21202,9 +21712,12 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
     const useOpaqueMask = (typeof cfg.forceOpaqueMask === "boolean")
         ? cfg.forceOpaqueMask
         : (tweak.enabled && tweak.forceOpaqueMask)
-    let maskSkin = useOpaqueMask
-        ? _ensureOpaqueMaskSkin(CLOUD_GEOMETRY_SKIN_ID)
+    const baseGeomSkin = (cfg.maskSkinId && String(cfg.maskSkinId).trim())
+        ? String(cfg.maskSkinId).trim()
         : CLOUD_GEOMETRY_SKIN_ID
+    let maskSkin = useOpaqueMask
+        ? _ensureOpaqueMaskSkin(baseGeomSkin)
+        : baseGeomSkin
     const wantGeomPalette = (cfg.enforcePaletteOnGeometry !== false)
         && !!cfg.paletteKey
         && !(tweak.enabled && tweak.disablePaletteMap)
@@ -21244,16 +21757,18 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
     const regionMaxY = (cy + Math.idiv(regionH, 2)) | 0
     const tilePx = Math.max(32, cfg.tilePx | 0) | 0
     const maskRadius = Math.max(Math.idiv(regionW, 2) | 0, Math.idiv(regionH, 2) | 0) + 18
-    const maskScaleRaw = _effectPickScaleForRadius(CLOUD_GEOMETRY_SKIN_ID, "", maskRadius | 0)
+    const maskScaleRaw = _effectPickScaleForRadius(baseGeomSkin, "", maskRadius | 0)
     const maskScaleMult = Number.isFinite(cfg.maskScaleMult) ? Math.max(0.2, Number(cfg.maskScaleMult)) : 1
     const maskScale = maskScaleRaw * maskScaleMult
 
     const hideGeom = (typeof cfg.hideGeometry === "boolean") ? cfg.hideGeometry : (tweak.enabled && tweak.hideGeometry)
+    const traceSkip = !!cfg.traceSkip
 
     const makeMask = (tagSuffix: string, rotSpeed?: number, rotBase?: number, fpsMult?: number, wobbleAmp?: number, wobblePeriod?: number): Sprite => {
         const mfx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
         mfx.setFlag(SpriteFlag.Ghost, true)
         if (cfg.tag) sprites.setDataString(mfx, "__hallTag", `${cfg.tag}|${tagSuffix}`)
+        if (traceSkip) sprites.setDataNumber(mfx, "__hallTraceSkip", 1)
         sprites.setDataNumber(mfx, "__hallSpawnX", cx | 0)
         sprites.setDataNumber(mfx, "__hallSpawnY", cy | 0)
         if (Number.isFinite(rotSpeed)) {
@@ -21267,10 +21782,13 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         if (Number.isFinite(wobbleAmp)) sprites.setDataNumber(mfx, "__hallFpsWobbleAmp", Number(wobbleAmp))
         if (Number.isFinite(wobblePeriod)) sprites.setDataNumber(mfx, "__hallFpsWobblePeriod", Number(wobblePeriod))
         if (Number.isFinite(cfg.maskFrameOffset)) sprites.setDataNumber(mfx, "__hallMaskFrameOffset", Number(cfg.maskFrameOffset))
+        if (Number.isFinite(cfg.dustRiseLiftPx)) sprites.setDataNumber(mfx, "__hallDustRiseLiftPx", Number(cfg.dustRiseLiftPx))
+        if (Number.isFinite(cfg.dustFadeMs)) sprites.setDataNumber(mfx, "__hallDustFadeMs", Number(cfg.dustFadeMs))
         mfx.x = cx | 0
         mfx.y = cy | 0
         mfx.z = 1000
         if ((cfg.lifespanMs | 0) > 0) mfx.lifespan = cfg.lifespanMs | 0
+        const maskOccludeSelf = !!cfg.maskOccludeSelf
         const maskOpts: EffectApplyOpts = {
             alpha: _vfxTweakAlpha(Math.max(0.05, Math.min(1, cfg.maskAlpha)), tweak.maskAlphaMult),
             scale: maskScale,
@@ -21278,18 +21796,33 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
             forceTop: true,
             repeat: -1,
             fps: _vfxTweakFps(8),
-            mode: "full"
+            // When the geometry is visible, use a mask-capable mode so we can occlude it.
+            mode: maskOccludeSelf ? "projectile" : "full"
         }
         if (hideGeom) {
-            maskOpts.alpha = 0
+            // Do not zero alpha here; bitmap masks depend on alpha and will go fully transparent.
+            // Geometry visibility is handled separately (via optional low-alpha geometry sprite).
             maskOpts.forceVisible = true
         }
         _applySmokeAnim(maskOpts, (cfg.smokeAnim || "alive") as any)
         if (cloudTint) maskOpts.tint = cloudTint | 0
         applyEffectToSprite(mfx, maskSkin, maskOpts)
-        if (CLOUD_GEOMETRY_SKIN_ID) {
-            sprites.setDataString(mfx, "__hallOccSkin", CLOUD_GEOMETRY_SKIN_ID)
+        if (cfg.dustRise) {
+            const baseAlpha = sprites.readDataNumber(mfx, EFFECT_ALPHA_DATA_KEY)
+            if (Number.isFinite(baseAlpha)) sprites.setDataNumber(mfx, "__hallDustBaseAlpha", Number(baseAlpha))
         }
+        _applyHallMaskFrameOverrides(mfx, maskSkin, cfg)
+        if (maskOccludeSelf) {
+            // Self-mask through the occlusion composite (via __heMaskNativeOverride on this sprite).
+            sprites.setDataSprite(mfx, EFFECT_MASK_SPRITE_REF_DATA_KEY, mfx as any)
+            sprites.setDataNumber(mfx, EFFECT_MASK_INVERT_DATA_KEY, 0)
+        }
+    if (baseGeomSkin) {
+        const occSkin = (maskAlphaMinClamp > 0)
+            ? _ensureMaskAlphaFloorSkin(baseGeomSkin, maskAlphaMinClamp, maskAlphaScale)
+            : baseGeomSkin
+        sprites.setDataString(mfx, "__hallOccSkin", occSkin)
+    }
         if (Number.isFinite(cfg.maskFrameOffset)) {
             const atlas = _getEffectAtlasAny()
             const resolved = atlas ? _resolveEffectEntry(atlas, maskSkin, "") : null
@@ -21320,6 +21853,129 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
     const maskFx2 = cfg.doubleMask
         ? makeMask("mask2", cfg.mask2RotateSpeedRadPerMs, cfg.mask2RotateBaseRad, cfg.mask2FpsMult, cfg.mask2FpsWobbleAmp, cfg.mask2FpsWobblePeriodMs)
         : null
+    if (cfg.spawnPadPillar && maskFx) {
+        const tile = WORLD_TILE_SIZE | 0
+        const spawnX = Number.isFinite(cfg.dustCenterX) ? (cfg.dustCenterX as number) : (cx | 0)
+        const spawnY = Number.isFinite(cfg.dustCenterY) ? (cfg.dustCenterY as number) : (cy | 0)
+        const tr = Math.max(0, Math.idiv(spawnY | 0, tile) | 0)
+        const tc = Math.max(0, Math.idiv(spawnX | 0, tile) | 0)
+        const baseX = _dunColToX(tc) | 0
+        const baseY = _dunRowToY(tr) | 0
+        const offX = (spawnX | 0) - baseX
+        const offY = (spawnY | 0) - baseY
+        const padBaseOffset = Number.isFinite(cfg.padBaseOffsetPx) ? Number(cfg.padBaseOffsetPx) : (HALL_DUST_PAD_BASE_OFFSET_PX | 0)
+        const pillarBaseOffset = Number.isFinite(cfg.pillarBaseOffsetPx) ? Number(cfg.pillarBaseOffsetPx) : (HALL_DUST_PILLAR_BASE_OFFSET_PX | 0)
+        const pad = _dunDecor_spawnAtTile({
+            name: "telepad",
+            role: DECOR_ROLE.TRIGGER,
+            tileR: tr,
+            tileC: tc,
+            pxW: (tile * 5) | 0,
+            pxH: (tile * 2) | 0,
+            offX,
+            offY
+        })
+        const pillar = _dunDecor_spawnAtTile({
+            name: "stairs_statue",
+            role: DECOR_ROLE.TRIGGER,
+            tileR: tr,
+            tileC: tc,
+            pxW: tile | 0,
+            pxH: (tile * 3) | 0,
+            offX,
+            offY
+        })
+        sprites.setDataSprite(maskFx, "__hallPadDecor", pad as any)
+        sprites.setDataSprite(maskFx, "__hallPillarDecor", pillar as any)
+        sprites.setDataNumber(maskFx, "__hallPadBaseOffsetPx", padBaseOffset)
+        sprites.setDataNumber(maskFx, "__hallPillarBaseOffsetPx", pillarBaseOffset)
+        sprites.setDataNumber(maskFx, "__hallPadSinkPx", Number.isFinite(cfg.padSinkPx) ? Number(cfg.padSinkPx) : (HALL_DUST_PAD_SINK_PX | 0))
+        sprites.setDataNumber(maskFx, "__hallPillarSinkPx", Number.isFinite(cfg.pillarSinkPx) ? Number(cfg.pillarSinkPx) : (HALL_DUST_PILLAR_SINK_PX | 0))
+        sprites.setDataNumber(pad, "__hallDecorBaseOffX", offX | 0)
+        sprites.setDataNumber(pillar, "__hallDecorBaseOffX", offX | 0)
+        sprites.setDataNumber(pad, "__hallDecorBaseOffY", offY | 0)
+        sprites.setDataNumber(pillar, "__hallDecorBaseOffY", offY | 0)
+        sprites.setDataNumber(pad, "__hallDecorH", (tile * 2) | 0)
+        sprites.setDataNumber(pillar, "__hallDecorH", (tile * 3) | 0)
+        sprites.setDataNumber(pad, "__hallDecorCenterBiasY", Math.round(tile * 0.5) | 0)
+        sprites.setDataNumber(pillar, "__hallDecorCenterBiasY", (tile * -1) | 0)
+        _dunEffectsHallDecor.push(pad, pillar)
+    }
+    const geomAlpha = Number.isFinite(cfg.geometryAlpha)
+        ? Math.max(0, Math.min(1, Number(cfg.geometryAlpha)))
+        : NaN
+    if (maskFx && Number.isFinite(geomAlpha)) {
+        // Hide the mask sprite itself (it remains as the mask source) and render a separate low-alpha geometry.
+        // Keep the alpha for masking even when invisible.
+        try { maskFx.setFlag(SpriteFlag.Invisible, true) } catch { }
+        try { sprites.setDataNumber(maskFx, "__hallMaskKeepAlpha", 1) } catch { }
+        const gfx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
+        gfx.setFlag(SpriteFlag.Ghost, true)
+        if (cfg.tag) sprites.setDataString(gfx, "__hallTag", `${cfg.tag}|geom`)
+        if (traceSkip) sprites.setDataNumber(gfx, "__hallTraceSkip", 1)
+        sprites.setDataNumber(gfx, "__hallSpawnX", cx | 0)
+        sprites.setDataNumber(gfx, "__hallSpawnY", cy | 0)
+        gfx.x = cx | 0
+        gfx.y = cy | 0
+        // Place geometry under the fill so the fill dominates (geometry should not tint alpha).
+        gfx.z = 1000
+        if ((cfg.lifespanMs | 0) > 0) gfx.lifespan = cfg.lifespanMs | 0
+
+        // Mirror mask movement/animation controls.
+        const copyNum = (k: string) => {
+            const v = sprites.readDataNumber(maskFx, k)
+            if (Number.isFinite(v)) sprites.setDataNumber(gfx, k, v)
+        }
+        copyNum("__hallRotSpeed")
+        copyNum("__hallRotBase")
+        copyNum("__hallFpsMult")
+        copyNum("__hallFpsWobbleAmp")
+        copyNum("__hallFpsWobblePeriod")
+        copyNum("__hallMaskFrameOffset")
+        copyNum("__hallDustRise")
+        copyNum("__hallDustAllowFade")
+        copyNum("__hallDustRiseStart")
+        copyNum("__hallDustRiseMs")
+        copyNum("__hallDustRiseScaleMult")
+        copyNum("__hallDustRiseStartScaleX")
+        copyNum("__hallDustRiseStartScaleY")
+        copyNum("__hallDustRiseEndScaleX")
+        copyNum("__hallDustRiseEndScaleY")
+        copyNum("__hallDustRiseEasePow")
+        copyNum("__hallDustRiseJitterPct")
+        copyNum("__hallDustRiseJitterPhase")
+        copyNum("__hallDustFadeMs")
+        copyNum("__hallDustCenterX")
+        copyNum("__hallDustCenterY")
+        copyNum("__hallDustOffsetX")
+        copyNum("__hallDustOffsetY")
+
+        const gopts: EffectApplyOpts = {
+            alpha: geomAlpha,
+            scale: maskScale,
+            blend: "normal",
+            forceTop: true,
+            forceVisible: true,
+            repeat: -1,
+            fps: _vfxTweakFps(8),
+            mode: "projectile",
+            maskSprite: maskFx
+        }
+        _applySmokeAnim(gopts, (cfg.smokeAnim || "alive") as any)
+        if (cloudTint) gopts.tint = cloudTint | 0
+        applyEffectToSprite(gfx, maskSkin, gopts)
+        if (cfg.dustRise) {
+            const baseAlpha = sprites.readDataNumber(gfx, EFFECT_ALPHA_DATA_KEY)
+            if (Number.isFinite(baseAlpha)) sprites.setDataNumber(gfx, "__hallDustBaseAlpha", Number(baseAlpha))
+        }
+        _applyHallMaskFrameOverrides(gfx, maskSkin, cfg)
+        sprites.setDataSprite(gfx, EFFECT_MASK_SPRITE_REF_DATA_KEY, maskFx as any)
+        sprites.setDataNumber(gfx, EFFECT_MASK_INVERT_DATA_KEY, 0)
+        if (cfg.maskFlipX) sprites.setDataNumber(gfx, EFFECT_FLIP_X_DATA_KEY, 1)
+        if (cfg.maskFlipY) sprites.setDataNumber(gfx, EFFECT_FLIP_Y_DATA_KEY, 1)
+        if (!cfg.noDemo) _hallDemoTag(gfx, geomAlpha, cfg)
+        _dunEffectsHallFx.push(gfx)
+    }
     if (cfg.dustRise && maskFx) {
         const dcx = Number.isFinite(cfg.dustCenterX) ? Number(cfg.dustCenterX) : (cx | 0)
         const dcy = Number.isFinite(cfg.dustCenterY) ? Number(cfg.dustCenterY) : (cy | 0)
@@ -21345,6 +22001,7 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(maskFx, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
         if (Number.isFinite(cfg.dustRiseJitterPct)) sprites.setDataNumber(maskFx, "__hallDustRiseJitterPct", Number(cfg.dustRiseJitterPct))
         if (Number.isFinite(cfg.dustRiseJitterPhase)) sprites.setDataNumber(maskFx, "__hallDustRiseJitterPhase", Number(cfg.dustRiseJitterPhase))
+        if (Number.isFinite(cfg.dustFadeMs)) sprites.setDataNumber(maskFx, "__hallDustFadeMs", Number(cfg.dustFadeMs))
         sprites.setDataNumber(maskFx, "__hallDustCenterX", dcx)
         sprites.setDataNumber(maskFx, "__hallDustCenterY", dcy)
         sprites.setDataNumber(maskFx, "__hallDustOffsetX", dox)
@@ -21375,6 +22032,7 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(maskFx2, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
         if (Number.isFinite(cfg.dustRiseJitterPct)) sprites.setDataNumber(maskFx2, "__hallDustRiseJitterPct", Number(cfg.dustRiseJitterPct))
         if (Number.isFinite(cfg.dustRiseJitterPhase)) sprites.setDataNumber(maskFx2, "__hallDustRiseJitterPhase", Number(cfg.dustRiseJitterPhase))
+        if (Number.isFinite(cfg.dustFadeMs)) sprites.setDataNumber(maskFx2, "__hallDustFadeMs", Number(cfg.dustFadeMs))
         sprites.setDataNumber(maskFx2, "__hallDustCenterX", dcx)
         sprites.setDataNumber(maskFx2, "__hallDustCenterY", dcy)
         sprites.setDataNumber(maskFx2, "__hallDustOffsetX", dox)
@@ -21393,6 +22051,7 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
             const ofx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
             ofx.setFlag(SpriteFlag.Ghost, true)
             if (cfg.tag) sprites.setDataString(ofx, "__hallTag", `${cfg.tag}|${tagSuffix}`)
+            if (traceSkip) sprites.setDataNumber(ofx, "__hallTraceSkip", 1)
             sprites.setDataNumber(ofx, "__hallSpawnX", cx | 0)
             sprites.setDataNumber(ofx, "__hallSpawnY", cy | 0)
             if (followMask) sprites.setDataNumber(ofx, "__hallFollowMaskId", (followMask.id | 0))
@@ -21416,26 +22075,27 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
             if (Number.isFinite(wobbleAmp)) sprites.setDataNumber(ofx, "__hallFpsWobbleAmp", Number(wobbleAmp))
             if (Number.isFinite(wobblePeriod)) sprites.setDataNumber(ofx, "__hallFpsWobblePeriod", Number(wobblePeriod))
             if (Number.isFinite(cfg.maskFrameOffset)) sprites.setDataNumber(ofx, "__hallMaskFrameOffset", Number(cfg.maskFrameOffset))
-            if (cfg.dustRise) {
-                const riseMult = Number.isFinite(cfg.dustRiseScaleMult)
-                    ? Math.max(0.05, Number(cfg.dustRiseScaleMult))
-                    : 1
-                sprites.setDataNumber(ofx, "__hallDustRise", 1)
-                if (Number.isFinite(cfg.dustRiseStartMs)) sprites.setDataNumber(ofx, "__hallDustRiseStart", Number(cfg.dustRiseStartMs))
-                if (Number.isFinite(cfg.dustRiseMs)) sprites.setDataNumber(ofx, "__hallDustRiseMs", Number(cfg.dustRiseMs))
-                sprites.setDataNumber(ofx, "__hallDustRiseScaleMult", riseMult)
-                if (Number.isFinite(cfg.dustRiseStartScaleX)) sprites.setDataNumber(ofx, "__hallDustRiseStartScaleX", Number(cfg.dustRiseStartScaleX))
-                if (Number.isFinite(cfg.dustRiseStartScaleY)) sprites.setDataNumber(ofx, "__hallDustRiseStartScaleY", Number(cfg.dustRiseStartScaleY))
-                if (Number.isFinite(cfg.dustRiseEndScaleX)) sprites.setDataNumber(ofx, "__hallDustRiseEndScaleX", Number(cfg.dustRiseEndScaleX))
-                if (Number.isFinite(cfg.dustRiseEndScaleY)) sprites.setDataNumber(ofx, "__hallDustRiseEndScaleY", Number(cfg.dustRiseEndScaleY))
-                if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(ofx, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
-                if (Number.isFinite(cfg.dustRiseJitterPct)) sprites.setDataNumber(ofx, "__hallDustRiseJitterPct", Number(cfg.dustRiseJitterPct))
-                if (Number.isFinite(cfg.dustRiseJitterPhase)) sprites.setDataNumber(ofx, "__hallDustRiseJitterPhase", Number(cfg.dustRiseJitterPhase))
-                if (Number.isFinite(cfg.dustCenterX)) sprites.setDataNumber(ofx, "__hallDustCenterX", Number(cfg.dustCenterX))
-                if (Number.isFinite(cfg.dustCenterY)) sprites.setDataNumber(ofx, "__hallDustCenterY", Number(cfg.dustCenterY))
-                if (Number.isFinite(cfg.dustOffsetX)) sprites.setDataNumber(ofx, "__hallDustOffsetX", Number(cfg.dustOffsetX))
-                if (Number.isFinite(cfg.dustOffsetY)) sprites.setDataNumber(ofx, "__hallDustOffsetY", Number(cfg.dustOffsetY))
-            }
+        if (cfg.dustRise) {
+            const riseMult = Number.isFinite(cfg.dustRiseScaleMult)
+                ? Math.max(0.05, Number(cfg.dustRiseScaleMult))
+                : 1
+            sprites.setDataNumber(ofx, "__hallDustRise", 1)
+            if (Number.isFinite(cfg.dustRiseStartMs)) sprites.setDataNumber(ofx, "__hallDustRiseStart", Number(cfg.dustRiseStartMs))
+            if (Number.isFinite(cfg.dustRiseMs)) sprites.setDataNumber(ofx, "__hallDustRiseMs", Number(cfg.dustRiseMs))
+            sprites.setDataNumber(ofx, "__hallDustRiseScaleMult", riseMult)
+            if (Number.isFinite(cfg.dustRiseStartScaleX)) sprites.setDataNumber(ofx, "__hallDustRiseStartScaleX", Number(cfg.dustRiseStartScaleX))
+            if (Number.isFinite(cfg.dustRiseStartScaleY)) sprites.setDataNumber(ofx, "__hallDustRiseStartScaleY", Number(cfg.dustRiseStartScaleY))
+            if (Number.isFinite(cfg.dustRiseEndScaleX)) sprites.setDataNumber(ofx, "__hallDustRiseEndScaleX", Number(cfg.dustRiseEndScaleX))
+            if (Number.isFinite(cfg.dustRiseEndScaleY)) sprites.setDataNumber(ofx, "__hallDustRiseEndScaleY", Number(cfg.dustRiseEndScaleY))
+            if (Number.isFinite(cfg.dustRiseEasePow)) sprites.setDataNumber(ofx, "__hallDustRiseEasePow", Number(cfg.dustRiseEasePow))
+            if (Number.isFinite(cfg.dustRiseJitterPct)) sprites.setDataNumber(ofx, "__hallDustRiseJitterPct", Number(cfg.dustRiseJitterPct))
+            if (Number.isFinite(cfg.dustRiseJitterPhase)) sprites.setDataNumber(ofx, "__hallDustRiseJitterPhase", Number(cfg.dustRiseJitterPhase))
+            if (Number.isFinite(cfg.dustFadeMs)) sprites.setDataNumber(ofx, "__hallDustFadeMs", Number(cfg.dustFadeMs))
+            if (Number.isFinite(cfg.dustCenterX)) sprites.setDataNumber(ofx, "__hallDustCenterX", Number(cfg.dustCenterX))
+            if (Number.isFinite(cfg.dustCenterY)) sprites.setDataNumber(ofx, "__hallDustCenterY", Number(cfg.dustCenterY))
+            if (Number.isFinite(cfg.dustOffsetX)) sprites.setDataNumber(ofx, "__hallDustOffsetX", Number(cfg.dustOffsetX))
+            if (Number.isFinite(cfg.dustOffsetY)) sprites.setDataNumber(ofx, "__hallDustOffsetY", Number(cfg.dustOffsetY))
+        }
             const opts: EffectApplyOpts = {
                 alpha: Math.max(0, Math.min(1, borderAlpha)),
                 scale: maskScale,
@@ -21449,6 +22109,10 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
             _applySmokeAnim(opts, (cfg.smokeAnim || "alive") as any)
             if (borderTint) opts.tint = borderTint | 0
             applyEffectToSprite(ofx, outlineSkin, opts)
+            if (cfg.dustRise) {
+                const baseAlpha = sprites.readDataNumber(ofx, EFFECT_ALPHA_DATA_KEY)
+                if (Number.isFinite(baseAlpha)) sprites.setDataNumber(ofx, "__hallDustBaseAlpha", Number(baseAlpha))
+            }
             if (Number.isFinite(cfg.maskFrameOffset)) {
                 const atlas = _getEffectAtlasAny()
                 const resolved = atlas ? _resolveEffectEntry(atlas, outlineSkin, "") : null
@@ -21567,6 +22231,7 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         const borderFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
         borderFx.setFlag(SpriteFlag.Ghost, true)
         if (cfg.tag) sprites.setDataString(borderFx, "__hallTag", `${cfg.tag}|border`)
+        if (traceSkip) sprites.setDataNumber(borderFx, "__hallTraceSkip", 1)
         borderFx.x = cx | 0
         borderFx.y = cy | 0
         borderFx.z = 999
@@ -21607,6 +22272,7 @@ function _dunSpawnDebugCloud(cx: number, cy: number, cfg: DebugCloudConfig): voi
         const puffFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
         puffFx.setFlag(SpriteFlag.Ghost, true)
         if (cfg.tag) sprites.setDataString(puffFx, "__hallTag", `${cfg.tag}|puff`)
+        if (traceSkip) sprites.setDataNumber(puffFx, "__hallTraceSkip", 1)
         puffFx.x = (cx + ox) | 0
         puffFx.y = (cy + oy) | 0
         puffFx.z = 1002
@@ -21635,14 +22301,20 @@ function _dunSpawnHallEffectFill(
     regionH: number,
     cfg: DebugCloudConfig,
     maskFx: Sprite | null
-): Sprite {
+): void {
     const tweak = _getVfxTweak()
+    const traceSkip = !!cfg.traceSkip
     const skinId = _hallEnsurePaletteEffect(cfg)
     const fitRadius = Math.max(regionW | 0, regionH | 0) >> 1
     const useTint = (skinId === cfg.texId)
         ? ((tweak.enabled && Number.isFinite(tweak.tintOverride)) ? (tweak.tintOverride as number) : (cfg.tint | 0))
         : 0
     const unionOutline = !!(cfg.doubleMask && maskFx && (maskFx as any).__hallMaskUnionOutline)
+
+    if (cfg.useTiledFill && maskFx) {
+        _dunSpawnHallTiledLayer(cx | 0, cy | 0, regionW | 0, regionH | 0, cfg.tilePx | 0, cfg, maskFx)
+        return
+    }
 
     if (cfg.borderUseFillColors && !unionOutline) {
         const padOutRaw =
@@ -21652,6 +22324,7 @@ function _dunSpawnHallEffectFill(
         const borderFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
         borderFx.setFlag(SpriteFlag.Ghost, true)
         if (cfg.tag) sprites.setDataString(borderFx, "__hallTag", `${cfg.tag}|border`)
+        if (traceSkip) sprites.setDataNumber(borderFx, "__hallTraceSkip", 1)
         borderFx.x = cx | 0
         borderFx.y = cy | 0
         borderFx.z = 1000
@@ -21690,6 +22363,7 @@ function _dunSpawnHallEffectFill(
             borderMask.setFlag(SpriteFlag.Ghost, true)
             borderMask.setFlag(SpriteFlag.Invisible, true)
             if (cfg.tag) sprites.setDataString(borderMask, "__hallTag", `${cfg.tag}|border-mask`)
+            if (traceSkip) sprites.setDataNumber(borderMask, "__hallTraceSkip", 1)
             borderMask.x = cx | 0
             borderMask.y = cy | 0
             borderMask.z = 999
@@ -21730,6 +22404,7 @@ function _dunSpawnHallEffectFill(
     const fillFx = sprites.create(_getEffectDummyImage(), SpriteKind.HeroEffect)
     fillFx.setFlag(SpriteFlag.Ghost, true)
     if (cfg.tag) sprites.setDataString(fillFx, "__hallTag", `${cfg.tag}|fill`)
+    if (traceSkip) sprites.setDataNumber(fillFx, "__hallTraceSkip", 1)
     sprites.setDataNumber(fillFx, "__hallSpawnX", cx | 0)
     sprites.setDataNumber(fillFx, "__hallSpawnY", cy | 0)
     fillFx.x = cx | 0
@@ -21754,6 +22429,10 @@ function _dunSpawnHallEffectFill(
     }
     if (useTint) fillOpts.tint = useTint | 0
     applyEffectToSprite(fillFx, skinId, fillOpts)
+    if (cfg.dustRise) {
+        const baseAlpha = sprites.readDataNumber(fillFx, EFFECT_ALPHA_DATA_KEY)
+        if (Number.isFinite(baseAlpha)) sprites.setDataNumber(fillFx, "__hallDustBaseAlpha", Number(baseAlpha))
+    }
     if (Number.isFinite(cfg.fillFrameOffset)) {
         const atlas = _getEffectAtlasAny()
         const resolved = atlas ? _resolveEffectEntry(atlas, skinId, "") : null
@@ -21788,7 +22467,7 @@ function _dunSpawnHallEffectFill(
             " tint=0x" + ((cfg.tint | 0) >>> 0).toString(16).padStart(6, "0")
         )
     }
-    return fillFx
+    return
 }
 
 const _hallPaletteCache: Record<string, string> = Object.create(null)
@@ -22526,11 +23205,14 @@ function _dunSpawnHallTiledLayer(
     const frameIndex = resolved.frameIndices && resolved.frameIndices.length ? resolved.frameIndices[0] : 0
     const tileSprite = sc.add.tileSprite(cx, cy, regionW, regionH, texKey, frameIndex)
     tileSprite.setOrigin(0.5, 0.5)
-    tileSprite.setAlpha(Math.max(0.02, Math.min(1, cfg.alpha)))
+    const useOpaqueFill = !!cfg.forceOpaqueFill
+    const fillAlpha = useOpaqueFill ? 1 : Math.max(0.02, Math.min(1, cfg.alpha))
+    tileSprite.setAlpha(fillAlpha)
     if ((cfg.tint | 0) === 0) tileSprite.setTint(0xffffff)
     else tileSprite.setTint(cfg.tint | 0)
     tileSprite.setDepth(1001)
     ;(tileSprite as any).__heHallTag = cfg.tag ? `${cfg.tag}|tile` : ""
+    if (cfg.traceSkip) (tileSprite as any).__heHallTraceSkip = 1
     if (typeof tileSprite.setBlendMode === "function") tileSprite.setBlendMode(0)
     if (DEBUG_EFFECTS_HALL_LOGS) {
         const frameCount = resolved.frameIndices ? (resolved.frameIndices.length | 0) : 0
@@ -22558,7 +23240,8 @@ function _dunSpawnHallTiledLayer(
         }
     }
 
-    const maskNative = (maskFx as any).native
+    const maskOverride = (maskFx as any).__heMaskNativeOverride
+    const maskNative = maskOverride || (maskFx as any).native
     if (maskNative && typeof maskNative.createBitmapMask === "function") {
         try {
             const mask = maskNative.createBitmapMask()
@@ -22585,7 +23268,7 @@ function _dunSpawnHallTiledLayer(
                 } catch {
                     try { tileSprite.setFrame(frameId); } catch { }
                 }
-                if (DEBUG_EFFECTS_HALL_LOGS) {
+                if (DEBUG_EFFECTS_HALL_LOGS && DEBUG_EFFECTS_HALL_FRAME_LOGS) {
                     const now = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
                     const last = (tileSprite as any).__heHallTexLogAt | 0
                     if (!last || (now - last) >= (HALL_TEX_LOG_EVERY_MS | 0)) {
@@ -22623,11 +23306,15 @@ function _dunEnterFloor_setupKind(kind: string, nowMs: number, padX: number, pad
 
     else _dunEnterFloor_setupCombatFloor(nowMs)
 
-    if (kind != DUNGEON_KIND_ENTRANCE) {
+    const hasStudentTraps = _dunHasStudentMazeTrapPlacements()
+
+    if (!hasStudentTraps && kind != DUNGEON_KIND_ENTRANCE) {
         _dunEnterFloor_spawnStarterShrine()
     }
 
-    if (kind != DUNGEON_KIND_HALL && kind != DUNGEON_KIND_ENTRANCE) {
+    if (hasStudentTraps) {
+        _dunSpawnStudentMazeTraps(nowMs | 0)
+    } else if (kind != DUNGEON_KIND_HALL && kind != DUNGEON_KIND_ENTRANCE) {
         _dunEnterFloor_spawnTrapsForFloor(nowMs | 0)
     }
 
@@ -23535,6 +24222,109 @@ function _dunTickEffectsHall(nowMs: number): void {
         if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
         hallFxById[(fx.id | 0)] = fx
     }
+    // Ensure occlusion composites exist for dust clusters (setup can miss on rapid reloads).
+    {
+        const clusterMasks: Record<string, Record<number, Sprite>> = Object.create(null)
+        const clusterIndices: Record<string, number[]> = Object.create(null)
+        for (let i = 0; i < _dunEffectsHallFx.length; i++) {
+            const fx = _dunEffectsHallFx[i]
+            if (!fx || (fx.flags & sprites.Flag.Destroyed)) continue
+            const tag = sprites.readDataString(fx, "__hallTag") || ""
+            const m = /^hall\/dust\/([^/]+)\/cluster\/(\d+)\|mask$/.exec(tag)
+            if (!m || !m[1] || !m[2]) continue
+            const setKey = String(m[1] || "")
+            const idx = Number(m[2]) | 0
+            if (!(idx >= 0)) continue
+            let setMasks = clusterMasks[setKey]
+            if (!setMasks) {
+                setMasks = Object.create(null)
+                clusterMasks[setKey] = setMasks
+            }
+            let setList = clusterIndices[setKey]
+            if (!setList) {
+                setList = []
+                clusterIndices[setKey] = setList
+            }
+            setMasks[idx] = fx
+            setList.push(idx)
+        }
+        const g: any = (globalThis as any)
+        const sc = g ? g.__phaserScene : null
+        const atlas = _getEffectAtlasAny()
+        if (sc && sc.textures && atlas) {
+            for (const setKey in clusterIndices) {
+                const setList = clusterIndices[setKey]
+                const setMasks = clusterMasks[setKey]
+                if (!setList || !setList.length || !setMasks) continue
+                setList.sort((a, b) => a - b)
+                for (let i = 0; i < setList.length; i++) {
+                    const idx = setList[i]
+                    const backMask = setMasks[idx]
+                    if (!backMask) continue
+                    const frontMasks: Sprite[] = []
+                    for (let j = i + 1; j < setList.length; j++) {
+                        const fidx = setList[j]
+                        const fm = setMasks[fidx]
+                        if (fm) frontMasks.push(fm)
+                    }
+                    const anyFx: any = backMask as any
+                    if (!anyFx.__hallMaskOcclude) {
+                        const occSkin = (sprites.readDataString(backMask, "__hallOccSkin") || "").trim()
+                        const occDir = (sprites.readDataString(backMask, "__hallOccDir") || "").trim()
+                        const skin = (occSkin || (sprites.readDataString(backMask, "effectSkin") || "")).trim()
+                        const dir = (occDir || (sprites.readDataString(backMask, "effectDir") || "")).trim()
+                        const resolved = skin ? _resolveEffectEntry(atlas, skin, dir || "") : null
+                        const fw = resolved ? (resolved.frameW | 0) : 0
+                        const fh = resolved ? (resolved.frameH | 0) : 0
+                        if (fw > 0 && fh > 0) {
+                            const outKey = `effects.hallocclude.${(backMask.id | 0)}.${fw}x${fh}`
+                            const canvasTex = sc.textures.exists(outKey)
+                                ? sc.textures.get(outKey)
+                                : sc.textures.createCanvas(outKey, fw, fh)
+                            if (canvasTex) {
+                                const ctx = canvasTex.getContext()
+                                const tmp1 = document.createElement("canvas")
+                                tmp1.width = fw
+                                tmp1.height = fh
+                                const tmp2 = document.createElement("canvas")
+                                tmp2.width = fw
+                                tmp2.height = fh
+                                const tctx1 = tmp1.getContext("2d", { willReadFrequently: true } as any)
+                                const tctx2 = tmp2.getContext("2d", { willReadFrequently: true } as any)
+                                if (ctx && tctx1 && tctx2) {
+                                    try { ctx.clearRect(0, 0, fw, fh) } catch { }
+                                    canvasTex.refresh()
+                                    const maskImage = sc.add.image(backMask.x, backMask.y, canvasTex.key)
+                                    maskImage.setVisible(false)
+                                    maskImage.setOrigin(0.5, 0.5)
+                                    ;(maskImage as any).__heMaskNativeOverride = maskImage
+                                    anyFx.__hallMaskOcclude = {
+                                        canvasTex,
+                                        ctx,
+                                        tmp1,
+                                        tmp2,
+                                        tctx1,
+                                        tctx2,
+                                        frameW: fw,
+                                        frameH: fh,
+                                        src1: backMask,
+                                        src2List: frontMasks.slice(),
+                                        maskImage
+                                    }
+                                    anyFx.__heMaskNativeOverride = maskImage
+                                }
+                            }
+                        }
+                    } else if (anyFx.__hallMaskOcclude) {
+                        anyFx.__hallMaskOcclude.src2List = frontMasks.slice()
+                        if (anyFx.__hallMaskOcclude.maskImage) {
+                            anyFx.__heMaskNativeOverride = anyFx.__hallMaskOcclude.maskImage
+                        }
+                    }
+                }
+            }
+        }
+    }
     // Subtle rotation drift for smoke masks (outline only).
     for (let i = 0; i < _dunEffectsHallFx.length; i++) {
         const fx = _dunEffectsHallFx[i]
@@ -23542,54 +24332,54 @@ function _dunTickEffectsHall(nowMs: number): void {
         const tag = sprites.readDataString(fx, "__hallTag") || ""
         if (!tag || tag.indexOf("|mask") < 0) continue
         const speed = sprites.readDataNumber(fx, "__hallRotSpeed")
+        let start = sprites.readDataNumber(fx, "__hallRotStart")
+        if (!Number.isFinite(start) || start <= 0) {
+            start = now | 0
+            sprites.setDataNumber(fx, "__hallRotStart", start)
+        }
         if (Number.isFinite(speed) && speed !== 0) {
             const base = sprites.readDataNumber(fx, "__hallRotBase")
-            let start = sprites.readDataNumber(fx, "__hallRotStart")
-            if (!Number.isFinite(start) || start <= 0) {
-                start = now | 0
-                sprites.setDataNumber(fx, "__hallRotStart", start)
-            }
             const rot = (Number.isFinite(base) ? base : 0) + ((now - start) * speed)
             sprites.setDataNumber(fx, EFFECT_ROT_DATA_KEY, rot)
-            const fpsMult = sprites.readDataNumber(fx, "__hallFpsMult")
-            const wobbleAmp = sprites.readDataNumber(fx, "__hallFpsWobbleAmp")
-            const wobblePeriod = sprites.readDataNumber(fx, "__hallFpsWobblePeriod")
+        }
+        const fpsMult = sprites.readDataNumber(fx, "__hallFpsMult")
+        const wobbleAmp = sprites.readDataNumber(fx, "__hallFpsWobbleAmp")
+        const wobblePeriod = sprites.readDataNumber(fx, "__hallFpsWobblePeriod")
             if (Number.isFinite(fpsMult) || Number.isFinite(wobbleAmp)) {
-                const baseFps = 8
+                const baseFps = (tag.indexOf("hall/dust") >= 0) ? HALL_DUST_MASK_ANIM_BASE_FPS : 8
                 const mult = Number.isFinite(fpsMult) && fpsMult > 0 ? Number(fpsMult) : 1
-                const amp = Number.isFinite(wobbleAmp) ? Number(wobbleAmp) : 0
-                const period = Number.isFinite(wobblePeriod) && wobblePeriod > 0 ? Number(wobblePeriod) : 6000
-                let phase0 = sprites.readDataNumber(fx, "__hallFpsPhase0")
-                if (!Number.isFinite(phase0)) {
-                    phase0 = Math.random() * Math.PI * 2
-                    sprites.setDataNumber(fx, "__hallFpsPhase0", phase0)
-                }
-                let phase1 = sprites.readDataNumber(fx, "__hallFpsPhase1")
-                if (!Number.isFinite(phase1)) {
-                    phase1 = Math.random() * Math.PI * 2
-                    sprites.setDataNumber(fx, "__hallFpsPhase1", phase1)
-                }
-                let period2 = sprites.readDataNumber(fx, "__hallFpsPeriod2")
-                if (!Number.isFinite(period2) || period2 <= 0) {
-                    period2 = period * (0.25 + (Math.random() * 0.55))
-                    sprites.setDataNumber(fx, "__hallFpsPeriod2", period2)
-                }
-                const t = (now - start)
-                const basePhase = (t / period) * Math.PI * 2
-                const warp = amp ? (1 + (0.05 * Math.sin((t / (period * 2.6)) * Math.PI * 2 + phase0))) : 1
-                const wobbleA = amp ? (Math.sin(basePhase * warp + phase0) * amp) : 0
-                const wobbleB = amp ? (Math.sin((t / period2) * Math.PI * 2 + phase1) * (amp * 0.5)) : 0
-                const globalWobble = amp ? (Math.sin((now / 6000) * Math.PI * 2) * (amp * 0.05)) : 0
-                const fps = Math.max(1, baseFps * mult + wobbleA + wobbleB + globalWobble)
-                const last = sprites.readDataNumber(fx, "__hallFpsLast")
-                let lastUpdate = sprites.readDataNumber(fx, "__hallFpsUpdateAt")
-                if (!Number.isFinite(lastUpdate)) lastUpdate = 0
-                if (!Number.isFinite(last) || Math.abs(last - fps) > 0.0001) {
-                    if ((now - (lastUpdate | 0)) > 500) {
-                        sprites.setDataNumber(fx, "__hallFpsLast", fps)
-                        sprites.setDataNumber(fx, EFFECT_FPS_DATA_KEY, fps)
-                        sprites.setDataNumber(fx, "__hallFpsUpdateAt", now | 0)
-                    }
+            const amp = Number.isFinite(wobbleAmp) ? Number(wobbleAmp) : 0
+            const period = Number.isFinite(wobblePeriod) && wobblePeriod > 0 ? Number(wobblePeriod) : 6000
+            let phase0 = sprites.readDataNumber(fx, "__hallFpsPhase0")
+            if (!Number.isFinite(phase0)) {
+                phase0 = Math.random() * Math.PI * 2
+                sprites.setDataNumber(fx, "__hallFpsPhase0", phase0)
+            }
+            let phase1 = sprites.readDataNumber(fx, "__hallFpsPhase1")
+            if (!Number.isFinite(phase1)) {
+                phase1 = Math.random() * Math.PI * 2
+                sprites.setDataNumber(fx, "__hallFpsPhase1", phase1)
+            }
+            let period2 = sprites.readDataNumber(fx, "__hallFpsPeriod2")
+            if (!Number.isFinite(period2) || period2 <= 0) {
+                period2 = period * (0.25 + (Math.random() * 0.55))
+                sprites.setDataNumber(fx, "__hallFpsPeriod2", period2)
+            }
+            const t = (now - start)
+            const basePhase = (t / period) * Math.PI * 2
+            const warp = amp ? (1 + (0.05 * Math.sin((t / (period * 2.6)) * Math.PI * 2 + phase0))) : 1
+            const wobbleA = amp ? (Math.sin(basePhase * warp + phase0) * amp) : 0
+            const wobbleB = amp ? (Math.sin((t / period2) * Math.PI * 2 + phase1) * (amp * 0.5)) : 0
+            const globalWobble = amp ? (Math.sin((now / 6000) * Math.PI * 2) * (amp * 0.05)) : 0
+            const fps = Math.max(1, baseFps * mult + wobbleA + wobbleB + globalWobble)
+            const last = sprites.readDataNumber(fx, "__hallFpsLast")
+            let lastUpdate = sprites.readDataNumber(fx, "__hallFpsUpdateAt")
+            if (!Number.isFinite(lastUpdate)) lastUpdate = 0
+            if (!Number.isFinite(last) || Math.abs(last - fps) > 0.0001) {
+                if ((now - (lastUpdate | 0)) > 500) {
+                    sprites.setDataNumber(fx, "__hallFpsLast", fps)
+                    sprites.setDataNumber(fx, EFFECT_FPS_DATA_KEY, fps)
+                    sprites.setDataNumber(fx, "__hallFpsUpdateAt", now | 0)
                 }
             }
         }
@@ -23607,6 +24397,7 @@ function _dunTickEffectsHall(nowMs: number): void {
             const riseMs = Number.isFinite(riseMsCfg) && (riseMsCfg | 0) > 0 ? (riseMsCfg | 0) : (HALL_DUST_RISE_MS | 0)
             const loopMs = Math.max(1, (riseMs | 0) * 2)
             const elapsed = ((now - (startMs | 0)) % loopMs)
+            const rising = elapsed <= riseMs
             let tRaw = elapsed / riseMs
             if (tRaw > 1) tRaw = 2 - tRaw
             tRaw = Math.max(0, Math.min(1, tRaw))
@@ -23651,23 +24442,86 @@ function _dunTickEffectsHall(nowMs: number): void {
             const endSx = (Number.isFinite(endSxRaw) ? Number(endSxRaw) : HALL_DUST_RISE_END_SCALE_X) * riseMult
             const endSy = (Number.isFinite(endSyRaw) ? Number(endSyRaw) : HALL_DUST_RISE_END_SCALE_Y) * riseMult
             const sy = startSy + ((endSy - startSy) * t)
-            const sx = Math.max(0.01, endSy * 2)
+            const widthT = rising ? tBase : 1
+            const sx = Math.max(0.01, endSx * (0.5 + (0.5 * widthT)))
             sprites.setDataNumber(fx, EFFECT_SCALE_X_DATA_KEY, sx)
             sprites.setDataNumber(fx, EFFECT_SCALE_Y_DATA_KEY, sy)
             // Anchor the base using alignBottom, so the bottom stays fixed while scaling.
+            // NOTE: EFFECT_SCALE_DATA_KEY is the base scale applied by applyEffectToSprite; we must include it
+            // when computing the initial bottom anchor, or the fill/border will drift relative to the mask.
             const spawnYRaw = sprites.readDataNumber(fx, "__hallSpawnY")
             let baseBottomAnchor = sprites.readDataNumber(fx, "__hallDustBottomY")
             if (!(baseBottomAnchor > 0)) {
                 const nfx: any = (fx as any).native
                 const frameH = (nfx && nfx.frame) ? ((nfx.frame.cutHeight ?? nfx.frame.height) | 0) : 0
                 const spawnY = Number.isFinite(spawnYRaw) ? Number(spawnYRaw) : fx.y
+                const baseScaleRaw = sprites.readDataNumber(fx, EFFECT_SCALE_DATA_KEY)
+                const baseScale = (Number.isFinite(baseScaleRaw) && baseScaleRaw > 0) ? Number(baseScaleRaw) : 1
                 if (frameH > 0) {
-                    baseBottomAnchor = spawnY + ((frameH * startSy) * 0.5)
+                    baseBottomAnchor = spawnY + ((frameH * baseScale * startSy) * 0.5)
                     sprites.setDataNumber(fx, "__hallDustBottomY", baseBottomAnchor)
-                    sprites.setDataNumber(fx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, baseBottomAnchor)
                 }
-            } else {
-                sprites.setDataNumber(fx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, baseBottomAnchor)
+            }
+            const liftPxRaw = sprites.readDataNumber(fx, "__hallDustRiseLiftPx")
+            const liftPx = (Number.isFinite(liftPxRaw) && liftPxRaw > 0) ? Number(liftPxRaw) : 0
+            const lift = (liftPx > 0) ? (liftPx * Math.sin(Math.PI * t)) : 0
+            if (baseBottomAnchor > 0) {
+                sprites.setDataNumber(fx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, baseBottomAnchor - lift)
+            }
+            const fadeMsRaw = sprites.readDataNumber(fx, "__hallDustFadeMs")
+            const fadeMs = (Number.isFinite(fadeMsRaw) && (fadeMsRaw | 0) > 0) ? (fadeMsRaw | 0) : 0
+            let fadeAlpha = 1
+            if (fadeMs > 0) {
+                const fadeStart = Math.max(0, loopMs - fadeMs)
+                if (elapsed >= fadeStart) {
+                    const tf = Math.max(0, Math.min(1, (elapsed - fadeStart) / Math.max(1, fadeMs)))
+                    fadeAlpha = Math.max(0, Math.min(1, 1 - tf))
+                }
+            }
+            sprites.setDataNumber(fx, "__hallDustFadeAlpha", fadeAlpha)
+            if (fadeMs > 0) {
+                let baseAlpha = sprites.readDataNumber(fx, "__hallDustBaseAlpha")
+                if (!Number.isFinite(baseAlpha)) {
+                    baseAlpha = sprites.readDataNumber(fx, EFFECT_ALPHA_DATA_KEY)
+                    if (Number.isFinite(baseAlpha)) sprites.setDataNumber(fx, "__hallDustBaseAlpha", Number(baseAlpha))
+                }
+                if (Number.isFinite(baseAlpha)) {
+                    sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, Number(baseAlpha) * fadeAlpha)))
+                }
+            }
+
+            const bottomNow = (baseBottomAnchor > 0) ? (baseBottomAnchor - lift) : 0
+            const padDecor = sprites.readDataSprite(fx, "__hallPadDecor") as Sprite | null
+            if (padDecor && bottomNow > 0) {
+                const baseOffX = sprites.readDataNumber(padDecor, "__hallDecorBaseOffX") | 0
+                const baseOffY = sprites.readDataNumber(padDecor, "__hallDecorBaseOffY") | 0
+                const decorH = sprites.readDataNumber(padDecor, "__hallDecorH") | 0
+                const centerBiasY = sprites.readDataNumber(padDecor, "__hallDecorCenterBiasY") | 0
+                const baseOffset = sprites.readDataNumber(fx, "__hallPadBaseOffsetPx")
+                const sinkMax = sprites.readDataNumber(fx, "__hallPadSinkPx")
+                const baseY = (_dunRowToY(sprites.readDataNumber(padDecor, "decorTileR") | 0) | 0)
+                    + (Number.isFinite(baseOffY) ? (baseOffY | 0) : 0)
+                    + (Number.isFinite(centerBiasY) ? (centerBiasY | 0) : 0)
+                const sinkPx = Number.isFinite(sinkMax) ? Math.round(Number(sinkMax) * t) : 0
+                const desiredBase = (bottomNow - (Number.isFinite(baseOffset) ? Number(baseOffset) : 0)) + sinkPx
+                const nextOffY = Math.round(desiredBase - (baseY + (decorH / 2)))
+                _dunDecor_setOffset(padDecor, baseOffX | 0, nextOffY | 0)
+            }
+            const pillarDecor = sprites.readDataSprite(fx, "__hallPillarDecor") as Sprite | null
+            if (pillarDecor && bottomNow > 0) {
+                const baseOffX = sprites.readDataNumber(pillarDecor, "__hallDecorBaseOffX") | 0
+                const baseOffY = sprites.readDataNumber(pillarDecor, "__hallDecorBaseOffY") | 0
+                const decorH = sprites.readDataNumber(pillarDecor, "__hallDecorH") | 0
+                const centerBiasY = sprites.readDataNumber(pillarDecor, "__hallDecorCenterBiasY") | 0
+                const baseOffset = sprites.readDataNumber(fx, "__hallPillarBaseOffsetPx")
+                const sinkMax = sprites.readDataNumber(fx, "__hallPillarSinkPx")
+                const baseY = (_dunRowToY(sprites.readDataNumber(pillarDecor, "decorTileR") | 0) | 0)
+                    + (Number.isFinite(baseOffY) ? (baseOffY | 0) : 0)
+                    + (Number.isFinite(centerBiasY) ? (centerBiasY | 0) : 0)
+                const sinkPx = Number.isFinite(sinkMax) ? Math.round(Number(sinkMax) * t) : 0
+                const desiredBase = (bottomNow - (Number.isFinite(baseOffset) ? Number(baseOffset) : 0)) + sinkPx
+                const nextOffY = Math.round(desiredBase - (baseY + (decorH / 2)))
+                _dunDecor_setOffset(pillarDecor, baseOffX | 0, nextOffY | 0)
             }
 
             // Constrain smoke animation to stable frames, then fade after the scale cycle completes.
@@ -23720,8 +24574,10 @@ function _dunTickEffectsHall(nowMs: number): void {
             const n2: any = src2 && (src2 as any).native
             const atlas = _getEffectAtlasAny()
             const g2: any = globalThis as any
-            const sc = g2 ? g2.__phaserScene : null
-            if (atlas && sc && n1 && n2) {
+            const sc = (n1 && (n1.scene as any)) || (g2 ? g2.__phaserScene : null)
+            const texMgrDefault = (n1 && n1.texture && n1.texture.manager) ? n1.texture.manager
+                : ((n2 && n2.texture && n2.texture.manager) ? n2.texture.manager : (sc ? sc.textures : null))
+            if (atlas && n1 && n2 && texMgrDefault) {
                 try {
                     const lastUnion = sprites.readDataNumber(fx, "__hallUnionUpdateAt") || 0
                     const unionFps = sprites.readDataNumber(src1, EFFECT_FPS_DATA_KEY)
@@ -23743,7 +24599,8 @@ function _dunTickEffectsHall(nowMs: number): void {
                         const nativeFrame = native && native.frame ? (native.frame.name ?? native.frame.index ?? null) : null
                         const frameId = _heResolveFrameIdForTrace(resolved, nativeFrame, frameIndex, frameIndexRaw)
                         if (frameId == null) return null
-                        const tex = sc.textures.get(resolved.textureKey)
+                        const texMgr = (native && native.texture && native.texture.manager) ? native.texture.manager : texMgrDefault
+                        const tex = texMgr ? texMgr.get(resolved.textureKey) : null
                         const f = tex ? tex.get(frameId | 0) : null
                         if (!f || !f.source || !f.source.image) return null
                         return { resolved, frame: f, img: f.source.image, frameId: frameId | 0 }
@@ -23943,34 +24800,84 @@ function _dunTickEffectsHall(nowMs: number): void {
             const n1: any = src1 && (src1 as any).native
             const atlas = _getEffectAtlasAny()
             const g2: any = globalThis as any
-            const sc = g2 ? g2.__phaserScene : null
-            if (atlas && sc && n1) {
+            const sc = (n1 && (n1.scene as any)) || (g2 ? g2.__phaserScene : null)
+            const texMgrDefault = (n1 && n1.texture && n1.texture.manager) ? n1.texture.manager : (sc ? sc.textures : null)
+            if (n1 && texMgrDefault) {
                 try {
                     const lastOcclude = sprites.readDataNumber(fx, "__hallOccludeUpdateAt") || 0
                     const occFps = sprites.readDataNumber(src1, EFFECT_FPS_DATA_KEY)
+                    const srcTag = sprites.readDataString(src1, "__hallTag") || ""
+                    // Dust occlusion must stay in lockstep with the mask animation; do not clamp to the
+                    // global min update interval, or we get frame lag gaps on the border.
+                    const minMs = (srcTag.indexOf("hall/dust") >= 0) ? 0 : (HALL_MASK_UNION_UPDATE_MIN_MS | 0)
                     const occMs = (Number.isFinite(occFps) && (occFps as number) > 0)
-                        ? Math.max(HALL_MASK_UNION_UPDATE_MIN_MS, Math.round(1000 / Math.max(1, occFps)))
-                        : HALL_MASK_UNION_UPDATE_MIN_MS
-                    if ((now - (lastOcclude | 0)) < occMs) continue
-                    sprites.setDataNumber(fx, "__hallOccludeUpdateAt", now | 0)
+                        ? Math.max(minMs, Math.round(1000 / Math.max(1, occFps)))
+                        : minMs
                     const resolveFrame = (s: Sprite, native: any): any => {
-                        const skin = (sprites.readDataString(s, "effectSkin") || "").trim()
-                        const dir = (sprites.readDataString(s, "effectDir") || "").trim()
-                        if (!skin) return null
-                        const resolved = _resolveEffectEntry(atlas, skin, dir || "")
-                        if (!resolved) return null
-                        const frameIndex = sprites.readDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY)
-                        const frameIndexRaw = sprites.readDataNumber(s, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY) | 0
-                        const nativeFrame = native && native.frame ? (native.frame.name ?? native.frame.index ?? null) : null
-                        const frameId = _heResolveFrameIdForTrace(resolved, nativeFrame, frameIndex, frameIndexRaw)
-                        if (frameId == null) return null
-                        const tex = sc.textures.get(resolved.textureKey)
-                        const f = tex ? tex.get(frameId | 0) : null
-                        if (!f || !f.source || !f.source.image) return null
-                        return { resolved, frame: f, img: f.source.image, frameId: frameId | 0 }
+                        // Occlusion must be based on geometry (not the visual alpha/tint skin), so prefer the
+                        // raw geometry skin/dir that we stash on masks as __hallOccSkin/__hallOccDir.
+                        const occSkin = (sprites.readDataString(s, "__hallOccSkin") || "").trim()
+                        const occDir = (sprites.readDataString(s, "__hallOccDir") || "").trim()
+                        const skin = (occSkin || (sprites.readDataString(s, "effectSkin") || "")).trim()
+                        const dir = (occDir || (sprites.readDataString(s, "effectDir") || "")).trim()
+                        if (skin && atlas) {
+                            const resolved = _resolveEffectEntry(atlas, skin, dir || "")
+                            if (resolved) {
+                                const frameIndex = sprites.readDataNumber(s, EFFECT_FRAME_INDEX_DATA_KEY)
+                                const frameIndexRaw = sprites.readDataNumber(s, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY) | 0
+                                const nativeFrame = native && native.frame ? (native.frame.name ?? native.frame.index ?? null) : null
+                                const frameId = _heResolveFrameIdForTrace(resolved, nativeFrame, frameIndex, frameIndexRaw)
+                                if (frameId != null) {
+                                    const texMgr = (native && native.texture && native.texture.manager) ? native.texture.manager : texMgrDefault
+                                    const tex = texMgr ? texMgr.get(resolved.textureKey) : null
+                                    const f = tex ? tex.get(frameId | 0) : null
+                                    if (f && f.source && f.source.image) {
+                                        return { resolved, frame: f, img: f.source.image, frameId: frameId | 0 }
+                                    }
+                                }
+                            }
+                        }
+                        // Fallback to the native frame if the atlas/skin path fails.
+                        const nf = native && native.frame ? native.frame : null
+                        const nimg = nf && nf.source ? nf.source.image : null
+                        if (nf && nimg) {
+                            const nid = (nf.name ?? nf.index ?? 0) as number
+                            return { resolved: null, frame: nf, img: nimg, frameId: nid | 0 }
+                        }
+                        return null
                     }
                     const r1 = resolveFrame(src1, n1)
                     if (!r1) continue
+                    const lastFrame1 = sprites.readDataNumber(src1, "__hallOccludeFrame1")
+                    const frameChanged = (!Number.isFinite(lastFrame1) || (lastFrame1 | 0) !== (r1.frameId | 0))
+                    const baseScale1Raw = sprites.readDataNumber(src1, EFFECT_SCALE_DATA_KEY)
+                    const baseScale1 = (Number.isFinite(baseScale1Raw) && baseScale1Raw > 0) ? Number(baseScale1Raw) : 1
+                    const axis1xRaw = sprites.readDataNumber(src1, EFFECT_SCALE_X_DATA_KEY)
+                    const axis1yRaw = sprites.readDataNumber(src1, EFFECT_SCALE_Y_DATA_KEY)
+                    const axis1x = (Number.isFinite(axis1xRaw) && axis1xRaw > 0) ? Number(axis1xRaw) : 1
+                    const axis1y = (Number.isFinite(axis1yRaw) && axis1yRaw > 0) ? Number(axis1yRaw) : 1
+                    const s1x = baseScale1 * axis1x
+                    const s1y = baseScale1 * axis1y
+                    const rot1Raw = sprites.readDataNumber(src1, EFFECT_ROT_DATA_KEY)
+                    const rot1 = Number.isFinite(rot1Raw) ? Number(rot1Raw) : 0
+                    const pos1x = src1.x
+                    let pos1y = src1.y
+                    const bottom1 = sprites.readDataNumber(src1, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY)
+                    if (Number.isFinite(bottom1) && bottom1 > 0 && fh > 0) {
+                        pos1y = Number(bottom1) - ((fh * s1y) * 0.5)
+                    }
+                    const lastSx = sprites.readDataNumber(src1, "__hallOccludeScaleX")
+                    const lastSy = sprites.readDataNumber(src1, "__hallOccludeScaleY")
+                    const lastX = sprites.readDataNumber(src1, "__hallOccludePosX")
+                    const lastY = sprites.readDataNumber(src1, "__hallOccludePosY")
+                    const lastR = sprites.readDataNumber(src1, "__hallOccludeRot1")
+                    const scaleChanged = (!Number.isFinite(lastSx) || Math.abs(s1x - Number(lastSx)) > 0.0001)
+                        || (!Number.isFinite(lastSy) || Math.abs(s1y - Number(lastSy)) > 0.0001)
+                    const posChanged = (!Number.isFinite(lastX) || Math.abs(pos1x - Number(lastX)) > 0.001)
+                        || (!Number.isFinite(lastY) || Math.abs(pos1y - Number(lastY)) > 0.001)
+                    const rotChanged = (!Number.isFinite(lastR) || Math.abs(rot1 - Number(lastR)) > 0.0001)
+                    if (!frameChanged && !scaleChanged && !posChanged && !rotChanged && (now - (lastOcclude | 0)) < occMs) continue
+                    sprites.setDataNumber(fx, "__hallOccludeUpdateAt", now | 0)
                     const frontEntries: Array<{ sprite: Sprite; native: any; resolved: any; frame: any; img: any; frameId: number }> = []
                     for (let i = 0; i < src2List.length; i++) {
                         const s2 = src2List[i]
@@ -23981,8 +24888,8 @@ function _dunTickEffectsHall(nowMs: number): void {
                         if (!r2) continue
                         frontEntries.push({ sprite: s2, native: n2, resolved: r2.resolved, frame: r2.frame, img: r2.img, frameId: r2.frameId | 0 })
                     }
-                    const fw = (r1.resolved.frameW | 0) || (r1.frame.cutWidth | 0)
-                    const fh = (r1.resolved.frameH | 0) || (r1.frame.cutHeight | 0)
+                    const fw = ((r1.resolved && (r1.resolved.frameW | 0)) || (r1.frame.cutWidth | 0) || (r1.frame.width | 0))
+                    const fh = ((r1.resolved && (r1.resolved.frameH | 0)) || (r1.frame.cutHeight | 0) || (r1.frame.height | 0))
                     if (fw <= 0 || fh <= 0) continue
                     occlude.frameW = fw | 0
                     occlude.frameH = fh | 0
@@ -23997,11 +24904,6 @@ function _dunTickEffectsHall(nowMs: number): void {
                         occlude.tctx2.canvas.width = ow | 0
                         occlude.tctx2.canvas.height = oh | 0
                     }
-                    const pos1x = Number.isFinite(n1.x) ? Number(n1.x) : src1.x
-                    const pos1y = Number.isFinite(n1.y) ? Number(n1.y) : src1.y
-                    const s1x = Number.isFinite(n1.scaleX) && n1.scaleX > 0 ? Number(n1.scaleX) : 1
-                    const s1y = Number.isFinite(n1.scaleY) && n1.scaleY > 0 ? Number(n1.scaleY) : 1
-                    const rot1 = Number(n1.rotation ?? 0)
                     const cx = ow / 2
                     const cy = oh / 2
                     occlude.tctx1.setTransform(1, 0, 0, 1, 0, 0)
@@ -24009,13 +24911,27 @@ function _dunTickEffectsHall(nowMs: number): void {
                     occlude.tctx1.drawImage(r1.img, r1.frame.cutX, r1.frame.cutY, r1.frame.cutWidth, r1.frame.cutHeight, 0, 0, fw, fh)
                     occlude.tctx2.setTransform(1, 0, 0, 1, 0, 0)
                     occlude.tctx2.clearRect(0, 0, ow, oh)
+                    occlude.tctx2.globalAlpha = 1
                     for (let i = 0; i < frontEntries.length; i++) {
                         const fe = frontEntries[i]
-                        const n2 = fe.native
-                        const pos2x = Number.isFinite(n2.x) ? Number(n2.x) : fe.sprite.x
-                        const pos2y = Number.isFinite(n2.y) ? Number(n2.y) : fe.sprite.y
-                        const s2x = Number.isFinite(n2.scaleX) && n2.scaleX > 0 ? Number(n2.scaleX) : 1
-                        const s2y = Number.isFinite(n2.scaleY) && n2.scaleY > 0 ? Number(n2.scaleY) : 1
+                        const s2 = fe.sprite
+                        const baseScale2Raw = sprites.readDataNumber(s2, EFFECT_SCALE_DATA_KEY)
+                        const baseScale2 = (Number.isFinite(baseScale2Raw) && baseScale2Raw > 0) ? Number(baseScale2Raw) : 1
+                        const axis2xRaw = sprites.readDataNumber(s2, EFFECT_SCALE_X_DATA_KEY)
+                        const axis2yRaw = sprites.readDataNumber(s2, EFFECT_SCALE_Y_DATA_KEY)
+                        const axis2x = (Number.isFinite(axis2xRaw) && axis2xRaw > 0) ? Number(axis2xRaw) : 1
+                        const axis2y = (Number.isFinite(axis2yRaw) && axis2yRaw > 0) ? Number(axis2yRaw) : 1
+                        const s2x = baseScale2 * axis2x
+                        const s2y = baseScale2 * axis2y
+                        const rot2Raw = sprites.readDataNumber(s2, EFFECT_ROT_DATA_KEY)
+                        const rot2 = Number.isFinite(rot2Raw) ? Number(rot2Raw) : 0
+                        const pos2x = s2.x
+                        let pos2y = s2.y
+                        const f2hSrc = ((fe.resolved && (fe.resolved.frameH | 0)) || (fe.frame.cutHeight ?? fe.frame.height ?? fh) | 0)
+                        const bottom2 = sprites.readDataNumber(s2, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY)
+                        if (Number.isFinite(bottom2) && bottom2 > 0 && f2hSrc > 0) {
+                            pos2y = Number(bottom2) - ((f2hSrc * s2y) * 0.5)
+                        }
                         const dxw = pos2x - pos1x
                         const dyw = pos2y - pos1y
                         const cosr = Math.cos(-rot1)
@@ -24024,11 +24940,14 @@ function _dunTickEffectsHall(nowMs: number): void {
                         const dyl = ((dxw * sinr) + (dyw * cosr)) / s1y
                         const rx = s2x / s1x
                         const ry = s2y / s1y
-                        const rot = Number(n2.rotation ?? 0) - rot1
+                        const rot = rot2 - rot1
+                        const fade2Raw = sprites.readDataNumber(s2, "__hallDustFadeAlpha")
+                        const fade2 = Number.isFinite(fade2Raw) ? Math.max(0, Math.min(1, Number(fade2Raw))) : 1
                         occlude.tctx2.save()
                         occlude.tctx2.translate(cx + dxl, cy + dyl)
                         if (rot) occlude.tctx2.rotate(rot)
                         if (rx !== 1 || ry !== 1) occlude.tctx2.scale(rx, ry)
+                        occlude.tctx2.globalAlpha = fade2
                         const f2w = (fe.frame.cutWidth ?? fe.frame.width ?? fw) | 0
                         const f2h = (fe.frame.cutHeight ?? fe.frame.height ?? fh) | 0
                         occlude.tctx2.drawImage(
@@ -24044,6 +24963,7 @@ function _dunTickEffectsHall(nowMs: number): void {
                         )
                         occlude.tctx2.restore()
                     }
+                    occlude.tctx2.globalAlpha = 1
                     if ((occlude.canvasTex && typeof occlude.canvasTex.resize === "function") && ((occlude.canvasTex.width | 0) !== (ow | 0) || (occlude.canvasTex.height | 0) !== (oh | 0))) {
                         try { occlude.canvasTex.resize(ow | 0, oh | 0) } catch { }
                     }
@@ -24058,10 +24978,18 @@ function _dunTickEffectsHall(nowMs: number): void {
                     const po = out.data
                     const pfo = frontOut ? frontOut.data : null
                     const occMin = Math.max(0, Math.min(255, HALL_MASK_OCCLUDE_ALPHA_MIN | 0))
+                    let frontOccCount = 0
+                    let backOccCount = 0
+                    const totalPix = Math.max(1, (p1.length / 4) | 0)
                     for (let i = 0; i < p1.length; i += 4) {
                         const a1 = p1[i + 3]
                         const a2 = p2[i + 3]
-                        const a = (a1 >= occMin && a2 < occMin) ? 255 : 0
+                        // Preserve the back (src1) alpha so the fill + baked border keep their intended softness.
+                        // Only use the front alpha threshold to decide occlusion, so "front blocks back" stays true
+                        // even when the front cloud is visually semi-transparent.
+                        if (a2 >= occMin) frontOccCount++
+                        if (a1 >= occMin) backOccCount++
+                        const a = (a2 >= occMin) ? 0 : a1
                         po[i] = 255
                         po[i + 1] = 255
                         po[i + 2] = 255
@@ -24076,6 +25004,10 @@ function _dunTickEffectsHall(nowMs: number): void {
                     }
                     occlude.ctx.putImageData(out, 0, 0)
                     occlude.canvasTex.refresh()
+                    occlude.lastFrontOccCount = frontOccCount | 0
+                    occlude.lastBackOccCount = backOccCount | 0
+                    occlude.lastFrontOccPct = Number((frontOccCount / totalPix).toFixed(4))
+                    occlude.lastBackOccPct = Number((backOccCount / totalPix).toFixed(4))
                     if (frontOut && occlude.frontCtx && occlude.frontCanvasTex) {
                         occlude.frontCtx.putImageData(frontOut, 0, 0)
                         occlude.frontCanvasTex.refresh()
@@ -24121,13 +25053,16 @@ function _dunTickEffectsHall(nowMs: number): void {
                         } catch { }
                     }
                     sprites.setDataNumber(src1, "__hallOccludeFrame1", r1.frameId | 0)
+                    sprites.setDataNumber(src1, "__hallOccludeScaleX", s1x)
+                    sprites.setDataNumber(src1, "__hallOccludeScaleY", s1y)
+                    sprites.setDataNumber(src1, "__hallOccludePosX", pos1x)
+                    sprites.setDataNumber(src1, "__hallOccludePosY", pos1y)
+                    sprites.setDataNumber(src1, "__hallOccludeRot1", rot1)
                     if (occlude.maskImage) {
                         occlude.maskImage.x = pos1x
                         occlude.maskImage.y = pos1y
                         occlude.maskImage.rotation = rot1
-                        const sx = s1x
-                        const sy = s1y
-                        occlude.maskImage.setScale(sx, sy)
+                        occlude.maskImage.setScale(s1x, s1y)
                         occlude.maskImage.setAlpha(1)
                         if (!(occlude.maskImage as any).__heMaskNativeOverride) {
                             ;(occlude.maskImage as any).__heMaskNativeOverride = occlude.maskImage
@@ -24137,9 +25072,7 @@ function _dunTickEffectsHall(nowMs: number): void {
                         occlude.frontMaskImage.x = pos1x
                         occlude.frontMaskImage.y = pos1y
                         occlude.frontMaskImage.rotation = rot1
-                        const sx = s1x
-                        const sy = s1y
-                        occlude.frontMaskImage.setScale(sx, sy)
+                        occlude.frontMaskImage.setScale(s1x, s1y)
                         occlude.frontMaskImage.setAlpha(1)
                         if (!(occlude.frontMaskImage as any).__heMaskNativeOverride) {
                             ;(occlude.frontMaskImage as any).__heMaskNativeOverride = occlude.frontMaskImage
@@ -24154,9 +25087,7 @@ function _dunTickEffectsHall(nowMs: number): void {
                         occlude.borderMaskImage.x = pos1x
                         occlude.borderMaskImage.y = pos1y
                         occlude.borderMaskImage.rotation = rot1
-                        const sx = s1x
-                        const sy = s1y
-                        occlude.borderMaskImage.setScale(sx, sy)
+                        occlude.borderMaskImage.setScale(s1x, s1y)
                         occlude.borderMaskImage.setAlpha(1)
                         if (!(occlude.borderMaskImage as any).__heMaskNativeOverride) {
                             ;(occlude.borderMaskImage as any).__heMaskNativeOverride = occlude.borderMaskImage
@@ -24167,6 +25098,7 @@ function _dunTickEffectsHall(nowMs: number): void {
                         occlude.borderMaskSprite.y = pos1y
                         ;(occlude.borderMaskSprite as any).__heMaskNativeOverride = occlude.borderMaskImage
                     }
+
                 } catch { }
             }
         }
@@ -24181,50 +25113,40 @@ function _dunTickEffectsHall(nowMs: number): void {
         fx.x = target.x
         fx.y = target.y
         const tag = sprites.readDataString(fx, "__hallTag") || ""
-            if (tag.indexOf("|fill") >= 0 || tag.indexOf("|mask-outline") >= 0 || tag.indexOf("|mask2-outline") >= 0 || tag.indexOf("|occlude") >= 0 || tag.indexOf("|border") >= 0) {
-                const isOutline = (tag.indexOf("|mask-outline") >= 0 || tag.indexOf("|mask2-outline") >= 0)
-                const isBorder = (tag.indexOf("|border") >= 0)
-                const isOcclude = (tag.indexOf("|occlude") >= 0)
-                let maskRef = sprites.readDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY)
-                const occ = (target as any).__hallMaskOcclude
-                const occMaskImg = (occ && occ.maskImage && Array.isArray(occ.src2List) && occ.src2List.length > 0)
-                    ? occ.maskImage
-                    : null
-                const occBorderSprite = (occ && occ.borderMaskSprite) ? occ.borderMaskSprite : null
-                if (occMaskImg) {
-                    ;(target as any).__heMaskNativeOverride = occMaskImg
-                } else if ((target as any).__heMaskNativeOverride === (occ ? occ.maskImage : null)) {
-                    ;(target as any).__heMaskNativeOverride = null
+        if (tag.indexOf("|fill") >= 0 || tag.indexOf("|mask-outline") >= 0 || tag.indexOf("|mask2-outline") >= 0 || tag.indexOf("|occlude") >= 0 || tag.indexOf("|border") >= 0) {
+            const isOutline = (tag.indexOf("|mask-outline") >= 0 || tag.indexOf("|mask2-outline") >= 0)
+            const isBorder = (tag.indexOf("|border") >= 0)
+            const isOcclude = (tag.indexOf("|occlude") >= 0)
+            let maskRef = sprites.readDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY)
+
+            // If this mask has a hall occlusion composite, use it as the mask source for
+            // any dependent sprites so the whole cloud respects depth occlusion.
+            const occ = (target as any).__hallMaskOcclude
+            const occReady = !!(occ && ((sprites.readDataNumber(target, "__hallOccludeUpdateAt") | 0) > 0))
+            const occMaskImg = (occReady && occ && occ.maskImage) ? occ.maskImage : null
+            const occBorderSprite = (occReady && occ && occ.borderMaskSprite) ? occ.borderMaskSprite : null
+            if (occMaskImg) {
+                ;(target as any).__heMaskNativeOverride = occMaskImg
+            } else if (!occReady && (target as any).__heMaskNativeOverride === (occ ? occ.maskImage : null)) {
+                ;(target as any).__heMaskNativeOverride = null
+            }
+
+            if (isBorder || isOutline) {
+                if (occBorderSprite) {
+                    if (maskRef !== occBorderSprite) {
+                        sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, occBorderSprite as any)
+                        maskRef = occBorderSprite as any
+                    }
+                } else if (maskRef !== target) {
+                    sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, target as any)
+                    maskRef = target as any
                 }
-                if (isBorder) {
-                    if (occBorderSprite) {
-                        if (maskRef !== occBorderSprite) {
-                            sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, occBorderSprite as any)
-                            maskRef = occBorderSprite as any
-                        }
-                        sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 0)
-                    } else if (maskRef !== target) {
-                        sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, target as any)
-                        maskRef = target as any
-                        sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 0)
-                    }
-                } else if (isOutline) {
-                    if (occBorderSprite) {
-                        if (maskRef !== occBorderSprite) {
-                            sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, occBorderSprite as any)
-                            maskRef = occBorderSprite as any
-                        }
-                        sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 0)
-                    } else if (maskRef !== target) {
-                        sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, target as any)
-                        maskRef = target as any
-                        sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 0)
-                    }
-                } else {
-                    if (!isOcclude && !maskRef && (tag.indexOf("|fill") >= 0 || isOutline)) {
-                        sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, target as any)
-                        maskRef = target as any
-                    }
+                sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 0)
+            } else {
+                if (!isOcclude && !maskRef && (tag.indexOf("|fill") >= 0 || isOutline)) {
+                    sprites.setDataSprite(fx, EFFECT_MASK_SPRITE_REF_DATA_KEY, target as any)
+                    maskRef = target as any
+                }
                 if (!isOcclude && (tag.indexOf("|fill") >= 0 || isOutline)) {
                     sprites.setDataNumber(fx, EFFECT_MASK_INVERT_DATA_KEY, 0)
                 }
@@ -24234,10 +25156,14 @@ function _dunTickEffectsHall(nowMs: number): void {
             const scaleSource = (isOutline || isBorder) ? alignSource : (maskRef || alignSource)
             const maskHasDustRise = (alignSource && (sprites.readDataNumber(alignSource, "__hallDustRise") | 0) !== 0)
             if (alignSource && maskHasDustRise) {
+                const isFill = (tag.indexOf("|fill") >= 0)
                 const baseScale = sprites.readDataNumber(alignSource, EFFECT_SCALE_DATA_KEY)
                 const sx = scaleSource ? sprites.readDataNumber(scaleSource, EFFECT_SCALE_X_DATA_KEY) : NaN
                 const sy = scaleSource ? sprites.readDataNumber(scaleSource, EFFECT_SCALE_Y_DATA_KEY) : NaN
-                if (Number.isFinite(baseScale) && baseScale > 0) {
+                // Dust rise drives the *axis* scaling (scaleX/scaleY). Do not overwrite the fill's
+                // base scale, since fill and mask frames are different sizes (e.g. 256x256 fill vs 128x128 mask).
+                // Overwriting base scale breaks alignment and can create unmasked-looking "square" artifacts.
+                if (!isFill && Number.isFinite(baseScale) && baseScale > 0) {
                     sprites.setDataNumber(fx, EFFECT_SCALE_DATA_KEY, Number(baseScale))
                 }
                 if (Number.isFinite(sx) && sx > 0) sprites.setDataNumber(fx, EFFECT_SCALE_X_DATA_KEY, Number(sx))
@@ -24246,15 +25172,33 @@ function _dunTickEffectsHall(nowMs: number): void {
                 if (Number.isFinite(bottom) && bottom > 0) {
                     sprites.setDataNumber(fx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY, Number(bottom))
                     const atlas = _getEffectAtlasAny()
-                    const skin = (sprites.readDataString(alignSource, "effectSkin") || "").trim()
-                    const dir = (sprites.readDataString(alignSource, "effectDir") || "").trim()
-                    const resolved = (atlas && skin) ? _resolveEffectEntry(atlas, skin, dir || "") : null
-                    const frameH = resolved ? (resolved.frameH | 0) : 0
-                    const baseScale2 = Number.isFinite(baseScale) && baseScale > 0 ? Number(baseScale) : 1
-                    const axisY2 = (Number.isFinite(sy) && sy > 0) ? Number(sy) : 1
-                    const dispH = (frameH > 0) ? (frameH * baseScale2 * axisY2) : 0
+                    // Compute the display height from the *object being positioned* (fx), not from the mask.
+                    const skinFx = (sprites.readDataString(fx, "effectSkin") || "").trim()
+                    const dirFx = (sprites.readDataString(fx, "effectDir") || "").trim()
+                    const resolvedFx = (atlas && skinFx) ? _resolveEffectEntry(atlas, skinFx, dirFx || "") : null
+                    const frameH = resolvedFx ? (resolvedFx.frameH | 0) : 0
+                    const baseScaleFxRaw = sprites.readDataNumber(fx, EFFECT_SCALE_DATA_KEY)
+                    const baseScaleFx = (Number.isFinite(baseScaleFxRaw) && baseScaleFxRaw > 0)
+                        ? Number(baseScaleFxRaw)
+                        : ((Number.isFinite(baseScale) && baseScale > 0) ? Number(baseScale) : 1)
+                    const axisYFxRaw = sprites.readDataNumber(fx, EFFECT_SCALE_Y_DATA_KEY)
+                    const axisYFx = (Number.isFinite(axisYFxRaw) && axisYFxRaw > 0) ? Number(axisYFxRaw) : 1
+                    const dispH = (frameH > 0) ? (frameH * baseScaleFx * axisYFx) : 0
                     if (dispH > 0) {
                         fx.y = Number(bottom) - (dispH * 0.5)
+                    }
+                }
+            }
+            if (alignSource && maskHasDustRise) {
+                const fadeRaw = sprites.readDataNumber(alignSource, "__hallDustFadeAlpha")
+                if (Number.isFinite(fadeRaw)) {
+                    let baseAlpha = sprites.readDataNumber(fx, "__hallDustBaseAlpha")
+                    if (!Number.isFinite(baseAlpha)) {
+                        baseAlpha = sprites.readDataNumber(fx, EFFECT_ALPHA_DATA_KEY)
+                        if (Number.isFinite(baseAlpha)) sprites.setDataNumber(fx, "__hallDustBaseAlpha", Number(baseAlpha))
+                    }
+                    if (Number.isFinite(baseAlpha)) {
+                        sprites.setDataNumber(fx, EFFECT_ALPHA_DATA_KEY, Math.max(0, Math.min(1, Number(baseAlpha) * Number(fadeRaw))))
                     }
                 }
             }
@@ -24349,6 +25293,91 @@ function _dunTickEffectsHall(nowMs: number): void {
                     try { (native.__effectPaintMask as any).invertAlpha = wantInvert } catch { }
                     try { native.setMask?.(native.__effectPaintMask) } catch { }
                 }
+            }
+        }
+    }
+    // Keep hall-native tiled fills aligned to their mask sprites (dust rise / bottom anchor).
+    if (_dunEffectsHallNativeFx && _dunEffectsHallNativeFx.length > 0) {
+        for (let i = 0; i < _dunEffectsHallNativeFx.length; i++) {
+            const entry = _dunEffectsHallNativeFx[i]
+            const tile: any = entry && entry.sprite
+            if (!tile || tile.destroyed) continue
+            if (tile.__heHallTraceSkip) continue
+            const tag = tile.__heHallTag || ""
+            if (!tag || tag.indexOf("|tile") < 0) continue
+            const maskIdStr = tile.__heMaskSpriteId || ""
+            let maskId = 0
+            if (maskIdStr) {
+                if (typeof maskIdStr === "string" && maskIdStr.indexOf("occ:") === 0) {
+                    const raw = Number(maskIdStr.slice(4))
+                    if (Number.isFinite(raw)) maskId = raw | 0
+                } else {
+                    const raw = Number(maskIdStr)
+                    if (Number.isFinite(raw)) maskId = raw | 0
+                }
+            }
+            if (!(maskId > 0)) continue
+            const maskFx = hallFxById[maskId]
+            if (!maskFx) continue
+            const occ = (maskFx as any).__hallMaskOcclude
+            const occReady = !!(occ && ((sprites.readDataNumber(maskFx, "__hallOccludeUpdateAt") | 0) > 0))
+            const occMask = (occReady && occ && occ.maskImage) ? occ.maskImage : null
+            const overrideRaw = (maskFx as any).__heMaskNativeOverride
+            const override = (!occReady && occ && overrideRaw === occ.maskImage) ? null : overrideRaw
+            const desiredMask = occMask || override || (maskFx as any).native
+            if (desiredMask && tile.__heMaskSpriteRef !== desiredMask) {
+                try {
+                    if (typeof desiredMask.createBitmapMask === "function") {
+                        const m = desiredMask.createBitmapMask()
+                        tile.setMask(m)
+                        tile.__heMaskSpriteRef = desiredMask
+                        tile.__heMaskSpriteId = occMask ? (`occ:${maskId}`) : String(maskId)
+                        tile.__heMaskSpriteTag = occMask
+                            ? ((sprites.readDataString(maskFx, "__hallTag") || "") + "|occlude")
+                            : (sprites.readDataString(maskFx, "__hallTag") || "")
+                    }
+                } catch { }
+            }
+            // Use the mask sprite's *data-driven* scale to size the tile this frame. Reading displayWidth/Height
+            // from the Phaser mask image can lag a frame behind the scale updates, which creates visible gaps
+            // during vertical rise.
+            let maskW = 0
+            let maskH = 0
+            const atlas = _getEffectAtlasAny()
+            const skin = (sprites.readDataString(maskFx, "effectSkin") || "").trim()
+            const dir = (sprites.readDataString(maskFx, "effectDir") || "").trim()
+            const resolved = (atlas && skin) ? _resolveEffectEntry(atlas, skin, dir || "") : null
+            const frameW = resolved ? (resolved.frameW | 0) : 0
+            const frameH = resolved ? (resolved.frameH | 0) : 0
+            const baseScaleRaw = sprites.readDataNumber(maskFx, EFFECT_SCALE_DATA_KEY)
+            const baseScale = (Number.isFinite(baseScaleRaw) && baseScaleRaw > 0) ? Number(baseScaleRaw) : 1
+            const axisXRaw = sprites.readDataNumber(maskFx, EFFECT_SCALE_X_DATA_KEY)
+            const axisYRaw = sprites.readDataNumber(maskFx, EFFECT_SCALE_Y_DATA_KEY)
+            const axisX = (Number.isFinite(axisXRaw) && axisXRaw > 0) ? Number(axisXRaw) : 1
+            const axisY = (Number.isFinite(axisYRaw) && axisYRaw > 0) ? Number(axisYRaw) : 1
+            if (frameW > 0 && frameH > 0) {
+                maskW = frameW * baseScale * axisX
+                maskH = frameH * baseScale * axisY
+            }
+            if (!(maskW > 0 && maskH > 0)) {
+                const sizeMask: any = desiredMask || (maskFx as any).native
+                maskW = (sizeMask && Number.isFinite(sizeMask.displayWidth)) ? Number(sizeMask.displayWidth) : (sizeMask ? Number(sizeMask.width || 0) : 0)
+                maskH = (sizeMask && Number.isFinite(sizeMask.displayHeight)) ? Number(sizeMask.displayHeight) : (sizeMask ? Number(sizeMask.height || 0) : 0)
+            }
+            if (maskW > 0 && maskH > 0) {
+                const pad = (tag.indexOf("hall/dust") >= 0) ? (HALL_DUST_TILE_PAD_PX | 0) : 0
+                const outW = maskW + (pad * 2)
+                const outH = maskH + (pad * 2)
+                if (Number.isFinite(tile.displayWidth)) tile.displayWidth = outW
+                if (Number.isFinite(tile.displayHeight)) tile.displayHeight = outH
+            }
+            tile.x = maskFx.x
+            tile.rotation = 0
+            const bottom = sprites.readDataNumber(maskFx, EFFECT_ALIGN_BOTTOM_Y_DATA_KEY)
+            if (Number.isFinite(bottom) && (bottom > 0) && (tile.displayHeight > 0)) {
+                tile.y = Number(bottom) - (tile.displayHeight * 0.5)
+            } else {
+                tile.y = maskFx.y
             }
         }
     }
@@ -29172,7 +30201,7 @@ function _stampCliffRimOnMap(): void {
         set(r | 0, right | 0, DECAL_CLIFF_RIM_EDGE_E)
     }
 
-    if (DEBUG_TILEMAP_AUDIT) {
+    if (DEBUG_TILEMAP_AUDIT && DEBUG_TILEMAP_AUDIT_CONSOLE) {
         let count = 0
         let minR = 999999
         let maxR = -1
@@ -29375,7 +30404,7 @@ function _dunStampEntranceTower(): void {
         }
     }
 
-    if (DEBUG_TILEMAP_AUDIT) {
+    if (DEBUG_TILEMAP_AUDIT && DEBUG_TILEMAP_AUDIT_CONSOLE) {
         let count = 0
         let minR = 999999
         let maxR = -1
@@ -29648,6 +30677,7 @@ function _shopTrialArenaStampDecals(r0: number, c0: number, h: number, w: number
 
 function _shopTrialArenaAudit(reason: string): void {
     if (!DEBUG_TILEMAP_AUDIT) return
+    if (!DEBUG_TILEMAP_AUDIT_CONSOLE) return
 
     const r0 = _shopTrialAreaR | 0
     const c0 = _shopTrialAreaC | 0
@@ -39786,6 +40816,7 @@ type _WorldgenPathCell = { r: number; c: number; dir: "h" | "v"; wasWall: boolea
 type _WorldgenBridgeCandidate = { anchorR: number; anchorC: number; kind: "bridge_h" | "bridge_v"; score: number; span: number };
 
 let _worldgenBridgePlacements: _WorldgenBridgePlacement[] = [];
+let _dunStudentMazeTrapPlacements: StudentMazeTrapPlacement[] = [];
 
 function _worldgen_isFloor(v: number): boolean {
     return ((v | 0) !== (TILE_WALL | 0));
@@ -40273,6 +41304,261 @@ function _worldgen_connectIslandsWithBridges(map: number[][]): _WorldgenBridgePl
     }
 
     return placements;
+}
+
+function _studentMazeCollectProfiles(): string[] {
+    const out: string[] = [];
+    const seen: Record<string, boolean> = Object.create(null);
+
+    if (isPhaserRuntime()) {
+        const g: any = globalThis as any;
+        const connected = g && g.__netProfileConnected ? g.__netProfileConnected : null;
+        const byPid = g && g.__netProfileByPid ? g.__netProfileByPid : null;
+
+        if (byPid && connected) {
+            const pids = Object.keys(byPid);
+            for (let i = 0; i < pids.length; i++) {
+                const pid = Number(pids[i]) | 0;
+                const profile = byPid[pid];
+                if (!profile || !connected[profile]) continue;
+                if (seen[profile]) continue;
+                seen[profile] = true;
+                out.push(profile);
+            }
+        } else if (connected) {
+            const keys = Object.keys(connected);
+            for (let i = 0; i < keys.length; i++) {
+                const key = String(keys[i] || "");
+                if (!key || !connected[key]) continue;
+                if (seen[key]) continue;
+                seen[key] = true;
+                out.push(key);
+            }
+        } else if (byPid) {
+            const pids = Object.keys(byPid);
+            for (let i = 0; i < pids.length; i++) {
+                const pid = Number(pids[i]) | 0;
+                const profile = byPid[pid];
+                if (!profile) continue;
+                if (seen[profile]) continue;
+                seen[profile] = true;
+                out.push(profile);
+            }
+        }
+    }
+
+    if (out.length === 0) {
+        for (let hi = 0; hi < heroes.length; hi++) {
+            const hero = heroes[hi];
+            if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue;
+            const key = _heroProfileKeyForIndex(hi);
+            if (!key || seen[key]) continue;
+            seen[key] = true;
+            out.push(key);
+        }
+    }
+
+    return out;
+}
+
+function _studentMazeProfilesAllowed(hooks: StudentMazeHooks, profiles: string[]): boolean {
+    if (!hooks) return false;
+    if (!profiles || profiles.length === 0) return isProfileAllowed(hooks, "");
+    for (let i = 0; i < profiles.length; i++) {
+        if (isProfileAllowed(hooks, profiles[i])) return true;
+    }
+    return false;
+}
+
+function _studentMazeBuildContext(rows: number, cols: number): StudentMazeContext {
+    const profiles = _studentMazeCollectProfiles();
+    return {
+        floorIndex: _dunFloorIndex | 0,
+        floorKind: String(_dunFloorKind || ""),
+        rows: rows | 0,
+        cols: cols | 0,
+        profiles,
+        profile: profiles.length ? String(profiles[0] || "") : "",
+        seed: _dunFloorTextureSeed | 0,
+    };
+}
+
+function _studentMazePickGrid(
+    ctx: StudentMazeContext,
+    hooks: StudentMazeHooks
+): { grid: StudentMazeGrid; mazeId?: string } | null {
+    let mazeId = "";
+    if (typeof hooks.getMazeIdForFloor === "function") {
+        try {
+            mazeId = String(hooks.getMazeIdForFloor(ctx) || "").trim();
+        } catch { /* ignore */ }
+    }
+
+    if (mazeId) {
+        const def = getStudentMaze(mazeId);
+        if (def) {
+            if (typeof def.generate === "function") {
+                try {
+                    const grid = def.generate(ctx);
+                    if (grid) return { grid, mazeId };
+                } catch { /* ignore */ }
+            }
+            if (def.grid) return { grid: def.grid, mazeId };
+        }
+    }
+
+    if (typeof hooks.generateMaze === "function") {
+        try {
+            const grid = hooks.generateMaze(ctx);
+            if (grid) return { grid, mazeId: mazeId || undefined };
+        } catch { /* ignore */ }
+    }
+
+    return null;
+}
+
+function _studentMazeNormalizeCell(cell: any): number {
+    if (cell === 2 || cell === "bridge") return TILE_BRIDGE;
+    if (cell === 1 || cell === "wall" || cell === true) return TILE_WALL;
+    if (cell === 0 || cell === "empty" || cell === "open" || cell === false) return TILE_EMPTY;
+    if (typeof cell === "number") return cell !== 0 ? TILE_WALL : TILE_EMPTY;
+    if (typeof cell === "string") {
+        const s = cell.trim().toLowerCase();
+        if (s === "bridge") return TILE_BRIDGE;
+        if (s === "wall" || s === "w") return TILE_WALL;
+        if (s === "empty" || s === "open" || s === "floor") return TILE_EMPTY;
+        if (!s) return TILE_WALL;
+    }
+    if (cell == null) return TILE_WALL;
+    return TILE_WALL;
+}
+
+function _studentMazeNormalizeGrid(raw: StudentMazeGrid, rows: number, cols: number): number[][] | null {
+    if (!raw || !Array.isArray(raw.cells)) return null;
+    const rowCount = rows | 0;
+    const colCount = cols | 0;
+    if (rowCount <= 0 || colCount <= 0) return null;
+    const out: number[][] = [];
+
+    for (let r = 0; r < rowCount; r++) {
+        const srcRow = Array.isArray(raw.cells[r]) ? raw.cells[r] : null;
+        const row: number[] = [];
+        for (let c = 0; c < colCount; c++) {
+            const cell = srcRow ? srcRow[c] : undefined;
+            row.push(_studentMazeNormalizeCell(cell));
+        }
+        out.push(row);
+    }
+
+    return out;
+}
+
+function _studentMazeNormalizeTrapPlacements(
+    raw: StudentMazeTrapPlacement[] | null | undefined,
+    rows: number,
+    cols: number
+): StudentMazeTrapPlacement[] {
+    if (!raw || !Array.isArray(raw)) return [];
+    const rowCount = rows | 0;
+    const colCount = cols | 0;
+    if (rowCount <= 0 || colCount <= 0) return [];
+    const out: StudentMazeTrapPlacement[] = [];
+
+    for (let i = 0; i < raw.length; i++) {
+        const p: any = raw[i];
+        if (!p) continue;
+        const rr = Number(p.r);
+        const cc = Number(p.c);
+        if (!Number.isFinite(rr) || !Number.isFinite(cc)) continue;
+        const r = rr | 0;
+        const c = cc | 0;
+        if (r < 0 || c < 0 || r >= rowCount || c >= colCount) continue;
+
+        const kindRaw = String(p.kind || "").trim().toLowerCase();
+        const kind = (kindRaw === "shrine") ? "shrine" : "trap";
+        const modeRaw = String(p.mode || "").trim().toLowerCase();
+        const mode: StudentMazeTrapMode = (modeRaw === "block") ? "block" : "kill";
+        const propBase = String(p.propBase || "").trim();
+        const trapId = String(p.trapId || "").trim();
+
+        out.push({
+            r: r | 0,
+            c: c | 0,
+            kind,
+            propBase: propBase || undefined,
+            trapId: trapId || undefined,
+            mode,
+            data: p.data,
+        });
+    }
+
+    return out;
+}
+
+function _studentMazeApplyTheme(theme: StudentMazeTheme | null | undefined): void {
+    if (!theme) return;
+    const base = String(theme.baseFamily || "").trim();
+    const wall = String(theme.wallFamily || "").trim();
+    const palette = String(theme.palette || "").trim();
+    const seed = (typeof theme.textureSeed === "number" && Number.isFinite(theme.textureSeed))
+        ? (theme.textureSeed | 0)
+        : 0;
+
+    if (base) _dunBaseFamily = base;
+    if (wall) _dunWallFamily = wall;
+    if (palette) _dunThemePalette = palette;
+    if (seed) _dunFloorTextureSeed = seed | 0;
+
+    if (isPhaserRuntime()) {
+        ;(globalThis as any).__floorBaseFamily = _dunBaseFamily
+        ;(globalThis as any).__floorWallFamily = _dunWallFamily
+        ;(globalThis as any).__floorThemePalette = _dunThemePalette
+        ;(globalThis as any).__floorTextureSeed = _dunFloorTextureSeed | 0
+    }
+}
+
+function _studentMazeTryBuildWorld(rows: number, cols: number): number[][] | null {
+    _dunStudentMazeTrapPlacements = [];
+    const hooks = getStudentMazeHooks();
+    if (!hooks) return null;
+    const ctx = _studentMazeBuildContext(rows | 0, cols | 0);
+    if (!_studentMazeProfilesAllowed(hooks, ctx.profiles || [])) return null;
+
+    const picked = _studentMazePickGrid(ctx, hooks);
+    if (!picked) return null;
+    const map = _studentMazeNormalizeGrid(picked.grid, rows | 0, cols | 0);
+    if (!map) return null;
+
+    _studentMazeApplyTheme(picked.grid.theme);
+    _dunStudentMazeTrapPlacements = _studentMazeNormalizeTrapPlacements(picked.grid.traps, rows | 0, cols | 0);
+
+    if (typeof hooks.onMazeReady === "function") {
+        try {
+            hooks.onMazeReady({ ...ctx, mazeId: picked.mazeId, grid: picked.grid });
+        } catch { /* ignore */ }
+    }
+
+    return map;
+}
+
+function _studentMazeGetDefaultDims(): { rows: number; cols: number } {
+    let cols = Math.max(WORLD_TILES_W, MIN_WORLD_TILES_W) | 0;
+    let rows = Math.max(WORLD_TILES_H, MIN_WORLD_TILES_H) | 0;
+
+    if ((_dunFloorKind || "") === DUNGEON_KIND_SHOP) {
+        cols = Math.max(SHOP_WORLD_TILES_W, MIN_WORLD_TILES_W) | 0;
+        rows = Math.max(SHOP_WORLD_TILES_H, MIN_WORLD_TILES_H) | 0;
+    }
+
+    if ((_dunFloorKind || "") === DUNGEON_KIND_HALL) {
+        if (cols < 16) cols = 16;
+        if (rows < 12) rows = 12;
+    } else if ((_dunFloorKind || "") === DUNGEON_KIND_COMBAT && _dunIsBossFloor(_dunFloorIndex | 0)) {
+        if (cols < 16) cols = 16;
+        if (rows < 12) rows = 12;
+    }
+
+    return { rows, cols };
 }
 
 function _createTileMap2D(): number[][] {
@@ -41561,7 +42847,7 @@ function initWorldDecorPostPass(): void {
 
     }
 
-    if (DEBUG_TILEMAP_AUDIT) {
+    if (DEBUG_TILEMAP_AUDIT && DEBUG_TILEMAP_AUDIT_CONSOLE) {
         const stats = _auditDecalRangeStats(DECAL_CLIFF_RIM_NW_TL, DECAL_CLIFF_RIM_EDGE_E)
         const boxH = (stats.maxR >= stats.minR) ? ((stats.maxR - stats.minR + 1) | 0) : 0
         const boxW = (stats.maxC >= stats.minC) ? ((stats.maxC - stats.minC + 1) | 0) : 0
@@ -41572,7 +42858,7 @@ function initWorldDecorPostPass(): void {
         )
     }
     _stampCliffRimOnMap()
-    if (DEBUG_TILEMAP_AUDIT) {
+    if (DEBUG_TILEMAP_AUDIT && DEBUG_TILEMAP_AUDIT_CONSOLE) {
         const stats = _auditDecalRangeStats(DECAL_CLIFF_RIM_NW_TL, DECAL_CLIFF_RIM_EDGE_E)
         const boxH = (stats.maxR >= stats.minR) ? ((stats.maxR - stats.minR + 1) | 0) : 0
         const boxW = (stats.maxC >= stats.minC) ? ((stats.maxC - stats.minC + 1) | 0) : 0
@@ -41628,7 +42914,12 @@ function initWorldDecorPostPass(): void {
 function initWorldTileMap(): void {
 
     // Always build the numeric world grid (used by Phaser renderer + collision).
-    if (_dunFloorKind === DUNGEON_KIND_HALL) {
+    const mazeDims = _studentMazeGetDefaultDims();
+    const mazeMap = _studentMazeTryBuildWorld(mazeDims.rows | 0, mazeDims.cols | 0);
+    if (mazeMap) {
+        _engineWorldTileMap = mazeMap;
+        _worldgenBridgePlacements = [];
+    } else if (_dunFloorKind === DUNGEON_KIND_HALL) {
         _engineWorldTileMap = _createTileMap2D_TestWorld("")
         _worldgenBridgePlacements = [];
     } else if (DEBUG_FORCE_TEST_WORLD_KIND) {
@@ -42187,7 +43478,12 @@ function _dunUpdateInteractableFocus(nowMs: number): void {
             (prevR | 0) !== (nextR | 0) ||
             (prevC | 0) !== (nextC | 0) ||
             String(prevName || "") !== String(nextName || "");
-        if (focusChanged) _heQueueVisualDump("focus-change", 200)
+        if (focusChanged) {
+            if ((prevActive | 0) === 1 && (want | 0) === 0) {
+                _hePropsAnimOverride = { r: prevR | 0, c: prevC | 0, name: String(prevName || "") }
+                _heQueueVisualDump("props-anim", 200)
+            }
+        }
     }
 
     _dunAuditDumpFloorOnEntry()
@@ -42441,12 +43737,6 @@ function _dunAuditDumpFloorOnEntry(): void {
     _tilemapAuditDumpLatest = entry
     _tilemapAuditDumpHistory.push(entry)
     if (_tilemapAuditDumpHistory.length > 30) _tilemapAuditDumpHistory.shift()
-
-    const g: any = globalThis as any
-    const fn = g && g.__heDebugDumpToFile
-    if (typeof fn === "function") {
-        try { fn("tilemap-audit") } catch { }
-    }
     _heQueueVisualDump("tilemap-visual-entry", 1200)
 }
 
@@ -52657,6 +53947,7 @@ function _spawnPoisonGroundHazard(
     tickMs?: number
 ): void {
     const size = Math.max(4, (sizePx != null ? (sizePx | 0) : (POISON_GROUND_SIZE_PX | 0))) | 0
+    const life = (lifeMs != null ? (lifeMs | 0) : (POISON_GROUND_LIFE_MS | 0)) | 0
     const img = image.create(size, size)
     img.fill(0)
     const fill = 7
@@ -52675,8 +53966,33 @@ function _spawnPoisonGroundHazard(
     sprites.setDataNumber(hz, "__hazardDmg", (dmg != null ? (dmg | 0) : (POISON_GROUND_DMG | 0)) | 0)
     sprites.setDataNumber(hz, "__hazardTickMs", (tickMs != null ? (tickMs | 0) : (POISON_GROUND_TICK_MS | 0)) | 0)
     sprites.setDataNumber(hz, "__hazardNextHitMs", 0)
-    hz.lifespan = (lifeMs != null ? (lifeMs | 0) : (POISON_GROUND_LIFE_MS | 0)) | 0
+    hz.lifespan = life
+
+    const cloudRadius = Math.max(8, Math.idiv(size, 2) + 2) | 0
+    _spawnPoisonCloudAt(x | 0, y | 0, cloudRadius | 0, life | 0)
 }
+
+sprites.onDestroyed(SpriteKind.MonsterEffect, function (fx) {
+    if (!fx || (fx.flags & sprites.Flag.Destroyed)) return
+    const explode = sprites.readDataNumber(fx, "__poisonExplode") | 0
+    if (!explode) return
+    const exRaw = sprites.readDataNumber(fx, "__poisonExplodeX")
+    const eyRaw = sprites.readDataNumber(fx, "__poisonExplodeY")
+    const ex = Number.isFinite(exRaw) ? (exRaw | 0) : (fx.x | 0)
+    const ey = Number.isFinite(eyRaw) ? (eyRaw | 0) : (fx.y | 0)
+    const size = sprites.readDataNumber(fx, "__poisonExplodeSize") | 0
+    const life = sprites.readDataNumber(fx, "__poisonExplodeLifeMs") | 0
+    const dmg = sprites.readDataNumber(fx, "__poisonExplodeDmg") | 0
+    const tick = sprites.readDataNumber(fx, "__poisonExplodeTickMs") | 0
+    _spawnPoisonGroundHazard(
+        ex | 0,
+        ey | 0,
+        life > 0 ? (life | 0) : undefined,
+        size > 0 ? (size | 0) : undefined,
+        dmg > 0 ? (dmg | 0) : undefined,
+        tick > 0 ? (tick | 0) : undefined
+    )
+})
 
 sprites.onOverlap(SpriteKind.MonsterEffect, SpriteKind.Player, function (fx, hero) {
     if (!fx || (fx.flags & sprites.Flag.Destroyed)) return
@@ -53893,11 +55209,39 @@ function updateStrengthChargingAllHeroes(nowMs: number): void {
         const minHoldUntil = (startMs | 0) + (prepMs | 0)
 
         if (!held) {
-            // If release happens before hold begins, treat as a tap: no charge.
-            if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD)) {
+            const heldFlag = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD);
+            let arcDegBefore = 0;
+            if (!heldFlag) {
+                if (_heStrengthTraceCanLog()) {
+                    arcDegBefore = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0;
+                }
+                // If release happens before hold begins, treat as a tap: no charge.
                 sprites.setDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG, 0)
             }
-            if (STR_CHARGE_ALLOW_TAP_RELEASE || (nowMs | 0) >= (minHoldUntil | 0)) {
+            const allowRelease = STR_CHARGE_ALLOW_TAP_RELEASE || (nowMs | 0) >= (minHoldUntil | 0);
+            if (allowRelease) {
+                if (_heStrengthTraceCanLog()) {
+                    const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+                    const data = {
+                        hi: heroIndex | 0,
+                        pid: ownerId | 0,
+                        moveId: moveId | 0,
+                        btnId: btnId | 0,
+                        heldInput: 0,
+                        heldFlag: heldFlag ? 1 : 0,
+                        now: nowMs | 0,
+                        startMs: startMs | 0,
+                        maxMs: maxMs | 0,
+                        prepMs: prepMs | 0,
+                        minHoldUntil: minHoldUntil | 0,
+                        allowTapRelease: STR_CHARGE_ALLOW_TAP_RELEASE ? 1 : 0,
+                        arcDegBefore: arcDegBefore | 0,
+                        arcDegAfter: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0,
+                        state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+                    };
+                    if (!heldFlag) _heStrengthTraceLastTapRelease = data;
+                    _heStrengthTracePush("CHARGE_RELEASE_INPUT", data);
+                }
                 releaseStrengthCharge(heroIndex, hero, nowMs)
             }
         }
@@ -53941,7 +55285,25 @@ function beginStrengthCharge(
 
 ): void {
 
-    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) {
+        if (_heStrengthTraceCanLog()) {
+            const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+            const btnId = encodeIntentToStrBtnId(button);
+            const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+            const data = {
+                hi: heroIndex | 0,
+                pid: ownerId | 0,
+                moveId: sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0,
+                btn: button || "",
+                btnId: btnId | 0,
+                heldInput: heldInput ? 1 : 0,
+                anim: animKey || "",
+                state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+            };
+            _heStrengthTracePush("CHARGE_BEGIN_SKIP_ALREADY_CHARGING", data);
+        }
+        return;
+    }
 
 
 
@@ -53949,7 +55311,22 @@ function beginStrengthCharge(
 
     const btnId = encodeIntentToStrBtnId(button)
 
-    if (btnId === 0) return
+    if (btnId === 0) {
+        if (_heStrengthTraceCanLog()) {
+            const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+            const data = {
+                hi: heroIndex | 0,
+                pid: ownerId | 0,
+                moveId: sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0,
+                btn: button || "",
+                btnId: 0,
+                anim: animKey || "",
+                state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+            };
+            _heStrengthTracePush("CHARGE_BEGIN_SKIP_BAD_BTN", data);
+        }
+        return;
+    }
 
 
 
@@ -54066,6 +55443,32 @@ function beginStrengthCharge(
     // ? Visible prep part, then hold part (transition happens in updateStrengthChargeForHero)
 
     let prepMs = _strengthPrepMsFromFrames(maxMs | 0)
+
+    if (_heStrengthTraceCanLog()) {
+        const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+        const heldInput = isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0);
+        const holdMsRaw = ((maxMs | 0) - (prepMs | 0)) | 0;
+        const holdMs = Math.max(1, holdMsRaw | 0) | 0;
+        const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+        const data = {
+            hi: heroIndex | 0,
+            pid: ownerId | 0,
+            moveId: moveId | 0,
+            btn: button || "",
+            btnId: btnId | 0,
+            heldInput: heldInput ? 1 : 0,
+            now: now | 0,
+            maxMs: maxMs | 0,
+            prepMs: prepMs | 0,
+            holdMs: holdMs | 0,
+            arcMaxDeg: arcMaxDeg | 0,
+            reachPx: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_REACH_PX) | 0,
+            anim: animKey || "",
+            state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+        };
+        _heStrengthTraceLastChargeBegin = data;
+        _heStrengthTracePush("CHARGE_BEGIN", data);
+    }
 
 
 
@@ -54483,6 +55886,29 @@ function updateStrengthChargeForHero(heroIndex: number, hero: Sprite, nowMs: num
 
         if (ppNow !== "charging") {
 
+            if (_heStrengthTraceCanLog()) {
+                const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+                const btnId = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_BTN) | 0;
+                const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+                const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+                const data = {
+                    hi: heroIndex | 0,
+                    pid: ownerId | 0,
+                    moveId: moveId | 0,
+                    btnId: btnId | 0,
+                    heldInput: heldInput ? 1 : 0,
+                    now: nowMs | 0,
+                    startMs: startMs | 0,
+                    holdStartMs: holdStart | 0,
+                    prepMs: prepMs | 0,
+                    holdMs: holdMs | 0,
+                    arcDeg: arcDeg | 0,
+                    arcMaxDeg: arcMaxDeg | 0,
+                    state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+                };
+                _heStrengthTracePush("CHARGE_HOLD_BEGIN", data);
+            }
+
             _animKeys_setPhasePart(
 
                 heroIndex,
@@ -54629,6 +56055,11 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
     const wasHolding = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD);
+    const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+    const btnId = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_BTN) | 0;
+    const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+    const chargeStartMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0;
+    const chargeMaxMs = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0;
     sprites.setDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY, wasHolding ? 1 : 0);
     const holdCol = STR_SWING_WINDUP_FRAME_COLS[STR_SWING_WINDUP_FRAME_COLS.length - 1] | 0;
     sprites.setDataNumber(hero, STR_SWING_START_COL_KEY, wasHolding ? ((holdCol + 1) | 0) : 0);
@@ -54649,7 +56080,8 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
     // Snapshot arc BEFORE clearing charge state
 
-    let arcDeg = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0
+    const arcDegRaw = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0
+    let arcDeg = arcDegRaw | 0
 
 
 
@@ -54670,6 +56102,7 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     const minArcDeg = Math.max(1, Math.idiv(arcMaxDeg0, 36)) | 0 // 360->10
 
     if (arcDeg < minArcDeg) arcDeg = minArcDeg
+    const arcDegClamped = arcDeg | 0
 
 
 
@@ -54975,6 +56408,39 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
 
     callHeroAnim(heroIndex, "slash", swingDurationMs)
 
+    if (_heStrengthTraceCanLog()) {
+        const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+        const data = {
+            hi: heroIndex | 0,
+            pid: ownerId | 0,
+            moveId: moveId | 0,
+            btn: button || "",
+            btnId: btnId | 0,
+            heldInput: heldInput ? 1 : 0,
+            wasHolding: wasHolding ? 1 : 0,
+            chargeStartMs: chargeStartMs | 0,
+            chargeMaxMs: chargeMaxMs | 0,
+            arcDegRaw: arcDegRaw | 0,
+            arcDeg: arcDegClamped | 0,
+            arcMaxDeg: arcMaxDeg0 | 0,
+            minArcDeg: minArcDeg | 0,
+            swingMs: swingDurationMs | 0,
+            reachExtraPx: reachExtraPx | 0,
+            dmg: dmg | 0,
+            slowPct: slowPct | 0,
+            slowDurationMs: slowDurationMs | 0,
+            weakenPct: weakenPct | 0,
+            weakenDurationMs: weakenDurationMs | 0,
+            knockbackPct: knockbackPct | 0,
+            element: el | 0,
+            traits: traitsFinal.slice(0),
+            stats: stats.slice(0),
+            state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+        };
+        _heStrengthTraceLastRelease = data;
+        _heStrengthTracePush("CHARGE_RELEASE", data);
+    }
+
 
 
     _dbgMovePipe("STR_RELEASE", heroIndex, hero, now, `arcDeg=${arcDeg} swingMs=${swingDurationMs} dmg=${dmg}`)
@@ -55027,6 +56493,12 @@ function releaseStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): 
     sprites.setDataNumber(hero, STR_PEND_SWING_ACTIVE_KEY, 0)
     sprites.setDataNumber(hero, STR_PEND_SWING_SPAWN_AT_MS_KEY, 0)
 
+    if (_heStrengthTraceCanLog()) {
+        _heStrengthTraceMovesCompleted = Math.min(HE_STRENGTH_TRACE_MAX_MOVES | 0, (_heStrengthTraceMovesCompleted | 0) + 1);
+    }
+    _heStrengthTraceNotifyDoneIfNeeded();
+    sprites.setDataNumber(hero, STR_TRACE_MOVE_ID_KEY, 0);
+
 
 
     // ------------------------------------------------------------
@@ -55064,6 +56536,30 @@ function cancelStrengthCharge(heroIndex: number, hero: Sprite, nowMs: number): v
     if (!hero) return
 
     if (!sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+    if (_heStrengthTraceCanLog()) {
+        const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+        const btnId = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_BTN) | 0;
+        const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+        const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+        const data = {
+            hi: heroIndex | 0,
+            pid: ownerId | 0,
+            moveId: moveId | 0,
+            btnId: btnId | 0,
+            heldInput: heldInput ? 1 : 0,
+            now: nowMs | 0,
+            chargeStartMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0,
+            chargeMaxMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0,
+            arcDeg: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0,
+            arcMaxDeg: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG) | 0,
+            state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+        };
+        _heStrengthTraceLastCancel = data;
+        _heStrengthTracePush("CHARGE_CANCEL", data);
+        _heStrengthTraceMovesCompleted = Math.min(HE_STRENGTH_TRACE_MAX_MOVES | 0, (_heStrengthTraceMovesCompleted | 0) + 1);
+    }
+    _heStrengthTraceNotifyDoneIfNeeded();
+    sprites.setDataNumber(hero, STR_TRACE_MOVE_ID_KEY, 0);
     _destroyStrengthChargeTrail(heroIndex, hero)
 
 
@@ -55337,7 +56833,26 @@ function executeStrengthMove(
 
     // Ignore retriggers while charging
 
-    if (sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING)) return
+    const alreadyCharging = sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING);
+    if (alreadyCharging) {
+        if (_heStrengthTraceCanLog()) {
+            const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+            const btnId = encodeIntentToStrBtnId(button);
+            const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+            const data = {
+                hi: heroIndex | 0,
+                pid: ownerId | 0,
+                moveId: sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0,
+                btn: button || "",
+                btnId: btnId | 0,
+                heldInput: heldInput ? 1 : 0,
+                anim: animKey || "",
+                state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+            };
+            _heStrengthTracePush("MOVE_SKIP_ALREADY_CHARGING", data);
+        }
+        return;
+    }
 
 
 
@@ -55354,6 +56869,30 @@ function executeStrengthMove(
     const element = traits[OUT.ELEMENT] | 0
 
     const traitsRaw: MoveTraits = [0, t1Raw, t2Raw, t3Raw, t4Raw, element]
+
+    if (_heStrengthTraceCanLog()) {
+        const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+        const btnId = encodeIntentToStrBtnId(button);
+        const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+        const moveId = (_heStrengthTraceMovesStarted | 0) + 1;
+        _heStrengthTraceMovesStarted = moveId | 0;
+        sprites.setDataNumber(hero, STR_TRACE_MOVE_ID_KEY, moveId | 0);
+        const data = {
+            hi: heroIndex | 0,
+            pid: ownerId | 0,
+            moveId: moveId | 0,
+            btn: button || "",
+            btnId: btnId | 0,
+            heldInput: heldInput ? 1 : 0,
+            anim: animKey || "",
+            traits: traits.slice(0),
+            traitsRaw: traitsRaw.slice(0),
+            stats: stats.slice(0),
+            state: _heStrengthTraceHeroState(heroIndex | 0, hero)
+        };
+        _heStrengthTraceLastMoveStart = data;
+        _heStrengthTracePush("MOVE_BEGIN", data);
+    }
 
 
 
@@ -55603,6 +57142,32 @@ function spawnStrengthSwingProjectile(
         const spawnSide = (arcSide: number, sharedHit: boolean): Sprite => {
             const img0 = _getEffectDummyImage();
             const proj = sprites.create(img0, SpriteKind.HeroWeapon);
+            if (_heStrengthTraceCanLog()) {
+                const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+                const data = {
+                    hi: heroIndex | 0,
+                    projId: (proj as any).id | 0,
+                    moveId: moveId | 0,
+                    side: arcSide | 0,
+                    sharedHit: sharedHit ? 1 : 0,
+                    element: element | 0,
+                    totalArcDeg: totalArcDeg | 0,
+                    swingMs: swingDuration | 0,
+                    reachExtraPx: reachExtraPx | 0,
+                    innerR: inner0 | 0,
+                    frontStartR: frontStartR | 0,
+                    reachFromInner: reachFromInner | 0,
+                    outerR: outerR | 0,
+                    dir: dirKey || "",
+                    nx: +nx.toFixed(4),
+                    ny: +ny.toFixed(4),
+                    travelFrames: travelFrames | 0,
+                    travelFrameMs: travelFrameMs | 0
+                };
+                sprites.setDataNumber(proj, STR_TRACE_MOVE_ID_KEY, moveId | 0);
+                _heStrengthTraceLastProjectile = data;
+                _heStrengthTracePush("PROJ_SPAWN", data);
+            }
             sprites.setDataNumber(proj, PROJ_DATA.TEX_W, img0.width | 0);
             sprites.setDataNumber(proj, PROJ_DATA.TEX_H, img0.height | 0);
 
@@ -55704,6 +57269,32 @@ function spawnStrengthSwingProjectile(
     const spawnSide = (arcSide: number, sharedHit: boolean): Sprite => {
         const img0 = _createStrengthTraceImage(outerR)
         const proj = sprites.create(img0, SpriteKind.HeroWeapon)
+        if (_heStrengthTraceCanLog()) {
+            const moveId = sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0;
+            const data = {
+                hi: heroIndex | 0,
+                projId: (proj as any).id | 0,
+                moveId: moveId | 0,
+                side: arcSide | 0,
+                sharedHit: sharedHit ? 1 : 0,
+                element: element | 0,
+                totalArcDeg: totalArcDeg | 0,
+                swingMs: swingDuration | 0,
+                reachExtraPx: reachExtraPx | 0,
+                innerR: inner0 | 0,
+                frontStartR: frontStartR | 0,
+                reachFromInner: reachFromInner | 0,
+                outerR: outerR | 0,
+                dir: dirKey || "",
+                nx: +nx.toFixed(4),
+                ny: +ny.toFixed(4),
+                travelFrames: travelFrames | 0,
+                travelFrameMs: travelFrameMs | 0
+            };
+            sprites.setDataNumber(proj, STR_TRACE_MOVE_ID_KEY, moveId | 0);
+            _heStrengthTraceLastProjectile = data;
+            _heStrengthTracePush("PROJ_SPAWN", data);
+        }
         sprites.setDataNumber(proj, PROJ_DATA.TEX_W, img0.width | 0)
         sprites.setDataNumber(proj, PROJ_DATA.TEX_H, img0.height | 0)
 
@@ -74511,6 +76102,45 @@ function spawnEnemyOfKind(monsterId: string, x: number, y: number, elite?: boole
 
     sprites.setDataNumber(enemy, ENEMY_LAST_HIT_HI_KEY, -1)
 
+    const nowMs = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : 0
+    const isBossNow = _enemyIsBoss(enemy)
+    if (isBossNow) {
+        const hooks = getStudentBossHooks()
+        const profiles = _bossCollectProfiles()
+        if (hooks && _bossHooksProfilesAllowed(hooks, profiles)) {
+            const profile = profiles.length ? String(profiles[0] || "") : ""
+            if (DEBUG_BOSS_OVERRIDE_SPAWN && typeof hooks.overrideBossSpawnStats === "function") {
+                const ctx = _bossBuildContextBase(enemy, eIndex, nowMs | 0, profile, profiles, hooks)
+                ctx.stats = {
+                    maxHp: sprites.readDataNumber(enemy, ENEMY_DATA.MAX_HP) | 0,
+                    speed: sprites.readDataNumber(enemy, ENEMY_DATA.SPEED) | 0,
+                    touchDamage: sprites.readDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE) | 0,
+                    regenPct: sprites.readDataNumber(enemy, ENEMY_DATA.REGEN_PCT) | 0,
+                    advanceRangePx: sprites.readDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX) | 0,
+                    projectileId: sprites.readDataString(enemy, ENEMY_DATA.PROJECTILE_ID) || "",
+                    attackIntervalMs: sprites.readDataNumber(enemy, ENEMY_DATA.ATTACK_INTERVAL_MS) | 0,
+                    attackRatePct: sprites.readDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT) | 0,
+                }
+                try {
+                    const override = hooks.overrideBossSpawnStats(ctx)
+                    _bossApplySpawnOverride(enemy, override)
+                } catch { /* ignore */ }
+            }
+
+            const ctx = _bossBuildContextBase(enemy, eIndex, nowMs | 0, profile, profiles, hooks)
+            const prevPhase = sprites.readDataString(enemy, ENEMY_BOSS_PHASE_ID_KEY) || ""
+            if (ctx.phaseId && ctx.phaseId !== prevPhase) {
+                sprites.setDataString(enemy, ENEMY_BOSS_PHASE_ID_KEY, ctx.phaseId)
+                if (typeof hooks.onBossPhaseChanged === "function") {
+                    try { hooks.onBossPhaseChanged({ ...ctx, prevPhaseId: prevPhase || "" }) } catch { /* ignore */ }
+                }
+            }
+            if (typeof hooks.onBossSpawned === "function") {
+                try { hooks.onBossSpawned(ctx) } catch { /* ignore */ }
+            }
+        }
+    }
+
     if (isBoss) {
         _dunQueueBossIntroForEnemy(enemy, monsterIdNorm)
     }
@@ -74633,6 +76263,16 @@ function _dunQueueBossIntroForEnemy(enemy: Sprite, monsterId: string): void {
         x: enemy.x | 0,
         y: enemy.y | 0,
         monsterId: String(monsterId || "").trim()
+    }
+
+    const hooks = getStudentBossHooks()
+    if (hooks && typeof hooks.onBossIntroQueued === "function") {
+        const profiles = _bossCollectProfiles()
+        if (_bossHooksProfilesAllowed(hooks, profiles)) {
+            const profile = profiles.length ? String(profiles[0] || "") : ""
+            const ctx = _bossBuildContextBase(enemy, getEnemyIndex(enemy), nowMs | 0, profile, profiles, hooks)
+            try { hooks.onBossIntroQueued(ctx) } catch { /* ignore */ }
+        }
     }
 }
 
@@ -77789,6 +79429,324 @@ function _enemyIsBoss(enemy: Sprite): boolean {
     return ENEMY_BOSS_IDS.has(id)
 }
 
+const ENEMY_BOSS_PHASE_ID_KEY = "__bossPhaseId"
+const ENEMY_BOSS_ENGAGED_KEY = "__bossEngaged"
+
+function _bossGetHpPct(enemy: Sprite): number {
+    if (!enemy) return 0
+    const hp = sprites.readDataNumber(enemy, ENEMY_DATA.HP) | 0
+    const maxHp = sprites.readDataNumber(enemy, ENEMY_DATA.MAX_HP) | 0
+    if (maxHp <= 0) return 0
+    return Math.max(0, Math.min(100, Math.round((hp / maxHp) * 100)))
+}
+
+function _bossPhaseResolveForConfig(cfg: StudentBossPhaseConfig | null, hpPct: number): { phaseId: string; phase: StudentBossPhase | null } {
+    if (!cfg || !cfg.phases || cfg.phases.length === 0) return { phaseId: "", phase: null }
+    const phases = cfg.phases
+    for (let i = 0; i < phases.length; i++) {
+        const p = phases[i]
+        if (!p || !p.id) continue
+        const min = (p.minHpPct == null ? 0 : Number(p.minHpPct))
+        const max = (p.maxHpPct == null ? 100 : Number(p.maxHpPct))
+        const lo = Math.max(0, Math.min(100, Math.min(min, max)))
+        const hi = Math.max(0, Math.min(100, Math.max(min, max)))
+        if (hpPct >= lo && hpPct <= hi) {
+            return { phaseId: p.id, phase: p }
+        }
+    }
+    if (cfg.defaultPhaseId) {
+        const pick = phases.find((p) => p && p.id === cfg.defaultPhaseId) || null
+        if (pick) return { phaseId: pick.id, phase: pick }
+    }
+    const fallback = phases[0]
+    return fallback && fallback.id ? { phaseId: fallback.id, phase: fallback } : { phaseId: "", phase: null }
+}
+
+function _bossHooksProfilesAllowed(hooks: any, profiles: string[]): boolean {
+    if (!hooks) return false
+    if (!profiles || profiles.length === 0) return isProfileAllowed(hooks, "")
+    for (let i = 0; i < profiles.length; i++) {
+        if (isProfileAllowed(hooks, profiles[i])) return true
+    }
+    return false
+}
+
+function _bossCollectProfiles(): string[] {
+    try {
+        return _studentMazeCollectProfiles()
+    } catch {
+        return []
+    }
+}
+
+function _bossBuildContextBase(
+    enemy: Sprite,
+    eIndex: number,
+    nowMs: number,
+    profile?: string,
+    profiles?: string[],
+    hooks?: any
+): any {
+    const monsterId = sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || ""
+    const hp = sprites.readDataNumber(enemy, ENEMY_DATA.HP) | 0
+    const maxHp = sprites.readDataNumber(enemy, ENEMY_DATA.MAX_HP) | 0
+    const hpPct = maxHp > 0 ? Math.max(0, Math.min(100, Math.round((hp / maxHp) * 100))) : 0
+    const cfg = getStudentBossPhaseConfig(monsterId)
+    let phaseRes = _bossPhaseResolveForConfig(cfg, hpPct)
+    if (
+        hooks &&
+        DEBUG_BOSS_OVERRIDE_PHASE &&
+        typeof hooks.overrideBossPhase === "function" &&
+        _bossHooksProfilesAllowed(hooks, profiles || [])
+    ) {
+        try {
+            const overrideCtx = {
+                now: nowMs | 0,
+                monsterId: String(monsterId || ""),
+                enemy,
+                eIndex: eIndex | 0,
+                hp,
+                maxHp,
+                hpPct,
+                floorIndex: _dunFloorIndex | 0,
+                floorKind: String(_dunFloorKind || ""),
+                profile: profile ? String(profile || "") : "",
+                profiles: profiles && profiles.length ? profiles.slice() : undefined,
+                phaseId: phaseRes.phaseId || "",
+                phase: phaseRes.phase || null,
+                defaultPhaseId: phaseRes.phaseId || "",
+                defaultPhase: phaseRes.phase || null,
+                data: cfg ? cfg.data : undefined,
+            }
+            const overrideIdRaw = hooks.overrideBossPhase(overrideCtx)
+            const overrideId = overrideIdRaw != null ? String(overrideIdRaw || "").trim() : ""
+            if (overrideId && cfg && cfg.phases && cfg.phases.length) {
+                const pick = cfg.phases.find((p) => p && p.id === overrideId) || null
+                if (pick) phaseRes = { phaseId: pick.id, phase: pick }
+            }
+        } catch { /* ignore */ }
+    }
+    return {
+        now: nowMs | 0,
+        monsterId: String(monsterId || ""),
+        enemy,
+        eIndex: eIndex | 0,
+        hp,
+        maxHp,
+        hpPct,
+        floorIndex: _dunFloorIndex | 0,
+        floorKind: String(_dunFloorKind || ""),
+        profile: profile ? String(profile || "") : "",
+        profiles: profiles && profiles.length ? profiles.slice() : undefined,
+        phaseId: phaseRes.phaseId || "",
+        phase: phaseRes.phase || null,
+        data: cfg ? cfg.data : undefined,
+    }
+}
+
+function _bossApplySpawnOverride(enemy: Sprite, stats: Partial<StudentBossSpawnStats> | null | undefined): void {
+    if (!enemy || !stats) return
+    if (stats.scale != null) _enemySetMonsterScale(enemy, Number(stats.scale))
+    if (stats.maxHp != null) _enemySetHpAndBar(enemy, Number(stats.maxHp))
+    if (stats.speed != null) sprites.setDataNumber(enemy, ENEMY_DATA.SPEED, Number(stats.speed) | 0)
+    if (stats.touchDamage != null) sprites.setDataNumber(enemy, ENEMY_DATA.TOUCH_DAMAGE, Number(stats.touchDamage) | 0)
+    if (stats.regenPct != null) sprites.setDataNumber(enemy, ENEMY_DATA.REGEN_PCT, Number(stats.regenPct) | 0)
+    if (stats.advanceRangePx != null) sprites.setDataNumber(enemy, ENEMY_DATA.ADVANCE_RANGE_PX, Number(stats.advanceRangePx) | 0)
+    if (stats.projectileId != null) sprites.setDataString(enemy, ENEMY_DATA.PROJECTILE_ID, String(stats.projectileId || ""))
+    if (stats.attackIntervalMs != null) sprites.setDataNumber(enemy, ENEMY_DATA.ATTACK_INTERVAL_MS, Number(stats.attackIntervalMs) | 0)
+    if (stats.attackRatePct != null) sprites.setDataNumber(enemy, ENEMY_DATA.ATK_RATE_PCT, Number(stats.attackRatePct) | 0)
+}
+
+function _bossMovePhaseName(phase: number): "idle" | "telegraph" | "exec" | "recover" {
+    if ((phase | 0) === BOSS_MOVE_PHASE_TELEGRAPH) return "telegraph"
+    if ((phase | 0) === BOSS_MOVE_PHASE_EXEC) return "exec"
+    if ((phase | 0) === BOSS_MOVE_PHASE_RECOVER) return "recover"
+    return "idle"
+}
+
+function _bossDispatchMovePhase(enemy: Sprite, phase: number, moveId: string, nowMs: number): void {
+    const hooks = getStudentBossHooks()
+    if (!hooks || typeof hooks.onBossMovePhase !== "function") return
+    const profiles = _bossCollectProfiles()
+    if (!_bossHooksProfilesAllowed(hooks, profiles)) return
+    const profile = profiles.length ? String(profiles[0] || "") : ""
+    const ctx = _bossBuildContextBase(enemy, getEnemyIndex(enemy), nowMs | 0, profile, profiles, hooks)
+    ctx.moveId = String(moveId || "")
+    ctx.movePhase = _bossMovePhaseName(phase | 0)
+    ctx.movePhaseIndex = phase | 0
+    try { hooks.onBossMovePhase(ctx) } catch { /* ignore */ }
+}
+
+function _bossDispatchMovePicked(
+    enemy: Sprite,
+    nowMs: number,
+    profile: string,
+    profiles: string[],
+    candidates: { id: string; weight: number }[],
+    chosenId: string
+): void {
+    const hooks = getStudentBossHooks()
+    if (!hooks || typeof hooks.onBossMovePicked !== "function") return
+    if (profile) {
+        if (!isProfileAllowed(hooks, profile)) return
+    } else if (!_bossHooksProfilesAllowed(hooks, profiles)) return
+    const ctx = _bossBuildContextBase(enemy, getEnemyIndex(enemy), nowMs | 0, profile, profiles, hooks)
+    ctx.candidates = Array.isArray(candidates) ? candidates.map((c) => ({ id: String(c.id || ""), weight: c.weight | 0 })) : []
+    ctx.chosenId = String(chosenId || "")
+    try { hooks.onBossMovePicked(ctx) } catch { /* ignore */ }
+}
+
+function _bossDispatchIntroJumpStart(
+    enemy: Sprite,
+    nowMs: number,
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    startMs: number,
+    landAtMs: number,
+    endMs: number
+): void {
+    const hooks = getStudentBossHooks()
+    if (!hooks || typeof hooks.onBossIntroJumpStart !== "function") return
+    const profiles = _bossCollectProfiles()
+    const profile = profiles.length ? String(profiles[0] || "") : ""
+    if (profile) {
+        if (!isProfileAllowed(hooks, profile)) return
+    } else if (!_bossHooksProfilesAllowed(hooks, profiles)) return
+    const ctx = _bossBuildContextBase(enemy, getEnemyIndex(enemy), nowMs | 0, profile, profiles, hooks)
+    ctx.fromX = fromX | 0
+    ctx.fromY = fromY | 0
+    ctx.toX = toX | 0
+    ctx.toY = toY | 0
+    ctx.startMs = startMs | 0
+    ctx.landAtMs = landAtMs | 0
+    ctx.endMs = endMs | 0
+    try { hooks.onBossIntroJumpStart(ctx) } catch { /* ignore */ }
+}
+
+function _bossDispatchIntroJumpLand(
+    enemy: Sprite,
+    nowMs: number,
+    fromX: number,
+    fromY: number,
+    toX: number,
+    toY: number,
+    startMs: number,
+    landAtMs: number,
+    endMs: number
+): void {
+    const hooks = getStudentBossHooks()
+    if (!hooks || typeof hooks.onBossIntroJumpLand !== "function") return
+    const profiles = _bossCollectProfiles()
+    const profile = profiles.length ? String(profiles[0] || "") : ""
+    if (profile) {
+        if (!isProfileAllowed(hooks, profile)) return
+    } else if (!_bossHooksProfilesAllowed(hooks, profiles)) return
+    const ctx = _bossBuildContextBase(enemy, getEnemyIndex(enemy), nowMs | 0, profile, profiles, hooks)
+    ctx.fromX = fromX | 0
+    ctx.fromY = fromY | 0
+    ctx.toX = toX | 0
+    ctx.toY = toY | 0
+    ctx.startMs = startMs | 0
+    ctx.landAtMs = landAtMs | 0
+    ctx.endMs = endMs | 0
+    try { hooks.onBossIntroJumpLand(ctx) } catch { /* ignore */ }
+}
+
+function _bossDispatchBarrageVolley(
+    enemy: Sprite,
+    nowMs: number,
+    shotCount: number,
+    targetCount: number,
+    clustered: boolean,
+    targets: { x: number; y: number }[]
+): void {
+    const hooks = getStudentBossHooks()
+    if (!hooks || typeof hooks.onBossBarrageVolley !== "function") return
+    const profiles = _bossCollectProfiles()
+    const profile = profiles.length ? String(profiles[0] || "") : ""
+    if (profile) {
+        if (!isProfileAllowed(hooks, profile)) return
+    } else if (!_bossHooksProfilesAllowed(hooks, profiles)) return
+    const ctx = _bossBuildContextBase(enemy, getEnemyIndex(enemy), nowMs | 0, profile, profiles, hooks)
+    ctx.shotCount = shotCount | 0
+    ctx.targetCount = targetCount | 0
+    ctx.clustered = !!clustered
+    ctx.targets = Array.isArray(targets) ? targets.map((t) => ({ x: t.x | 0, y: t.y | 0 })) : []
+    try { hooks.onBossBarrageVolley(ctx) } catch { /* ignore */ }
+}
+
+function _bossDispatchPoisonRing(enemy: Sprite, nowMs: number, centerR: number, centerC: number, radius: number): void {
+    const hooks = getStudentBossHooks()
+    if (!hooks || typeof hooks.onBossPoisonRing !== "function") return
+    const profiles = _bossCollectProfiles()
+    const profile = profiles.length ? String(profiles[0] || "") : ""
+    if (profile) {
+        if (!isProfileAllowed(hooks, profile)) return
+    } else if (!_bossHooksProfilesAllowed(hooks, profiles)) return
+    const ctx = _bossBuildContextBase(enemy, getEnemyIndex(enemy), nowMs | 0, profile, profiles, hooks)
+    ctx.centerR = centerR | 0
+    ctx.centerC = centerC | 0
+    ctx.radius = radius | 0
+    try { hooks.onBossPoisonRing(ctx) } catch { /* ignore */ }
+}
+
+function _bossDispatchChargeHit(enemy: Sprite, nowMs: number, hero: Sprite, heroIndex: number, damage: number): void {
+    const hooks = getStudentBossHooks()
+    if (!hooks || typeof hooks.onBossChargeHit !== "function") return
+    const profiles = _bossCollectProfiles()
+    const heroProfile = _normalizeProfileKey(_getProfileFromHeroSprite(hero))
+    const profile = heroProfile || (profiles.length ? String(profiles[0] || "") : "")
+    if (profile) {
+        if (!isProfileAllowed(hooks, profile)) return
+    } else if (!_bossHooksProfilesAllowed(hooks, profiles)) return
+    const ctx = _bossBuildContextBase(enemy, getEnemyIndex(enemy), nowMs | 0, profile, profiles, hooks)
+    ctx.heroIndex = heroIndex | 0
+    ctx.hero = hero || null
+    ctx.damage = damage | 0
+    try { hooks.onBossChargeHit(ctx) } catch { /* ignore */ }
+}
+
+function _bossDispatchEngaged(enemy: Sprite, eIndex: number, nowMs: number, profile: string, profiles: string[], hooks: any): void {
+    if (!hooks || typeof hooks.onBossEngaged !== "function") return
+    if (profile) {
+        if (!isProfileAllowed(hooks, profile)) return
+    } else if (!_bossHooksProfilesAllowed(hooks, profiles)) return
+    const ctx = _bossBuildContextBase(enemy, eIndex, nowMs | 0, profile, profiles, hooks)
+    try { hooks.onBossEngaged(ctx) } catch { /* ignore */ }
+}
+
+function _bossDispatchHurt(enemy: Sprite, eIndex: number, nowMs: number, profile: string, profiles: string[], hooks: any, dmgCtx: any): void {
+    if (!hooks || typeof hooks.onBossHurt !== "function") return
+    if (profile) {
+        if (!isProfileAllowed(hooks, profile)) return
+    } else if (!_bossHooksProfilesAllowed(hooks, profiles)) return
+    const ctx = _bossBuildContextBase(enemy, eIndex, nowMs | 0, profile, profiles, hooks)
+    ctx.baseDamage = dmgCtx.baseDamage | 0
+    ctx.damage = dmgCtx.damage | 0
+    ctx.sourceHeroIndex = dmgCtx.sourceHeroIndex | 0
+    ctx.sourceHero = dmgCtx.sourceHero || null
+    ctx.family = dmgCtx.family | 0
+    ctx.element = dmgCtx.element | 0
+    ctx.button = String(dmgCtx.button || "")
+    ctx.sourceTag = String(dmgCtx.sourceTag || "")
+    try { hooks.onBossHurt(ctx) } catch { /* ignore */ }
+}
+
+function _bossMaybeDispatchPhaseChange(enemy: Sprite, eIndex: number, nowMs: number, profile: string, profiles: string[], hooks: any): void {
+    if (!hooks || typeof hooks.onBossPhaseChanged !== "function") return
+    if (profile) {
+        if (!isProfileAllowed(hooks, profile)) return
+    } else if (!_bossHooksProfilesAllowed(hooks, profiles)) return
+    const prevPhase = sprites.readDataString(enemy, ENEMY_BOSS_PHASE_ID_KEY) || ""
+    const ctx = _bossBuildContextBase(enemy, eIndex, nowMs | 0, profile, profiles, hooks)
+    const nextPhase = String(ctx.phaseId || "")
+    if (!nextPhase || nextPhase === prevPhase) return
+    sprites.setDataString(enemy, ENEMY_BOSS_PHASE_ID_KEY, nextPhase)
+    try { hooks.onBossPhaseChanged({ ...ctx, prevPhaseId: prevPhase || "" }) } catch { /* ignore */ }
+}
+
 type BossMoveId = "barrage" | "charge" | "poison"
 type BossMoveDef = {
     id: BossMoveId
@@ -77947,17 +79905,88 @@ function _enemyBossPickMove(
     }
 
     if (candidates.length <= 0) return null
-    if (candidates.length === 1) return candidates[0].def
+    const hooks = getStudentBossHooks()
+    const profiles = _bossCollectProfiles()
+    const profile = pick && pick.target ? _normalizeProfileKey(_getProfileFromHeroSprite(pick.target)) : (profiles[0] || "")
+    if (candidates.length === 1) {
+        _bossDispatchMovePicked(
+            enemy,
+            nowMs | 0,
+            profile || "",
+            profiles,
+            candidates.map((c) => ({ id: c.def.id, weight: c.weight | 0 })),
+            candidates[0].def.id
+        )
+        return candidates[0].def
+    }
+    const cfg = getStudentBossPhaseConfig(sprites.readDataString(enemy, ENEMY_DATA.MONSTER_ID) || "")
+    let phaseWeights: Record<string, number> | null = null
+    if (cfg && cfg.phases && cfg.phases.length) {
+        let phaseRes = _bossPhaseResolveForConfig(cfg, _bossGetHpPct(enemy))
+        if (
+            hooks &&
+            DEBUG_BOSS_OVERRIDE_PHASE &&
+            typeof hooks.overrideBossPhase === "function" &&
+            _bossHooksProfilesAllowed(hooks, profiles)
+        ) {
+            const ctx = _bossBuildContextBase(enemy, getEnemyIndex(enemy), nowMs | 0, profile, profiles, hooks)
+            if (ctx && ctx.phase) phaseRes = { phaseId: ctx.phaseId, phase: ctx.phase }
+        }
+        phaseWeights = phaseRes && phaseRes.phase && phaseRes.phase.moveWeights ? phaseRes.phase.moveWeights : null
+    }
+    if (phaseWeights) {
+        for (let i = 0; i < candidates.length; i++) {
+            const entry = candidates[i]
+            const mult = Number((phaseWeights as any)[entry.def.id])
+            if (mult > 0) {
+                entry.weight = Math.max(1, Math.round(entry.weight * mult)) | 0
+            }
+        }
+    }
+
+    const ctx = hooks ? _bossBuildContextBase(enemy, getEnemyIndex(enemy), nowMs | 0, profile, profiles, hooks) : null
+    const candidateSummary = candidates.map((c) => ({ id: c.def.id, weight: c.weight | 0 }))
+
+    if (
+        hooks &&
+        DEBUG_BOSS_OVERRIDE_MOVE &&
+        typeof hooks.pickBossMove === "function" &&
+        _bossHooksProfilesAllowed(hooks, profiles)
+    ) {
+        try {
+            const pickCtx = {
+                ...(ctx || _bossBuildContextBase(enemy, getEnemyIndex(enemy), nowMs | 0, profile, profiles, hooks)),
+                candidates: candidates.map((c) => ({ id: c.def.id, weight: c.weight | 0 })),
+            }
+            const forcedRaw = hooks.pickBossMove(pickCtx)
+            const forced = forcedRaw != null ? String(forcedRaw || "").trim() : ""
+            if (forced) {
+                const forcedDef = moveset.find((m) => m && m.id === forced) || null
+                if (forcedDef) {
+                    _bossDispatchMovePicked(enemy, nowMs | 0, profile || "", profiles, candidateSummary, forcedDef.id)
+                    return forcedDef
+                }
+            }
+        } catch { /* ignore */ }
+    }
 
     let total = 0
     for (let i = 0; i < candidates.length; i++) total += Math.max(1, candidates[i].weight | 0)
-    if (total <= 0) return candidates[0].def
+    if (total <= 0) {
+        _bossDispatchMovePicked(enemy, nowMs | 0, profile || "", profiles, candidateSummary, candidates[0].def.id)
+        return candidates[0].def
+    }
     let roll = Math.randomRange(1, total) | 0
     for (let i = 0; i < candidates.length; i++) {
         roll -= Math.max(1, candidates[i].weight | 0)
-        if (roll <= 0) return candidates[i].def
+        if (roll <= 0) {
+            _bossDispatchMovePicked(enemy, nowMs | 0, profile || "", profiles, candidateSummary, candidates[i].def.id)
+            return candidates[i].def
+        }
     }
-    return candidates[candidates.length - 1].def
+    const fallback = candidates[candidates.length - 1].def
+    _bossDispatchMovePicked(enemy, nowMs | 0, profile || "", profiles, candidateSummary, fallback.id)
+    return fallback
 }
 
 function _enemyBossSetMovePhase(enemy: Sprite, phase: number, untilMs: number, nowMs: number): void {
@@ -77966,9 +79995,12 @@ function _enemyBossSetMovePhase(enemy: Sprite, phase: number, untilMs: number, n
     if (phase === BOSS_MOVE_PHASE_TELEGRAPH) sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_TELE_START_MS, nowMs | 0)
     else if (phase === BOSS_MOVE_PHASE_EXEC) sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_EXEC_START_MS, nowMs | 0)
     else if (phase === BOSS_MOVE_PHASE_RECOVER) sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_RECOVER_START_MS, nowMs | 0)
+    const moveId = sprites.readDataString(enemy, ENEMY_BOSS_MOVE_ID) || ""
+    _bossDispatchMovePhase(enemy, phase | 0, moveId, nowMs | 0)
 }
 
 function _enemyBossClearMove(enemy: Sprite): void {
+    const prevMove = sprites.readDataString(enemy, ENEMY_BOSS_MOVE_ID) || ""
     sprites.setDataString(enemy, ENEMY_BOSS_MOVE_ID, "")
     sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_PHASE, BOSS_MOVE_PHASE_IDLE)
     sprites.setDataNumber(enemy, ENEMY_BOSS_MOVE_UNTIL, 0)
@@ -77983,6 +80015,8 @@ function _enemyBossClearMove(enemy: Sprite): void {
     sprites.setDataNumber(enemy, "__atkVisOffX", 0)
     sprites.setDataNumber(enemy, "__atkVisOffY", 0)
     sprites.setDataNumber(enemy, "__atkVisScaleX1000", 0)
+    const nowMs = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : 0
+    _bossDispatchMovePhase(enemy, BOSS_MOVE_PHASE_IDLE, prevMove, nowMs | 0)
 }
 
 function _enemyBossApplyTelegraphVisual(enemy: Sprite, moveId: string, nowMs: number, teleMs: number): void {
@@ -78080,6 +80114,7 @@ function _enemyBossChargeCheckHits(enemy: Sprite, heroTargets: Sprite[], nowMs: 
                 const dmg = Math.max(1, Math.idiv((baseDmg | 0) * (SLIME_BOSS_CHARGE_DAMAGE_PCT | 0), 100)) | 0
                 applyDamageToHeroIndex(hi, dmg, { kind: "bossCharge", enemyIndex: getEnemyIndex(enemy), x: enemy.x, y: enemy.y })
                 _bossIntroStartHeroKnockdown(hi, hero, enemy.x, enemy.y, nowMs | 0)
+                _bossDispatchChargeHit(enemy, nowMs | 0, hero, hi | 0, dmg | 0)
                 sprites.setDataNumber(hero, HERO_BOSS_CHARGE_HIT_UNTIL, (nowMs + (SLIME_BOSS_CHARGE_HIT_COOLDOWN_MS | 0)) | 0)
             }
         }
@@ -78106,37 +80141,82 @@ function _enemyBossPoisonInit(enemy: Sprite): void {
     sprites.setDataNumber(enemy, ENEMY_BOSS_POISON_RADIUS_TILES, startRadius | 0)
 }
 
-function _enemyBossPoisonSpawnRing(centerR: number, centerC: number, radius: number): void {
-    if (radius <= 0) return
-    const rows = (_engineWorldTileMap && _engineWorldTileMap.length) ? (_engineWorldTileMap.length | 0) : 0
-    const cols = (rows > 0 && _engineWorldTileMap[0] && _engineWorldTileMap[0].length) ? (_engineWorldTileMap[0].length | 0) : 0
-    const step = Math.max(1, SLIME_BOSS_POISON_RING_STEP_TILES | 0) | 0
-    const rTop = centerR - radius
-    const rBot = centerR + radius
-    const cLeft = centerC - radius
-    const cRight = centerC + radius
-
-    const spawnAt = (r: number, c: number) => {
-        if (rows > 0 && (r < 0 || r >= rows)) return
-        if (cols > 0 && (c < 0 || c >= cols)) return
-        const x = _dunColToX(c | 0) | 0
-        const y = _dunRowToY(r | 0) | 0
+function _enemyBossPoisonLaunchProjectile(enemy: Sprite, targetX: number, targetY: number, nowMs: number): void {
+    if (!enemy) return
+    const sx = enemy.x | 0
+    const sy = enemy.y | 0
+    const tx = targetX | 0
+    const ty = targetY | 0
+    const dx = (tx - sx) | 0
+    const dy = (ty - sy) | 0
+    const dist = Math.sqrt((dx * dx) + (dy * dy))
+    const speed = Math.max(10, SLIME_BOSS_POISON_PROJECTILE_SPEED_PX | 0) | 0
+    if (!Number.isFinite(dist) || dist <= 4) {
         _spawnPoisonGroundHazard(
-            x | 0,
-            y | 0,
+            tx | 0,
+            ty | 0,
             SLIME_BOSS_POISON_HAZARD_LIFE_MS | 0,
-            SLIME_BOSS_POISON_HAZARD_SIZE_PX | 0,
+            SLIME_BOSS_POISON_CLOUD_SIZE_PX | 0,
             SLIME_BOSS_POISON_HAZARD_DMG | 0
         )
+        return
     }
+    const travelMs = Math.max(120, Math.round((dist / Math.max(1, speed)) * 1000)) | 0
+    const vx = Math.round((dx / dist) * speed) | 0
+    const vy = Math.round((dy / dist) * speed) | 0
+    const dir = _enemyDirFromVector(vx, vy)
+    const dims = _enemyProjectileHitDimsForSkin(SLIME_BOSS_POISON_PROJECTILE_SKIN_ID, dir)
+    const img = image.create(dims.w | 0, dims.h | 0)
+    img.fill(0)
+    const fx = sprites.create(img, SpriteKind.MonsterEffect)
+    fx.setFlag(SpriteFlag.Ghost, true)
+    fx.z = (enemy.z | 0) + 2000
+    fx.x = sx | 0
+    fx.y = sy | 0
+    fx.vx = vx | 0
+    fx.vy = vy | 0
+    fx.lifespan = (travelMs + (SLIME_BOSS_POISON_PROJECTILE_PAD_MS | 0)) | 0
+    applyEffectToSprite(fx, SLIME_BOSS_POISON_PROJECTILE_SKIN_ID, { dir })
+    sprites.setDataNumber(fx, "enemyIndex", getEnemyIndex(enemy) | 0)
+    sprites.setDataNumber(fx, "__poisonExplode", 1)
+    sprites.setDataNumber(fx, "__poisonExplodeX", tx | 0)
+    sprites.setDataNumber(fx, "__poisonExplodeY", ty | 0)
+    sprites.setDataNumber(fx, "__poisonExplodeSize", SLIME_BOSS_POISON_CLOUD_SIZE_PX | 0)
+    sprites.setDataNumber(fx, "__poisonExplodeLifeMs", SLIME_BOSS_POISON_HAZARD_LIFE_MS | 0)
+    sprites.setDataNumber(fx, "__poisonExplodeDmg", SLIME_BOSS_POISON_HAZARD_DMG | 0)
+    sprites.setDataNumber(fx, "__poisonExplodeTickMs", 0)
+    void nowMs
+}
 
-    for (let c = cLeft; c <= cRight; c += step) {
-        spawnAt(rTop, c)
-        spawnAt(rBot, c)
-    }
-    for (let r = rTop + step; r <= rBot - step; r += step) {
-        spawnAt(r, cLeft)
-        spawnAt(r, cRight)
+function _enemyBossPoisonSpawnRing(enemy: Sprite, centerR: number, centerC: number, radius: number, nowMs: number): void {
+    if (!enemy || radius <= 0) return
+    const tile = WORLD_TILE_SIZE | 0
+    const rows = (_engineWorldTileMap && _engineWorldTileMap.length) ? (_engineWorldTileMap.length | 0) : 0
+    const cols = (rows > 0 && _engineWorldTileMap[0] && _engineWorldTileMap[0].length) ? (_engineWorldTileMap[0].length | 0) : 0
+    const centerX = tile > 0 ? (_dunColToX(centerC | 0) | 0) : (enemy.x | 0)
+    const centerY = tile > 0 ? (_dunRowToY(centerR | 0) | 0) : (enemy.y | 0)
+    const radiusPx = Math.max(1, (radius | 0) * Math.max(1, tile | 0)) | 0
+    const circumference = Math.max(1, Math.round(2 * Math.PI * radiusPx)) | 0
+    const spacing = Math.max(16, SLIME_BOSS_POISON_CLOUD_SPACING_PX | 0) | 0
+    let count = Math.round(circumference / spacing) | 0
+    count = Math.max(SLIME_BOSS_POISON_CLOUD_MIN_COUNT | 0, Math.min(SLIME_BOSS_POISON_CLOUD_MAX_COUNT | 0, count | 0)) | 0
+    const seen: { [k: string]: number } = Object.create(null)
+
+    for (let i = 0; i < count; i++) {
+        const ang = (i / count) * Math.PI * 2
+        let tx = Math.round(centerX + Math.cos(ang) * radiusPx) | 0
+        let ty = Math.round(centerY + Math.sin(ang) * radiusPx) | 0
+        if (tile > 0 && rows > 0 && cols > 0) {
+            const r = Math.idiv(ty | 0, tile) | 0
+            const c = Math.idiv(tx | 0, tile) | 0
+            if (r < 0 || r >= rows || c < 0 || c >= cols) continue
+            const key = `${r},${c}`
+            if (seen[key]) continue
+            seen[key] = 1
+            tx = _dunColToX(c | 0) | 0
+            ty = _dunRowToY(r | 0) | 0
+        }
+        _enemyBossPoisonLaunchProjectile(enemy, tx | 0, ty | 0, nowMs | 0)
     }
 }
 
@@ -78154,7 +80234,8 @@ function _enemyBossPoisonTick(enemy: Sprite, nowMs: number): void {
     let radius = sprites.readDataNumber(enemy, ENEMY_BOSS_POISON_RADIUS_TILES) | 0
     if (radius <= 0) return
 
-    _enemyBossPoisonSpawnRing(centerR | 0, centerC | 0, radius | 0)
+    _enemyBossPoisonSpawnRing(enemy, centerR | 0, centerC | 0, radius | 0, nowMs | 0)
+    _bossDispatchPoisonRing(enemy, nowMs | 0, centerR | 0, centerC | 0, radius | 0)
 
     if (radius > (SLIME_BOSS_POISON_MIN_RADIUS_TILES | 0)) {
         radius = (radius - 1) | 0
@@ -78604,6 +80685,17 @@ function _enemyBossUpdateIntroJump(enemy: Sprite, nowMs: number): boolean {
     const landed = sprites.readDataNumber(enemy, ENEMY_BOSS_JUMP_LANDED_KEY) | 0
     if (!landed && nowMs >= impactAt) {
         sprites.setDataNumber(enemy, ENEMY_BOSS_JUMP_LANDED_KEY, 1)
+        _bossDispatchIntroJumpLand(
+            enemy,
+            nowMs | 0,
+            fromX | 0,
+            fromY | 0,
+            toX | 0,
+            toY | 0,
+            startMs | 0,
+            landAtMs | 0,
+            endMs | 0
+        )
         if (DEBUG_BOSS_INTRO) {
             console.log("[BOSS][INTRO] jump impact", { enemyId: enemy.id | 0, nowMs: nowMs | 0, toX: toX | 0, toY: toY | 0 })
         }
@@ -81366,8 +83458,9 @@ function _enemyBossSpawnBarrage(enemy: Sprite, attackMs: number): void {
 
     if (angles.length <= 0) return
     _enemyBossShuffleAngles(angles)
-    anyEnemy.__bossBarrageQueue = angles
     const nowMs = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : 0
+    _bossDispatchBarrageVolley(enemy, nowMs | 0, angles.length | 0, targets.length | 0, clustered, targets)
+    anyEnemy.__bossBarrageQueue = angles
     sprites.setDataNumber(enemy, "__bossBarrageNextMs", nowMs | 0)
     _enemyBossProcessBarrageQueue(enemy, nowMs | 0)
 }
@@ -82956,6 +85049,21 @@ function handleEnemyKilledAndScheduleDeath(eIndex: number, enemy: Sprite, srcHi:
 
 
 
+    const isBoss = _enemyIsBoss(enemy)
+    if (isBoss) {
+        const hooks = getStudentBossHooks()
+        if (hooks && typeof hooks.onBossDefeated === "function") {
+            const profiles = _bossCollectProfiles()
+            const profile = (killerHi >= 0) ? _heroProfileKeyForIndex(killerHi) : (profiles[0] || "")
+            const allowed = profile ? isProfileAllowed(hooks, profile) : _bossHooksProfilesAllowed(hooks, profiles)
+            if (allowed) {
+                const ctx = _bossBuildContextBase(enemy, eIndex | 0, now | 0, String(profile || ""), profiles, hooks)
+                ctx.killerHi = killerHi | 0
+                try { hooks.onBossDefeated(ctx) } catch { /* ignore */ }
+            }
+        }
+    }
+
     let coinsFinal = coins | 0
 
     let xpScaleFinal = 1
@@ -83266,6 +85374,15 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex
 
     if (!hasAnyWork) return;
 
+    const isBoss = _enemyIsBoss(enemy)
+    const hooks = isBoss ? getStudentBossHooks() : null
+    const profiles = isBoss ? _bossCollectProfiles() : []
+    const profileKey = (srcHi >= 0) ? _heroProfileKeyForIndex(srcHi) : (profiles[0] || "")
+
+    if (isBoss && (sprites.readDataNumber(enemy, ENEMY_BOSS_ENGAGED_KEY) | 0) === 0) {
+        sprites.setDataNumber(enemy, ENEMY_BOSS_ENGAGED_KEY, 1)
+        _bossDispatchEngaged(enemy, eIndex | 0, now | 0, String(profileKey || ""), profiles, hooks)
+    }
 
 
     // 1) Relics (and other “on-hit” rule mutations) run FIRST
@@ -83290,7 +85407,33 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex
         }
     }
 
-    // 2c) Aggro (threat) update after final damage is known
+    // 2c) Boss damage override (debug only)
+    const baseDamage = ctx.damage | 0
+    if (
+        isBoss &&
+        hooks &&
+        DEBUG_BOSS_OVERRIDE_DAMAGE &&
+        typeof hooks.overrideBossDamage === "function" &&
+        (profileKey ? isProfileAllowed(hooks, profileKey) : _bossHooksProfilesAllowed(hooks, profiles))
+    ) {
+        try {
+            const bossCtx = _bossBuildContextBase(enemy, eIndex | 0, now | 0, String(profileKey || ""), profiles, hooks)
+            bossCtx.baseDamage = baseDamage | 0
+            bossCtx.damage = ctx.damage | 0
+            bossCtx.sourceHeroIndex = srcHi | 0
+            bossCtx.sourceHero = srcHero || null
+            bossCtx.family = ctx.family | 0
+            bossCtx.element = ctx.element | 0
+            bossCtx.button = String(ctx.button || "")
+            bossCtx.sourceTag = String(ctx.sourceTag || "")
+            const override = hooks.overrideBossDamage(bossCtx)
+            if (typeof override === "number" && Number.isFinite(override)) {
+                ctx.damage = Math.max(0, Math.round(override)) | 0
+            }
+        } catch { /* ignore */ }
+    }
+
+    // 2d) Aggro (threat) update after final damage is known
     _enemyAggroNoteHit(ctx)
 
 
@@ -83339,6 +85482,19 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex
 
         flashEnemyOnDamage(enemy);
 
+        if (isBoss) {
+            _bossDispatchHurt(enemy, eIndex | 0, now | 0, String(profileKey || ""), profiles, hooks, {
+                baseDamage: baseDamage | 0,
+                damage: ctx.damage | 0,
+                sourceHeroIndex: srcHi | 0,
+                sourceHero: srcHero || null,
+                family: ctx.family | 0,
+                element: ctx.element | 0,
+                button: ctx.button || "",
+                sourceTag: ctx.sourceTag || "",
+            })
+        }
+
 
 
         if (hp <= 0) {
@@ -83347,6 +85503,10 @@ function applyDamageToEnemyIndex(eIndex: number, amount: number, sourceHeroIndex
 
         }
 
+    }
+
+    if (isBoss) {
+        _bossMaybeDispatchPhaseChange(enemy, eIndex | 0, now | 0, String(profileKey || ""), profiles, hooks)
     }
 
 
@@ -85360,6 +87520,7 @@ if (SHOP_MODE_ACTIVE) {
 
     updateAgilityHookshotAll(now)
     updateAgilityThrustMotionAll(now)
+    _heAgilityDumpTick(now)
 
 
 
@@ -92150,6 +94311,812 @@ function _heDebugTraceInternal(tag: any, data?: any): void {
     }
 }
 
+type StrengthTraceEvent = {
+    t: number;
+    rt: number;
+    tag: string;
+    data: any;
+};
+
+const HE_STRENGTH_TRACE_REASON_PREFIX = "strength";
+const HE_STRENGTH_TRACE_MAX_MOVES = 3;
+const STR_TRACE_MOVE_ID_KEY = "strTraceMoveId";
+let _heStrengthTraceMovesStarted = 0;
+let _heStrengthTraceMovesCompleted = 0;
+let _heStrengthTraceRunId = "";
+let _heStrengthTraceRunStartMs = 0;
+let _heStrengthTraceLastDumpMs = 0;
+let _heStrengthTraceLastMoveStart: any = null;
+let _heStrengthTraceLastChargeBegin: any = null;
+let _heStrengthTraceLastRelease: any = null;
+let _heStrengthTraceLastCancel: any = null;
+let _heStrengthTraceLastTapRelease: any = null;
+let _heStrengthTraceLastProjectile: any = null;
+let _heStrengthTraceLastArcFx: any = null;
+let _heStrengthTraceDoneNotified = false;
+
+function _heGetStrengthTraceBuffer(): StrengthTraceEvent[] {
+    const g: any = globalThis as any;
+    if (g && Array.isArray(g.__heStrengthTraceBuffer)) return g.__heStrengthTraceBuffer;
+    const arr: StrengthTraceEvent[] = [];
+    if (g) g.__heStrengthTraceBuffer = arr;
+    return arr;
+}
+
+function _heStrengthTraceRecord(tag: string, data?: any): void {
+    const buf = _heGetStrengthTraceBuffer();
+    let runtimeMs = 0;
+    try {
+        if (typeof game !== "undefined" && game && typeof game.runtime === "function") {
+            runtimeMs = game.runtime() | 0;
+        }
+    } catch { }
+    buf.push({
+        t: Date.now(),
+        rt: runtimeMs | 0,
+        tag: String(tag || ""),
+        data: (data === undefined) ? null : data
+    });
+    const max = Math.max(1, DEBUG_STR_TRACE_MAX | 0);
+    if (buf.length > max) buf.splice(0, buf.length - max);
+}
+
+function _heStrengthTraceCanLog(): boolean {
+    return DEBUG_STR_TRACE && ((_heStrengthTraceMovesCompleted | 0) < HE_STRENGTH_TRACE_MAX_MOVES);
+}
+
+function _heStrengthTraceNotifyDoneIfNeeded(): void {
+    if (!DEBUG_STR_TRACE) return;
+    if (_heStrengthTraceDoneNotified) return;
+    if ((_heStrengthTraceMovesCompleted | 0) < (HE_STRENGTH_TRACE_MAX_MOVES | 0)) return;
+    _heStrengthTraceDoneNotified = true;
+    let runtimeMs = 0;
+    try {
+        if (typeof game !== "undefined" && game && typeof game.runtime === "function") {
+            runtimeMs = game.runtime() | 0;
+        }
+    } catch { }
+    const tag = HE_STRENGTH_TRACE_REASON_PREFIX + ":auto";
+    const file = "debugdump_strength.json";
+    let bytes = 0;
+    let ok = 1;
+    try {
+        const payload = _heBuildStrengthDebugDump("done");
+        const text = JSON.stringify(payload);
+        bytes = text ? (text.length | 0) : 0;
+    } catch {
+        ok = 0;
+        bytes = 0;
+    }
+    const g: any = globalThis as any;
+    const host = (g && typeof g.__isHost === "boolean") ? (g.__isHost ? 1 : 0) : 0;
+    const net: any = g && g.__net;
+    let ws = 0;
+    if (net) {
+        if (typeof net.ws !== "undefined") ws = net.ws ? 1 : 0;
+        else ws = 1;
+    }
+    const moves = `${_heStrengthTraceMovesCompleted | 0}/${HE_STRENGTH_TRACE_MAX_MOVES | 0}`;
+    console.log(
+        "[STR][DUMP]" +
+        " done=1" +
+        " ok=" + (ok | 0) +
+        " reason=limit" +
+        " file=" + file +
+        " tag=" + tag +
+        " rtMs=" + (runtimeMs | 0) +
+        " timeoutMs=0" +
+        " bytes=" + (bytes | 0) +
+        " host=" + (host | 0) +
+        " ws=" + (ws | 0) +
+        " moves=" + moves +
+        " runId=" + (_heStrengthTraceRunId || "")
+    );
+}
+
+function _heStrengthTraceInitIfNeeded(reasonTag: string): void {
+    if (!DEBUG_STR_TRACE) return;
+    if (_heStrengthTraceRunId) return;
+    const g: any = globalThis as any;
+    _heStrengthTraceRunId = "str-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    _heStrengthTraceRunStartMs = 0;
+    _heStrengthTraceMovesStarted = 0;
+    _heStrengthTraceMovesCompleted = 0;
+    _heStrengthTraceDoneNotified = false;
+    try {
+        if (typeof game !== "undefined" && game && typeof game.runtime === "function") {
+            _heStrengthTraceRunStartMs = game.runtime() | 0;
+        }
+    } catch { }
+    const buf = _heGetStrengthTraceBuffer();
+    buf.length = 0;
+    if (g) {
+        g.__heStrengthTraceMeta = {
+            runId: _heStrengthTraceRunId,
+            startedAt: Date.now(),
+            startedAtRt: _heStrengthTraceRunStartMs | 0,
+            maxMoves: HE_STRENGTH_TRACE_MAX_MOVES | 0
+        };
+    }
+    _heStrengthTraceRecord("RUN_START", { reason: String(reasonTag || ""), runId: _heStrengthTraceRunId });
+}
+
+function _heStrengthTracePush(tag: string, data?: any): void {
+    if (!_heStrengthTraceCanLog()) return;
+    _heStrengthTraceInitIfNeeded(String(tag || ""));
+    _heStrengthTraceRecord(String(tag || ""), data);
+    _heStrengthTraceDump(String(tag || ""));
+}
+
+function _heStrengthTraceHeroState(hi: number, hero: Sprite): any {
+    const ownerId = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+    const btnId = sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_BTN) | 0;
+    const heldInput = (btnId | 0) !== 0 ? isStrBtnIdPressedForOwner(ownerId | 0, btnId | 0) : false;
+    return {
+        hi: hi | 0,
+        pid: ownerId | 0,
+        name: sprites.readDataString(hero, HERO_DATA.NAME) || "",
+        x: hero.x | 0,
+        y: hero.y | 0,
+        actionKind: sprites.readDataString(hero, HERO_DATA.ActionKind) || "",
+        phaseName: sprites.readDataString(hero, HERO_DATA.PhaseName) || "",
+        phasePart: sprites.readDataString(hero, HERO_DATA.PhasePartName) || "",
+        phaseProg: sprites.readDataNumber(hero, HERO_DATA.PhaseProgressInt) | 0,
+        phasePartProg: sprites.readDataNumber(hero, HERO_DATA.PhasePartProgress) | 0,
+        strCharging: sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGING) ? 1 : 0,
+        strChargeHeld: sprites.readDataBoolean(hero, HERO_DATA.STR_CHARGE_HELD) ? 1 : 0,
+        strChargeBtn: btnId | 0,
+        strChargeHeldInput: heldInput ? 1 : 0,
+        strChargeStartMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_START_MS) | 0,
+        strChargeLastMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_LAST_MS) | 0,
+        strChargeMaxMs: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_MAX_MS) | 0,
+        strChargeArcDeg: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_DEG) | 0,
+        strChargeArcMaxDeg: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_ARC_MAX_DEG) | 0,
+        strChargeReachPx: sprites.readDataNumber(hero, HERO_DATA.STR_CHARGE_REACH_PX) | 0,
+        strSwingSkipWindup: sprites.readDataNumber(hero, STR_SWING_SKIP_WINDUP_KEY) | 0,
+        strSwingStartCol: sprites.readDataNumber(hero, STR_SWING_START_COL_KEY) | 0,
+        strTraceMoveId: sprites.readDataNumber(hero, STR_TRACE_MOVE_ID_KEY) | 0,
+        strSegName: sprites.readDataString(hero, STR_SEG_NAME_KEY) || "",
+        strSegStartMs: sprites.readDataNumber(hero, STR_SEG_START_MS_KEY) | 0,
+        strSegDurMs: sprites.readDataNumber(hero, STR_SEG_DUR_MS_KEY) | 0,
+        strSegProg: sprites.readDataNumber(hero, STR_SEG_PROGRESS_INT_KEY) | 0,
+        payload: {
+            family: sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_FAMILY) | 0,
+            btn: sprites.readDataString(hero, HERO_DATA.STR_PAYLOAD_BTNSTR) || "",
+            t1: sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T1) | 0,
+            t2: sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T2) | 0,
+            t3: sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T3) | 0,
+            t4: sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_T4) | 0,
+            el: sprites.readDataNumber(hero, HERO_DATA.STR_PAYLOAD_EL) | 0,
+            anim: sprites.readDataString(hero, HERO_DATA.STR_PAYLOAD_ANIM) || "",
+        }
+    };
+}
+
+function _heBuildStrengthDebugDump(reason?: string): any {
+    const g: any = globalThis as any;
+    let runtimeMs = 0;
+    try { runtimeMs = game.runtime() | 0; } catch { }
+    const heroStates: any[] = [];
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi];
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue;
+        heroStates.push(_heStrengthTraceHeroState(hi | 0, hero));
+    }
+    const buf = _heGetStrengthTraceBuffer();
+    return {
+        type: "heStrengthDumpV1",
+        createdAt: Date.now(),
+        runtimeMs: runtimeMs | 0,
+        reason: String(reason || ""),
+        host: g && typeof g.__isHost === "boolean" ? !!g.__isHost : null,
+        run: {
+            id: _heStrengthTraceRunId,
+            startedAtRt: _heStrengthTraceRunStartMs | 0,
+            maxMoves: HE_STRENGTH_TRACE_MAX_MOVES | 0,
+            movesStarted: _heStrengthTraceMovesStarted | 0,
+            movesCompleted: _heStrengthTraceMovesCompleted | 0
+        },
+        settings: {
+            chargeAllowTapRelease: STR_CHARGE_ALLOW_TAP_RELEASE ? 1 : 0,
+            swingWindupCols: STR_SWING_WINDUP_FRAME_COLS.slice(0),
+            swingForwardCols: STR_SWING_FORWARD_FRAME_COLS.slice(0),
+            swingReturnCols: STR_SWING_RETURN_FRAME_COLS.slice(0),
+            swingWindupMs: (STR_SWING_WINDUP_FRAME_MS || []).slice(0),
+            swingForwardMs: (STR_SWING_FORWARD_FRAME_MS || []).slice(0),
+            swingReturnMs: (STR_SWING_RETURN_FRAME_MS || []).slice(0),
+        },
+        last: {
+            moveStart: _heStrengthTraceLastMoveStart,
+            chargeBegin: _heStrengthTraceLastChargeBegin,
+            release: _heStrengthTraceLastRelease,
+            cancel: _heStrengthTraceLastCancel,
+            tapRelease: _heStrengthTraceLastTapRelease,
+            projectile: _heStrengthTraceLastProjectile,
+            arcFx: _heStrengthTraceLastArcFx,
+        },
+        heroes: heroStates,
+        events: buf.slice(0)
+    };
+}
+
+function _heStrengthTraceDump(reason?: string): void {
+    if (!_heStrengthTraceCanLog()) return;
+    if (!DEBUG_STR_TRACE_AUTO_DUMP) return;
+    if (!DEBUG_DEBUG_DUMP) return;
+    _heStrengthTraceInitIfNeeded(String(reason || ""));
+    const now = (typeof game !== "undefined" && game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0);
+    const cooldown = Math.max(0, DEBUG_STR_TRACE_DUMP_COOLDOWN_MS | 0);
+    if (cooldown > 0 && (_heStrengthTraceLastDumpMs | 0) > 0 && (now - (_heStrengthTraceLastDumpMs | 0)) < cooldown) return;
+    _heStrengthTraceLastDumpMs = now | 0;
+    const g: any = globalThis as any;
+    const net: any = g && g.__net;
+    if (!net || typeof net.sendDebugDump !== "function") return;
+    const payload = _heBuildStrengthDebugDump(reason);
+    const reasonTag = HE_STRENGTH_TRACE_REASON_PREFIX + (reason ? (":" + String(reason || "")) : "");
+    try { net.sendDebugDump(payload, reasonTag); } catch { /* ignore */ }
+}
+
+// ------------------------------------------------------------------
+// AGILITY DUMP (separate file, machine-readable)
+// ------------------------------------------------------------------
+
+type AgiDumpEvent = {
+    t: number;
+    rt: number;
+    tag: string;
+    hi: number;
+    moveId: number;
+    data: any;
+};
+
+type AgiDumpMove = {
+    id: number;
+    kind: string;
+    heroIndex: number;
+    startedAt: number;
+    startedAtRt: number;
+    endedAt: number | null;
+    endedAtRt: number | null;
+    meta: any;
+    events: AgiDumpEvent[];
+    samples: any[];
+    lastSampleMs: number;
+};
+
+const HE_AGI_DUMP_REASON_PREFIX = "agility";
+let _heAgiDumpRunId = "";
+let _heAgiDumpRunStartMs = 0;
+let _heAgiDumpMoveSeq = 0;
+let _heAgiDumpMoves: AgiDumpMove[] = [];
+let _heAgiDumpActiveByHero: { [k: number]: AgiDumpMove } = Object.create(null);
+let _heAgiDumpLastStateByHero: { [k: number]: { agi: number; hook: number; phase: string; part: string } } = Object.create(null);
+let _heAgiDumpMovesCompleted = 0;
+let _heAgiDumpDone = false;
+let _heAgiDumpSent = false;
+
+function _heAgilityDumpReset(reason?: string): void {
+    if (!DEBUG_AGI_DUMP) return;
+    const g: any = globalThis as any;
+    _heAgiDumpRunId = "agi-" + Date.now().toString(36) + Math.random().toString(36).slice(2, 6);
+    _heAgiDumpRunStartMs = 0;
+    try { _heAgiDumpRunStartMs = game.runtime() | 0; } catch { }
+    _heAgiDumpMoveSeq = 0;
+    _heAgiDumpMoves = [];
+    _heAgiDumpActiveByHero = Object.create(null);
+    _heAgiDumpLastStateByHero = Object.create(null);
+    _heAgiDumpMovesCompleted = 0;
+    _heAgiDumpDone = false;
+    _heAgiDumpSent = false;
+    if (g) {
+        g.__heAgilityDumpMeta = {
+            runId: _heAgiDumpRunId,
+            startedAt: Date.now(),
+            startedAtRt: _heAgiDumpRunStartMs | 0,
+            reason: String(reason || "")
+        };
+    }
+}
+
+function _heAgilityDumpInitIfNeeded(reason?: string): void {
+    if (!DEBUG_AGI_DUMP) return;
+    if (_heAgiDumpRunId) return;
+    _heAgilityDumpReset(reason);
+}
+
+function _heAgilityDumpRecordEvent(move: AgiDumpMove, tag: string, data?: any): void {
+    if (!move) return;
+    const max = Math.max(1, DEBUG_AGI_DUMP_MAX_EVENTS_PER_MOVE | 0);
+    if (move.events.length >= max) return;
+    let rt = 0;
+    try { rt = game.runtime() | 0; } catch { }
+    move.events.push({
+        t: Date.now(),
+        rt: rt | 0,
+        tag: String(tag || ""),
+        hi: move.heroIndex | 0,
+        moveId: move.id | 0,
+        data: (data === undefined) ? null : data
+    });
+}
+
+function _heAgilityDumpStartMove(heroIndex: number, hero: Sprite, kind: string, nowMs: number): AgiDumpMove | null {
+    const maxMoves = Math.max(1, DEBUG_AGI_DUMP_MOVES_MAX | 0);
+    if (_heAgiDumpMoves.length >= maxMoves) return null;
+    const move: AgiDumpMove = {
+        id: (++_heAgiDumpMoveSeq) | 0,
+        kind: String(kind || ""),
+        heroIndex: heroIndex | 0,
+        startedAt: Date.now(),
+        startedAtRt: nowMs | 0,
+        endedAt: null,
+        endedAtRt: null,
+        meta: {
+            pid: sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0,
+            name: sprites.readDataString(hero, HERO_DATA.NAME) || "",
+            comboMode: sprites.readDataNumber(hero, HERO_DATA.AGI_COMBO_MODE) | 0,
+            phaseName: sprites.readDataString(hero, HERO_DATA.PhaseName) || "",
+            phasePart: sprites.readDataString(hero, HERO_DATA.PhasePartName) || "",
+        },
+        events: [],
+        samples: [],
+        lastSampleMs: 0
+    };
+    _heAgiDumpMoves.push(move);
+    _heAgiDumpActiveByHero[heroIndex | 0] = move;
+    _heAgilityDumpRecordEvent(move, "MOVE_START", { kind: move.kind });
+    return move;
+}
+
+function _heAgilityDumpEndMove(move: AgiDumpMove, nowMs: number, reason?: string): void {
+    if (!move || move.endedAtRt != null) return;
+    move.endedAt = Date.now();
+    move.endedAtRt = nowMs | 0;
+    _heAgilityDumpRecordEvent(move, "MOVE_END", { reason: String(reason || "") });
+    _heAgiDumpMovesCompleted = (_heAgiDumpMovesCompleted + 1) | 0;
+    if (_heAgiDumpMovesCompleted >= (DEBUG_AGI_DUMP_MOVES_MAX | 0)) {
+        _heAgiDumpDone = true;
+    }
+}
+
+function _heAgilityDumpResolveDir(
+    heroIndex: number,
+    hero: Sprite,
+    proj: Sprite | null,
+    hookState: AgiHookshotState | null
+): { nx: number; ny: number; src: string } {
+    let nx = 0;
+    let ny = 0;
+    let src = "none";
+    if (hookState) {
+        nx = hookState.dirX || 0;
+        ny = hookState.dirY || 0;
+        if (nx || ny) src = "hook";
+    }
+    if ((!nx && !ny) && proj) {
+        nx = sprites.readDataNumber(proj, PROJ_DATA.DIR_X) || 0;
+        ny = sprites.readDataNumber(proj, PROJ_DATA.DIR_Y) || 0;
+        if (nx || ny) src = "proj";
+    }
+    if (!nx && !ny) {
+        const aim = getAimVectorForHero(heroIndex);
+        nx = aim[0];
+        ny = aim[1];
+        if (nx || ny) src = "aim";
+    }
+    if (!nx && !ny) {
+        nx = _getHeroFacingX(heroIndex) || 1;
+        ny = _getHeroFacingY(heroIndex) || 0;
+        src = "facing";
+    }
+    let m = Math.sqrt(nx * nx + ny * ny);
+    if (m < 1e-6) {
+        nx = 1;
+        ny = 0;
+        m = 1;
+    }
+    return { nx: nx / m, ny: ny / m, src };
+}
+
+function _heAgilityDumpWeaponAxis(hero: Sprite, nx: number, ny: number): any {
+    const info = _getHeroWeaponFgInfo(hero);
+    const axisLocal = info ? _weaponAxisFromMask(info, nx, ny) : null;
+    const axisWorld = axisLocal
+        ? {
+            x0: (hero.x + axisLocal.x0),
+            y0: (hero.y + axisLocal.y0),
+            x1: (hero.x + axisLocal.x1),
+            y1: (hero.y + axisLocal.y1)
+        }
+        : null;
+    const axisLen = axisWorld
+        ? Math.hypot((axisWorld.x1 - axisWorld.x0), (axisWorld.y1 - axisWorld.y0))
+        : 0;
+    return {
+        info: info ? {
+            texKey: info.texKey,
+            frameName: info.frameName,
+            offX: info.offX | 0,
+            offY: info.offY | 0,
+            originX: Number.isFinite(info.originX) ? Number(info.originX) : 0.5,
+            originY: Number.isFinite(info.originY) ? Number(info.originY) : 0.5,
+            scaleX: Number.isFinite(info.scaleX) ? Number(info.scaleX) : 1,
+            scaleY: Number.isFinite(info.scaleY) ? Number(info.scaleY) : 1,
+            flipX: info.flipX ? 1 : 0,
+            flipY: info.flipY ? 1 : 0
+        } : null,
+        axisLocal,
+        axisWorld,
+        axisLen: Number.isFinite(axisLen) ? Number(axisLen) : 0
+    };
+}
+
+function _heAgilityDumpResolveRawFrame(fx: Sprite): number {
+    if (!fx) return 0;
+    const frameIndex = sprites.readDataNumber(fx, EFFECT_FRAME_INDEX_DATA_KEY);
+    const frameIndexRaw = sprites.readDataNumber(fx, EFFECT_FRAME_INDEX_IS_RAW_DATA_KEY) | 0;
+    if (frameIndexRaw) return frameIndex | 0;
+    const skin = sprites.readDataString(fx, "effectSkin") || "";
+    const dir = sprites.readDataString(fx, "effectDir") || "";
+    const atlas = _getEffectAtlasAny();
+    const resolved = (atlas && skin) ? _resolveEffectEntry(atlas, skin, dir || "") : null;
+    const frames = resolved && resolved.frameIndices ? resolved.frameIndices : null;
+    if (frames && Number.isFinite(frameIndex) && (frameIndex | 0) >= 0 && (frameIndex | 0) < frames.length) {
+        return frames[frameIndex | 0] | 0;
+    }
+    return frameIndex | 0;
+}
+
+function _heAgilityDumpCometAxisFromFx(fx: Sprite, rawFrame: number): any {
+    if (!fx) return null;
+    const skin = sprites.readDataString(fx, "effectSkin") || "";
+    const tipOffset = _agiCometTipOffsetForRaw(skin, rawFrame | 0);
+    const tailOffset = _agiCometTailOffsetForRaw(skin, rawFrame | 0);
+    if (!tipOffset && !tailOffset) return null;
+    let dxLocal = 0;
+    let dyLocal = 0;
+    if (tipOffset && tailOffset) {
+        dxLocal = (tipOffset.dx || 0) - (tailOffset.dx || 0);
+        dyLocal = (tipOffset.dy || 0) - (tailOffset.dy || 0);
+    } else if (tipOffset) {
+        dxLocal = tipOffset.dx || 0;
+        dyLocal = tipOffset.dy || 0;
+    } else {
+        dxLocal = 0;
+        dyLocal = 0;
+    }
+    const scale = sprites.readDataNumber(fx, EFFECT_SCALE_DATA_KEY);
+    const scaleX = sprites.readDataNumber(fx, EFFECT_SCALE_X_DATA_KEY);
+    const scaleY = sprites.readDataNumber(fx, EFFECT_SCALE_Y_DATA_KEY);
+    const sx = Number.isFinite(scaleX) && scaleX > 0 ? scaleX : (Number.isFinite(scale) && scale > 0 ? scale : 1);
+    const sy = Number.isFinite(scaleY) && scaleY > 0 ? scaleY : (Number.isFinite(scale) && scale > 0 ? scale : 1);
+    const s = (Number.isFinite(scale) && scale > 0) ? scale : 1;
+    const dxScaled = dxLocal * s * sx;
+    const dyScaled = dyLocal * s * sy;
+    const rot = sprites.readDataNumber(fx, EFFECT_ROT_DATA_KEY) || 0;
+    const cos = Math.cos(rot);
+    const sin = Math.sin(rot);
+    const dxWorld = (dxScaled * cos) - (dyScaled * sin);
+    const dyWorld = (dxScaled * sin) + (dyScaled * cos);
+    const tipX = fx.x;
+    const tipY = fx.y;
+    const tailX = tipX - dxWorld;
+    const tailY = tipY - dyWorld;
+    return {
+        tipX: Number(tipX),
+        tipY: Number(tipY),
+        tailX: Number(tailX),
+        tailY: Number(tailY),
+        dxWorld: Number(dxWorld),
+        dyWorld: Number(dyWorld),
+        rawFrame: rawFrame | 0
+    };
+}
+
+function _heAgilityDumpSquareFillExpect(
+    hero: Sprite,
+    element: number,
+    nx: number,
+    ny: number,
+    maskFx: Sprite | null
+): any {
+    const elem = _heroBodyEffectElement(hero, element | 0) | 0;
+    const dir = _enemyDirFromVector(nx, ny);
+    const pick = _agiCometElementTexturePick(elem | 0, dir || "");
+    const atlas = _getEffectAtlasAny();
+    const resolved = (atlas && pick && pick.skinId) ? _resolveEffectEntry(atlas, pick.skinId, pick.dir || "") : null;
+    const g: any = globalThis as any;
+    const sc: any = g ? g.__phaserScene : null;
+    const texKey = resolved ? String(resolved.textureKey || "") : "";
+    const texExists = !!(sc && sc.textures && typeof sc.textures.exists === "function" && texKey && sc.textures.exists(texKey));
+    const maskHasSource = maskFx ? _effectSpriteHasFrameSource(maskFx) : false;
+    let reason = "";
+    if (!pick || !pick.skinId) reason = "no_pick";
+    else if (!resolved) reason = "no_resolve";
+    else if (!texExists) reason = "no_texture";
+    else if (!maskHasSource) reason = "mask_no_source";
+    return {
+        elem: elem | 0,
+        dir,
+        pickSkin: pick ? (pick.skinId || "") : "",
+        pickDir: pick && pick.dir ? (pick.dir || "") : "",
+        resolved: resolved ? 1 : 0,
+        texKey,
+        texExists: texExists ? 1 : 0,
+        maskHasSource: maskHasSource ? 1 : 0,
+        reason
+    };
+}
+
+function _heAgilityDumpEffectInfo(s: Sprite | null): any {
+    if (!s || (s.flags & sprites.Flag.Destroyed)) return null;
+    const atlas = _getEffectAtlasAny();
+    const g: any = globalThis as any;
+    const sc: any = g ? g.__phaserScene : null;
+    const stride = 2;
+    const alphaMin = 0.05;
+    return _heBuildEffectTraceInfo(s, atlas, sc, stride, alphaMin, true);
+}
+
+function _heAgilityDumpBuildSample(
+    move: AgiDumpMove,
+    heroIndex: number,
+    hero: Sprite,
+    nowMs: number
+): any {
+    const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0;
+    const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0;
+    const hookSt = agiHookshotStateByHeroIndex[heroIndex] || null;
+    let proj: Sprite | null = null;
+    for (let i = 0; i < heroProjectiles.length; i++) {
+        const p = heroProjectiles[i];
+        if (!p || (p.flags & sprites.Flag.Destroyed)) continue;
+        if ((sprites.readDataNumber(p, PROJ_DATA.FAMILY) | 0) !== (FAMILY.AGILITY | 0)) continue;
+        if ((sprites.readDataNumber(p, PROJ_DATA.HERO_INDEX) | 0) !== (heroIndex | 0)) continue;
+        proj = p;
+        break;
+    }
+    const dir = _heAgilityDumpResolveDir(heroIndex, hero, proj, hookSt);
+    const weaponAxis = _heAgilityDumpWeaponAxis(hero, dir.nx, dir.ny);
+    const squareFx = proj ? sprites.readDataSprite(proj, AGI_SQUARE_COMET_FX_KEY) : null;
+    const squareFillFx = proj ? sprites.readDataSprite(proj, AGI_SQUARE_COMET_FILL_FX_KEY) : null;
+    const normalFx = proj ? sprites.readDataSprite(proj, AGI_COMET_FX_KEY) : null;
+    const hookComet = hookSt ? (hookSt.comet || null) : null;
+    const hookAimComet = hookSt ? (hookSt.aimComet || null) : null;
+    const squareRaw = squareFx ? _heAgilityDumpResolveRawFrame(squareFx) : 0;
+    const normalRaw = normalFx ? _heAgilityDumpResolveRawFrame(normalFx) : 0;
+    const hookRaw = hookComet ? _heAgilityDumpResolveRawFrame(hookComet) : 0;
+    const squareAxis = squareFx ? _heAgilityDumpCometAxisFromFx(squareFx, squareRaw | 0) : null;
+    const normalAxis = normalFx ? _heAgilityDumpCometAxisFromFx(normalFx, normalRaw | 0) : null;
+    const hookAxis = hookComet ? _heAgilityDumpCometAxisFromFx(hookComet, hookRaw | 0) : null;
+    const elementNow = proj ? (sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0) : (hookSt ? (hookSt.element | 0) : 0);
+    const fillExpect = squareFx ? _heAgilityDumpSquareFillExpect(hero, elementNow | 0, dir.nx, dir.ny, squareFx) : null;
+    return {
+        t: Date.now(),
+        rt: nowMs | 0,
+        hi: heroIndex | 0,
+        moveId: move.id | 0,
+        kind: move.kind,
+        dir: { nx: Number(dir.nx), ny: Number(dir.ny), src: dir.src },
+        hero: {
+            x: hero.x | 0,
+            y: hero.y | 0,
+            vx: hero.vx | 0,
+            vy: hero.vy | 0,
+            dirX: _getHeroFacingX(heroIndex) | 0,
+            dirY: _getHeroFacingY(heroIndex) | 0,
+            animHold: sprites.readDataNumber(hero, HERO_DATA.ANIM_HOLD) | 0
+        },
+        phase: {
+            actionKind: sprites.readDataString(hero, HERO_DATA.ActionKind) || "",
+            actionSeq: sprites.readDataNumber(hero, HERO_DATA.ActionSequence) | 0,
+            phaseName: sprites.readDataString(hero, HERO_DATA.PhaseName) || "",
+            phaseProg: sprites.readDataNumber(hero, HERO_DATA.PhaseProgressInt) | 0,
+            partName: sprites.readDataString(hero, HERO_DATA.PhasePartName) || "",
+            partProg: sprites.readDataNumber(hero, HERO_DATA.PhasePartProgress) | 0
+        },
+        agi: {
+            state: agiState | 0,
+            hookState: hookState | 0,
+            dashUntil: sprites.readDataNumber(hero, HERO_DATA.AGI_DASH_UNTIL) | 0,
+            lungeStart: sprites.readDataNumber(hero, HERO_DATA.AgilityLungeStartMs) | 0,
+            lungeEnd: sprites.readDataNumber(hero, HERO_DATA.AgilityLungeEndMs) | 0,
+            animTotal: sprites.readDataNumber(hero, HERO_DATA.AgilityAnimTotalMs) | 0,
+            comboMode: sprites.readDataNumber(hero, HERO_DATA.AGI_COMBO_MODE) | 0,
+            execSeq: sprites.readDataNumber(hero, HERO_DATA.AGI_EXECUTE_SEQ) | 0
+        },
+        weapon: weaponAxis,
+        projectile: proj ? {
+            id: (proj as any).id | 0,
+            element: sprites.readDataNumber(proj, PROJ_DATA.ELEMENT) | 0,
+            dirX: sprites.readDataNumber(proj, PROJ_DATA.DIR_X),
+            dirY: sprites.readDataNumber(proj, PROJ_DATA.DIR_Y),
+            startMs: sprites.readDataNumber(proj, PROJ_DATA.START_TIME) | 0,
+            dashMs: sprites.readDataNumber(proj, PROJ_DATA.DASH_MS) | 0,
+            reachT: sprites.readDataNumber(proj, PROJ_DATA.REACH_T) | 0,
+            maxReach: sprites.readDataNumber(proj, PROJ_DATA.MAX_REACH) | 0,
+            arrowLen: sprites.readDataNumber(proj, PROJ_DATA.ARROW_LEN) | 0,
+            moveType: sprites.readDataString(proj, PROJ_DATA.MOVE_TYPE) || ""
+        } : null,
+        squareComet: {
+            base: _heAgilityDumpEffectInfo(squareFx),
+            fill: _heAgilityDumpEffectInfo(squareFillFx),
+            axis: squareAxis,
+            fillExpect
+        },
+        normalComet: {
+            base: _heAgilityDumpEffectInfo(normalFx),
+            axis: normalAxis
+        },
+        hook: hookSt ? {
+            state: hookSt.state | 0,
+            aimAngleMdeg: hookSt.aimAngleMdeg | 0,
+            dirX: hookSt.dirX | 0,
+            dirY: hookSt.dirY | 0,
+            tipDist: hookSt.tipDist | 0,
+            weaponLen: hookSt.weaponLen | 0,
+            maxDist: hookSt.maxDist | 0,
+            element: hookSt.element | 0,
+            timingPosX1000: hookSt.timingPosX1000 | 0,
+            timingPendingAdd: hookSt.timingPendingAdd | 0,
+            timingIsExec: hookSt.timingIsExec | 0,
+            comet: _heAgilityDumpEffectInfo(hookComet),
+            aimComet: _heAgilityDumpEffectInfo(hookAimComet),
+            axis: hookAxis
+        } : null
+    };
+}
+
+function _heBuildAgilityDump(reason?: string): any {
+    let runtimeMs = 0;
+    try { runtimeMs = game.runtime() | 0; } catch { }
+    return {
+        type: "heAgilityDumpV1",
+        createdAt: Date.now(),
+        runtimeMs: runtimeMs | 0,
+        reason: String(reason || ""),
+        run: {
+            id: _heAgiDumpRunId,
+            startedAtRt: _heAgiDumpRunStartMs | 0,
+            movesMax: DEBUG_AGI_DUMP_MOVES_MAX | 0,
+            movesCompleted: _heAgiDumpMovesCompleted | 0,
+            done: _heAgiDumpDone ? 1 : 0
+        },
+        settings: {
+            tickIntervalMs: DEBUG_AGI_DUMP_TICK_INTERVAL_MS | 0,
+            maxSamplesPerMove: DEBUG_AGI_DUMP_MAX_SAMPLES_PER_MOVE | 0,
+            maxEventsPerMove: DEBUG_AGI_DUMP_MAX_EVENTS_PER_MOVE | 0
+        },
+        moves: _heAgiDumpMoves.slice(0)
+    };
+}
+
+function _heAgilityDumpToFile(reason?: string): void {
+    if (!DEBUG_AGI_DUMP) return;
+    if (!DEBUG_DEBUG_DUMP) return;
+    const g: any = globalThis as any;
+    const net: any = g && g.__net;
+    if (!net || typeof net.sendDebugDump !== "function") return;
+    const payload = _heBuildAgilityDump(reason);
+    const reasonTag = HE_AGI_DUMP_REASON_PREFIX + (reason ? (":" + String(reason || "")) : "");
+    let approxBytes = -1;
+    try { approxBytes = JSON.stringify(payload).length | 0; } catch { approxBytes = -1; }
+    const host = (g && typeof g.__isHost === "boolean") ? (g.__isHost ? 1 : 0) : -1;
+    const wsState = (net && net.ws && typeof net.ws.readyState === "number") ? (net.ws.readyState | 0) : -1;
+    let startRt = 0;
+    try { startRt = game.runtime() | 0; } catch { startRt = 0; }
+    const timeoutMs = 15000;
+    try {
+        const p = net.sendDebugDump(payload, reasonTag);
+        if (p && typeof p.then === "function") {
+            p.then((res: any) => {
+                if (!DEBUG_AGI_DUMP) return;
+                const ok = (res && typeof res.ok === "boolean") ? res.ok : null;
+                const rr = (res && typeof res.reason === "string") ? res.reason : "";
+                const file = (res && typeof res.file === "string") ? res.file : "";
+                let endRt = 0;
+                try { endRt = game.runtime() | 0; } catch { endRt = 0; }
+                const dur = (endRt > 0 && startRt > 0) ? (endRt - startRt) : 0;
+                // Single completion line for dump status.
+                // eslint-disable-next-line no-console
+                console.log(
+                    "[AGI][DUMP] done=1 ok=" + ok +
+                    " reason=" + rr +
+                    " file=" + file +
+                    " tag=" + reasonTag +
+                    " rtMs=" + (dur | 0) +
+                    " timeoutMs=" + (timeoutMs | 0) +
+                    " bytes=" + (approxBytes | 0) +
+                    " host=" + host +
+                    " ws=" + (wsState | 0) +
+                    " moves=" + (_heAgiDumpMovesCompleted | 0) + "/" + (DEBUG_AGI_DUMP_MOVES_MAX | 0) +
+                    " runId=" + (_heAgiDumpRunId || "")
+                );
+            }).catch(() => {
+                if (!DEBUG_AGI_DUMP) return;
+                // eslint-disable-next-line no-console
+                console.log(
+                    "[AGI][DUMP] done=1 ok=0 reason=promise" +
+                    " tag=" + reasonTag +
+                    " timeoutMs=" + (timeoutMs | 0) +
+                    " bytes=" + (approxBytes | 0) +
+                    " host=" + host +
+                    " ws=" + (wsState | 0) +
+                    " moves=" + (_heAgiDumpMovesCompleted | 0) + "/" + (DEBUG_AGI_DUMP_MOVES_MAX | 0) +
+                    " runId=" + (_heAgiDumpRunId || "")
+                );
+            });
+        }
+    } catch { /* ignore */ }
+}
+
+function _heAgilityDumpTick(nowMs: number): void {
+    if (!DEBUG_AGI_DUMP) return;
+    _heAgilityDumpInitIfNeeded("tick");
+    if (_heAgiDumpDone) {
+        if (DEBUG_AGI_DUMP_AUTO_DUMP && !_heAgiDumpSent) {
+            _heAgiDumpSent = true;
+            _heAgilityDumpToFile("auto");
+        }
+        return;
+    }
+    const maxMoves = Math.max(1, DEBUG_AGI_DUMP_MOVES_MAX | 0);
+    const interval = Math.max(1, DEBUG_AGI_DUMP_TICK_INTERVAL_MS | 0);
+    const maxSamples = Math.max(1, DEBUG_AGI_DUMP_MAX_SAMPLES_PER_MOVE | 0);
+    for (let hi = 0; hi < heroes.length; hi++) {
+        const hero = heroes[hi];
+        if (!hero || (hero.flags & sprites.Flag.Destroyed)) continue;
+        const agiState = sprites.readDataNumber(hero, HERO_DATA.AGI_STATE) | 0;
+        const hookState = sprites.readDataNumber(hero, HERO_DATA.AGI_HOOK_STATE) | 0;
+        const last = _heAgiDumpLastStateByHero[hi] || { agi: -1, hook: -1, phase: "", part: "" };
+        let move = _heAgiDumpActiveByHero[hi] || null;
+        if (!move && _heAgiDumpMoves.length < maxMoves) {
+            if ((hookState | 0) !== AGI_HOOK_STATE.NONE && (last.hook | 0) === AGI_HOOK_STATE.NONE) {
+                move = _heAgilityDumpStartMove(hi, hero, "hook", nowMs | 0);
+            } else if ((agiState | 0) === AGI_STATE.EXECUTING && (last.agi | 0) !== AGI_STATE.EXECUTING && (hookState | 0) === AGI_HOOK_STATE.NONE) {
+                move = _heAgilityDumpStartMove(hi, hero, "dash", nowMs | 0);
+            }
+        }
+        if (move) {
+            if ((agiState | 0) !== (last.agi | 0)) {
+                _heAgilityDumpRecordEvent(move, "AGI_STATE", { from: last.agi | 0, to: agiState | 0 });
+            }
+            if ((hookState | 0) !== (last.hook | 0)) {
+                _heAgilityDumpRecordEvent(move, "HOOK_STATE", { from: last.hook | 0, to: hookState | 0 });
+            }
+            const ph = sprites.readDataString(hero, HERO_DATA.PhaseName) || "";
+            const pp = sprites.readDataString(hero, HERO_DATA.PhasePartName) || "";
+            if (ph !== last.phase) {
+                _heAgilityDumpRecordEvent(move, "PHASE", { from: last.phase || "", to: ph });
+            }
+            if (pp !== last.part) {
+                _heAgilityDumpRecordEvent(move, "PHASE_PART", { from: last.part || "", to: pp });
+            }
+            if ((nowMs | 0) - (move.lastSampleMs | 0) >= interval && move.samples.length < maxSamples) {
+                move.lastSampleMs = nowMs | 0;
+                move.samples.push(_heAgilityDumpBuildSample(move, hi, hero, nowMs | 0));
+            }
+            if (move.kind === "dash" && (agiState | 0) === AGI_STATE.NONE && (last.agi | 0) === AGI_STATE.EXECUTING) {
+                _heAgilityDumpEndMove(move, nowMs | 0, "dash_done");
+                delete _heAgiDumpActiveByHero[hi];
+            } else if (move.kind === "hook" && (hookState | 0) === AGI_HOOK_STATE.NONE && (last.hook | 0) !== AGI_HOOK_STATE.NONE) {
+                _heAgilityDumpEndMove(move, nowMs | 0, "hook_done");
+                delete _heAgiDumpActiveByHero[hi];
+            }
+        }
+        _heAgiDumpLastStateByHero[hi] = {
+            agi: agiState | 0,
+            hook: hookState | 0,
+            phase: sprites.readDataString(hero, HERO_DATA.PhaseName) || "",
+            part: sprites.readDataString(hero, HERO_DATA.PhasePartName) || ""
+        };
+    }
+    if (_heAgiDumpDone && DEBUG_AGI_DUMP_AUTO_DUMP && !_heAgiDumpSent) {
+        _heAgiDumpSent = true;
+        _heAgilityDumpToFile("auto");
+    }
+}
+
 const HE_EFFECTS_DUMP_DELAY_MS = 1200
 const HE_TRACE_PROOF_HOLD_MS = 15000
 const HE_EFFECTS_HALL_TRACE_INTERVAL_MS = (DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE && DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE > 0)
@@ -92213,6 +95180,7 @@ const _heMaskedBoundsCacheOrder: string[] = []
 
 function _heQueueEffectsDump(reason: string, delayMs?: number): void {
     if (!DEBUG_DEBUG_DUMP || !DEBUG_EFFECTS_DUMP) return
+    if (_heEffectsDumpDone) return
     const now = (game && typeof game.runtime === "function") ? (game.runtime() | 0) : (Date.now() | 0)
     const delay = (delayMs != null ? delayMs : HE_EFFECTS_DUMP_DELAY_MS) | 0
     const when = (now + Math.max(0, delay)) | 0
@@ -92226,7 +95194,7 @@ function _heQueueEffectsDump(reason: string, delayMs?: number): void {
     _heEffectsDumpReason = reasonTag
     if (force) {
         _heDebugDumpHoldUntilMs = (now + HE_TRACE_PROOF_HOLD_MS) | 0
-        if (DEBUG_EFFECTS_HALL_LOGS) {
+        if (DEBUG_EFFECTS_HALL_TRACE_LOGS) {
             console.log(
                 "[VFX][HALL][TRACE][DUMP] queued reason=" + reasonTag + " when=" + (_heEffectsDumpQueuedMs | 0)
             )
@@ -92246,46 +95214,44 @@ function _heNoteEffectApplied(): void {
 
 function _heEffectsDumpTick(nowMs: number): void {
     if (!DEBUG_DEBUG_DUMP || !DEBUG_EFFECTS_DUMP) return
+    if (_heEffectsDumpDone) return
     if (_heEffectsDumpQueuedMs <= 0) return
     if (_heEffectsDumpInFlight) return
     const now = nowMs | 0
     if (now < (_heEffectsDumpQueuedMs | 0)) return
-    const g: any = globalThis as any
-    const fn = g && g.__heDebugDumpToFile
-    if (typeof fn !== "function") {
-        _heEffectsDumpQueuedMs = 0
-        _heEffectsDumpReason = ""
-        return
-    }
     _heEffectsDumpInFlight = true
     const reason = _heEffectsDumpReason || "effects"
-    if (DEBUG_EFFECTS_HALL_LOGS && reason.indexOf("trace-proof") >= 0) {
+    if (DEBUG_EFFECTS_HALL_TRACE_LOGS && reason.indexOf("trace-proof") >= 0) {
         console.log("[VFX][HALL][TRACE][DUMP] fire reason=" + reason)
     }
     let p: any = null
-    try { p = fn(reason) } catch { p = null }
+    _heEffectsDumpDone = true
+    try { p = _heSendDebugDump(reason) } catch { p = null }
     _heEffectsDumpQueuedMs = 0
     _heEffectsDumpReason = ""
     if (p && typeof p.then === "function") {
         p.then((res: any) => {
-            if (DEBUG_EFFECTS_HALL_LOGS && reason.indexOf("trace-proof") >= 0) {
+            if (DEBUG_EFFECTS_HALL_TRACE_LOGS && reason.indexOf("trace-proof") >= 0) {
                 const ok = res && typeof res.ok === "boolean" ? res.ok : null
                 const r = res && typeof res.reason === "string" ? res.reason : ""
                 const file = res && typeof res.file === "string" ? res.file : ""
                 console.log("[VFX][HALL][TRACE][DUMP] done ok=" + ok + " reason=" + r + " file=" + file)
             }
             _heEffectsDumpInFlight = false
+            _heEffectsDumpDone = true
         }).catch((err: any) => {
-            if (DEBUG_EFFECTS_HALL_LOGS && reason.indexOf("trace-proof") >= 0) {
+            if (DEBUG_EFFECTS_HALL_TRACE_LOGS && reason.indexOf("trace-proof") >= 0) {
                 console.log("[VFX][HALL][TRACE][DUMP] fail err=" + String(err || ""))
             }
             _heEffectsDumpInFlight = false
+            _heEffectsDumpDone = true
         })
     } else {
-        if (DEBUG_EFFECTS_HALL_LOGS && reason.indexOf("trace-proof") >= 0) {
+        if (DEBUG_EFFECTS_HALL_TRACE_LOGS && reason.indexOf("trace-proof") >= 0) {
             console.log("[VFX][HALL][TRACE][DUMP] done sync")
         }
         _heEffectsDumpInFlight = false
+        _heEffectsDumpDone = true
     }
 }
 
@@ -92297,7 +95263,7 @@ function _heStartEffectsHallTraceNow(nowMs: number): void {
     _heEffectsHallTraceNextMs = (now + HE_EFFECTS_HALL_TRACE_START_DELAY_MS) | 0
     _heEffectsHallTraceEndMs = (now + HE_EFFECTS_HALL_TRACE_START_DELAY_MS + HE_EFFECTS_HALL_TRACE_DURATION_MS) | 0
     _heEffectsHallTraceSamples = []
-    if (DEBUG_EFFECTS_HALL_LOGS) {
+    if (DEBUG_EFFECTS_HALL_TRACE_LOGS) {
         console.log("[VFX][HALL][TRACE] started")
     }
 }
@@ -92338,7 +95304,7 @@ function _heEffectsHallTraceTick(nowMs: number): void {
     if (now >= (_heEffectsHallTraceEndMs | 0)) {
         _heEffectsHallTraceActive = false
         _heEffectsHallTraceInFlight = true
-        if (DEBUG_EFFECTS_HALL_LOGS) {
+        if (DEBUG_EFFECTS_HALL_TRACE_LOGS) {
             console.log(
                 "[VFX][HALL][TRACE] completed samples=" + (_heEffectsHallTraceSamples.length | 0)
             )
@@ -92371,32 +95337,6 @@ function _heEffectsHallTraceTick(nowMs: number): void {
             _heEffectsHallTraceInFlight = false
             _heQueueEffectsDump("trace-proof", 0)
         }
-        const dumpFn = g && g.__heDebugDumpToFile
-        if (typeof dumpFn === "function") {
-            if (DEBUG_EFFECTS_HALL_LOGS) {
-                console.log("[VFX][HALL][TRACE][DUMP] direct fire reason=trace-proof")
-            }
-            let dp: any = null
-            try { dp = dumpFn("trace-proof") } catch { dp = null }
-            if (dp && typeof dp.then === "function") {
-                dp.then((res: any) => {
-                    if (DEBUG_EFFECTS_HALL_LOGS) {
-                        const ok = res && typeof res.ok === "boolean" ? res.ok : null
-                        const r = res && typeof res.reason === "string" ? res.reason : ""
-                        const file = res && typeof res.file === "string" ? res.file : ""
-                        console.log("[VFX][HALL][TRACE][DUMP] direct done ok=" + ok + " reason=" + r + " file=" + file)
-                    }
-                }).catch((err: any) => {
-                    if (DEBUG_EFFECTS_HALL_LOGS) {
-                        console.log("[VFX][HALL][TRACE][DUMP] direct fail err=" + String(err || ""))
-                    }
-                })
-            } else if (DEBUG_EFFECTS_HALL_LOGS) {
-                console.log("[VFX][HALL][TRACE][DUMP] direct done sync")
-            }
-        } else if (DEBUG_EFFECTS_HALL_LOGS) {
-            console.log("[VFX][HALL][TRACE][DUMP] direct missing __heDebugDumpToFile")
-        }
         return
     }
     _heEffectsHallTraceNextMs = (now + HE_EFFECTS_HALL_TRACE_INTERVAL_MS) | 0
@@ -92414,6 +95354,7 @@ function _heEffectsHallTraceTick(nowMs: number): void {
     for (let i = 0; i < all.length; i++) {
         const s = all[i]
         if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+        if ((sprites.readDataNumber(s, "__hallTraceSkip") | 0) !== 0) continue
         const tag = sprites.readDataString(s, "__hallTag") || ""
         if (!tag) continue
         if (tag.indexOf("hall/alpha") < 0 && tag.indexOf("hall/poison") < 0 && tag.indexOf("hall/dust") < 0) continue
@@ -92432,6 +95373,50 @@ function _heEffectsHallTraceTick(nowMs: number): void {
         else if (slot === "border-mask") entry.borderMask = s
         else if (slot === "mask-outline") entry.border = s
         else if (slot === "mask2-outline") entry.borderMask = s
+    }
+
+    const tileByBase: { [k: string]: any } = Object.create(null)
+    if (_dunEffectsHallNativeFx && _dunEffectsHallNativeFx.length > 0) {
+        for (let i = 0; i < _dunEffectsHallNativeFx.length; i++) {
+            const entry = _dunEffectsHallNativeFx[i]
+            const tile: any = entry && entry.sprite
+            if (!tile || tile.destroyed) continue
+            const tag = tile.__heHallTag || ""
+            if (!tag || tag.indexOf("|tile") < 0) continue
+            const base = tag.split("|")[0] || ""
+            if (!base) continue
+            const texKey = tile.texture ? (tile.texture.key || "") : ""
+            const frame = tile.frame ? (tile.frame.name ?? tile.frame.index ?? null) : null
+            const maskPresent = !!tile.mask
+            const maskRef = tile.__heMaskSpriteRef
+            const maskRefW = (maskRef && Number.isFinite((maskRef as any).displayWidth))
+                ? Number((maskRef as any).displayWidth)
+                : (maskRef ? Number((maskRef as any).width || 0) : 0)
+            const maskRefH = (maskRef && Number.isFinite((maskRef as any).displayHeight))
+                ? Number((maskRef as any).displayHeight)
+                : (maskRef ? Number((maskRef as any).height || 0) : 0)
+            tileByBase[base] = {
+                tag,
+                texKey,
+                frame,
+                x: Math.round(tile.x || 0),
+                y: Math.round(tile.y || 0),
+                w: Math.round(tile.displayWidth || tile.width || 0),
+                h: Math.round(tile.displayHeight || tile.height || 0),
+                tileScaleX: Number.isFinite(tile.tileScaleX) ? Number(tile.tileScaleX) : null,
+                tileScaleY: Number.isFinite(tile.tileScaleY) ? Number(tile.tileScaleY) : null,
+                tilePosX: Number.isFinite(tile.tilePositionX) ? Number(tile.tilePositionX) : null,
+                tilePosY: Number.isFinite(tile.tilePositionY) ? Number(tile.tilePositionY) : null,
+                alpha: Number.isFinite(tile.alpha) ? Number(tile.alpha) : null,
+                tint: Number.isFinite(tile.tintTopLeft) ? (tile.tintTopLeft | 0) : null,
+                depth: Number.isFinite(tile.depth) ? (tile.depth | 0) : null,
+                maskPresent: maskPresent ? 1 : 0,
+                maskSpriteId: tile.__heMaskSpriteId || "",
+                maskSpriteTag: tile.__heMaskSpriteTag || "",
+                maskRefW: Math.round(maskRefW || 0),
+                maskRefH: Math.round(maskRefH || 0)
+            }
+        }
     }
 
     const sampleItems: any[] = []
@@ -92541,6 +95526,21 @@ function _heEffectsHallTraceTick(nowMs: number): void {
                 hRatio: (fillBoundsScaled.h && borderBoundsScaled.h) ? Number((borderBoundsScaled.h / fillBoundsScaled.h).toFixed(3)) : null
             }
             : null
+        const maskOcc = (maskSprite as any)?.__hallMaskOcclude || null
+        const maskOccInfo = maskOcc
+            ? {
+                frontCount: Array.isArray(maskOcc.src2List) ? maskOcc.src2List.length : (maskOcc.src2 ? 1 : 0),
+                maskKey: maskOcc.canvasTex?.key || "",
+                frameW: maskOcc.frameW | 0,
+                frameH: maskOcc.frameH | 0,
+                lastUpdateAt: sprites.readDataNumber(maskSprite, "__hallOccludeUpdateAt") | 0,
+                maskImageVisible: !!(maskOcc.maskImage && maskOcc.maskImage.visible),
+                lastFrontOccCount: (maskOcc.lastFrontOccCount | 0) || 0,
+                lastBackOccCount: (maskOcc.lastBackOccCount | 0) || 0,
+                lastFrontOccPct: Number.isFinite(maskOcc.lastFrontOccPct) ? Number(maskOcc.lastFrontOccPct) : null,
+                lastBackOccPct: Number.isFinite(maskOcc.lastBackOccPct) ? Number(maskOcc.lastBackOccPct) : null
+            }
+            : null
 
         if (fill && sc) {
             // capture later as a single snapshot per tick (avoids Phaser snapshot override)
@@ -92548,17 +95548,29 @@ function _heEffectsHallTraceTick(nowMs: number): void {
 
         let clusterIndex: number | null = null
         let clusterRole = ""
-        const m = /cluster\/(\d+)/.exec(baseTag)
-        if (m && m[1]) {
-            clusterIndex = Number(m[1]) | 0
+        let clusterSet = ""
+        const m = /dust\/([^/]+)\/cluster\/(\d+)/.exec(baseTag)
+        if (m && m[1] && m[2]) {
+            clusterSet = String(m[1] || "")
+            clusterIndex = Number(m[2]) | 0
             if (clusterIndex === 0) clusterRole = "center"
             else if (clusterIndex === 1) clusterRole = "leftLarge"
             else if (clusterIndex === 2) clusterRole = "rightMedium"
             else if (clusterIndex === 3) clusterRole = "frontSmall"
         }
+        const tileInfo = tileByBase[baseTag] || null
+        const tileOcclude = tileInfo
+            ? {
+                maskPresent: tileInfo.maskPresent ? 1 : 0,
+                maskSpriteId: tileInfo.maskSpriteId || "",
+                maskSpriteTag: tileInfo.maskSpriteTag || "",
+                usesOcclude: (tileInfo.maskSpriteTag || "").indexOf("|occlude") >= 0 ? 1 : 0
+            }
+            : null
         sampleItems.push({
             baseTag,
             clusterIndex,
+            clusterSet,
             clusterRole,
             fill: fillInfo,
             mask: maskInfo,
@@ -92583,7 +95595,10 @@ function _heEffectsHallTraceTick(nowMs: number): void {
             borderMaskCorners,
             hasNativeMask: !!(fill as any)?.native?.mask,
             borderHasNativeMask: !!(border as any)?.native?.mask,
-            borderVsFill
+            borderVsFill,
+            maskOcclude: maskOccInfo,
+            tile: tileInfo,
+            tileOcclude
         })
     }
 
@@ -92591,10 +95606,12 @@ function _heEffectsHallTraceTick(nowMs: number): void {
     for (let i = 0; i < all.length; i++) {
         const s = all[i]
         if (!s || (s.flags & sprites.Flag.Destroyed)) continue
+        if ((sprites.readDataNumber(s, "__hallTraceSkip") | 0) !== 0) continue
         const tag = sprites.readDataString(s, "__hallTag") || ""
         if (tag) continue
         const skin = (sprites.readDataString(s, "effectSkin") || "")
-        if (skin.indexOf("waves3 texture") < 0 && skin.indexOf("waves2 texture") < 0) continue
+        const skinLower = skin.toLowerCase()
+        if (skinLower.indexOf("waves3 texture") < 0 && skinLower.indexOf("waves2 texture") < 0 && skinLower.indexOf("fluidextras texture") < 0) continue
         const fillInfo = _heBuildEffectTraceInfo(s, atlas, sc, stride, alphaMin)
         if (!fillInfo) continue
         sampleItems.push({
@@ -92638,9 +95655,13 @@ function _heEffectsHallTraceTick(nowMs: number): void {
         const entry = _dunEffectsHallNativeFx[i]
         const tile: any = entry && entry.sprite
         if (!tile || tile.destroyed) continue
+        if (tile.__heHallTraceSkip) continue
         const texKey = tile.texture ? (tile.texture.key || "") : ""
         const frame = tile.frame ? (tile.frame.name ?? tile.frame.index ?? null) : null
         const maskPresent = !!tile.mask
+        const maskRef = tile.__heMaskSpriteRef
+        const maskRefW = (maskRef && Number.isFinite((maskRef as any).displayWidth)) ? Number((maskRef as any).displayWidth) : (maskRef ? Number((maskRef as any).width || 0) : 0)
+        const maskRefH = (maskRef && Number.isFinite((maskRef as any).displayHeight)) ? Number((maskRef as any).displayHeight) : (maskRef ? Number((maskRef as any).height || 0) : 0)
         nativeTiles.push({
             tag: tile.__heHallTag || "",
             texKey,
@@ -92658,7 +95679,35 @@ function _heEffectsHallTraceTick(nowMs: number): void {
             depth: Number.isFinite(tile.depth) ? (tile.depth | 0) : null,
             maskPresent: maskPresent ? 1 : 0,
             maskSpriteId: tile.__heMaskSpriteId || "",
-            maskSpriteTag: tile.__heMaskSpriteTag || ""
+            maskSpriteTag: tile.__heMaskSpriteTag || "",
+            maskRefW: Math.round(maskRefW || 0),
+            maskRefH: Math.round(maskRefH || 0)
+        })
+    }
+    const nativeTilesNoOcclude = nativeTiles.filter((t) => {
+        if (!t) return false
+        if (!t.maskPresent) return true
+        return !t.maskSpriteTag || String(t.maskSpriteTag || "").indexOf("|occlude") < 0
+    })
+
+    // Summarize occlusion composites so we can verify front-mask counts and active canvas keys.
+    const occludeSummary: any[] = []
+    for (const baseTag in byBase) {
+        const entry = byBase[baseTag]
+        const mask = entry && entry.mask ? (entry.mask as any) : null
+        if (!mask) continue
+        const occ = (mask as any).__hallMaskOcclude
+        if (!occ) continue
+        const frontCount = Array.isArray(occ.src2List) ? occ.src2List.length : (occ.src2 ? 1 : 0)
+        occludeSummary.push({
+            tag: sprites.readDataString(mask, "__hallTag") || baseTag,
+            maskId: (mask.id | 0) || 0,
+            frontCount: frontCount | 0,
+            maskKey: occ.canvasTex?.key || "",
+            frameW: occ.frameW | 0,
+            frameH: occ.frameH | 0,
+            lastUpdateAt: sprites.readDataNumber(mask, "__hallOccludeUpdateAt") | 0,
+            maskImageVisible: !!(occ.maskImage && occ.maskImage.visible)
         })
     }
 
@@ -92696,7 +95745,9 @@ function _heEffectsHallTraceTick(nowMs: number): void {
         t: now,
         items: sampleItems,
         textureUsage,
-        nativeTiles
+        nativeTiles,
+        nativeTilesNoOcclude,
+        occludeSummary
     })
 }
 
@@ -93635,7 +96686,7 @@ function _heRecordScreenSnapResult(entry: any): void {
 
 function _heScreenSnapNoteError(reason?: string, err?: string): void {
     _heScreenSnapErrors = (_heScreenSnapErrors + 1) | 0
-    if (reason && DEBUG_EFFECTS_HALL_LOGS) {
+    if (reason && DEBUG_EFFECTS_HALL_TRACE_LOGS) {
         console.log(
             "[VFX][HALL][SNAP][ERR]" +
             " reason=" + reason +
@@ -93933,7 +96984,7 @@ function _heScreenSnapPumpTick(sc: any, nowMs: number): void {
     _heScreenSnapScheduled = (_heScreenSnapScheduled + 1) | 0
     _heScreenSnapLastScheduledAtMs = now | 0
     _heScreenSnapLastScheduledFrame = _heScreenSnapFrame | 0
-    if (DEBUG_EFFECTS_HALL_LOGS) {
+    if (DEBUG_EFFECTS_HALL_TRACE_LOGS) {
         console.log(
             "[VFX][HALL][SNAP][SCHEDULE]" +
             " id=" + (req.id ?? "n/a") +
@@ -94467,6 +97518,8 @@ function _heBuildEffectTraceInfo(
     const nativeRotation = native && Number.isFinite(native.rotation) ? Number(native.rotation) : null
     const nativeOriginX = native && Number.isFinite(native.originX) ? Number(native.originX) : null
     const nativeOriginY = native && Number.isFinite(native.originY) ? Number(native.originY) : null
+    const effectAlpha = sprites.readDataNumber(s, EFFECT_ALPHA_DATA_KEY)
+    const effectForceVisible = sprites.readDataNumber(s, EFFECT_FORCE_VISIBLE_DATA_KEY)
     let nativeBounds: any = null
     if (native && typeof native.getBounds === "function") {
         try {
@@ -94567,6 +97620,8 @@ function _heBuildEffectTraceInfo(
         nativeRotation: nativeRotation,
         nativeOriginX: nativeOriginX,
         nativeOriginY: nativeOriginY,
+        effectAlpha: Number.isFinite(effectAlpha) ? Number(effectAlpha) : null,
+        effectForceVisible: Number.isFinite(effectForceVisible) ? (effectForceVisible | 0) : null,
         nativeBounds: nativeBounds,
         spawnX: Number.isFinite(spawnX) ? (spawnX | 0) : null,
         spawnY: Number.isFinite(spawnY) ? (spawnY | 0) : null,
@@ -94915,8 +97970,10 @@ function _heBuildDebugDump(reason?: string): any {
     const trace = traceBuf.length ? traceBuf.slice(-HE_DEBUG_TRACE_MAX) : []
 
     const isTilemapDump = reasonTag.indexOf("tilemap") >= 0
-    const isTilemapFocusDump = reasonTag.indexOf("tilemap-focus") >= 0
-    const effects = isTilemapDump ? null : _heCollectEffectsDump()
+    const isPropsAnimDump = reasonTag.indexOf("props-anim") >= 0
+    const isEffectsDump = reasonTag.indexOf("effects") >= 0
+    const wantFullDump = !isTilemapDump && !isPropsAnimDump && !isEffectsDump
+    const effects = (isEffectsDump || wantFullDump) ? _heCollectEffectsDump() : null
     if (DEBUG_TILEMAP_AUDIT_DUMP && !_tilemapAuditDumpLatest) {
         const fn = (typeof _dunBuildTilemapAuditEntry === "function") ? _dunBuildTilemapAuditEntry : null
         if (fn) {
@@ -94989,18 +98046,28 @@ function _heBuildDebugDump(reason?: string): any {
     }
     if (tilemapVisual) decorateVisual(tilemapVisual)
 
-    if (isTilemapFocusDump) {
-        const focusR = _dunInteractFocusR | 0
-        const focusC = _dunInteractFocusC | 0
+    const vfxTweak = (g && g.__heVfxTweak && typeof g.__heVfxTweak === "object")
+        ? g.__heVfxTweak
+        : null
+
+    if (isPropsAnimDump) {
+        const focusR = (_hePropsAnimOverride ? (_hePropsAnimOverride.r | 0) : (_dunInteractFocusR | 0))
+        const focusC = (_hePropsAnimOverride ? (_hePropsAnimOverride.c | 0) : (_dunInteractFocusC | 0))
+        const focusName = (_hePropsAnimOverride ? String(_hePropsAnimOverride.name || "") : String(_dunInteractFocusName || ""))
+        const focusActive = _dunInteractFocusActive ? 1 : 0
+        const propsAll: any[] = []
         const focusedProps: any[] = []
         if (tilemapVisual && Array.isArray(tilemapVisual.props)) {
             for (let i = 0; i < tilemapVisual.props.length; i++) {
                 const p = tilemapVisual.props[i]
-                if (!p || !p.anchor) continue
+                if (!p) continue
+                propsAll.push(p)
+                if (!p.anchor) continue
                 if ((p.anchor.r | 0) !== focusR || (p.anchor.c | 0) !== focusC) continue
                 focusedProps.push(p)
             }
         }
+        _hePropsAnimOverride = null
         return {
             type: "heDebugDumpV1",
             createdAt: Date.now(),
@@ -95020,23 +98087,102 @@ function _heBuildDebugDump(reason?: string): any {
                 rows: worldRows | 0,
                 cols: worldCols | 0,
             },
-            tilemapFocus: DEBUG_TILEMAP_AUDIT_DUMP ? _heBuildFocusAudit(tilemapVisual) : null,
-            tilemapVisual: tilemapVisual ? {
+            focus: {
+                active: focusActive,
+                r: focusR | 0,
+                c: focusC | 0,
+                name: focusName,
+            },
+            propsAnim: tilemapVisual ? {
                 rows: tilemapVisual.rows,
                 cols: tilemapVisual.cols,
                 tileSize: tilemapVisual.tileSize,
-                props: focusedProps,
+                props: propsAll,
+                focused: focusedProps,
+            } : {
+                rows: worldRows | 0,
+                cols: worldCols | 0,
+                tileSize: WORLD_TILE_SIZE | 0,
+                props: [],
+                focused: [],
+            },
+            propsAnimPixelProbe: DEBUG_TILEMAP_AUDIT_DUMP ? _heTilemapPixelProbeLatest : null,
+        }
+    }
+    if (isTilemapDump) {
+        return {
+            type: "heDebugDumpV1",
+            createdAt: Date.now(),
+            runtimeMs: runtimeMs | 0,
+            reason: reasonTag,
+            host: g && typeof g.__isHost === "boolean" ? !!g.__isHost : null,
+            floor: {
+                index: _dunFloorIndex | 0,
+                kind: String(_dunFloorKind || ""),
+                baseFamily: String(_dunBaseFamily || ""),
+                wallFamily: String(_dunWallFamily || ""),
+            },
+            world: {
+                worldRev: _engineWorldRev | 0,
+                decorRev: _engineDecorRev | 0,
+                tileSize: WORLD_TILE_SIZE | 0,
+                rows: worldRows | 0,
+                cols: worldCols | 0,
+            },
+            tilemapAudit: DEBUG_TILEMAP_AUDIT_DUMP ? {
+                latest: String(_tilemapAuditDumpLatest || ""),
+                history: _tilemapAuditDumpHistory.slice(0),
+                map: _dunBuildTilemapAuditStruct(),
             } : null,
+            tilemapVisual,
+            tilemapFocus: DEBUG_TILEMAP_AUDIT_DUMP ? _heBuildFocusAudit(tilemapVisual) : null,
             tilemapTimeline: DEBUG_TILEMAP_AUDIT_DUMP ? {
                 intervalMs: HE_TILEMAP_DELTA_INTERVAL_MS | 0,
-                samples: _heTilemapDeltaTimeline.slice(Math.max(0, _heTilemapDeltaTimeline.length - 30)),
+                samples: _heTilemapDeltaTimeline.slice(Math.max(0, _heTilemapDeltaTimeline.length - 60)),
             } : null,
             tilemapPixelProbe: DEBUG_TILEMAP_AUDIT_DUMP ? _heTilemapPixelProbeLatest : null,
         }
     }
-    const vfxTweak = (g && g.__heVfxTweak && typeof g.__heVfxTweak === "object")
-        ? g.__heVfxTweak
-        : null
+    if (isEffectsDump) {
+        return {
+            type: "heDebugDumpV1",
+            createdAt: Date.now(),
+            runtimeMs: runtimeMs | 0,
+            reason: reasonTag,
+            host: g && typeof g.__isHost === "boolean" ? !!g.__isHost : null,
+            floor: {
+                index: _dunFloorIndex | 0,
+                kind: String(_dunFloorKind || ""),
+            },
+            world: {
+                worldRev: _engineWorldRev | 0,
+                decorRev: _engineDecorRev | 0,
+                tileSize: WORLD_TILE_SIZE | 0,
+                rows: worldRows | 0,
+                cols: worldCols | 0,
+            },
+            effects,
+            effectsHallTrace: _heEffectsHallTraceLatest,
+            effectsHallTraceLive: (_heEffectsHallTraceSamples && _heEffectsHallTraceSamples.length)
+                ? {
+                    active: !!_heEffectsHallTraceActive,
+                    inFlight: !!_heEffectsHallTraceInFlight,
+                    startMs: _heEffectsHallTraceStartMs | 0,
+                    endMs: _heEffectsHallTraceEndMs | 0,
+                    nextMs: _heEffectsHallTraceNextMs | 0,
+                    samples: _heEffectsHallTraceSamples.slice(0)
+                }
+                : {
+                    active: !!_heEffectsHallTraceActive,
+                    inFlight: !!_heEffectsHallTraceInFlight,
+                    startMs: _heEffectsHallTraceStartMs | 0,
+                    endMs: _heEffectsHallTraceEndMs | 0,
+                    nextMs: _heEffectsHallTraceNextMs | 0,
+                    samples: []
+                },
+            vfxTweak,
+        }
+    }
     return {
         type: "heDebugDumpV1",
         createdAt: Date.now(),
@@ -95153,11 +98299,55 @@ let _heVisualDumpLastMs = 0
 let _heVisualDumpLastDecorRev = -1
 let _heVisualDumpNeedPixels = false
 let _heTilemapPixelProbeLatest: any = null
+let _heTilemapDumpDone = false
+let _hePropsAnimDumpDone = false
+let _heEffectsDumpDone = false
+let _heTraceProofDumpDone = false
+let _hePropsAnimOverride: { r: number, c: number, name: string } | null = null
+
+function _heWithTimeout(p: Promise<any>, ms: number, reasonTag: string): Promise<any> {
+    let settled = false
+    return new Promise((resolve) => {
+        const t = setTimeout(() => {
+            if (settled) return
+            settled = true
+            resolve({ ok: false, reason: reasonTag })
+        }, ms | 0)
+        p.then((res: any) => {
+            if (settled) return
+            settled = true
+            clearTimeout(t)
+            resolve(res)
+        }).catch((err: any) => {
+            if (settled) return
+            settled = true
+            clearTimeout(t)
+            resolve({ ok: false, reason: String(err || "error") })
+        })
+    })
+}
+
+function _heSendDebugDump(reason: string, payloadOverride?: any): Promise<any> {
+    if (!DEBUG_DEBUG_DUMP) return Promise.resolve({ ok: false, reason: "debug-disabled" })
+    const g: any = globalThis as any
+    if (g && typeof g.__isHost === "boolean" && !g.__isHost) {
+        return Promise.resolve({ ok: false, reason: "not-host" })
+    }
+    const net: any = g && g.__net
+    if (!net || typeof net.sendDebugDump !== "function") {
+        return Promise.resolve({ ok: false, reason: "no-net" })
+    }
+    const tag = String(reason || "")
+    const dumpTimeoutMs = tag.indexOf("trace-proof") >= 0 ? 15000 : 3000
+    const payload = payloadOverride ?? _heBuildDebugDump(reason)
+    return _heWithTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout")
+}
 
 function _heInstallDebugDumpToFile(g: any): void {
     if (!g) return
     g.__heDebugDumpToFile = function (reason?: string): Promise<any> {
-        if (!DEBUG_DEBUG_DUMP) return Promise.resolve({ ok: false, reason: "disabled" })
+        if (!DEBUG_DEBUG_DUMP) return Promise.resolve({ ok: false, reason: "debug-disabled" })
+        if (!DEBUG_DEBUG_DUMP_MANUAL) return Promise.resolve({ ok: false, reason: "manual-disabled" })
         if (g && typeof g.__isHost === "boolean" && !g.__isHost) {
             return Promise.resolve({ ok: false, reason: "not-host" })
         }
@@ -95165,30 +98355,9 @@ function _heInstallDebugDumpToFile(g: any): void {
         if (!net || typeof net.sendDebugDump !== "function") {
             return Promise.resolve({ ok: false, reason: "no-net" })
         }
-        const withTimeout = (p: Promise<any>, ms: number, reasonTag: string): Promise<any> => {
-            let settled = false
-            return new Promise((resolve) => {
-                const t = setTimeout(() => {
-                    if (settled) return
-                    settled = true
-                    resolve({ ok: false, reason: reasonTag })
-                }, ms | 0)
-                p.then((res: any) => {
-                    if (settled) return
-                    settled = true
-                    clearTimeout(t)
-                    resolve(res)
-                }).catch((err: any) => {
-                    if (settled) return
-                    settled = true
-                    clearTimeout(t)
-                    resolve({ ok: false, reason: String(err || "error") })
-                })
-            })
-        }
         const tag = String(reason || "")
         const dumpTimeoutMs = tag.indexOf("trace-proof") >= 0 ? 15000 : 3000
-        const wantPixels = DEBUG_TILEMAP_AUDIT_DUMP && tag.indexOf("tilemap-focus") >= 0
+        const wantPixels = DEBUG_TILEMAP_AUDIT_DUMP && tag.indexOf("props-anim") >= 0
         if (wantPixels) {
             let focusProbe: any = null
             try {
@@ -95197,8 +98366,9 @@ function _heInstallDebugDumpToFile(g: any): void {
                 const visual = sc && sc.registry ? sc.registry.get("__worldTileRenderer") : null
                 if (visual && typeof visual.getVisualAudit === "function") {
                     const audit: any = visual.getVisualAudit()
-                    const focusR = _dunInteractFocusR | 0
-                    const focusC = _dunInteractFocusC | 0
+                    const focusR = (_hePropsAnimOverride ? (_hePropsAnimOverride.r | 0) : (_dunInteractFocusR | 0))
+                    const focusC = (_hePropsAnimOverride ? (_hePropsAnimOverride.c | 0) : (_dunInteractFocusC | 0))
+                    const focusName = (_hePropsAnimOverride ? String(_hePropsAnimOverride.name || "") : String(_dunInteractFocusName || ""))
                     if (audit && Array.isArray(audit.props)) {
                         for (let i = 0; i < audit.props.length; i++) {
                             const p = audit.props[i]
@@ -95210,7 +98380,7 @@ function _heInstallDebugDumpToFile(g: any): void {
                                 focusProbe = {
                                     r: focusR | 0,
                                     c: focusC | 0,
-                                    name: String(_dunInteractFocusName || ""),
+                                    name: focusName,
                                     kidBounds: kid?.screenBounds ?? null,
                                 }
                             }
@@ -95256,7 +98426,7 @@ function _heInstallDebugDumpToFile(g: any): void {
                                 focusProbe.pixelSampleSupported = 0
                                 _heTilemapPixelProbeLatest = focusProbe
                                 const payload = _heBuildDebugDump(reason)
-                                withTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
+                                _heWithTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
                                     finish({ ok: false, reason: "timeout-snapshot", sent: res })
                                 })
                             }
@@ -95290,7 +98460,7 @@ function _heInstallDebugDumpToFile(g: any): void {
                                 }
                                     _heTilemapPixelProbeLatest = focusProbe
                                     const payload = _heBuildDebugDump(reason)
-                                    withTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
+                                    _heWithTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
                                         clearTimeout(timeout)
                                         finish(res)
                                     })
@@ -95298,7 +98468,7 @@ function _heInstallDebugDumpToFile(g: any): void {
                             } catch {
                                 _heTilemapPixelProbeLatest = focusProbe
                                 const payload = _heBuildDebugDump(reason)
-                                withTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
+                                _heWithTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout").then((res) => {
                                     clearTimeout(timeout)
                                     finish(res)
                                 })
@@ -95311,7 +98481,7 @@ function _heInstallDebugDumpToFile(g: any): void {
             }
         }
         const payload = _heBuildDebugDump(reason)
-        return withTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout")
+        return _heWithTimeout(net.sendDebugDump(payload, reason), dumpTimeoutMs, "timeout")
     }
 }
 
@@ -95324,10 +98494,16 @@ function _heQueueVisualDump(reason: string, delayMs?: number): void {
     const when = (now + delay) | 0
     if (_heVisualDumpQueuedMs > 0 && _heVisualDumpQueuedMs <= when) return
     let tag = String(reason || "tilemap-visual")
-    if (tag.indexOf("tilemap") < 0) tag = "tilemap-" + tag
+    const isPropsAnim = tag.indexOf("props-anim") >= 0
+    if (!isPropsAnim && tag.indexOf("tilemap") < 0) tag = "tilemap-" + tag
+    if (isPropsAnim) {
+        if (_hePropsAnimDumpDone) return
+    } else {
+        if (_heTilemapDumpDone) return
+    }
     _heVisualDumpQueuedMs = when
     _heVisualDumpReason = tag
-    if (tag.indexOf("focus") >= 0) _heVisualDumpNeedPixels = true
+    if (isPropsAnim) _heVisualDumpNeedPixels = true
 }
 
 function _heHashString(s: string): number {
@@ -95753,8 +98929,8 @@ function _heVisualDumpTick(nowMs: number): void {
     try {
         if (_heVisualDumpNeedPixels && visual && typeof visual.getVisualAudit === "function") {
             const audit: any = visual.getVisualAudit()
-            const focusR = _dunInteractFocusR | 0
-            const focusC = _dunInteractFocusC | 0
+            const focusR = (_hePropsAnimOverride ? (_hePropsAnimOverride.r | 0) : (_dunInteractFocusR | 0))
+            const focusC = (_hePropsAnimOverride ? (_hePropsAnimOverride.c | 0) : (_dunInteractFocusC | 0))
             if (audit && Array.isArray(audit.props)) {
                 for (let i = 0; i < audit.props.length; i++) {
                     const p = audit.props[i]
@@ -95766,7 +98942,7 @@ function _heVisualDumpTick(nowMs: number): void {
                         focusProbe = {
                             r: focusR | 0,
                             c: focusC | 0,
-                            name: String(_dunInteractFocusName || ""),
+                            name: (_hePropsAnimOverride ? String(_hePropsAnimOverride.name || "") : String(_dunInteractFocusName || "")),
                             kidBounds: kid?.screenBounds ?? null,
                         }
                     }
@@ -95776,8 +98952,27 @@ function _heVisualDumpTick(nowMs: number): void {
         }
     } catch { focusProbe = null }
 
+    const markDone = (): void => {
+        const isPropsAnim = String(reason || "").indexOf("props-anim") >= 0
+        if (isPropsAnim) _hePropsAnimDumpDone = true
+        else _heTilemapDumpDone = true
+    }
     const sendDump = (): void => {
         let p: any = null
+        markDone()
+        const logDump = (res: any): void => {
+            if (!DEBUG_TILEMAP_AUDIT_DUMP) return
+            const tag = String(reason || "")
+            const ok = res && res.ok ? 1 : 0
+            const r = String(res?.reason || (ok ? "ok" : "error"))
+            const file = res?.file ? String(res.file || "") : "n/a"
+            const bytes = (typeof res?.bytes === "number") ? (res.bytes | 0) : -1
+            if (tag.indexOf("props-anim") >= 0) {
+                console.log(`[PROPS][ANIM][DUMP] ok=${ok} reason=${r} file=${file} bytes=${bytes}`)
+            } else if (tag.indexOf("tilemap") >= 0) {
+                console.log(`[TILEMAP][AUDIT][DUMP] ok=${ok} reason=${r} file=${file} bytes=${bytes}`)
+            }
+        }
         try {
             if (focusProbe) _heTilemapPixelProbeLatest = focusProbe
             p = net.sendDebugDump(_heBuildDebugDump(reason), reason)
@@ -95786,13 +98981,16 @@ function _heVisualDumpTick(nowMs: number): void {
             return
         }
         if (p && typeof p.then === "function") {
-            p.then(() => {
+            p.then((res: any) => {
                 _heVisualDumpInFlight = false
+                logDump(res)
             }).catch(() => {
                 _heVisualDumpInFlight = false
+                logDump({ ok: false, reason: "promise" })
             })
         } else {
             _heVisualDumpInFlight = false
+            logDump({ ok: true, reason: "sent-sync" })
         }
         _heVisualDumpNeedPixels = false
     }
@@ -96106,6 +99304,7 @@ g.__heUiCommand = function (cmd: any): any {
     }
     if (t === "debugDump") {
         if (!DEBUG_DEBUG_DUMP) return { ok: false, reason: "debug-disabled", snapshot: g.__heGetUiSnapshot(pid) }
+        if (!DEBUG_DEBUG_DUMP_MANUAL) return { ok: false, reason: "manual-disabled", snapshot: g.__heGetUiSnapshot(pid) }
         const reason = cmd && typeof cmd.reason === "string" ? cmd.reason : ""
         const fn = g && g.__heDebugDumpToFile
         if (typeof fn !== "function") {

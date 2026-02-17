@@ -13544,6 +13544,19 @@ function _syncEffectPath(
         glueAny.applyEffectAnimationForSprite(effectSprite);
     }
 
+    if (hasAlignBottom && Number.isFinite(alignBottomY) && alignBottomY > 0) {
+        const dh = Number.isFinite(nativeAny.displayHeight) ? Number(nativeAny.displayHeight) : 0;
+        let h = dh;
+        if (!(h > 0)) {
+            const frameH = (nativeAny.frame && (nativeAny.frame.cutHeight ?? nativeAny.frame.height)) ? (nativeAny.frame.cutHeight ?? nativeAny.frame.height) : 0;
+            const scaleY = Number.isFinite(nativeAny.scaleY) ? Number(nativeAny.scaleY) : 1;
+            h = (frameH > 0) ? (frameH * scaleY) : 0;
+        }
+        if (h > 0) {
+            nativeAny.y = Number(alignBottomY) - (h * 0.5);
+        }
+    }
+
     if (hasMaskInvert) {
         nativeAny.__effectMaskInvert = maskInvert;
     }
@@ -14101,7 +14114,14 @@ function _syncVisibilityAndDebugTail(
     // ------------------------------------------------------------
     const shouldBeVisible = forceVisible ? true : (!hasInvisibleFlag && !autoHideByPixels && !hideBase);
     native.visible = shouldBeVisible;
-    native.alpha = shouldBeVisible ? (hasEffectAlpha ? effectAlphaNum : 1) : 0;
+    const keepAlphaWhenHidden =
+        (role === "EFFECT") && ((dataAny.__hallMaskKeepAlpha as any) | 0) !== 0;
+    if (!shouldBeVisible && keepAlphaWhenHidden) {
+        // Keep alpha for bitmap masking even though the sprite is hidden.
+        native.alpha = hasEffectAlpha ? effectAlphaNum : 1;
+    } else {
+        native.alpha = shouldBeVisible ? (hasEffectAlpha ? effectAlphaNum : 1) : 0;
+    }
 
     if (shouldLogHero) {
         console.log(

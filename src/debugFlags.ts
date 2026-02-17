@@ -45,6 +45,10 @@ export const DEBUG_HERO_ANIM_STRENGTH_TRACE = false;
 export const DEBUG_STR_PROJECTILE_METRICS = false;
 export const DEBUG_STR_PROJECTILE_FRAMES = false;
 export const DEBUG_STR_PROJECTILE_FRAMES_THROTTLE_MS = 0;
+export const DEBUG_STR_TRACE = true; // [STR][TRACE] capture strength trace events for file dumps.
+export const DEBUG_STR_TRACE_AUTO_DUMP = true; // Auto-write strength trace dump to file.
+export const DEBUG_STR_TRACE_MAX = 800; // Max strength trace events to keep.
+export const DEBUG_STR_TRACE_DUMP_COOLDOWN_MS = 250; // Minimum ms between auto dumps.
 
 // Agility/integrator debug
 export const DEBUG_AGILITY = false;
@@ -76,6 +80,12 @@ export const DEBUG_AGI_COMET_ALIGN_LOG_VERBOSE = false;
 export const DEBUG_AGI_COMET_ALIGN_VIS = true; // Draw weapon bounds + tip for comet alignment debugging.
 export const DEBUG_AGI_COMET_ALIGN_VIS_HERO_INDEX = -1; // -1 = all heroes
 export const DEBUG_AGI_COMET_ALIGN_VIS_TIP_R = 6;
+export const DEBUG_AGI_DUMP = true; // Capture agility dump snapshots for the first N moves.
+export const DEBUG_AGI_DUMP_AUTO_DUMP = true; // Auto-write agility dump to file when complete.
+export const DEBUG_AGI_DUMP_MOVES_MAX = 3; // Number of agility moves to capture after game start.
+export const DEBUG_AGI_DUMP_TICK_INTERVAL_MS = 120; // Sample interval for agility dump ticks.
+export const DEBUG_AGI_DUMP_MAX_SAMPLES_PER_MOVE = 160; // Cap per-move samples.
+export const DEBUG_AGI_DUMP_MAX_EVENTS_PER_MOVE = 600; // Cap per-move events.
 
 // Move pipeline debug
 export const DEBUG_MOVE_PIPE = false;
@@ -117,12 +127,18 @@ export const DEBUG_STATUE_PEDESTAL = false;
 // Dungeon/shop/relic/UI logs (HeroEngineInPhaser.ts)
 export const DEBUG_DUNGEON_LOGS = false;
 export const DEBUG_BOSS_INTRO = false; // Boss intro/jump/pad sink lifecycle logs.
+export const DEBUG_BOSS_OVERRIDE_MOVE = _studentOverride(_studentOverrides.bossOverrideMove, false); // Allow boss move override hook (debug).
+export const DEBUG_BOSS_OVERRIDE_PHASE = _studentOverride(_studentOverrides.bossOverridePhase, false); // Allow boss phase override hook (debug).
+export const DEBUG_BOSS_OVERRIDE_DAMAGE = _studentOverride(_studentOverrides.bossOverrideDamage, false); // Allow boss damage override hook (debug).
+export const DEBUG_BOSS_OVERRIDE_SPAWN = _studentOverride(_studentOverrides.bossOverrideSpawn, false); // Allow boss spawn override hook (debug).
 export const DEBUG_PAD_SINK_PROP_LOGS = false; // [PAD][PILLAR] summarize prop offset ranges during pad sink.
 export const DEBUG_BOSS_PAD_DUST_PERSIST = false; // Keep boss pad dust alive (skip destroy) for visibility.
 export const DEBUG_FORCE_HALL_OF_ENEMIES = false; // Force hall floor kind for enemy showcase/debug.
 export const DEBUG_EFFECTS_HALL_ON_START = false; // Start run in effects hall (debug VFX layout).
 export const DEBUG_EFFECTS_HALL_LOGS = false; // Log effects hall texture frames (debug).
-export const DEBUG_EFFECTS_HALL_TRACE = false; // Auto-capture effects hall trace samples to file.
+export const DEBUG_EFFECTS_HALL_TRACE_LOGS = false; // [VFX][HALL][TRACE]/[SNAP] trace + dump pipeline logs.
+export const DEBUG_EFFECTS_HALL_FRAME_LOGS = false; // [VFX][HALL][FRAME] tile animation logs.
+export const DEBUG_EFFECTS_HALL_TRACE = true; // Auto-capture effects hall trace samples to file.
 export const DEBUG_EFFECTS_HALL_ONLY_ROWS = true; // Only spawn the 10-row test lanes (suppress other hall effects).
 export const DEBUG_EFFECTS_HALL_ONLY_POISON = false; // Only spawn poison clouds in effects hall (skip dust).
 export const DEBUG_EFFECTS_HALL_ONLY_DUST = true; // Only spawn dust clouds in effects hall (skip poison).
@@ -130,6 +146,7 @@ export const DEBUG_EFFECTS_HALL_FREEZE_WORLD = false; // Pause non-hall dungeon 
 export const DEBUG_EFFECTS_HALL_TRACE_LITE = false; // Set true to reduce trace payload/cost (skip heavy bounds/mask work).
 export const DEBUG_EFFECTS_HALL_TRACE_INTERVAL_MS_OVERRIDE = 0; // >0 to override trace interval (ms).
 export const DEBUG_EFFECTS_HALL_TRACE_DURATION_MS_OVERRIDE = 0; // >0 to override trace duration (ms).
+export const DEBUG_EFFECTS_HALL_FORCE_WHITE_PALETTE = true; // Force white palette for hall effects (debug).
 export const DEBUG_FOCUS_LOGS = false;
 export const DEBUG_INTERACT_LOGS = _studentOverride(_studentOverrides.interactLogs, false); // General interact pipeline (props/NPC).
 export const DEBUG_INTERACT_TICK_LOGS = false; // Tick-level spam; keep off unless needed.
@@ -334,8 +351,9 @@ export const DEBUG_PROP_SYNC = false; // [net.decor.apply]/[net.decor.capture] l
 export const DEBUG_TILE_ATLAS_GLOBAL = false; // was DEBUG_TILES_GLOBAL in tileAtlas.ts
 export const DEBUG_TILES = false;
 export const DEBUG_TILEMAP_GLUE = false; // [tileMapGlue] base render done, etc.
-export const DEBUG_TILEMAP_AUDIT = false; // [TILEMAP][AUDIT] consolidated decor/prop/tilemap checks.
-export const DEBUG_TILEMAP_AUDIT_DUMP = false; // [TILEMAP][AUDIT][DUMP] floor map + props summary on entry.
+export const DEBUG_TILEMAP_AUDIT = true; // [TILEMAP][AUDIT] consolidated decor/prop/tilemap checks.
+export const DEBUG_TILEMAP_AUDIT_CONSOLE = false; // [TILEMAP][AUDIT] console logs only.
+export const DEBUG_TILEMAP_AUDIT_DUMP = true; // [TILEMAP][AUDIT][DUMP] floor map + props summary on entry.
 export const WORLD_SYNC_HASH_WARN_THRESHOLD_MS = 8000; // warn if host/follower hashes mismatch longer than this (0 disables)
 
 // Prop focus aura (tileMapGlue.ts)
@@ -405,6 +423,7 @@ export const DEBUG_PHASER_BANNER = false; // Phaser startup banner/version log.
 export const DEBUG_SAVE_LOGS = false;
 export const DEBUG_SAVE_TRACE = false; // Capture in-memory save/load trace for debug dumps.
 export const DEBUG_DEBUG_DUMP = true; // Allow writing debug dump files via __heDebugDumpToFile.
+export const DEBUG_DEBUG_DUMP_MANUAL = false; // Allow manual __heDebugDumpToFile() calls (auto dumps ignore this).
 export const DEBUG_RELICTIP_LOGS = false;
 export const DEBUG_COINFX = false;
 export const DEBUG_HOST_LOGIC = false;

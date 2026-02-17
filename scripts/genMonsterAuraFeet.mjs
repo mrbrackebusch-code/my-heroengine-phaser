@@ -16,12 +16,13 @@
 import fs from "fs";
 import path from "path";
 import zlib from "zlib";
-import { fileURLToPath } from "url";
+import { fileURLToPath, pathToFileURL } from "url";
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const ROOT = path.resolve(path.join(__dirname, ".."));
-const AURA_DIRS = [
+const STUDENT_ROOT = path.join(ROOT, "src", "student");
+const CORE_AURA_DIRS = [
   path.join(ROOT, "assets", "enemies", "monsters", "auras"),
   path.join(ROOT, "assets", "enemies", "bosses", "auras"),
 ];
@@ -33,6 +34,71 @@ const OUTLINE_SIDES_ALT = 6; // hexagon fallback when 8-sides isn't meaningfully
 const OUTLINE_SIMILARITY_PCT = 0.04; // choose 6 if |area8-area6|/area8 <= this
 const DIR_LETTERS = new Set(["U", "D", "L", "R", "N", "E", "S", "W"]);
 const AURA_RADIUS_RE = /_aura_r(\d+)$/i;
+
+function findStudentRegistryFiles() {
+  const out = [];
+  if (!fs.existsSync(STUDENT_ROOT)) return out;
+  const students = fs.readdirSync(STUDENT_ROOT, { withFileTypes: true });
+  for (const ent of students) {
+    if (!ent.isDirectory()) continue;
+    const base = path.join(STUDENT_ROOT, ent.name, "assets");
+    const jsPath = path.join(base, "registry.js");
+    const mjsPath = path.join(base, "registry.mjs");
+    if (fs.existsSync(jsPath)) out.push(jsPath);
+    if (fs.existsSync(mjsPath)) out.push(mjsPath);
+  }
+  return out.sort();
+}
+
+function readRegistryModule(mod) {
+  if (!mod) return {};
+  if (mod.default && typeof mod.default === "object") return mod.default;
+  return mod;
+}
+
+function normalizeEntryUrl(raw, sourceFile) {
+  if (!raw) return null;
+  if (raw instanceof URL) return raw;
+  const s = String(raw || "").trim();
+  if (!s) return null;
+  if (/^file:/i.test(s) || /^https?:/i.test(s)) return new URL(s);
+  return new URL(s, pathToFileURL(sourceFile));
+}
+
+async function loadStudentAuraEntries() {
+  const files = findStudentRegistryFiles();
+  /** @type {{ filePath: string; baseName: string; source: string }[]} */
+  const out = [];
+  for (const file of files) {
+    const mod = await import(pathToFileURL(file).href);
+    const reg = readRegistryModule(mod);
+    const monsters = reg.monsterSheets || reg.monsters || [];
+    const bosses = reg.bossSheets || reg.bosses || [];
+    const addEntries = (list) => {
+      if (!Array.isArray(list)) return;
+      for (const entry of list) {
+        const name = String(entry?.name || "").trim();
+        const url = normalizeEntryUrl(entry?.url, file);
+        if (!name || !url) {
+          throw new Error(`[genMonsterAuraFeet] Invalid registry entry (missing name/url) source=${file}`);
+        }
+        const filePath = fileURLToPath(url);
+        const baseName = path.basename(filePath, ".png");
+        if (baseName !== name) {
+          throw new Error(`[genMonsterAuraFeet] registry name mismatch: name="${name}" file="${baseName}" source=${file}`);
+        }
+        const auraPath = path.join(path.dirname(filePath), "auras", `${name}_aura_r0.png`);
+        if (!fs.existsSync(auraPath)) {
+          throw new Error(`[genMonsterAuraFeet] missing aura (r0) for ${name}: ${auraPath}`);
+        }
+        out.push({ filePath: auraPath, baseName: path.basename(auraPath, ".png"), source: file });
+      }
+    };
+    addEntries(monsters);
+    addEntries(bosses);
+  }
+  return out;
+}
 
 function mapLetterToDir(ch) {
   switch (ch) {
@@ -485,9 +551,9 @@ function findFoot(baseName, filePath, meta) {
   return out;
 }
 
-function listAuraPngs() {
+function listAuraPngs(dirs) {
   const out = [];
-  for (const dir of AURA_DIRS) {
+  for (const dir of dirs) {
     if (!fs.existsSync(dir)) continue;
     const files = fs.readdirSync(dir).filter(f => f.toLowerCase().endsWith(".png"));
     for (const file of files) {
@@ -497,10 +563,16 @@ function listAuraPngs() {
   return out;
 }
 
-function main() {
-  const entries = listAuraPngs();
+async function main() {
+  const coreEntries = listAuraPngs(CORE_AURA_DIRS);
+  const studentEntries = await loadStudentAuraEntries();
+  const entries = coreEntries.concat(studentEntries.map((e) => ({
+    dir: path.dirname(e.filePath),
+    file: path.basename(e.filePath),
+    full: e.filePath,
+  })));
   if (entries.length === 0) {
-    console.error(`[genMonsterAuraFeet] No aura PNGs found in: ${AURA_DIRS.join(", ")}`);
+    console.error(`[genMonsterAuraFeet] No aura PNGs found in: ${CORE_AURA_DIRS.join(", ")}`);
     process.exit(1);
   }
   // Seed with existing data if present
@@ -582,4 +654,7 @@ function main() {
   console.log("Wrote", OUT_TS);
 }
 
-main();
+main().catch((e) => {
+  console.error("[genMonsterAuraFeet] ERROR", e);
+  process.exit(1);
+});

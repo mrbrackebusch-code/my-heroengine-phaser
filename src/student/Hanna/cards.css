@@ -1,0 +1,84 @@
+/* Card Styles — Hanna Card Combo Minigame */
+
+.card {
+    border-radius: 8px;
+    box-shadow: 0 4px 8px rgba(0, 0, 0, 0.2);
+    overflow: hidden;
+    user-select: none;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.card:hover {
+    transform: scale(1.02);
+    box-shadow: 0 6px 12px rgba(0, 0, 0, 0.3);
+}
+
+.card-background {
+    background-color: #f5e6d3;
+}
+
+.card-rarity-common .card-background {
+    background-color: #f5e6d3;
+    border: 2px solid #8b7355;
+}
+
+.card-rarity-uncommon .card-background {
+    background-color: #e8e8e8;
+    border: 2px solid #a9a9a9;
+}
+
+.card-rarity-rare .card-background {
+    background-color: #7cb342;
+    border: 2px solid #558b2f;
+}
+
+.card-rarity-legendary .card-background {
+    background-color: #1e3a8a;
+    border: 2px solid #fbbf24;
+}
+
+.card-overlay {
+    z-index: 10;
+}
+
+.card-rarity-text {
+    font-family: Arial, sans-serif;
+    font-weight: bold;
+    letter-spacing: 0.5px;
+}
+
+.card-variant-text {
+    font-family: Arial, sans-serif;
+    font-size: 9px;
+    font-weight: bold;
+    letter-spacing: 0.3px;
+    opacity: 0.9;
+}
+
+.card-stat-number {
+    font-family: 'Courier New', monospace;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.card-gmgbh {
+    font-family: Arial, sans-serif;
+}
+
+.card-grid {
+    background: rgba(0, 0, 0, 0.05);
+    border-radius: 4px;
+}
+
+/* Responsive adjustments */
+@media (max-width: 768px) {
+    .card-grid {
+        grid-template-columns: repeat(2, 1fr) !important;
+    }
+}
+
+@media (max-width: 480px) {
+    .card-grid {
+        grid-template-columns: repeat(1, 1fr) !important;
+    }
+}

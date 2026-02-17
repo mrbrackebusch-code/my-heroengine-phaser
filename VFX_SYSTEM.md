@@ -92,6 +92,47 @@ approach:
 - Apply the smoke sprite as a bitmap mask to each tile.
 - Optionally add a second overlay layer (heroEffects) with lower alpha.
 
+## 5b) Dust Cloud Occlusion (Hall) — working recipe
+
+This is the approach that finally made layered dust clouds work without
+border leaks or mask drift. Use it as the template for future layered effects.
+
+### Core idea
+Each cloud is a **mask sprite + tiled fill**, and occlusion is a **separate
+geometry-based composite** that blocks anything behind it.
+
+### Required pieces
+- **Geometry sheet:** `SmokeBorderedRotating grayscale 128x128`
+  - The border is baked into the sheet; do not try to add a separate outline layer.
+- **Fill texture:** `HALL_DUST_TEX_ID` (tile sprite, seamless)
+- **Mask sprite:** the geometry sheet, hidden but still alpha-active
+  - Set `__hallMaskKeepAlpha=1` so hidden masks keep alpha for masking.
+
+### Occlusion (front blocks back, even if front is semi-transparent)
+- Build a canvas occluder (`__hallMaskOcclude`) from **geometry alpha**, not visual alpha.
+- Use `HALL_MASK_OCCLUDE_ALPHA_MIN` as the threshold.
+- For each back cloud, apply `(1 - occluder)` to **both** fill and border.
+- Do not gate occlusion on visibility; use the occlusion canvas mask directly.
+
+### Lockstep (prevents gaps)
+- Drive **all transforms** from effect data, not native sprite values:
+  - `EFFECT_SCALE_DATA_KEY`, `EFFECT_SCALE_X_DATA_KEY`, `EFFECT_SCALE_Y_DATA_KEY`
+  - `EFFECT_ROT_DATA_KEY`
+  - `EFFECT_ALIGN_BOTTOM_Y_DATA_KEY`
+- Apply bottom-anchoring to native sprites each tick so the visible mask,
+  occlusion mask, and tile fill all share the same base line.
+
+### Texture/scene access (avoid null scene)
+- When resolving frames for occlusion, use `native.texture.manager` (or
+  `native.scene`) rather than `globalThis.__phaserScene`.
+  This avoids occlusion updates silently skipping.
+
+### Debug tell-tales (from effects hall trace)
+- `maskOcclude.lastUpdateAt > 0`  → occlusion composite is updating
+- `tileOcclude.usesOcclude == 1` → tiles are actually using occlusion masks
+- `nativeMaskSpriteId.textureKey` should be `effects.hallocclude.*`
+- If `lastUpdateAt == 0`, occlusion is not running (usually scene/texture lookup)
+
 ## 6) REQUIRED Workflow for New Effects
 
 Whenever an effect is requested:
@@ -119,6 +160,10 @@ Registry + helper utilities live in:
 
 Use it to register named presets and spawn effects through helpers rather than
 hardcoding effect spawns in gameplay code.
+
+## 8a) Core Presets (available)
+
+- `poisonCloud`: lightweight masked cloud using `smokeSoftenedTransitioned grayscale 128x128` + `waves2 texture grayscale 256x256`. Used by slime boss poison hazards.
 
 ## 9) Debug VFX Gallery
 
