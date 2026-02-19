@@ -3,6 +3,7 @@ import { setupPetDefinitions } from "./petDefs";
 import { setupPetBehaviors } from "./petBehavior";
 import { setupPetInventory } from "./petInventory";
 import { setupPetCombat } from "./petCombat";
+import { setupPetXpProgression } from "./petXpSystem";
 
 registerStudentSystem({
     id: "Alan",
@@ -13,5 +14,6 @@ registerStudentSystem({
         setupPetBehaviors(api);
         setupPetInventory(api);
         setupPetCombat(api);
+        setupPetXpProgression(api);
     },
 });
