@@ -1,0 +1,72 @@
+*** Begin Patch
+*** Add File: src/student/ChrisS/heroengine_relic_integration.patch
++*** a/src/HeroEngineInPhaser.ts
++*** b/src/HeroEngineInPhaser.ts
++@@
++ @@
++ import { applyStudentRelicDefinitions, applyStudentVfxPresets } from "./studentHooks";
+++// Student relic dispatch hooks (students register handlers in studentSystemsHooks.ts)
+++import { dispatchRelicModifyMoveSpeed, dispatchRelicModifyMoveStats, dispatchRelicOnHitEnemy, dispatchRelicBeforeHeroDamage } from "./studentSystemsHooks";
++*** End Patch
++
+*** Begin Patch
+*** Update File: src/HeroEngineInPhaser.ts
+@@
+-    stats[STAT.KNOCKBACK_PCT] = BALANCE.MOVES.STRENGTH.KNOCKBACK_BASE_PCT + tStatus * BALANCE.MOVES.STRENGTH.KNOCKBACK_PER_POINT_PCT
+-
+-
+-    return stats
++
++    stats[STAT.KNOCKBACK_PCT] = BALANCE.MOVES.STRENGTH.KNOCKBACK_BASE_PCT + tStatus * BALANCE.MOVES.STRENGTH.KNOCKBACK_PER_POINT_PCT
++
++    // Student relics may modify move speed/stats (e.g., Amulet movespeed bonuses)
++    try {
++        // `hero` not available inside this helper; caller should call dispatchRelicModifyMoveSpeed
++        // Keep this here as a safety comment for maintainers.
++    } catch (e) {
++        console.error("[RELIC][ERROR] dispatchRelicModifyMoveSpeed in calculateStrengthStats:", e);
++    }
++
++    return stats
+*** End Patch
++
+*** Begin Patch
+*** Update File: src/HeroEngineInPhaser.ts
+@@
+-    beginStrengthCharge(heroIndex, hero, button, traitsRaw, stats, animKey)
++    // Allow student relics to modify per-move behavior before charge begins
++    try {
++        dispatchRelicModifyMoveStats({
++            hero,
++            move: { family: FAMILY.STRENGTH, button },
++            stats,
++            hitEnemies: []
++        });
++    } catch (e) {
++        console.error("[RELIC][ERROR] dispatchRelicModifyMoveStats:", e);
++    }
++
++    beginStrengthCharge(heroIndex, hero, button, traitsRaw, stats, animKey)
+*** End Patch
++
+*** Begin Patch
+*** Update File: src/HeroEngineInPhaser.ts
+@@
+-    applyDamageToEnemyIndex(eIndex, dmg, heroIndex, hit)
++    try {
++        // Notify student relics that an enemy was about to be hit
++        dispatchRelicOnHitEnemy({
++            hero: hero,
++            enemy: enemy,
++            eIndex: eIndex,
++            damage: dmg,
++            family,
++            button,
++            hitPacket: hit
++        });
++    } catch (e) {
++        console.error("[RELIC][ERROR] dispatchRelicOnHitEnemy:", e);
++    }
++
++    applyDamageToEnemyIndex(eIndex, dmg, heroIndex, hit)
+*** End Patch

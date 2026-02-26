@@ -1255,6 +1255,95 @@ export function listStudentRelicEffectHandlers(): StudentRelicEffectHandler[] {
     return Array.from(_studentRelicEffects.values());
 }
 
+export function getStudentRelicEffectHandler(effectKey: string): StudentRelicEffectHandler | null {
+    const key = String(effectKey || "").trim();
+    if (!key) return null;
+    return _studentRelicEffects.get(key) || null;
+}
+
+/**
+ * Dispatch modifyMoveSpeed hook to all handlers for a hero's equipped relics.
+ * Called during move stat calculation.
+ * 
+ * @param ctx Context with hero, stats object (will be mutated), and other move data
+ */
+export function dispatchRelicModifyMoveSpeed(ctx: any): void {
+    if (!ctx || !ctx.hero) return;
+    
+    const handlers = listStudentRelicEffectHandlers();
+    for (const handler of handlers) {
+        if (handler.modifyMoveSpeed && typeof handler.modifyMoveSpeed === "function") {
+            try {
+                handler.modifyMoveSpeed(ctx);
+            } catch (e) {
+                console.error(`[RELIC][ERROR] modifyMoveSpeed for ${handler.effectKey}:`, e);
+            }
+        }
+    }
+}
+
+/**
+ * Dispatch modifyMoveStats hook to all handlers for a hero's equipped relics.
+ * Called during move execution with detailed move information.
+ * 
+ * @param ctx Context with hero, move, family, hitEnemies, stats, and other move data
+ */
+export function dispatchRelicModifyMoveStats(ctx: any): void {
+    if (!ctx || !ctx.hero) return;
+    
+    const handlers = listStudentRelicEffectHandlers();
+    for (const handler of handlers) {
+        if (handler.modifyMoveStats && typeof handler.modifyMoveStats === "function") {
+            try {
+                handler.modifyMoveStats(ctx);
+            } catch (e) {
+                console.error(`[RELIC][ERROR] modifyMoveStats for ${handler.effectKey}:`, e);
+            }
+        }
+    }
+}
+
+/**
+ * Dispatch onHitEnemy hook to all handlers when an enemy is hit.
+ * 
+ * @param ctx Context with hero, hit packet, enemy, damage, and other hit data
+ */
+export function dispatchRelicOnHitEnemy(ctx: any): void {
+    if (!ctx || !ctx.hero) return;
+    
+    const handlers = listStudentRelicEffectHandlers();
+    for (const handler of handlers) {
+        if (handler.onHitEnemy && typeof handler.onHitEnemy === "function") {
+            try {
+                handler.onHitEnemy(ctx);
+            } catch (e) {
+                console.error(`[RELIC][ERROR] onHitEnemy for ${handler.effectKey}:`, e);
+            }
+        }
+    }
+}
+
+/**
+ * Dispatch beforeHeroDamage hook to all handlers when hero takes damage.
+ * Can be used to modify incoming damage or trigger defensive effects.
+ * 
+ * @param ctx Context with hero, damage amount, source, and damage details
+ */
+export function dispatchRelicBeforeHeroDamage(ctx: any): void {
+    if (!ctx || !ctx.hero) return;
+    
+    const handlers = listStudentRelicEffectHandlers();
+    for (const handler of handlers) {
+        if (handler.beforeHeroDamage && typeof handler.beforeHeroDamage === "function") {
+            try {
+                handler.beforeHeroDamage(ctx);
+            } catch (e) {
+                console.error(`[RELIC][ERROR] beforeHeroDamage for ${handler.effectKey}:`, e);
+            }
+        }
+    }
+}
+
 // ---------------------------------------------------------------------------
 // Hook requests
 // ---------------------------------------------------------------------------
