@@ -13,6 +13,9 @@ import { createVfxRegistry } from "./vfxRegistry";
 import type { VfxHelpers, VfxRegistry } from "./vfxRegistry";
 import { applyStudentRelicDefinitions, applyStudentVfxPresets } from "./studentHooks";
 import {
+    dispatchRelicModifyMoveSpeed,
+    dispatchRelicModifyMoveStats,
+    dispatchRelicOnHitEnemy,
     dispatchStudentNpcInteract,
     dispatchStudentPropInteract,
     getStudentBossHooks,
@@ -27780,6 +27783,73 @@ function setHeroLevelUpTraitBonus(hi: number, family: number, traitIndex: number
 
 }
 
+function _studentMoveFamilyKey(family: number): string {
+    if ((family | 0) === (FAMILY.STRENGTH | 0)) return "strength";
+    if ((family | 0) === (FAMILY.AGILITY | 0)) return "agility";
+    if ((family | 0) === (FAMILY.INTELLECT | 0)) return "intelligence";
+    if ((family | 0) === (FAMILY.HEAL | 0)) return "wisdom";
+    return "unknown";
+}
+
+function _applyStudentMoveSpeedScale(stats: number[], speedScale: number): void {
+    if (!Array.isArray(stats)) return;
+    const scale = Number(speedScale);
+    if (!isFinite(scale) || scale <= 0 || Math.abs(scale - 1) < 0.0001) return;
+
+    const inv = 1 / scale;
+    const scaleTimingSlot = (slot: number): void => {
+        const cur = Number(stats[slot]);
+        if (!isFinite(cur) || cur <= 0) return;
+        stats[slot] = Math.max(1, Math.round(cur * inv));
+    };
+
+    scaleTimingSlot(STAT.MOVE_DURATION);
+    scaleTimingSlot(STAT.STRENGTH_SWING_MS);
+    scaleTimingSlot(STAT.AGILITY_ANIM_MS);
+}
+
+function _dispatchStudentRelicModifyMoveSpeed(hero: Sprite, family: number, button: string, stats: number[]): void {
+    const moveFamily = _studentMoveFamilyKey(family);
+    const speedCtx: any = {
+        speed: 1,
+        rawStats: stats,
+    };
+
+    try {
+        dispatchRelicModifyMoveSpeed({
+            hero,
+            family: family | 0,
+            button: String(button || ""),
+            move: { family: moveFamily, button: String(button || "") },
+            stats: speedCtx,
+        });
+    } catch { }
+
+    _applyStudentMoveSpeedScale(stats, Number(speedCtx.speed));
+}
+
+function _dispatchStudentRelicModifyMoveStats(hero: Sprite, family: number, button: string, stats: number[]): void {
+    const moveFamily = _studentMoveFamilyKey(family);
+    const moveStatsCtx: any = {
+        speed: 1,
+        defense: 1,
+        rawStats: stats,
+    };
+
+    try {
+        dispatchRelicModifyMoveStats({
+            hero,
+            family: family | 0,
+            button: String(button || ""),
+            move: { family: moveFamily, button: String(button || "") },
+            stats: moveStatsCtx,
+            hitEnemies: [],
+        });
+    } catch { }
+
+    _applyStudentMoveSpeedScale(stats, Number(moveStatsCtx.speed));
+}
+
 
 
 // Post-calc stat modifier hook for relics.
@@ -27843,6 +27913,7 @@ function applyRelicModsToStats(
     // Allow handlers to replace ctx.stats entirely, but keep it safe.
 
     const out = (ctx && Array.isArray(ctx.stats)) ? ctx.stats : statsCopy
+    _dispatchStudentRelicModifyMoveSpeed(hero, family, button, out)
 
     return out
 
@@ -51097,6 +51168,8 @@ function doHeroMoveForPlayer(playerId: number, button: string) {
         return
 
     }
+
+    _dispatchStudentRelicModifyMoveStats(hero, family, button, stats)
 
 
 
@@ -84774,6 +84847,33 @@ function applyRelicOnHitToEnemy(ctx: EnemyHitContext): void {
     // RELIC DISPATCH: route to per-hero owned relic handlers via RELICS section
 
     relic_onHitEnemy(ctx)
+
+    const sourceHero = ctx.sourceHero
+    if (!sourceHero) return
+
+    const moveFamily = _studentMoveFamilyKey(ctx.family | 0)
+    const studentCtx: any = {
+        hero: sourceHero,
+        sourceHero,
+        sourceHeroIndex: ctx.sourceHeroIndex | 0,
+        enemy: ctx.enemy,
+        eIndex: ctx.eIndex | 0,
+        damage: ctx.damage | 0,
+        family: moveFamily,
+        familyId: ctx.family | 0,
+        button: String(ctx.button || ""),
+        move: { family: moveFamily, button: String(ctx.button || "") },
+        hitPacket: ctx,
+    }
+
+    try {
+        dispatchRelicOnHitEnemy(studentCtx)
+    } catch { }
+
+    const nextDamage = Number(studentCtx.damage)
+    if (isFinite(nextDamage)) {
+        ctx.damage = Math.max(0, Math.round(nextDamage))
+    }
 
 }
 

@@ -116,7 +116,7 @@ export class CardMinigameSession {
             const a = played[i];
             const b = played[i + 1];
             const c = played[i + 2];
-            if (a. < b. && b. < c.) {
+            if (a.stat < b.stat && b.stat < c.stat) {
                 combos.push({
                     id: `seq-${i}`,
                     name: "Sequence",

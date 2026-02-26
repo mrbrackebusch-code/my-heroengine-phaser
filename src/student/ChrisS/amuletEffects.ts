@@ -575,11 +575,12 @@ function triggerKnockbackEffect(ctx: any): void {
     }
 
     // TODO: Implement visual effect (shockwave/earth rupture around hero)
-    }
 }
 
 function triggerRockDropEffect(ctx: any, enemy: any): void {
     // Drop rock on enemy: stun for 2 seconds and deal extra damage
+    if (!enemy) return;
+    const stunDuration = 2000;
     
     // Apply stun status to enemy (disable movement/actions for 2 seconds)
     applyStun(enemy, stunDuration);
