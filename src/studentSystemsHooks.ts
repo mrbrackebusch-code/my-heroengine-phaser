@@ -1375,3 +1375,33 @@ export function requestHook(req: StudentHookRequest): void {
 export function listRequestedHooks(): StudentHookRequest[] {
     return _hookRequests.slice();
 }
+
+// ---------------------------------------------------------------------------
+// VFX Trigger (Student System)
+// ---------------------------------------------------------------------------
+
+let _vfxRegistry: any = null;
+
+export function _setVfxRegistry(registry: any): void {
+    _vfxRegistry = registry;
+}
+
+/**
+ * Trigger a registered VFX effect by ID.
+ * Used by student relic handlers to spawn visual effects.
+ * 
+ * @param vfxId The VFX preset ID (e.g., "amulet_zephyrs_vfx")
+ * @param params Effect parameters (x, y, lifespanMs, etc.)
+ * @returns true if the VFX was triggered, false otherwise
+ */
+export function triggerVfx(vfxId: string, params: any): boolean {
+    if (!_vfxRegistry || typeof _vfxRegistry.run !== "function") {
+        return false;
+    }
+    try {
+        return _vfxRegistry.run(vfxId, params);
+    } catch (e) {
+        console.error("[VFX][ERROR] Failed to trigger", vfxId, e);
+        return false;
+    }
+}

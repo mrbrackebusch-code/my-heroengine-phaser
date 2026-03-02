@@ -1,5 +1,5 @@
 import type { StudentApi } from "../../studentApi";
-import { registerStudentRelicEffectHandler } from "../../studentSystemsHooks";
+import { registerStudentRelicEffectHandler, triggerVfx } from "../../studentSystemsHooks";
 import { setEnemySlow, setEnemyWeaken, applyKnockback, applyKnockbackFrom, applyStun, getEnemiesInRadius } from "./amuletUtils";
 
 /**
@@ -391,6 +391,13 @@ function triggerTornadoEffect(ctx: any): void {
         const pullForce = 4; // pixels per frame
         const pullDuration = 800; // milliseconds
         
+        // Spawn tornado VFX at hero position
+        triggerVfx("amulet_zephyrs_vfx", {
+            x: hero.x,
+            y: hero.y,
+            lifespanMs: 800
+        });
+        
         const enemiesInRadius = getEnemiesInRadius(hero.x, hero.y, tornadoRadius);
         for (const enemy of enemiesInRadius) {
             // Pull enemies toward hero center (tornado vortex)
@@ -412,6 +419,13 @@ function triggerBurnEffect(ctx: any, enemy: any): void {
     const totalTicks = 4; // 2 seconds / 0.5 seconds = 4 ticks
     let tickCount = 0;
 
+    // Spawn burn VFX on enemy
+    triggerVfx("amulet_embers_vfx", {
+        x: enemy.x,
+        y: enemy.y,
+        lifespanMs: 2000
+    });
+
     const burnInterval = setInterval(() => {
         if (tickCount >= totalTicks || !enemy) {
             clearInterval(burnInterval);
@@ -429,8 +443,6 @@ function triggerBurnEffect(ctx: any, enemy: any): void {
 
         tickCount++;
     }, 500);
-
-    // TODO: Implement burn visual effect (flame particles/glow on enemy)
 }
 
 function triggerStunEffect(ctx: any, enemy: any): void {
@@ -461,6 +473,13 @@ function triggerPoisonEffect(ctx: any, enemy: any, state: VenomState): void {
     const totalTicks = 3; // 1.5 seconds / 0.5 seconds = 3 ticks
     let tickCount = 0;
 
+    // Spawn poison VFX on enemy
+    triggerVfx("amulet_venom_vfx", {
+        x: enemy.x,
+        y: enemy.y,
+        lifespanMs: 1500
+    });
+
     const poisonInterval = setInterval(() => {
         if (tickCount >= totalTicks || !enemy) {
             clearInterval(poisonInterval);
@@ -481,8 +500,6 @@ function triggerPoisonEffect(ctx: any, enemy: any, state: VenomState): void {
 
     // Apply defense and attack debuff (stack up to 20% reduction)
     applyPoisonDebuff(enemy, state);
-
-    // TODO: Implement poison visual effect (purple particles/glow on enemy)
 }
 
 function applyPoisonDebuff(enemy: any, state: VenomState): void {
@@ -567,14 +584,19 @@ function triggerKnockbackEffect(ctx: any): void {
     const knockbackDuration = 300; // milliseconds
     const knockbackForce = 3; // pixels per frame
     
+    // Spawn shockwave VFX at hero position
+    triggerVfx("amulet_stones_vfx", {
+        x: hero.x,
+        y: hero.y,
+        lifespanMs: 600
+    });
+    
     // Get all enemies in knockback radius
     const enemiesInRadius = getEnemiesInRadius(hero.x, hero.y, knockbackRadius);
     for (const enemy of enemiesInRadius) {
         // Apply knockback away from hero center
         applyKnockbackFrom(enemy, hero.x, hero.y, knockbackForce, knockbackDuration);
     }
-
-    // TODO: Implement visual effect (shockwave/earth rupture around hero)
 }
 
 function triggerRockDropEffect(ctx: any, enemy: any): void {
@@ -582,11 +604,15 @@ function triggerRockDropEffect(ctx: any, enemy: any): void {
     if (!enemy) return;
     const stunDuration = 2000;
     
+    // Spawn rock impact VFX at enemy position
+    triggerVfx("amulet_stones_vfx", {
+        x: enemy.x,
+        y: enemy.y,
+        lifespanMs: 800
+    });
+    
     // Apply stun status to enemy (disable movement/actions for 2 seconds)
     applyStun(enemy, stunDuration);
-
-    // TODO: Implement rock visual effect (stone falling, impact animation)
-    // TODO: Deal extra damage on impact
 }
 
 export default setupAmuletEffects;

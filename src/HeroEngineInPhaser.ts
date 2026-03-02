@@ -13101,6 +13101,8 @@ function _getVfxRegistry(): VfxRegistry {
     __vfxRegistry = created.registry
     __vfxHelpers = created.helpers
     _registerVfxPresets(__vfxRegistry, __vfxHelpers)
+    // Expose vfx registry to student systems for amulet effects, etc.
+    try { (globalThis as any).__heroEngineVfxRegistry = created.registry } catch { }
     return __vfxRegistry
 }
 
