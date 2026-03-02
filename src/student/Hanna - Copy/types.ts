@@ -35,22 +35,3 @@ export type SessionParams = {
     rewardMultiplier?: number; // applied after evaluation
     maxDurationMs?: number;
 };
-
-export type SessionOutcome = "win" | "lose";
-
-export type GameOverReason = "time_expired" | "cards_exhausted" | "no_valid_combo" | "combo_success" | "legendary_chain";
-
-export type GameOverResult = {
-    outcome: SessionOutcome;
-    reason: GameOverReason;
-    score: number;
-};
-
-export type SessionEndResult = {
-    combos: Combo[];
-    reward: Reward;
-    gameOver: GameOverResult;
-    consumedCardIds: string[];
-    remainingCardIds: string[];
-    awardedRelicIds: string[];
-};

@@ -1,5 +1,5 @@
 import type { Card } from "./types";
-import { getVariantDisplay } from "./cardFactory";
+import { getRarityDisplay, getVariantDisplay } from "./cardFactory";
 
 /**
  * Card Renderer — generates DOM elements for cards with dynamic labels.
@@ -14,13 +14,6 @@ export interface CardRendererOptions {
     height?: number; // default 360
     onCardClick?: (card: Card) => void;
 }
-
-const CARD_IMAGE_BY_RARITY: Record<string, string> = {
-    common: new URL("./assets/cards/1.png", import.meta.url).href,
-    uncommon: new URL("./assets/cards/2.png", import.meta.url).href,
-    rare: new URL("./assets/cards/3.png", import.meta.url).href,
-    legendary: new URL("./assets/cards/4.png", import.meta.url).href,
-};
 
 /** Map rarity to template background class and PNG filename */
 function getRarityClass(rarity: string): string {
@@ -40,7 +33,19 @@ function getRarityClass(rarity: string): string {
 
 /** Map rarity to PNG filename (relative to project root for debug.html) */
 function getRarityImage(rarity: string): string {
-    return CARD_IMAGE_BY_RARITY[rarity] || CARD_IMAGE_BY_RARITY.common;
+    // Use absolute path from project root for debug.html
+    switch (rarity) {
+        case "common":
+            return "src/student/Hanna/assets/cards/1.png";
+        case "uncommon":
+            return "src/student/Hanna/assets/cards/2.png";
+        case "rare":
+            return "src/student/Hanna/assets/cards/3.png";
+        case "legendary":
+            return "src/student/Hanna/assets/cards/4.png";
+        default:
+            return "src/student/Hanna/assets/cards/1.png";
+    }
 }
 
 /**
@@ -163,33 +168,24 @@ export function renderCardGrid(cards: Card[], options?: CardRendererOptions & { 
  * @param card The updated card data
  */
 export function updateCardLabels(container: HTMLElement, card: Card): void {
-    // Update rarity-aware styling and background image
-    container.className = `card ${getRarityClass(card.rarity)}`;
-    const background = container.querySelector<HTMLElement>(".card-background");
-    if (background) {
-        background.style.backgroundImage = `url('${getRarityImage(card.rarity)}')`;
+    // Update rarity display
+    const rarityText = container.querySelector(".card-rarity-text");
+    if (rarityText) {
+        rarityText.textContent = getRarityDisplay(card.rarity as any);
     }
 
     // Update variant display (show/hide based on variant)
-    const overlay = container.querySelector<HTMLElement>(".card-overlay") || container;
-    let variantElem = overlay.querySelector<HTMLDivElement>(".card-variant-text");
+    let variantElem = container.querySelector(".card-variant-text");
     const variantText = getVariantDisplay(card.variant);
     
     if (variantText) {
         if (!variantElem) {
             variantElem = document.createElement("div");
             variantElem.className = "card-variant-text";
-            variantElem.style.position = "absolute";
-            variantElem.style.top = "8px";
-            variantElem.style.right = "12px";
-            variantElem.style.fontSize = "13px";
-            variantElem.style.fontWeight = "bold";
-            variantElem.style.color = "#222";
-            variantElem.style.background = "rgba(255,255,255,0.7)";
-            variantElem.style.padding = "2px 8px";
-            variantElem.style.borderRadius = "6px";
-            variantElem.style.pointerEvents = "none";
-            overlay.appendChild(variantElem);
+            variantElem.style.fontSize = "10px";
+            variantElem.style.marginTop = "2px";
+            const topRight = container.querySelector(".card-top-right");
+            if (topRight) topRight.appendChild(variantElem);
         }
         variantElem.textContent = variantText;
     } else if (variantElem) {
@@ -201,4 +197,7 @@ export function updateCardLabels(container: HTMLElement, card: Card): void {
     if (statNumber) {
         statNumber.textContent = String(card.stat);
     }
+
+    // Update container class for rarity-based styling
+    container.className = `card ${getRarityClass(card.rarity)}`;
 }
