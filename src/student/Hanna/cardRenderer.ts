@@ -1,5 +1,5 @@
 import type { Card } from "./types";
-import { getRarityDisplay, getVariantDisplay } from "./cardFactory";
+import { getVariantDisplay } from "./cardFactory";
 
 /**
  * Card Renderer — generates DOM elements for cards with dynamic labels.
@@ -15,7 +15,14 @@ export interface CardRendererOptions {
     onCardClick?: (card: Card) => void;
 }
 
-/** Map rarity to template background class */
+const CARD_IMAGE_BY_RARITY: Record<string, string> = {
+    common: new URL("./assets/cards/1.png", import.meta.url).href,
+    uncommon: new URL("./assets/cards/2.png", import.meta.url).href,
+    rare: new URL("./assets/cards/3.png", import.meta.url).href,
+    legendary: new URL("./assets/cards/4.png", import.meta.url).href,
+};
+
+/** Map rarity to template background class and PNG filename */
 function getRarityClass(rarity: string): string {
     switch (rarity) {
         case "common":
@@ -29,6 +36,11 @@ function getRarityClass(rarity: string): string {
         default:
             return "card-rarity-common";
     }
+}
+
+/** Map rarity to PNG filename (relative to project root for debug.html) */
+function getRarityImage(rarity: string): string {
+    return CARD_IMAGE_BY_RARITY[rarity] || CARD_IMAGE_BY_RARITY.common;
 }
 
 /**
@@ -57,6 +69,7 @@ export function renderCard(card: Card, options?: CardRendererOptions): HTMLEleme
     background.style.inset = "0";
     background.style.backgroundSize = "cover";
     background.style.backgroundPosition = "center";
+    background.style.backgroundImage = `url('${getRarityImage(card.rarity)}')`;
     container.appendChild(background);
 
     // Overlay container for labels
@@ -71,31 +84,24 @@ export function renderCard(card: Card, options?: CardRendererOptions): HTMLEleme
     overlay.style.pointerEvents = "none";
     container.appendChild(overlay);
 
-    // Top-right: Rarity + Variant
-    const topRight = document.createElement("div");
-    topRight.className = "card-top-right";
-    topRight.style.textAlign = "right";
-    topRight.style.fontSize = "12px";
-    topRight.style.fontWeight = "bold";
-    topRight.style.color = "#000";
-    topRight.style.textShadow = "1px 1px 2px rgba(255,255,255,0.7)";
-    
-    const rarityText = document.createElement("div");
-    rarityText.className = "card-rarity-text";
-    rarityText.textContent = getRarityDisplay(card.rarity as any);
-    rarityText.style.fontSize = "14px";
-    topRight.appendChild(rarityText);
-
+    // Variant overlay only (no rarity overlay)
     const variantText = getVariantDisplay(card.variant);
     if (variantText) {
         const variantElem = document.createElement("div");
         variantElem.className = "card-variant-text";
         variantElem.textContent = variantText;
-        variantElem.style.fontSize = "10px";
-        variantElem.style.marginTop = "2px";
-        topRight.appendChild(variantElem);
+        variantElem.style.position = "absolute";
+        variantElem.style.top = "8px";
+        variantElem.style.right = "12px";
+        variantElem.style.fontSize = "13px";
+        variantElem.style.fontWeight = "bold";
+        variantElem.style.color = "#222";
+        variantElem.style.background = "rgba(255,255,255,0.7)";
+        variantElem.style.padding = "2px 8px";
+        variantElem.style.borderRadius = "6px";
+        variantElem.style.pointerEvents = "none";
+        overlay.appendChild(variantElem);
     }
-    overlay.appendChild(topRight);
 
     // Center: Stat (large prominent number)
     const center = document.createElement("div");
@@ -115,15 +121,7 @@ export function renderCard(card: Card, options?: CardRendererOptions): HTMLEleme
     center.appendChild(statNumber);
     overlay.appendChild(center);
 
-    // Bottom-left: GMGBH label
-    const bottomLeft = document.createElement("div");
-    bottomLeft.className = "card-gmgbh";
-    bottomLeft.textContent = "GMGBH";
-    bottomLeft.style.fontSize = "12px";
-    bottomLeft.style.fontWeight = "bold";
-    bottomLeft.style.color = "#000";
-    bottomLeft.style.textShadow = "1px 1px 2px rgba(255,255,255,0.7)";
-    overlay.appendChild(bottomLeft);
+    // No GMGBH label overlay
 
     // Click handler
     if (options?.onCardClick) {
@@ -165,24 +163,33 @@ export function renderCardGrid(cards: Card[], options?: CardRendererOptions & { 
  * @param card The updated card data
  */
 export function updateCardLabels(container: HTMLElement, card: Card): void {
-    // Update rarity display
-    const rarityText = container.querySelector(".card-rarity-text");
-    if (rarityText) {
-        rarityText.textContent = getRarityDisplay(card.rarity as any);
+    // Update rarity-aware styling and background image
+    container.className = `card ${getRarityClass(card.rarity)}`;
+    const background = container.querySelector<HTMLElement>(".card-background");
+    if (background) {
+        background.style.backgroundImage = `url('${getRarityImage(card.rarity)}')`;
     }
 
     // Update variant display (show/hide based on variant)
-    let variantElem = container.querySelector(".card-variant-text");
+    const overlay = container.querySelector<HTMLElement>(".card-overlay") || container;
+    let variantElem = overlay.querySelector<HTMLDivElement>(".card-variant-text");
     const variantText = getVariantDisplay(card.variant);
     
     if (variantText) {
         if (!variantElem) {
             variantElem = document.createElement("div");
             variantElem.className = "card-variant-text";
-            variantElem.style.fontSize = "10px";
-            variantElem.style.marginTop = "2px";
-            const topRight = container.querySelector(".card-top-right");
-            if (topRight) topRight.appendChild(variantElem);
+            variantElem.style.position = "absolute";
+            variantElem.style.top = "8px";
+            variantElem.style.right = "12px";
+            variantElem.style.fontSize = "13px";
+            variantElem.style.fontWeight = "bold";
+            variantElem.style.color = "#222";
+            variantElem.style.background = "rgba(255,255,255,0.7)";
+            variantElem.style.padding = "2px 8px";
+            variantElem.style.borderRadius = "6px";
+            variantElem.style.pointerEvents = "none";
+            overlay.appendChild(variantElem);
         }
         variantElem.textContent = variantText;
     } else if (variantElem) {
@@ -194,7 +201,4 @@ export function updateCardLabels(container: HTMLElement, card: Card): void {
     if (statNumber) {
         statNumber.textContent = String(card.stat);
     }
-
-    // Update container class for rarity-based styling
-    container.className = `card ${getRarityClass(card.rarity)}`;
 }
