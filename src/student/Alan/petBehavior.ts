@@ -42,10 +42,19 @@ export function setupPetBehaviors(_api: StudentApi): void {
                 state.retreating = true;
             }
 
+            // Calculate distance to hero for follow/retreat decisions
+            let distanceToHero = Infinity;
+            if (ctx.hero && ctx.pet.x != null && ctx.pet.y != null) {
+                const dx = ctx.pet.x - (ctx.hero.x || 0);
+                const dy = ctx.pet.y - (ctx.hero.y || 0);
+                distanceToHero = Math.sqrt(dx * dx + dy * dy);
+            }
+
             // If not retreating or wounded, follow hero and engage
             if (!state.retreating && !state.wounded) {
-                // Simple follow: request follow position near hero
-                if (ctx.hero) {
+                // Follow only if far from hero
+                const followDistance = 48; // pixels
+                if (distanceToHero > followDistance && ctx.hero) {
                     try {
                         if (typeof ctx.pet.followHero === 'function') {
                             ctx.pet.followHero(ctx.hero, { offset: { x: -16, y: 0 } });
@@ -54,12 +63,19 @@ export function setupPetBehaviors(_api: StudentApi): void {
                 }
                 // Attack behavior is handled by petCombat.ts
             } else {
-                // Retreating: stay behind hero or stay idle
+                // Retreating: stay behind hero at a safe distance
                 if (ctx.hero && typeof ctx.pet.moveTo === 'function') {
                     try {
-                        const behindX = (ctx.hero.x || 0) - 24;
+                        const safeDistance = 64; // pixels behind
+                        const behindX = (ctx.hero.x || 0) - safeDistance;
                         const behindY = ctx.hero.y || 0;
-                        ctx.pet.moveTo(behindX, behindY);
+                        // Only move if not already close to safe position
+                        const dx = ctx.pet.x - behindX;
+                        const dy = ctx.pet.y - behindY;
+                        const distToSafe = Math.sqrt(dx * dx + dy * dy);
+                        if (distToSafe > 16) { // threshold to avoid jitter
+                            ctx.pet.moveTo(behindX, behindY);
+                        }
                     } catch (e) {}
                 }
             }

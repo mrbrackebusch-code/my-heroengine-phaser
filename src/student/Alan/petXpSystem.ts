@@ -63,6 +63,15 @@ export function getPetXpState(pet: any): any {
     return pet?.__alanXp || { currentXp: 0, totalXpEarned: 0, level: 1, xpToNextLevel: 100 };
 }
 
+/**
+ * Get pet's XP progress as a percentage (0-100) towards next level.
+ */
+export function getPetXpProgress(pet: any): number {
+    const xpState = getPetXpState(pet);
+    if (!xpState || xpState.level >= 10) return 100; // Max level
+    return Math.min(100, (xpState.currentXp / xpState.xpToNextLevel) * 100);
+}
+
 // ============================================================================
 // XP GAIN & LEVELING
 // ============================================================================
@@ -86,6 +95,32 @@ export function awardPetXp(pet: any, xpAmount: number, ctx?: any): void {
     }
     
     pet.__alanXp = xpState;
+}
+
+/**
+ * Award XP from non-combat sources (e.g., exploration, quests, healing).
+ * Useful for future expansion.
+ */
+export function awardPetXpFromEvent(pet: any, xpAmount: number, reason?: string): void {
+    if (!pet || !xpAmount || xpAmount <= 0) return;
+    
+    const xpState = getPetXpState(pet);
+    if (!xpState) return;
+    
+    xpState.currentXp += xpAmount;
+    xpState.totalXpEarned += xpAmount;
+    
+    // Check for level-up(s)
+    while (xpState.currentXp >= xpState.xpToNextLevel && xpState.level < 10) {
+        _levelUpPet(pet, xpState);
+    }
+    
+    pet.__alanXp = xpState;
+    
+    // Log event
+    if (typeof console !== 'undefined' && console.log) {
+        console.log(`[PET] ${pet.name || 'Pet'} gained ${xpAmount} XP from ${reason || 'event'}!`);
+    }
 }
 
 /**
@@ -145,15 +180,15 @@ function _applyStatGrowth(pet: any, fromLevel: number, toLevel: number): void {
  * - Level 5→6: 300 XP (mid-game tempo)
  * - Level 9→10: 550 XP (max level is rare)
  * 
- * Formula: baseXp (100) + bonusPerLevel (50 × level)
- * This gives smooth, increasing difficulty without harsh curves.
+ * Formula: 50 + (50 × level)
+ * This gives increasing difficulty with smooth progression.
  * 
- * Elizabeth: Tune baseXp and bonusPerLevel constants to match desired pacing.
+ * Elizabeth: Tune the 50 constants to match desired pacing.
  */
 function _calculateXpThreshold(level: number): number {
-    const baseXp = 100;
-    const bonusPerLevel = 50;
-    const threshold = baseXp + (bonusPerLevel * level);
+    const baseIncrement = 50;
+    const levelBonus = 50;
+    const threshold = baseIncrement + (levelBonus * level);
     
     // Cap at reasonable values for levels 1-10
     return Math.min(threshold, 600); // Max 600 XP for level 10

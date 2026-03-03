@@ -110,7 +110,7 @@ function readPng(filePath) {
       .on("error", reject);
   });
 }
-c:\Users\Student\Downloads\wisp .64x64.png.png
+
 function writePng(png, filePath) {
   return new Promise((resolve, reject) => {
     const stream = fs.createWriteStream(filePath);
