@@ -134,15 +134,26 @@ function _levelUpPet(pet: any, xpState: any, ctx?: any): void {
     const oldLevel = xpState.level;
     xpState.level = Math.min(10, xpState.level + 1);
     
+    // Store old stats for comparison
+    const oldMaxHp = pet.maxHp || 40;
+    const oldAtk = pet.atk || 6;
+    
     // Grow stats based on growth rates
     _applyStatGrowth(pet, oldLevel, xpState.level);
+    
+    // Calculate stat increases
+    const hpIncrease = (pet.maxHp || 40) - oldMaxHp;
+    const atkIncrease = (pet.atk || 6) - oldAtk;
     
     // Recalculate XP to next level (can scale with level)
     xpState.xpToNextLevel = _calculateXpThreshold(xpState.level);
     
-    // Log level-up event
+    // Trigger level-up callback (for animations, VFX, UI updates)
+    _triggerLevelUpEvent(pet, xpState, { hpIncrease, atkIncrease, oldLevel });
+    
+    // Log level-up event with details
     if (typeof console !== 'undefined' && console.log) {
-        console.log(`[PET] ${pet.name || 'Pet'} leveled up to ${xpState.level}!`);
+        console.log(`[PET_LEVELUP] ${pet.name || 'Pet'} → Level ${xpState.level}! HP +${hpIncrease}, ATK +${atkIncrease}`);
     }
 }
 
@@ -173,25 +184,57 @@ function _applyStatGrowth(pet: any, fromLevel: number, toLevel: number): void {
 }
 
 /**
+ * Trigger level-up event callback for animations, VFX, and UI updates.
+ * Can be hooked into by external systems.
+ */
+let levelUpCallback: ((pet: any, xpState: any, details: any) => void) | null = null;
+
+export function registerLevelUpCallback(callback: (pet: any, xpState: any, details: any) => void): void {
+    levelUpCallback = callback;
+}
+
+function _triggerLevelUpEvent(pet: any, xpState: any, details: any): void {
+    if (levelUpCallback) {
+        try {
+            levelUpCallback(pet, xpState, details);
+        } catch (e) {
+            console.error("[PET] Level-up callback error:", e);
+        }
+    }
+}
+
+/**
  * Calculate XP threshold for next level.
  * 
- * Progression design:
- * - Level 1→2: 100 XP (quick early progression)
- * - Level 5→6: 300 XP (mid-game tempo)
- * - Level 9→10: 550 XP (max level is rare)
+ * ============================================================================
+ * TUNING CONSTANTS (Elizabeth: adjust these for pacing)
+ * ============================================================================
  * 
- * Formula: 50 + (50 × level)
- * This gives increasing difficulty with smooth progression.
+ * Current Formula: baseIncrement + (levelBonus × level)
+ * With baseIncrement=50, levelBonus=50:
+ * - Level 2: 100 XP (quick start)
+ * - Level 3: 150 XP
+ * - Level 5: 300 XP (mid-game)
+ * - Level 8: 450 XP
+ * - Level 10: 600 XP (capped, max level is rare)
  * 
- * Elizabeth: Tune the 50 constants to match desired pacing.
+ * Pacing Guidelines:
+ * - Faster progression: lower baseIncrement/levelBonus (e.g., 40/40)
+ * - Slower progression: higher baseIncrement/levelBonus (e.g., 75/75)
+ * - Balanced: ~4-6 defeated weak enemies (~25-30 XP each) per level in early game
+ * 
+ * Elizabeth: Test with actual enemy XP values to ensure good player rhythm.
+ * ============================================================================
  */
 function _calculateXpThreshold(level: number): number {
-    const baseIncrement = 50;
-    const levelBonus = 50;
-    const threshold = baseIncrement + (levelBonus * level);
+    // === TUNING: Adjust these constants to change progression pace ===
+    const baseIncrement = 50;  // Base XP for early levels
+    const levelBonus = 50;     // XP increase per level
+    const maxCap = 600;        // Maximum XP for any level
+    // ===================================================================
     
-    // Cap at reasonable values for levels 1-10
-    return Math.min(threshold, 600); // Max 600 XP for level 10
+    const threshold = baseIncrement + (levelBonus * level);
+    return Math.min(threshold, maxCap);
 }
 
 // ============================================================================
@@ -218,6 +261,71 @@ export function setupPetXpProgression(_api: StudentApi): void {
         // Award XP and handle level-ups automatically
         awardPetXp(ctx.pet, ctx.xpAmount, ctx);
     });
+}
+
+// ============================================================================
+// DEBUG & TEST UTILITIES (for tuning & verification)
+// ============================================================================
+
+/**
+ * Print progression table for debugging/tuning.
+ * Shows XP required for each level and example stat progression.
+ */
+export function printProgressionTable(): void {
+    console.log("\n=== PET XP PROGRESSION TABLE ===");
+    console.log("Level | XP to Next | Cumulative | Example ATK | Example HP");
+    console.log("------|------------|------------|-------------|----------");
+    
+    let cumulativeXp = 0;
+    for (let level = 1; level <= 10; level++) {
+        const xpToNext = _calculateXpThreshold(level);
+        cumulativeXp += xpToNext;
+        const exampleAtk = 6 + (1 * (level - 1)); // baseAtk + (growthAtk × (level-1))
+        const exampleHp = 40 + (6 * (level - 1)); // baseHp + (growthHp × (level-1))
+        
+        console.log(`  ${level}   | ${xpToNext.toString().padStart(10)} | ${cumulativeXp.toString().padStart(10)} | ${exampleAtk.toString().padStart(11)} | ${exampleHp.toString().padStart(8)}`);
+    }
+    console.log("================================\n");
+}
+
+/**
+ * Simulate XP awards and level-ups for testing.
+ */
+export function testLevelUpFlow(pet: any, xpAmounts: number[]): void {
+    if (!pet) {
+        console.error("[TEST] No pet provided");
+        return;
+    }
+    
+    initPetXpState(pet);
+    pet.__alanPetStats = { baseHp: 40, baseAtk: 6, growthHp: 6, growthAtk: 1 };
+    pet.maxHp = 40;
+    pet.hp = 40;
+    pet.atk = 6;
+    
+    console.log(`[TEST] Starting: Level ${pet.__alanXp.level}, XP: ${pet.__alanXp.currentXp}/${pet.__alanXp.xpToNextLevel}`);
+    
+    for (const xp of xpAmounts) {
+        awardPetXp(pet, xp);
+        const state = pet.__alanXp;
+        console.log(`[TEST] After +${xp} XP: Level ${state.level}, XP: ${state.currentXp}/${state.xpToNextLevel}, HP: ${pet.hp}/${pet.maxHp}, ATK: ${pet.atk}`);
+    }
+    
+    console.log(`[TEST] Final: Level ${pet.__alanXp.level}, Total XP earned: ${pet.__alanXp.totalXpEarned}`);
+}
+
+/**
+ * Get pet level-up stats for UI display.
+ * Returns object with level, progress, and next milestone XP.
+ */
+export function getPetLevelUpStats(pet: any): { level: number; xpProgress: number; xpToNext: number; nextLevel: number } {
+    const xpState = getPetXpState(pet);
+    return {
+        level: xpState.level,
+        xpProgress: xpState.currentXp,
+        xpToNext: xpState.xpToNextLevel,
+        nextLevel: xpState.level < 10 ? xpState.level + 1 : 10,
+    };
 }
 
 export default setupPetXpProgression;

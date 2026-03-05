@@ -52,6 +52,59 @@ This guide explains exactly what sprites are needed and how to integrate them in
 
 ---
 
+## 🛠️ How to Create the Sprites (Step-by-Step)
+
+If you're new to sprite creation, here's a beginner-friendly guide:
+
+### Recommended Tools (Free & Easy)
+- **GIMP** (free image editor): Download from gimp.org. Great for pixel art.
+- **Aseprite** (free trial, then $19.99): Professional pixel art tool with animation support.
+- **Piskel** (web-based, free): Simple online pixel art editor at piskelapp.com.
+
+### Step-by-Step Creation Process
+
+1. **Open your tool** (e.g., GIMP or Aseprite).
+
+2. **Create a new canvas**:
+   - Width: 512 pixels (16 frames × 32 px each)
+   - Height: 32 pixels
+   - Background: Transparent
+
+3. **Draw the first frame** (idle 0):
+   - Draw your wisp design in the leftmost 32×32 area.
+   - Keep it simple: a glowing orb, floating shape, etc.
+
+4. **Duplicate and animate**:
+   - Copy the first frame to the right (32 px offset).
+   - Make small changes for each frame (e.g., slight glow variation for idle).
+   - Repeat for all 16 frames in one row.
+
+5. **Save as PNG**:
+   - File name: `wisp 32x32.png` (include dimensions).
+   - Export with transparency.
+
+6. **Create icons**:
+   - New canvas: 16×16 pixels.
+   - Draw simple icons (e.g., food as a heart or apple, bandage as a cross).
+   - Save as `wisp_food 16x16.png` and `wisp_bandage 16x16.png`.
+
+7. **Place files**:
+   - Copy to `src/student/Alan/assets/pets/` (or as directed).
+
+### Example Wisp Design Ideas
+- **Simple Orb**: Blue circle with white highlights, slight pulsing.
+- **Floating Spirit**: Ghost-like shape with trailing particles.
+- **Magical Wisp**: Sparkly ball with color variations.
+
+If you need inspiration, search "pixel art sprite" on OpenGameArt.org (check licenses).
+
+### Quick Start: Generate a Placeholder
+If you're stuck, run this script to create a basic working spritesheet:
+```bash
+node src/student/Alan/generate_wisp_placeholder.mjs
+```
+This generates a blue circle with variations in `wisp 32x32.png`. Use it as a starting point—open in GIMP/Aseprite and customize!
+
 ## 🔗 Integration Steps
 
 ### Step 1: Create the Sprite Files
@@ -167,6 +220,6 @@ If you need clarification on:
 
 ---
 
-**Last Updated:** February 17, 2026  
+**Last Updated:** March 5, 2026  
 **Created for:** Lourdes (visuals & animations)  
 **Linked from:** [PET_SYSTEM_STATUS.md](PET_SYSTEM_STATUS.md)

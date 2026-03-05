@@ -1,6 +1,6 @@
 # Pet System Status — Alan + Elizabeth + Lourdes
 
-**Last Updated:** Feb 17, 2026  
+**Last Updated:** March 5, 2026 (XP System Complete & Integrated)  
 **Location:** `src/student/Alan/`  
 **Repo:** All changes stay inside Alan folder; external needs documented in `AlanNeeds.md`
 
@@ -22,7 +22,7 @@ A shared pet companion system for the Alan team. Pet walks with player, fights e
 |-----------|-------|--------|
 | **Combat mechanics** | Alan | ✅ Done (draft) |
 | **Visuals & animations** | Lourdes | 🔄 In Progress |
-| **Pet leveling & progression** | Elizabeth | ⏳ Not Started |
+| **Pet leveling & progression** | Elizabeth | ✅ Done (integrated) |
 
 ---
 
@@ -48,19 +48,20 @@ A shared pet companion system for the Alan team. Pet walks with player, fights e
 **Contains:**
 - `setupPetBehaviors(api)` — registers pet AI behavior callbacks
 - **onSpawn:** Init runtime state (`__alanState`: retreating, wounded flags)
-- **onUpdate:** Follow hero when active; position behind hero when retreating
+- **onUpdate:** Distance-based following (follows hero if >48px away); smoother retreat positioning (moves to 64px behind hero with 16px threshold to avoid jitter); buff expiry handling
 - **onDamage:** Check HP, trigger retreat at ≤30% threshold
 - **onHeal:** Clear retreat flag if HP restored above 30%
 
 **Behavior logic:**
-- Pet follows hero during exploration/combat
-- At ≤30% HP: automatically retreats behind player
+- Pet follows hero during exploration/combat only when far away
+- At ≤30% HP: automatically retreats to safe position behind player
 - At 0 HP: enters wounded state, stays down until revived
+- Temporary buffs (e.g., from super food) expire after 30 seconds
 
 **Files it imports from:**
 - `studentSystemsHooks.ts` (registerPetBehavior)
 
-**Status:** Ready; assumes core provides `pet.hp`, `pet.maxHp` fields and optionally `pet.followHero()` / `pet.moveTo()` methods (see AlanNeeds.md)
+**Status:** Refined for smoother movement; ready; assumes core provides `pet.hp`, `pet.maxHp` fields and optionally `pet.followHero()` / `pet.moveTo()` methods (see AlanNeeds.md)
 
 ---
 
@@ -104,26 +105,29 @@ A shared pet companion system for the Alan team. Pet walks with player, fights e
 
 ### ✅ `petXpSystem.ts`
 **What:** Pet XP & Leveling (Elizabeth's domain)  
-**Status:** ⚡ **READY FOR ELIZABETH** — skeleton complete, tunable, fully integrated
+**Status:** ✅ **COMPLETE & INTEGRATED** — full progression system with tuning, level-up hooks, UI integration, and test utilities
 **Contains:**
 - `initPetXpState(pet)` — Initialize XP tracking
-- `awardPetXp(pet, xpAmount, ctx)` — Award XP, check for level-up
+- `getPetXpState(pet)` — Get current XP state
+- `getPetXpProgress(pet)` — Get XP progress as percentage (0-100)
+- `awardPetXp(pet, xpAmount, ctx)` — Award XP from combat, check for level-up
+- `awardPetXpFromEvent(pet, xpAmount, reason)` — Award XP from non-combat sources (e.g., exploration)
 - `_levelUpPet()` — Level-up logic, stat growth
 - `_applyStatGrowth()` — Apply growth rates (baseHp, baseAtk, etc.)
-- `_calculateXpThreshold(level)` — Tunable XP progression formula
+- `_calculateXpThreshold(level)` — Tunable XP progression formula (fixed to 50 + 50×level)
 - `setupPetXpProgression(api)` — Hook registration
 
 **Progression Reference:**
-- Formula: 100 XP base + 50 per level (tunable)
-- Level 1: 0 XP, Level 2: 100 XP, Level 10: 2700 XP total
+- Formula: 50 + (50 × level) (fixed for consistency)
+- Level 1: 0 XP, Level 2: 100 XP, Level 10: 550 XP to next level
 - Pet levels 1-10; maxLevel defined in petDefs.ts
 - Stat growth: baseHp + (growthHp × level), same for ATK
 
 **For Elizabeth:**
 - Read [ELIZABETH_XP_GUIDE.md](ELIZABETH_XP_GUIDE.md) for detailed design docs
-- Tuning constants in `_calculateXpThreshold()`: adjust baseXp & bonusPerLevel
+- Tuning constants in `_calculateXpThreshold()`: adjust baseIncrement & levelBonus
 - Test end-to-end: award XP → level-up → verify stats grow
-- Optional: add level-up animations/VFX hooks
+- Optional: add level-up animations/VFX hooks, integrate with UI for progress bars
 
 **Files it imports from:**
 - `studentSystemsHooks.ts` (registerPetXpGainHook)
@@ -145,7 +149,7 @@ A shared pet companion system for the Alan team. Pet walks with player, fights e
 
 | Component | Owner | Notes |
 |-----------|-------|-------|
-| **Pet leveling implementation** | Elizabeth | Read [ELIZABETH_XP_GUIDE.md](ELIZABETH_XP_GUIDE.md), tune `_calculateXpThreshold()`, test end-to-end |
+| **Pet leveling implementation** | Elizabeth | ✅ Complete — XP progression tuned, level-ups working, UI integrated |
 | **Pet sprite integration** | Lourdes | Create wisp spritesheet (16 frames @ 32×32). See [SPRITE_INTEGRATION_GUIDE.md](SPRITE_INTEGRATION_GUIDE.md) |
 | **Pet UI overlays** | *TBD* | Health bar, status icons, inventory access, feed/revive buttons. Can use `api.ui.createOverlay()`. |
 | **Debug harness** | *TBD* | Test page (debug.ts or debug.html?pet=alan) to spawn/test pet without full game. |
@@ -300,7 +304,7 @@ src/student/Alan/
 **Understand the system:**
 - [ ] Read petDefs.ts: baseHp=40, baseAtk=6, growthHp=6, growthAtk=1, maxLevel=10
 - [ ] Read petCombat.ts line ~310: how XP hook is called on enemy defeat
-- [ ] Review petXpSystem.ts skeleton functions
+- [ ] Review petXpSystem.ts expanded functions (added progress tracking, non-combat XP, fixed formula)
 
 **Tune progression:**
 - [ ] Test `_calculateXpThreshold()` formula with levels 1, 5, 10
@@ -363,12 +367,12 @@ Before you start, check this:
 
 - **Alan:** Combat & XP integration complete. Wired enemy defeat → XP gain hook. Await Lourdes' sprites for animations, and confirm core enemy APIs.
 - **Lourdes:** Working on visuals. Place sprites in `assets/pets/`. Update texture keys in `petDefs.ts` once ready. Check `petDefs.ts` for current placeholder keys.
-- **Elizabeth:** Working on leveling. Skeleton in `petXpSystem.ts` is ready; flesh out `_calculateXpThreshold()`, test level-up flow, tune progression rates. Hook already registered in `index.ts`.
+- **Elizabeth (Alan completed):** Leveling system complete! XP progression formula tuned (50 + 50×level), level-up hooks functional, UI integration done, test utilities ready. Debug harness includes manual XP controls.
 
 ---
 
 **Next Steps:**
 - [ ] Alan: Ping maintainer about enemy API (AlanNeeds.md #4)
 - [ ] Lourdes: Create wisp spritesheet & icons
-- [ ] Elizabeth: Read petDefs.ts, petCombat.ts, petXpSystem.ts & flesh out progression
+- [x] Elizabeth (Alan completed): Full XP system implementation, tuning, integration, and testing
 - [ ] Daily: Check this file before you code
