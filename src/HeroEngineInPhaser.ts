@@ -21,6 +21,7 @@ import {
     getStudentBossHooks,
     getStudentBossPhaseConfig,
     getStudentDropHooks,
+    getStudentSpecialDoorFloor,
     getStudentMaze,
     getStudentMazeHooks,
     getStudentNpc,
@@ -40,6 +41,7 @@ import {
     type StudentMazeTheme,
     type StudentMazeTrapMode,
     type StudentMazeTrapPlacement,
+    type StudentSpecialDoorFloorDefinition,
 } from "./studentSystemsHooks";
 import { pickStudentDebugStartFloor } from "./studentDebug";
 import { ENEMY_EFFECT_DARKEN_PCT_DEFAULT, ENEMY_EFFECT_PALETTES } from "./vfxPalettes";
@@ -11052,6 +11054,7 @@ const DUNGEON_KIND_TREASURE = "treasure"
 
 const DUNGEON_KIND_STORY = "story"
 const DUNGEON_KIND_HALL = "hall"
+const DUNGEON_KIND_STUDENT_SPECIAL = "student_special"
 
 
 
@@ -11490,6 +11493,7 @@ const INTERACT_DATA = {
 
     KIND: "dun_i_kind",
     ACTION: "dun_i_action",
+    DOOR_ID: "dun_i_door_id",
     USED: "dun_i_used",
     FOCUSABLE: "dun_i_focusable",
 
@@ -11511,6 +11515,7 @@ const INTERACT_ACTION_PROP = "prop"
 const INTERACT_ACTION_NPC = "npc"
 const INTERACT_ACTION_HEADSTONE = "headstone"
 const INTERACT_ACTION_RELIC_OFFER = "relic_offer"
+const INTERACT_ACTION_STUDENT_SPECIAL_DOOR = "student_special_door"
 
 type PropAuraStyle = {
     radius?: number
@@ -13250,6 +13255,65 @@ function _dunSetInteractUsed(it: Sprite, used: boolean): void {
     sprites.setDataNumber(it, INTERACT_DATA.OPENED, v)
 }
 
+function _dunResolveHeroProfileForInteract(pid: number, hi: number): string {
+    const hiKey = _heroProfileKeyForIndex(hi | 0)
+    if (hiKey) return hiKey
+    const pidKey = _resolveProfileKeyForPlayerId(pid | 0)
+    if (pidKey) return pidKey
+    if ((pid | 0) > 0) return `player_${pid | 0}`
+    return "player_local"
+}
+
+function _dunBuildStudentSpecialDoorFloorState(profile: string, doorId: string): StudentSpecialDoorFloorState {
+    const profileName = String(profile || "").trim()
+    const resolvedDoorId = String(doorId || "").trim() || STUDENT_SPECIAL_DOOR_DEFAULT_ID
+    const def = _dunGetStudentSpecialDoorFloorDef(profileName, resolvedDoorId)
+    const floorKind = DUNGEON_KIND_STUDENT_SPECIAL
+    const floorIndex = STUDENT_TESTING_FLOOR_INDEX | 0
+
+    return {
+        profile: profileName,
+        doorId: resolvedDoorId,
+        floorKind,
+        floorIndex: floorIndex | 0,
+        fromFloorIndex: _dunFloorIndex | 0,
+        fromFloorKind: String(_dunFloorKind || ""),
+        data: def?.data,
+    }
+}
+
+function _dunHandleStudentSpecialDoorInteract(it: Sprite, hero: Sprite, pid: number, hi: number, nowMs: number): boolean {
+    void hero
+    if (!it || (it.flags & sprites.Flag.Destroyed)) return false
+    if ((_dunFloorKind || "") !== DUNGEON_KIND_ENTRANCE) return false
+
+    const profileName = _dunResolveHeroProfileForInteract(pid | 0, hi | 0)
+    if (!profileName) return false
+
+    const rawDoorId = sprites.readDataString(it, INTERACT_DATA.DOOR_ID) || STUDENT_SPECIAL_DOOR_DEFAULT_ID
+    const nextState = _dunBuildStudentSpecialDoorFloorState(profileName, rawDoorId)
+    _dunStudentSpecialDoorFloorState = nextState
+
+    try {
+        const g: any = (globalThis as any)
+        if (g && typeof g.__hero_saveBeforeTeleport === "function") {
+            g.__hero_saveBeforeTeleport(nextState.floorIndex | 0, nextState.floorKind)
+        }
+    } catch { }
+
+    if (DEBUG_STUDENT_SYSTEMS_LOGS) {
+        console.log(
+            "[STUDENT][DOOR] profile=" + nextState.profile +
+            " doorId=" + nextState.doorId +
+            " floor=" + (nextState.floorIndex | 0) +
+            " kind=" + nextState.floorKind
+        )
+    }
+
+    _dunEnterFloor(nextState.floorIndex | 0, nextState.floorKind, nowMs | 0)
+    return true
+}
+
 function _dunHandleInteractable(it: Sprite, hero: Sprite, pid: number, hi: number, nowMs: number): boolean {
     if (!it || (it.flags & sprites.Flag.Destroyed)) return false
     let action = _dunReadInteractAction(it)
@@ -13258,6 +13322,10 @@ function _dunHandleInteractable(it: Sprite, hero: Sprite, pid: number, hi: numbe
 
     if (action === INTERACT_ACTION_RELIC_OFFER) {
         return _dunHandleInteractRelicOffer(it, hero, pid | 0, hi | 0, nowMs | 0)
+    }
+
+    if (action === INTERACT_ACTION_STUDENT_SPECIAL_DOOR) {
+        return _dunHandleStudentSpecialDoorInteract(it, hero, pid | 0, hi | 0, nowMs | 0)
     }
 
     return _dunHandleInteractProp(it, hero, pid | 0, hi | 0, nowMs | 0, action)
@@ -14199,6 +14267,21 @@ let DUNGEON_BLOCK_INTENTS = false
 let _dunFloorIndex = 0
 
 let _dunFloorKind = DUNGEON_KIND_ENTRANCE
+
+const STUDENT_SPECIAL_DOOR_DEFAULT_ID = "testing_floor_teleport_rune"
+const STUDENT_TESTING_FLOOR_INDEX = 1
+
+type StudentSpecialDoorFloorState = {
+    profile: string
+    doorId: string
+    floorKind: string
+    floorIndex: number
+    fromFloorIndex: number
+    fromFloorKind: string
+    data?: any
+}
+
+let _dunStudentSpecialDoorFloorState: StudentSpecialDoorFloorState | null = null
 
 let _dunObjectiveDone = false
 const DUNGEON_PAD_HINT_COOLDOWN_MS = 4000
@@ -15398,6 +15481,8 @@ function _dunFloorKindTitle3(kind: string): string {
     if (k == DUNGEON_KIND_COMBAT) return "Monsters"
 
     if (k == DUNGEON_KIND_HALL) return "Hall of Enemies"
+
+    if (_dunIsStudentSpecialDoorFloorKind(k)) return "Student System"
 
     return "Event"
 
@@ -18248,6 +18333,7 @@ function _dunClearTransientFloorEntities(): void {
     _dunCombatWavesActive = false
     _dunCombatWavesComplete = false
     _dunMonsterPool = []
+    _dunCombatCardSummary = []
     _dunMonsterPoolTotalCount = 0
     _dunMonsterPoolDanger = 0
     _dunSpawnIntervalMs = 0
@@ -18311,6 +18397,44 @@ function _dunIsBossFloor(floor1: number): boolean {
 
 function _dunShouldShopAfterFloor(floor1: number): boolean {
     return _dunIsEliteFloor(floor1 | 0) || _dunIsBossFloor(floor1 | 0)
+}
+
+function _dunNormalizeStudentSpecialDoorKind(raw: any): string {
+    const kind = String(raw || "").trim().toLowerCase()
+    if (!kind) return DUNGEON_KIND_STUDENT_SPECIAL
+    if (
+        kind === DUNGEON_KIND_ENTRANCE ||
+        kind === DUNGEON_KIND_COMBAT ||
+        kind === DUNGEON_KIND_SHOP ||
+        kind === DUNGEON_KIND_TREASURE ||
+        kind === DUNGEON_KIND_STORY ||
+        kind === DUNGEON_KIND_HALL
+    ) {
+        return DUNGEON_KIND_STUDENT_SPECIAL
+    }
+    return kind
+}
+
+function _dunGetStudentSpecialDoorFloorDef(profile: string, doorId?: string): StudentSpecialDoorFloorDefinition | null {
+    const profileName = String(profile || "").trim()
+    if (!profileName) return null
+    const def = getStudentSpecialDoorFloor(profileName)
+    if (!def) return null
+    if (!isProfileAllowed(def, profileName)) return null
+    const requestedDoor = String(doorId || "").trim()
+    const defDoor = String(def.doorId || "").trim()
+    if (requestedDoor && defDoor && requestedDoor !== defDoor) return null
+    return def
+}
+
+function _dunIsStudentSpecialDoorFloorKind(kind: string): boolean {
+    const k = String(kind || "").trim().toLowerCase()
+    if (!k) return false
+    if (k === DUNGEON_KIND_STUDENT_SPECIAL) return true
+    const state = _dunStudentSpecialDoorFloorState
+    if (!state) return false
+    const activeKind = _dunNormalizeStudentSpecialDoorKind(state.floorKind)
+    return k === activeKind
 }
 
 function _dunFloorUsesDoorExit(): boolean {
@@ -18384,6 +18508,10 @@ function _dunEnterFloor_initState(nextIndex: number, kind: string, nowMs: number
     }
     if (DEBUG_EFFECTS_HALL_ON_START && (next | 0) <= 0) {
         nextKind = DUNGEON_KIND_HALL
+    }
+
+    if (!_dunIsStudentSpecialDoorFloorKind(nextKind)) {
+        _dunStudentSpecialDoorFloorState = null
     }
 
 
@@ -20410,6 +20538,14 @@ function _dunEnterFloor_setupEntranceFloor(nowMs: number): void {
     _dunEnterFloor_spawnStarterChest(nowMs)
     _dunEnterFloor_spawnMemoryBook(nowMs)
 
+}
+
+function _dunEnterFloor_setupStudentSpecialFloor(nowMs: number): void {
+    void nowMs
+    DUNGEON_BLOCK_INTENTS = false
+    _dunObjectiveDone = true
+    _dunSetPadPowered(true)
+    _dunRuneSetName("teleport_rune")
 }
 
 
@@ -23307,19 +23443,22 @@ function _dunEnterFloor_setupKind(kind: string, nowMs: number, padX: number, pad
 
     else if (kind == DUNGEON_KIND_SHOP) _dunEnterFloor_setupShopFloor(padX, padY)
 
+    else if (_dunIsStudentSpecialDoorFloorKind(kind)) _dunEnterFloor_setupStudentSpecialFloor(nowMs)
+
     else if (kind == DUNGEON_KIND_HALL) _dunEnterFloor_setupHallFloor(nowMs)
 
     else _dunEnterFloor_setupCombatFloor(nowMs)
 
+    const isStudentSpecialFloor = _dunIsStudentSpecialDoorFloorKind(kind)
     const hasStudentTraps = _dunHasStudentMazeTrapPlacements()
 
-    if (!hasStudentTraps && kind != DUNGEON_KIND_ENTRANCE) {
+    if (!isStudentSpecialFloor && !hasStudentTraps && kind != DUNGEON_KIND_ENTRANCE) {
         _dunEnterFloor_spawnStarterShrine()
     }
 
     if (hasStudentTraps) {
         _dunSpawnStudentMazeTraps(nowMs | 0)
-    } else if (kind != DUNGEON_KIND_HALL && kind != DUNGEON_KIND_ENTRANCE) {
+    } else if (!isStudentSpecialFloor && kind != DUNGEON_KIND_HALL && kind != DUNGEON_KIND_ENTRANCE) {
         _dunEnterFloor_spawnTrapsForFloor(nowMs | 0)
     }
 
@@ -23433,6 +23572,7 @@ function _dunNormalizeDebugStartKind(raw: any): string {
     if (k === "story") return DUNGEON_KIND_STORY;
     if (k === "treasure" || k === "relic") return DUNGEON_KIND_TREASURE;
     if (k === "hall" || k === "hallof_enemies") return DUNGEON_KIND_HALL;
+    if (k === "student" || k === "special") return DUNGEON_KIND_STUDENT_SPECIAL;
     if (k === "entrance" || k === "start") return DUNGEON_KIND_ENTRANCE;
     return "";
 }
@@ -23471,6 +23611,12 @@ function dungeonStartRun(nowMs: number): void {
 
     DUNGEON_MODE_ACTIVE = true
     resetAllTrapInstances()
+    try {
+        const g: any = globalThis as any
+        if (g && typeof g.__heHannaResetAllCards === "function") {
+            g.__heHannaResetAllCards("dungeonStartRun")
+        }
+    } catch { }
     const override = _dunResolveStudentDebugStartFloor()
     if (override) {
         if (DEBUG_STUDENT_SYSTEMS_LOGS) {
@@ -23683,6 +23829,24 @@ function _dunTickObjectiveEvaluation(nowMs: number): void {
             // RELIC HOOK: end of combat (objective completes)
 
             try { relic_onCombatCleared_allPlayers(nowMs | 0) } catch { }
+
+            try {
+                const g: any = globalThis as any
+                const fn = g ? g.__heHannaOnCombatCleared : null
+                if (typeof fn === "function") {
+                    fn({
+                        floorIndex: _dunFloorIndex | 0,
+                        floorKind: String(_dunFloorKind || ""),
+                        isBossLevel: _dunIsBossFloor(_dunFloorIndex | 0),
+                        levelSummary: {
+                            monsters: _dunCombatCardSummary.map((entry) => ({
+                                baseDanger: Math.max(1, entry?.baseDanger | 0) | 0,
+                                variant: entry?.variant ? String(entry.variant) : null,
+                            })),
+                        },
+                    })
+                }
+            } catch { }
 
 
 
@@ -30379,17 +30543,61 @@ function _dunStampEntranceTower(): void {
 
     if (_dunFloorKind === DUNGEON_KIND_ENTRANCE) {
         const anchorR = (doorTop + 3) | 0
-        const anchorC = doorLeft | 0
-        const existing = _dunFindDecorAtTile(anchorR | 0, anchorC | 0, "entrance_door")
-        if (!existing || (existing.flags & sprites.Flag.Destroyed)) {
+        const entranceDoorC = doorLeft | 0
+        const existingEntranceDoor = _dunFindDecorAtTile(anchorR | 0, entranceDoorC | 0, "entrance_door")
+        if (!existingEntranceDoor || (existingEntranceDoor.flags & sprites.Flag.Destroyed)) {
             _dunDecor_spawnAtTile({
                 name: "entrance_door",
                 role: DECOR_ROLE.TRIGGER,
                 tileR: anchorR | 0,
-                tileC: anchorC | 0,
+                tileC: entranceDoorC | 0,
                 pxW: WORLD_TILE_SIZE | 0,
                 pxH: WORLD_TILE_SIZE | 0,
             })
+        }
+
+        // Special student door: place near the entrance-floor spawn area, not inside the tower wall.
+        const spawnR = Math.max(1, (rows - 2) | 0) | 0
+        const spawnC = Math.idiv(cols | 0, 2) | 0
+        const specialDoorCandidates = [
+            { r: (spawnR - 1) | 0, c: (spawnC + 2) | 0 },
+            { r: (spawnR - 1) | 0, c: (spawnC - 2) | 0 },
+            { r: (spawnR - 2) | 0, c: (spawnC + 2) | 0 },
+            { r: (spawnR - 2) | 0, c: (spawnC - 2) | 0 },
+            { r: (spawnR - 1) | 0, c: (spawnC + 3) | 0 },
+            { r: (spawnR - 1) | 0, c: (spawnC - 3) | 0 },
+            // Fallback to old tower-side location if needed.
+            { r: anchorR | 0, c: doorRight | 0 },
+        ]
+
+        let specialDoorR = anchorR | 0
+        let specialDoorC = doorRight | 0
+        for (let i = 0; i < specialDoorCandidates.length; i++) {
+            const cand = specialDoorCandidates[i]
+            const rr = cand.r | 0
+            const cc = cand.c | 0
+            if (rr < 1 || cc < 1 || rr >= ((rows - 1) | 0) || cc >= ((cols - 1) | 0)) continue
+            if (_engineWorldTileMap && _engineWorldTileMap[rr] && _tileIsSolidType(_engineWorldTileMap[rr][cc] | 0)) continue
+            if (_dunFindDecorAtTile(rr | 0, cc | 0, "")) continue
+            specialDoorR = rr | 0
+            specialDoorC = cc | 0
+            break
+        }
+
+        const existingSpecialDoor = _dunFindDecorAtTile(specialDoorR | 0, specialDoorC | 0, "teleport_rune_testing")
+        if (!existingSpecialDoor || (existingSpecialDoor.flags & sprites.Flag.Destroyed)) {
+            const it = _dunSpawnInteractableProp({
+                name: "teleport_rune_testing",
+                tileR: specialDoorR | 0,
+                tileC: specialDoorC | 0,
+                action: INTERACT_ACTION_STUDENT_SPECIAL_DOOR,
+                role: DECOR_ROLE.TRIGGER,
+                pxW: ((WORLD_TILE_SIZE | 0) * 2) | 0,
+                pxH: ((WORLD_TILE_SIZE | 0) * 2) | 0,
+            })
+            if (it && !(it.flags & sprites.Flag.Destroyed)) {
+                sprites.setDataString(it, INTERACT_DATA.DOOR_ID, STUDENT_SPECIAL_DOOR_DEFAULT_ID)
+            }
         }
     } else {
         const doorIds = [
@@ -41614,9 +41822,97 @@ function _studentMazeTryBuildWorld(rows: number, cols: number): number[][] | nul
     return map;
 }
 
+function _createStudentSpecialDoorBlankMap(rows: number, cols: number): number[][] {
+    const out: number[][] = [];
+    const rr = Math.max(rows | 0, MIN_WORLD_TILES_H) | 0;
+    const cc = Math.max(cols | 0, MIN_WORLD_TILES_W) | 0;
+    for (let r = 0; r < rr; r++) {
+        const row: number[] = [];
+        for (let c = 0; c < cc; c++) row.push(TILE_EMPTY);
+        out.push(row);
+    }
+    return out;
+}
+
+function _dunTryBuildStudentSpecialDoorWorld(rows: number, cols: number): number[][] | null {
+    if (!_dunIsStudentSpecialDoorFloorKind(_dunFloorKind || "")) return null;
+
+    _dunStudentMazeTrapPlacements = [];
+
+    const state = _dunStudentSpecialDoorFloorState;
+    if (!state || !state.profile) {
+        return _createStudentSpecialDoorBlankMap(rows | 0, cols | 0);
+    }
+
+    const def = _dunGetStudentSpecialDoorFloorDef(state.profile, state.doorId);
+    const ctx = _studentMazeBuildContext(rows | 0, cols | 0);
+    ctx.profile = state.profile;
+    ctx.profiles = [state.profile];
+    ctx.data = {
+        ...(ctx.data || {}),
+        studentDoor: {
+            profile: state.profile,
+            doorId: state.doorId,
+            fromFloorIndex: state.fromFloorIndex | 0,
+            fromFloorKind: state.fromFloorKind,
+            data: state.data,
+        },
+    };
+
+    let grid: StudentMazeGrid | null = null;
+    if (def) {
+        if (typeof def.generate === "function") {
+            try {
+                grid = def.generate(ctx) || null;
+            } catch { /* ignore */ }
+        }
+
+        if (!grid && def.grid) {
+            grid = def.grid;
+        }
+
+        if (!grid) {
+            const mazeId = String(def.mazeId || "").trim();
+            if (mazeId) {
+                const mazeDef = getStudentMaze(mazeId);
+                if (mazeDef) {
+                    if (typeof mazeDef.generate === "function") {
+                        try {
+                            grid = mazeDef.generate(ctx) || null;
+                        } catch { /* ignore */ }
+                    }
+                    if (!grid && mazeDef.grid) grid = mazeDef.grid;
+                }
+            }
+        }
+    }
+
+    if (grid) {
+        const map = _studentMazeNormalizeGrid(grid, rows | 0, cols | 0);
+        if (map) {
+            _studentMazeApplyTheme(grid.theme);
+            _dunStudentMazeTrapPlacements = _studentMazeNormalizeTrapPlacements(grid.traps, rows | 0, cols | 0);
+            return map;
+        }
+    }
+
+    return _createStudentSpecialDoorBlankMap(rows | 0, cols | 0);
+}
+
 function _studentMazeGetDefaultDims(): { rows: number; cols: number } {
     let cols = Math.max(WORLD_TILES_W, MIN_WORLD_TILES_W) | 0;
     let rows = Math.max(WORLD_TILES_H, MIN_WORLD_TILES_H) | 0;
+
+    if (_dunIsStudentSpecialDoorFloorKind(_dunFloorKind || "")) {
+        const state = _dunStudentSpecialDoorFloorState;
+        const def = state ? _dunGetStudentSpecialDoorFloorDef(state.profile, state.doorId) : null;
+        if (def) {
+            const nextCols = Number(def.cols);
+            const nextRows = Number(def.rows);
+            if (Number.isFinite(nextCols) && (nextCols | 0) > 0) cols = Math.max(nextCols | 0, MIN_WORLD_TILES_W) | 0;
+            if (Number.isFinite(nextRows) && (nextRows | 0) > 0) rows = Math.max(nextRows | 0, MIN_WORLD_TILES_H) | 0;
+        }
+    }
 
     if ((_dunFloorKind || "") === DUNGEON_KIND_SHOP) {
         cols = Math.max(SHOP_WORLD_TILES_W, MIN_WORLD_TILES_W) | 0;
@@ -41640,6 +41936,12 @@ function _createTileMap2D(): number[][] {
     if ((_dunFloorKind || "") === DUNGEON_KIND_ENTRANCE) {
         _worldgenBridgePlacements = [];
         return _createEntranceFloorMap();
+    }
+
+    if (_dunIsStudentSpecialDoorFloorKind(_dunFloorKind || "")) {
+        _worldgenBridgePlacements = [];
+        const dims = _studentMazeGetDefaultDims();
+        return _createStudentSpecialDoorBlankMap(dims.rows | 0, dims.cols | 0);
     }
 
     // Shop floors use a deterministic open layout so we can place the platform + stairs cleanly.
@@ -42988,7 +43290,8 @@ function initWorldTileMap(): void {
 
     // Always build the numeric world grid (used by Phaser renderer + collision).
     const mazeDims = _studentMazeGetDefaultDims();
-    const mazeMap = _studentMazeTryBuildWorld(mazeDims.rows | 0, mazeDims.cols | 0);
+    const specialDoorMap = _dunTryBuildStudentSpecialDoorWorld(mazeDims.rows | 0, mazeDims.cols | 0);
+    const mazeMap = specialDoorMap || _studentMazeTryBuildWorld(mazeDims.rows | 0, mazeDims.cols | 0);
     if (mazeMap) {
         _engineWorldTileMap = mazeMap;
         _worldgenBridgePlacements = [];
@@ -76872,6 +77175,7 @@ function startEnemyWaves() {
     _dunCombatWavesActive = false
     _dunCombatWavesComplete = false
     _dunMonsterPool = []
+    _dunCombatCardSummary = []
     _dunMonsterPoolTotalCount = 0
     _dunMonsterPoolDanger = 0
     _dunSpawnIntervalMs = 0
@@ -76889,6 +77193,7 @@ function startEnemyWaves() {
     const floorNum = Math.max(1, (_dunFloorIndex | 0)) | 0
     const built = _buildMonsterPoolForFloor(_dunFloorIndex | 0, playerCount | 0)
     _dunMonsterPool = built.monsters || []
+    _dunCombatCardSummary = _buildHannaCombatSummaryForPool(_dunMonsterPool)
     _dunMonsterPoolTotalCount = _dunMonsterPool.length | 0
     _dunMonsterPoolDanger = built.totalDanger | 0
 
@@ -86580,6 +86885,11 @@ function updateHeroDeaths(now: number) {
         const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
         let profileKey = _heroProfileKeyForIndex(i)
         if (!profileKey) profileKey = sprites.readDataString(hero, HERO_DATA.NAME) || ""
+        try {
+            if (profileKey && typeof g?.__heHannaResetCardsForProfile === "function") {
+                g.__heHannaResetCardsForProfile(profileKey, "heroDeath")
+            }
+        } catch { }
         _heroDeath_showDialog(hero, pid | 0, profileKey || "")
 
         _heroDeath_enterGhost(i, hero, now)
@@ -87991,6 +88301,7 @@ const POSSIBLE_MONSTERS = [
 let _dunCombatWavesActive = false
 let _dunCombatWavesComplete = false
 let _dunMonsterPool: string[] = []
+let _dunCombatCardSummary: Array<{ baseDanger: number; variant?: string | null }> = []
 let _dunMonsterPoolTotalCount = 0
 let _dunMonsterPoolDanger = 0
 let _dunSpawnIntervalMs = 0
@@ -88715,6 +89026,21 @@ function _monsterTotalDangerForPool(monsters: string[]): number {
         total = (total + (_monsterDangerForSpawnId(monsters[i]) | 0)) | 0
     }
     return Math.max(1, total | 0) | 0
+}
+
+function _buildHannaCombatSummaryForPool(monsters: string[]): Array<{ baseDanger: number; variant?: string | null }> {
+    const out: Array<{ baseDanger: number; variant?: string | null }> = []
+    for (let i = 0; i < monsters.length; i++) {
+        const parsed = _parseMonsterSpawnId(monsters[i] || "")
+        const baseId = parsed.baseId || String(monsters[i] || "")
+        if (!baseId) continue
+        const baseDanger = Math.max(1, _monsterDefById(baseId).danger | 0) | 0
+        out.push({
+            baseDanger,
+            variant: parsed.variant ? String(parsed.variant) : null,
+        })
+    }
+    return out
 }
 
 function _scaleMonsterPoolByPlayerCount(basePool: string[], scale: number): string[] {
@@ -90117,9 +90443,13 @@ type RelicDefinition = {
     flavorText?: string
     rarity?: string
 
-    iconPrimary: RelicIconSpec
+    iconPrimary?: RelicIconSpec
 
     iconAlt?: RelicIconSpec
+
+    iconUrl?: string
+
+    iconAltUrl?: string
 
     uiHints?: RelicUiHints
 
@@ -90879,6 +91209,8 @@ const RELIC_IDS = {
 
     LOAF_OF_BREAD: "loaf_of_bread",
 
+    HANNA_LEGEND_RELIC: "hanna_legend_relic",
+
 }
 
 const RELIC_STARTER_OFFER_COUNT = 3
@@ -91504,6 +91836,38 @@ const RELIC_EFFECTS: { [effectKey: string]: RelicEffectHandler } = {
             ctx.setHpTo = (half > 0 ? half : 1) | 0
 
             console.log("[RELICHOOK][LANTERN] prevented death", { pid, hi: ctx.hi | 0, setHpTo: ctx.setHpTo | 0 })
+
+        },
+
+    },
+
+    hanna_legend_relic: {
+
+        effectKey: "hanna_legend_relic",
+
+        modifyMoveStats: (ctx: RelicModifyMoveStatsContext) => {
+
+            if (!ctx) return
+
+            const pid = _relicResolvePidFromHeroIndex(ctx.hi) | 0
+
+            if (pid <= 0) return
+
+            const st = _relicEnsureRuntimeForPid(pid)
+
+            const now = (ctx.now == null) ? (game.runtime() | 0) : (ctx.now | 0)
+
+            if ((st.hannaLegendDamageBoostUntilMs | 0) <= now) return
+
+            if (!ctx.stats || ctx.stats.length <= (STAT.DAMAGE_MULT | 0)) return
+
+            const i = STAT.DAMAGE_MULT | 0
+
+            const prev = ctx.stats[i] | 0
+
+            const multPct = Math.max(100, st.hannaLegendDamageMultPct | 0) | 0
+
+            ctx.stats[i] = Math.max(0, Math.round((prev * multPct) / 100)) | 0
 
         },
 
@@ -92513,6 +92877,10 @@ const RELIC_LOAF_OF_BREAD_HP_BONUS = 10
 const RELIC_LOAF_OF_BREAD_SHOP_PRICE = 10
 const RELIC_RAINBOW_GLYPH_TEXT = "SAIW"
 const RELIC_RAINBOW_FULL_MASK = 0b1111
+const RELIC_HANNA_LEGEND_MAX_USES = 3
+const RELIC_HANNA_LEGEND_XP_BONUS = 25
+const RELIC_HANNA_LEGEND_DAMAGE_BOOST_MS = 30_000
+const RELIC_HANNA_LEGEND_DAMAGE_MULT_PCT = 200
 
 
 
@@ -92531,6 +92899,12 @@ type RelicRuntimeState = {
     rainbowStep: number
 
     rainbowArmed: boolean
+
+    hannaLegendUsesConsumed: number
+
+    hannaLegendDamageBoostUntilMs: number
+
+    hannaLegendDamageMultPct: number
 
 }
 
@@ -92564,6 +92938,12 @@ function _relicEnsureRuntimeForPid(pid: number): RelicRuntimeState {
 
             rainbowArmed: false,
 
+            hannaLegendUsesConsumed: 0,
+
+            hannaLegendDamageBoostUntilMs: 0,
+
+            hannaLegendDamageMultPct: RELIC_HANNA_LEGEND_DAMAGE_MULT_PCT,
+
         }
 
         _relicRuntimeByPid[k] = st
@@ -92585,6 +92965,13 @@ function _relicEnsureRuntimeForPid(pid: number): RelicRuntimeState {
     st.rainbowStep = st.rainbowStep | 0
 
     st.rainbowArmed = !!st.rainbowArmed
+
+    st.hannaLegendUsesConsumed = Math.max(0, st.hannaLegendUsesConsumed | 0) | 0
+
+    st.hannaLegendDamageBoostUntilMs = Math.max(0, st.hannaLegendDamageBoostUntilMs | 0) | 0
+
+    const hannaLegendDamageMultPct = st.hannaLegendDamageMultPct | 0
+    st.hannaLegendDamageMultPct = hannaLegendDamageMultPct > 0 ? hannaLegendDamageMultPct : RELIC_HANNA_LEGEND_DAMAGE_MULT_PCT
 
     return st
 
@@ -92947,6 +93334,97 @@ function _relicApplyLoafOfBread(pid: number): void {
 
 }
 
+function _relicTryUseHannaLegendByPid(pid: number, source: string, effect?: any): { ok: boolean; reason: string } {
+
+    if (!_relicHasPid(pid | 0, RELIC_IDS.HANNA_LEGEND_RELIC)) return { ok: false, reason: "not-owned" }
+
+    const hi = _relicResolveHeroIndexForPid(pid | 0)
+
+    if (hi < 0 || hi >= heroes.length) return { ok: false, reason: "no-hero" }
+
+    const hero = heroes[hi]
+
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return { ok: false, reason: "no-hero" }
+
+    if (sprites.readDataBoolean(hero, HERO_DATA.IS_DEAD)) return { ok: false, reason: "hero-dead" }
+
+    const st = _relicEnsureRuntimeForPid(pid | 0)
+
+    const maxUsesRaw = Number(effect?.maxUses)
+    const maxUses = Number.isFinite(maxUsesRaw) ? Math.max(1, Math.round(maxUsesRaw)) : RELIC_HANNA_LEGEND_MAX_USES
+
+    if ((st.hannaLegendUsesConsumed | 0) >= (maxUses | 0)) return { ok: false, reason: "no-uses-left" }
+
+    const now = game.runtime() | 0
+    const durationRaw = Number(effect?.durationMs)
+    const durationMs = Number.isFinite(durationRaw) ? Math.max(0, Math.round(durationRaw)) : RELIC_HANNA_LEGEND_DAMAGE_BOOST_MS
+    const xpRaw = Number(effect?.xpBonus)
+    const xpBonus = Number.isFinite(xpRaw) ? Math.max(0, Math.round(xpRaw)) : RELIC_HANNA_LEGEND_XP_BONUS
+    const dmgMultRaw = Number(effect?.damageMultiplier)
+    const damageMultPct = Number.isFinite(dmgMultRaw)
+        ? Math.max(100, Math.round(dmgMultRaw * 100))
+        : RELIC_HANNA_LEGEND_DAMAGE_MULT_PCT
+    const healToMax = effect?.healToMax !== false
+
+    st.hannaLegendUsesConsumed = ((st.hannaLegendUsesConsumed | 0) + 1) | 0
+    st.hannaLegendDamageBoostUntilMs = durationMs > 0 ? ((now + durationMs) | 0) : 0
+    st.hannaLegendDamageMultPct = damageMultPct | 0
+
+    if (healToMax) {
+        let maxHp = sprites.readDataNumber(hero, HERO_DATA.MAX_HP) | 0
+        if (maxHp <= 0) maxHp = Math.max(1, sprites.readDataNumber(hero, HERO_DATA.HP) | 0) | 0
+        sprites.setDataNumber(hero, HERO_DATA.HP, maxHp | 0)
+        updateHeroHPBar(hi)
+    }
+
+    if ((xpBonus | 0) > 0) {
+        grantXpToHeroIndex(hi, xpBonus | 0, hero.x, hero.y - 24)
+    }
+
+    if (DEBUG_RELIC_LOGS) {
+        console.log("[RELIC][USE]", {
+            pid: pid | 0,
+            hi: hi | 0,
+            relicId: RELIC_IDS.HANNA_LEGEND_RELIC,
+            source: String(source || ""),
+            usesConsumed: st.hannaLegendUsesConsumed | 0,
+            boostUntilMs: st.hannaLegendDamageBoostUntilMs | 0,
+            damageMultPct: st.hannaLegendDamageMultPct | 0,
+        })
+    }
+
+    return { ok: true, reason: "used" }
+
+}
+
+function _relicTryUseByPid(pid: number, relicId: string, source: string): { ok: boolean; reason: string } {
+
+    const rid = String(relicId || "").trim()
+
+    if (!rid) return { ok: false, reason: "no-relic" }
+
+    if (rid === RELIC_IDS.HANNA_LEGEND_RELIC) {
+        return _relicTryUseHannaLegendByPid(pid | 0, source || "")
+    }
+
+    return { ok: false, reason: "not-usable" }
+
+}
+
+function _relicApplyUseEffectByPid(pid: number, effect: any, source: string): { ok: boolean; reason: string } {
+
+    const rid = String(effect?.relicId || "").trim()
+
+    if (!rid) return { ok: false, reason: "no-relic" }
+
+    if (rid === RELIC_IDS.HANNA_LEGEND_RELIC) {
+        return _relicTryUseHannaLegendByPid(pid | 0, source || "", effect)
+    }
+
+    return { ok: false, reason: "not-usable" }
+
+}
+
 function _relicGrantToPid(pid: number, relicId: string, source: string): boolean {
 
     const rid = String(relicId || "")
@@ -92974,6 +93452,45 @@ function _relicGrantToPid(pid: number, relicId: string, source: string): boolean
     }
 
     return true
+
+}
+
+function _heGrantPlayerRewardToPid(pid: number, reward: any, source: string): { ok: boolean; reason: string } {
+
+    const hi = _relicResolveHeroIndexForPid(pid | 0)
+
+    if (hi < 0 || hi >= heroes.length) return { ok: false, reason: "no-hero" }
+
+    const hero = heroes[hi]
+
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return { ok: false, reason: "no-hero" }
+
+    const xp = Math.max(0, Math.round(Number(reward?.xp || 0))) | 0
+    const gold = Math.max(0, Math.round(Number(reward?.gold || 0))) | 0
+    const itemId = String(reward?.itemId || "").trim()
+    const relicId = String(reward?.relicId || "").trim()
+
+    let applied = false
+
+    if ((xp | 0) > 0) {
+        grantXpToHeroIndex(hi, xp | 0, hero.x, hero.y - 24)
+        applied = true
+    }
+
+    if ((gold | 0) > 0) {
+        addHeroCoins(hi, gold | 0, hero.x, hero.y)
+        applied = true
+    }
+
+    if (relicId) {
+        if (_relicGrantToPid(pid | 0, relicId, source || "reward")) {
+            applied = true
+        }
+    }
+
+    if (itemId && !applied) return { ok: true, reason: "item-unsupported" }
+    if (applied) return { ok: true, reason: "granted" }
+    return { ok: true, reason: "no-op" }
 
 }
 
@@ -93131,6 +93648,28 @@ function getRelicUiStateByIdForPid(pid: number): { [relicId: string]: RelicUiSta
 
     }
 
+    // F) Hanna legend relic: active-use charges + active boost indicator.
+
+    if (out[RELIC_IDS.HANNA_LEGEND_RELIC]) {
+
+        const usesConsumed = Math.max(0, rt.hannaLegendUsesConsumed | 0) | 0
+
+        const remainingUses = Math.max(0, (RELIC_HANNA_LEGEND_MAX_USES - usesConsumed) | 0) | 0
+
+        const boostActive = (rt.hannaLegendDamageBoostUntilMs | 0) > now
+
+        out[RELIC_IDS.HANNA_LEGEND_RELIC] = {
+
+            disabled: remainingUses <= 0,
+
+            cornerCount: remainingUses,
+
+            throb: boostActive,
+
+        }
+
+    }
+
 
 
     return out
@@ -93242,6 +93781,8 @@ function _relicDefToUi(def: RelicDefinition | null): any {
         flavorText: String(def.flavorText || ""),
         iconPrimary,
         iconAlt,
+        iconUrl: def.iconUrl ? String(def.iconUrl || "") : "",
+        iconAltUrl: def.iconAltUrl ? String(def.iconAltUrl || "") : "",
     }
 }
 
@@ -99321,6 +99862,28 @@ function _heAutoDebugDumpTick(nowMs: number): void {
                 return { ok: false, reason: String((err as any) || ""), killed: 0 }
             }
         }
+        g.__heGrantPlayerReward = function (params: any): any {
+            try {
+                const reward = (params && typeof params === "object" && params.reward && typeof params.reward === "object")
+                    ? params.reward
+                    : params
+                const pid = _uiResolvePid(params && typeof params.playerId === "number" ? (params.playerId | 0) : undefined)
+                return _heGrantPlayerRewardToPid(pid | 0, reward || {}, "hanna-card-game")
+            } catch (err) {
+                return { ok: false, reason: String((err as any) || "") }
+            }
+        }
+        g.__heApplyRelicUseEffect = function (params: any): any {
+            try {
+                const effect = (params && typeof params === "object" && params.effect && typeof params.effect === "object")
+                    ? params.effect
+                    : params
+                const pid = _uiResolvePid(params && typeof params.playerId === "number" ? (params.playerId | 0) : undefined)
+                return _relicApplyUseEffectByPid(pid | 0, effect || {}, "hanna-applyRelicUseEffect")
+            } catch (err) {
+                return { ok: false, reason: String((err as any) || "") }
+            }
+        }
 
 
 
@@ -99497,6 +100060,24 @@ g.__heUiCommand = function (cmd: any): any {
     if (t === "relicPick") {
         const index = cmd && typeof cmd.index === "number" ? (cmd.index | 0) : _uiReadNum(hero, HERO_UI_DATA.SEL, 0)
         const r = _relicOfferTryPickIndex(hi, pid, index | 0, "__heUiCommand")
+        return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
+    }
+
+    if (t === "grantReward") {
+        const reward = (cmd && typeof cmd.reward === "object" && cmd.reward) ? cmd.reward : {}
+        const r = _heGrantPlayerRewardToPid(pid | 0, reward, "__heUiCommand")
+        return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
+    }
+
+    if (t === "applyRelicUseEffect") {
+        const effect = (cmd && typeof cmd.effect === "object" && cmd.effect) ? cmd.effect : {}
+        const r = _relicApplyUseEffectByPid(pid | 0, effect, "__heUiCommand")
+        return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
+    }
+
+    if (t === "useRelic") {
+        const relicId = cmd && typeof cmd.relicId === "string" ? String(cmd.relicId || "") : ""
+        const r = _relicTryUseByPid(pid | 0, relicId, "__heUiCommand")
         return { ok: !!r.ok, reason: r.reason, snapshot: g.__heGetUiSnapshot(pid) }
     }
 

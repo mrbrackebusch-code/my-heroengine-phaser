@@ -669,6 +669,21 @@ teleport_rune: {
     offsetYPx: 12,
 },
 
+teleport_rune_testing: {
+    atlas: "anims.teleportrune 64x64",
+    ref: { row: 0, col: 0 },
+    offsetYPx: 12,
+    overlay: {
+        atlas: "anims.teleportrune 64x64",
+        ref: { row: 0, col: 0 },
+        followState: true,
+        visibleByDefault: true,
+        tint: 0xff4a4a,
+        alpha: 0.65,
+        blendMode: "add",
+    },
+},
+
 teleport_rune_spin1: {
     atlas: "anims.teleportrune 64x64",
     ref: { row: 0, col: 0 },

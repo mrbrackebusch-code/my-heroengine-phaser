@@ -22,6 +22,7 @@ import { preloadEffectSheets, buildEffectAtlas } from "./effectAtlas";
 import { preloadHookshotThrustSheet } from "./hookshotWeaponAtlas";
 import { AURA_RADII } from "./auraConfig";
 import { preloadStudentAssets } from "./studentAssets";
+import { installHannaCardGameIntegration } from "./hannaCardGameIntegration";
 import { initStudentSystems } from "./studentSystems";
 import { applyStudentPropDefinitions, getStudentBossHooks, isProfileAllowed } from "./studentSystemsHooks";
 import "./studentAutoLoad";
@@ -1768,6 +1769,7 @@ async create() {
       getGlobals: () => (globalThis as any),
     });
     applyStudentPropDefinitions();
+    installHannaCardGameIntegration();
     _tryPruneUnconnectedHeroes("scene-create");
 
     // 9) Keyboard -> controller wiring (all clients)

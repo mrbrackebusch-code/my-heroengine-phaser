@@ -4483,7 +4483,17 @@ function _readTeamCoins(pid, hero, spritesNS) {
         function _shopui_iconStyleForRelic(relicId) {
           const cat = _hud_getRelicCatalogOnce();
           const def = cat ? (cat[String(relicId)] || null) : null;
-          const iconSpec = def ? def.iconPrimary : null;
+          return _hud_iconStyleForRelicDef(def, false);
+        }
+
+        function _hud_iconStyleForRelicDef(def, useAlt) {
+          const iconUrl = useAlt
+            ? String((def && (def.iconAltUrl || def.iconUrl)) || "")
+            : String((def && def.iconUrl) || "");
+          if (iconUrl) {
+            return `background-image:url('${iconUrl}'); background-position:center; background-size:cover; background-repeat:no-repeat; image-rendering:pixelated;`;
+          }
+          const iconSpec = (useAlt && def && def.iconAlt) ? def.iconAlt : (def ? def.iconPrimary : null);
           const sheetName = iconSpec ? String(iconSpec.sheet || "") : "";
           const x = iconSpec ? (iconSpec.x | 0) : 0;
           const y = iconSpec ? (iconSpec.y | 0) : 0;
@@ -4738,12 +4748,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
           }
           const cat = _hud_getRelicCatalogOnce();
           const def = cat ? (cat[String(relicId)] || null) : null;
-          const iconSpec = def ? def.iconPrimary : null;
-          const sheetName = iconSpec ? String(iconSpec.sheet || "") : "";
-          const x = iconSpec ? (iconSpec.x | 0) : 0;
-          const y = iconSpec ? (iconSpec.y | 0) : 0;
-          const url = RELIC_SHEET_URL[sheetName] || "";
-          return url ? `background-image:url('${url}'); background-position:${-(x * 32)}px ${-(y * 32)}px;` : "";
+          return _hud_iconStyleForRelicDef(def, false);
         }
 
         function _relicoffer_buildList(options, canControl) {
@@ -4998,6 +5003,24 @@ function _readTeamCoins(pid, hero, spritesNS) {
             }
             _relicTip.activeEl = null;
             _relicTip_setShown(false);
+          });
+
+          box.addEventListener("click", async (e) => {
+            const target = e.target && e.target.closest ? e.target.closest(".xp-relic") : null;
+            if (!target) return;
+            const relicId = String(target.getAttribute("data-relic-id") || "");
+            if (!relicId) return;
+            if (String(target.getAttribute("data-disabled") || "") === "1") return;
+            const pid = getPid();
+            if (!pid) return;
+            e.preventDefault();
+            e.stopPropagation();
+            const res = await _hud_cmd(pid, { type: "useRelic", relicId });
+            const snap = (res && res.snapshot && res.snapshot.ready) ? res.snapshot : null;
+            if (snap) {
+              _hud_lastSnap = snap;
+              _hud_lastSnapAt = Date.now() | 0;
+            }
           });
         }
 
@@ -5707,13 +5730,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             const throb = !!st.throb;
             const useAlt = !!st.useAltIcon;
 
-            const iconSpec = (useAlt && def && def.iconAlt) ? def.iconAlt : (def ? def.iconPrimary : null);
-            const sheetName = iconSpec ? String(iconSpec.sheet || "") : "";
-            const x = iconSpec ? (iconSpec.x | 0) : 0;
-            const y = iconSpec ? (iconSpec.y | 0) : 0;
-
-            const url = RELIC_SHEET_URL[sheetName] || "";
-            const bg = url ? `background-image:url('${url}'); background-position:${-(x * 32)}px ${-(y * 32)}px;` : "";
+            const bg = _hud_iconStyleForRelicDef(def, useAlt);
 
             const badge = (st.cornerCount === undefined || st.cornerCount === null) ? "" : `<div class="xp-relic-badge">${st.cornerCount | 0}</div>`;
 
@@ -5732,7 +5749,7 @@ function _readTeamCoins(pid, hero, spritesNS) {
             const flavorEsc = _hud_escapeAttr(flavor);
 
             html += `
-              <div class="xp-relic" data-name="${nameEsc}" data-effect="${effectEsc}" data-flavor="${flavorEsc}">
+              <div class="xp-relic" data-name="${nameEsc}" data-effect="${effectEsc}" data-flavor="${flavorEsc}" data-relic-id="${_hud_escapeAttr(String(relicId || ""))}" data-disabled="${disabled ? "1" : "0"}">
                 <div class="xp-relic-icon ${disabled ? "xp-disabled" : ""} ${throb ? "xp-throb" : ""}" style="${bg}">
                   ${badge}
                 </div>

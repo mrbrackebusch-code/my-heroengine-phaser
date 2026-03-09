@@ -1,7 +1,7 @@
 {
   "type": "heDebugDumpV1",
-  "createdAt": 1772124384298,
-  "runtimeMs": 3147,
+  "createdAt": 1773072694935,
+  "runtimeMs": 3840,
   "reason": "tilemap-visual-decor",
   "host": true,
   "floor": {
@@ -12,16 +12,16 @@
   },
   "world": {
     "worldRev": 3,
-    "decorRev": 259,
+    "decorRev": 260,
     "tileSize": 32,
     "rows": 34,
     "cols": 60
   },
   "tilemapAudit": {
-    "latest": "floor=0 kind=entrance rows=34 cols=60 map=r0=W0-27,G28-32,W33-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-19,G20-39,W40-59|r5=W0-20,G21-38,W39-59|r6=W0-22,G23-37,W38-59|r7=W0-23,G24-35,W36-59|r8=W0-25,G26-34,W35-59|r9=W0-26,G27-32,W33-59|r10=W0-26,G27-32,W33-59|r11=W0-26,G27-32,W33-59|r12=W0-26,G27-32,W33-59|r13=W0-26,G27-32,W33-59|r14=W0-26,G27-32,W33-59|r15=W0-26,G27-32,W33-59|r16=W0-26,G27-32,W33-59|r17=W0-26,G27-32,W33-59|r18=W0-26,G27-32,W33-59|r19=W0-26,G27-32,W33-59|r20=W0-26,G27-32,W33-59|r21=W0-26,G27-32,W33-59|r22=W0-26,G27-32,W33-59|r23=W0-26,G27-32,W33-59|r24=W0-26,G27-32,W33-59|r25=W0-26,G27-32,W33-59|r26=W0-26,G27-32,W33-59|r27=W0-26,G27-32,W33-59|r28=W0-26,G27-32,W33-59|r29=W0-26,G27-32,W33-59|r30=W0-26,G27-32,W33-59|r31=W0-26,G27-32,W33-59|r32=W0-26,G27-32,W33-59|r33=W0-59 props=teleport_rune@1,30(-16,0)|entrance_door@3,28|book_stump@5,32(0,-8)|book_memories@0@4,33(0,-8)|stairs_statue@0,30(-16,0)|entrance_wall#r0@0,0|entrance_wall#r0@0,1|entrance_wall#r0@0,2|entrance_wall#r0@0,3|entrance_wall#r0@0,4|entrance_wall#r0@0,5|entrance_wall#r0@0,6|entrance_wall#r0@0,7|entrance_wall#r0@0,8|entrance_wall#r0@0,9|entrance_wall#r0@0,10|entrance_wall#r0@0,11|entrance_wall#r0@0,12|entrance_wall#r0@0,13|entrance_wall#r0@0,14|entrance_wall#r0@0,15|entrance_wall#r0@0,16|entrance_wall#r0@0,17|entrance_wall#r0@0,18|entrance_wall#r0@0,19|entrance_wall#r0@0,20|entrance_wall#r0@0,21|entrance_wall#r0@0,22|entrance_wall#r0@0,23|entrance_wall#r0@0,24|entrance_wall#r0@0,25|entrance_wall#r0@0,26|entrance_wall#r0@0,27|entrance_wall#r0@0,32|entrance_wall#r0@0,33|entrance_wall#r0@0,34|entrance_wall#r0@0,35|entrance_wall#r0@0,36|entrance_wall#r0@0,37|entrance_wall#r0@0,38|entrance_wall#r0@0,39|entrance_wall#r0@0,40|entrance_wall#r0@0,41|entrance_wall#r0@0,42|entrance_wall#r0@0,43|entrance_wall#r0@0,44|entrance_wall#r0@0,45|entrance_wall#r0@0,46|entrance_wall#r0@0,47|entrance_wall#r0@0,48|entrance_wall#r0@0,49|entrance_wall#r0@0,50|entrance_wall#r0@0,51|entrance_wall#r0@0,52|entrance_wall#r0@0,53|entrance_wall#r0@0,54|entrance_wall#r0@0,55|entrance_wall#r0@0,56|entrance_wall#r0@0,57|entrance_wall#r0@0,58|entrance_wall#r0@0,59|entrance_wall#r1@1,0|entrance_wall#r1@1,1|entrance_wall#r1@1,2|entrance_wall#r1@1,3|entrance_wall#r1@1,4|entrance_wall#r1@1,5|entrance_wall#r1@1,6|entrance_wall#r1@1,7|entrance_wall#r1@1,8|entrance_wall#r1@1,9|entrance_wall#r1@1,10|entrance_wall#r1@1,11|entrance_wall#r1@1,12|entrance_wall#r1@1,13|entrance_wall#r1@1,14|entrance_wall#r1@1,15|entrance_wall#r1@1,16|entrance_wall#r1@1,17|entrance_wall#r1@1,18|entrance_wall#r1@1,19|entrance_wall#r1@1,20|entrance_wall#r1@1,21|entrance_wall#r1@1,22|entrance_wall#r1@1,23|entrance_wall#r1@1,24|entrance_wall#r1@1,25|entrance_wall#r1@1,26|entrance_wall#r1@1,27|entrance_wall#r1@1,32|entrance_wall#r1@1,33|entrance_wall#r1@1,34|entrance_wall#r1@1,35|entrance_wall#r1@1,36|entrance_wall#r1@1,37|entrance_wall#r1@1,38|entrance_wall#r1@1,39|entrance_wall#r1@1,40|entrance_wall#r1@1,41|entrance_wall#r1@1,42|entrance_wall#r1@1,43|entrance_wall#r1@1,44|entrance_wall#r1@1,45|entrance_wall#r1@1,46|entrance_wall#r1@1,47|entrance_wall#r1@1,48|entrance_wall#r1@1,49|entrance_wall#r1@1,50|entrance_wall#r1@1,51|entrance_wall#r1@1,52|entrance_wall#r1@1,53|entrance_wall#r1@1,54|entrance_wall#r1@1,55|entrance_wall#r1@1,56|entrance_wall#r1@1,57|entrance_wall#r1@1,58|entrance_wall#r1@1,59|entrance_wall#r2@2,0|entrance_wall#r2@2,1|entrance_wall#r2@2,2|entrance_wall#r2@2,3|entrance_wall#r2@2,4|entrance_wall#r2@2,5|entrance_wall#r2@2,6|entrance_wall#r2@2,7|entrance_wall#r2@2,8|entrance_wall#r2@2,9|entrance_wall#r2@2,10|entrance_wall#r2@2,11|entrance_wall#r2@2,12|entrance_wall#r2@2,13|entrance_wall#r2@2,14|entrance_wall#r2@2,15|entrance_wall#r2@2,16|entrance_wall#r2@2,17|entrance_wall#r2@2,18|entrance_wall#r2@2,19|entrance_wall#r2@2,20|entrance_wall#r2@2,21|entrance_wall#r2@2,22|entrance_wall#r2@2,23|entrance_wall#r2@2,24|entrance_wall#r2@2,25|entrance_wall#r2@2,26|entrance_wall#r2@2,27|entrance_wall#r2@2,32|entrance_wall#r2@2,33|entrance_wall#r2@2,34|entrance_wall#r2@2,35|entrance_wall#r2@2,36|entrance_wall#r2@2,37|entrance_wall#r2@2,38|entrance_wall#r2@2,39|entrance_wall#r2@2,40|entrance_wall#r2@2,41|entrance_wall#r2@2,42|entrance_wall#r2@2,43|entrance_wall#r2@2,44|entrance_wall#r2@2,45|entrance_wall#r2@2,46|entrance_wall#r2@2,47|entrance_wall#r2@2,48|entrance_wall#r2@2,49|entrance_wall#r2@2,50|entrance_wall#r2@2,51|entrance_wall#r2@2,52|entrance_wall#r2@2,53|entrance_wall#r2@2,54|entrance_wall#r2@2,55|entrance_wall#r2@2,56|entrance_wall#r2@2,57|entrance_wall#r2@2,58|entrance_wall#r2@2,59|entrance_wall#r3@3,0|entrance_wall#r3@3,1|entrance_wall#r3@3,2|entrance_wall#r3@3,3|entrance_wall#r3@3,4|entrance_wall#r3@3,5|entrance_wall#r3@3,6|entrance_wall#r3@3,7|entrance_wall#r3@3,8|entrance_wall#r3@3,9|entrance_wall#r3@3,10|entrance_wall#r3@3,11|entrance_wall#r3@3,12|entrance_wall#r3@3,13|entrance_wall#r3@3,14|entrance_wall#r3@3,15|entrance_wall#r3@3,16|entrance_wall#r3@3,17|entrance_wall#r3@3,18|entrance_wall#r3@3,19|entrance_wall#r3@3,20|entrance_wall#r3@3,21|entrance_wall#r3@3,22|entrance_wall#r3@3,23|entrance_wall#r3@3,24|entrance_wall#r3@3,25|entrance_wall#r3@3,26|entrance_wall#r3@3,27|entrance_wall#r3@3,32|entrance_wall#r3@3,33|entrance_wall#r3@3,34|entrance_wall#r3@3,35|entrance_wall#r3@3,36|entrance_wall#r3@3,37|entrance_wall#r3@3,38|entrance_wall#r3@3,39|entrance_wall#r3@3,40|entrance_wall#r3@3,41|entrance_wall#r3@3,42|entrance_wall#r3@3,43|entrance_wall#r3@3,44|entrance_wall#r3@3,45|entrance_wall#r3@3,46|entrance_wall#r3@3,47|entrance_wall#r3@3,48|entrance_wall#r3@3,49|entrance_wall#r3@3,50|entrance_wall#r3@3,51|entrance_wall#r3@3,52|entrance_wall#r3@3,53|entrance_wall#r3@3,54|entrance_wall#r3@3,55|entrance_wall#r3@3,56|entrance_wall#r3@3,57|entrance_wall#r3@3,58|entrance_wall#r3@3,59|entrance_gate#r0c0@0,28|entrance_gate#r0c1@0,29|entrance_gate#r0c3@0,31|entrance_gate#r1c0@1,28|entrance_gate#r1c1@1,29|entrance_gate#r1c3@1,31|entrance_gate#r2c0@2,28|entrance_gate#r2c1@2,29|entrance_gate#r2c2@2,30|entrance_gate#r2c3@2,31|entrance_gate#r3c3@3,31|book_stump@5,32(0,-8)|book_stump@5,33(0,-8)|book_stump@4,32(0,-8)|book_stump@4,33(0,-8)|chest_rainbow#closed@3,27(-24,40)",
+    "latest": "floor=0 kind=entrance rows=34 cols=60 map=r0=W0-27,G28-32,W33-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-19,G20-39,W40-59|r5=W0-20,G21-38,W39-59|r6=W0-22,G23-37,W38-59|r7=W0-23,G24-35,W36-59|r8=W0-25,G26-34,W35-59|r9=W0-26,G27-32,W33-59|r10=W0-26,G27-32,W33-59|r11=W0-26,G27-32,W33-59|r12=W0-26,G27-32,W33-59|r13=W0-26,G27-32,W33-59|r14=W0-26,G27-32,W33-59|r15=W0-26,G27-32,W33-59|r16=W0-26,G27-32,W33-59|r17=W0-26,G27-32,W33-59|r18=W0-26,G27-32,W33-59|r19=W0-26,G27-32,W33-59|r20=W0-26,G27-32,W33-59|r21=W0-26,G27-32,W33-59|r22=W0-26,G27-32,W33-59|r23=W0-26,G27-32,W33-59|r24=W0-26,G27-32,W33-59|r25=W0-26,G27-32,W33-59|r26=W0-26,G27-32,W33-59|r27=W0-26,G27-32,W33-59|r28=W0-26,G27-32,W33-59|r29=W0-26,G27-32,W33-59|r30=W0-26,G27-32,W33-59|r31=W0-26,G27-32,W33-59|r32=W0-26,G27-32,W33-59|r33=W0-59 props=teleport_rune@1,30(-16,0)|entrance_door@3,28|teleport_rune_testing@31,32|book_stump@5,32(0,-8)|book_memories@0@4,33(0,-8)|stairs_statue@0,30(-16,0)|entrance_wall#r0@0,0|entrance_wall#r0@0,1|entrance_wall#r0@0,2|entrance_wall#r0@0,3|entrance_wall#r0@0,4|entrance_wall#r0@0,5|entrance_wall#r0@0,6|entrance_wall#r0@0,7|entrance_wall#r0@0,8|entrance_wall#r0@0,9|entrance_wall#r0@0,10|entrance_wall#r0@0,11|entrance_wall#r0@0,12|entrance_wall#r0@0,13|entrance_wall#r0@0,14|entrance_wall#r0@0,15|entrance_wall#r0@0,16|entrance_wall#r0@0,17|entrance_wall#r0@0,18|entrance_wall#r0@0,19|entrance_wall#r0@0,20|entrance_wall#r0@0,21|entrance_wall#r0@0,22|entrance_wall#r0@0,23|entrance_wall#r0@0,24|entrance_wall#r0@0,25|entrance_wall#r0@0,26|entrance_wall#r0@0,27|entrance_wall#r0@0,32|entrance_wall#r0@0,33|entrance_wall#r0@0,34|entrance_wall#r0@0,35|entrance_wall#r0@0,36|entrance_wall#r0@0,37|entrance_wall#r0@0,38|entrance_wall#r0@0,39|entrance_wall#r0@0,40|entrance_wall#r0@0,41|entrance_wall#r0@0,42|entrance_wall#r0@0,43|entrance_wall#r0@0,44|entrance_wall#r0@0,45|entrance_wall#r0@0,46|entrance_wall#r0@0,47|entrance_wall#r0@0,48|entrance_wall#r0@0,49|entrance_wall#r0@0,50|entrance_wall#r0@0,51|entrance_wall#r0@0,52|entrance_wall#r0@0,53|entrance_wall#r0@0,54|entrance_wall#r0@0,55|entrance_wall#r0@0,56|entrance_wall#r0@0,57|entrance_wall#r0@0,58|entrance_wall#r0@0,59|entrance_wall#r1@1,0|entrance_wall#r1@1,1|entrance_wall#r1@1,2|entrance_wall#r1@1,3|entrance_wall#r1@1,4|entrance_wall#r1@1,5|entrance_wall#r1@1,6|entrance_wall#r1@1,7|entrance_wall#r1@1,8|entrance_wall#r1@1,9|entrance_wall#r1@1,10|entrance_wall#r1@1,11|entrance_wall#r1@1,12|entrance_wall#r1@1,13|entrance_wall#r1@1,14|entrance_wall#r1@1,15|entrance_wall#r1@1,16|entrance_wall#r1@1,17|entrance_wall#r1@1,18|entrance_wall#r1@1,19|entrance_wall#r1@1,20|entrance_wall#r1@1,21|entrance_wall#r1@1,22|entrance_wall#r1@1,23|entrance_wall#r1@1,24|entrance_wall#r1@1,25|entrance_wall#r1@1,26|entrance_wall#r1@1,27|entrance_wall#r1@1,32|entrance_wall#r1@1,33|entrance_wall#r1@1,34|entrance_wall#r1@1,35|entrance_wall#r1@1,36|entrance_wall#r1@1,37|entrance_wall#r1@1,38|entrance_wall#r1@1,39|entrance_wall#r1@1,40|entrance_wall#r1@1,41|entrance_wall#r1@1,42|entrance_wall#r1@1,43|entrance_wall#r1@1,44|entrance_wall#r1@1,45|entrance_wall#r1@1,46|entrance_wall#r1@1,47|entrance_wall#r1@1,48|entrance_wall#r1@1,49|entrance_wall#r1@1,50|entrance_wall#r1@1,51|entrance_wall#r1@1,52|entrance_wall#r1@1,53|entrance_wall#r1@1,54|entrance_wall#r1@1,55|entrance_wall#r1@1,56|entrance_wall#r1@1,57|entrance_wall#r1@1,58|entrance_wall#r1@1,59|entrance_wall#r2@2,0|entrance_wall#r2@2,1|entrance_wall#r2@2,2|entrance_wall#r2@2,3|entrance_wall#r2@2,4|entrance_wall#r2@2,5|entrance_wall#r2@2,6|entrance_wall#r2@2,7|entrance_wall#r2@2,8|entrance_wall#r2@2,9|entrance_wall#r2@2,10|entrance_wall#r2@2,11|entrance_wall#r2@2,12|entrance_wall#r2@2,13|entrance_wall#r2@2,14|entrance_wall#r2@2,15|entrance_wall#r2@2,16|entrance_wall#r2@2,17|entrance_wall#r2@2,18|entrance_wall#r2@2,19|entrance_wall#r2@2,20|entrance_wall#r2@2,21|entrance_wall#r2@2,22|entrance_wall#r2@2,23|entrance_wall#r2@2,24|entrance_wall#r2@2,25|entrance_wall#r2@2,26|entrance_wall#r2@2,27|entrance_wall#r2@2,32|entrance_wall#r2@2,33|entrance_wall#r2@2,34|entrance_wall#r2@2,35|entrance_wall#r2@2,36|entrance_wall#r2@2,37|entrance_wall#r2@2,38|entrance_wall#r2@2,39|entrance_wall#r2@2,40|entrance_wall#r2@2,41|entrance_wall#r2@2,42|entrance_wall#r2@2,43|entrance_wall#r2@2,44|entrance_wall#r2@2,45|entrance_wall#r2@2,46|entrance_wall#r2@2,47|entrance_wall#r2@2,48|entrance_wall#r2@2,49|entrance_wall#r2@2,50|entrance_wall#r2@2,51|entrance_wall#r2@2,52|entrance_wall#r2@2,53|entrance_wall#r2@2,54|entrance_wall#r2@2,55|entrance_wall#r2@2,56|entrance_wall#r2@2,57|entrance_wall#r2@2,58|entrance_wall#r2@2,59|entrance_wall#r3@3,0|entrance_wall#r3@3,1|entrance_wall#r3@3,2|entrance_wall#r3@3,3|entrance_wall#r3@3,4|entrance_wall#r3@3,5|entrance_wall#r3@3,6|entrance_wall#r3@3,7|entrance_wall#r3@3,8|entrance_wall#r3@3,9|entrance_wall#r3@3,10|entrance_wall#r3@3,11|entrance_wall#r3@3,12|entrance_wall#r3@3,13|entrance_wall#r3@3,14|entrance_wall#r3@3,15|entrance_wall#r3@3,16|entrance_wall#r3@3,17|entrance_wall#r3@3,18|entrance_wall#r3@3,19|entrance_wall#r3@3,20|entrance_wall#r3@3,21|entrance_wall#r3@3,22|entrance_wall#r3@3,23|entrance_wall#r3@3,24|entrance_wall#r3@3,25|entrance_wall#r3@3,26|entrance_wall#r3@3,27|entrance_wall#r3@3,32|entrance_wall#r3@3,33|entrance_wall#r3@3,34|entrance_wall#r3@3,35|entrance_wall#r3@3,36|entrance_wall#r3@3,37|entrance_wall#r3@3,38|entrance_wall#r3@3,39|entrance_wall#r3@3,40|entrance_wall#r3@3,41|entrance_wall#r3@3,42|entrance_wall#r3@3,43|entrance_wall#r3@3,44|entrance_wall#r3@3,45|entrance_wall#r3@3,46|entrance_wall#r3@3,47|entrance_wall#r3@3,48|entrance_wall#r3@3,49|entrance_wall#r3@3,50|entrance_wall#r3@3,51|entrance_wall#r3@3,52|entrance_wall#r3@3,53|entrance_wall#r3@3,54|entrance_wall#r3@3,55|entrance_wall#r3@3,56|entrance_wall#r3@3,57|entrance_wall#r3@3,58|entrance_wall#r3@3,59|entrance_gate#r0c0@0,28|entrance_gate#r0c1@0,29|entrance_gate#r0c3@0,31|entrance_gate#r1c0@1,28|entrance_gate#r1c1@1,29|entrance_gate#r1c3@1,31|entrance_gate#r2c0@2,28|entrance_gate#r2c1@2,29|entrance_gate#r2c2@2,30|entrance_gate#r2c3@2,31|entrance_gate#r3c3@3,31|book_stump@5,32(0,-8)|book_stump@5,33(0,-8)|book_stump@4,32(0,-8)|book_stump@4,33(0,-8)|chest_rainbow#closed@3,27(-24,40)",
     "history": [
-      "floor=0 kind=entrance rows=34 cols=60 map=r0=W0-27,G28-32,W33-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-19,G20-39,W40-59|r5=W0-20,G21-38,W39-59|r6=W0-22,G23-37,W38-59|r7=W0-23,G24-35,W36-59|r8=W0-25,G26-34,W35-59|r9=W0-26,G27-32,W33-59|r10=W0-26,G27-32,W33-59|r11=W0-26,G27-32,W33-59|r12=W0-26,G27-32,W33-59|r13=W0-26,G27-32,W33-59|r14=W0-26,G27-32,W33-59|r15=W0-26,G27-32,W33-59|r16=W0-26,G27-32,W33-59|r17=W0-26,G27-32,W33-59|r18=W0-26,G27-32,W33-59|r19=W0-26,G27-32,W33-59|r20=W0-26,G27-32,W33-59|r21=W0-26,G27-32,W33-59|r22=W0-26,G27-32,W33-59|r23=W0-26,G27-32,W33-59|r24=W0-26,G27-32,W33-59|r25=W0-26,G27-32,W33-59|r26=W0-26,G27-32,W33-59|r27=W0-26,G27-32,W33-59|r28=W0-26,G27-32,W33-59|r29=W0-26,G27-32,W33-59|r30=W0-26,G27-32,W33-59|r31=W0-26,G27-32,W33-59|r32=W0-26,G27-32,W33-59|r33=W0-59 props=teleport_rune@1,30(-16,0)|entrance_door@3,28|book_stump@5,32(0,-8)|book_memories@0@4,33(0,-8)|stairs_statue@0,30(-16,0)|entrance_wall#r0@0,0|entrance_wall#r0@0,1|entrance_wall#r0@0,2|entrance_wall#r0@0,3|entrance_wall#r0@0,4|entrance_wall#r0@0,5|entrance_wall#r0@0,6|entrance_wall#r0@0,7|entrance_wall#r0@0,8|entrance_wall#r0@0,9|entrance_wall#r0@0,10|entrance_wall#r0@0,11|entrance_wall#r0@0,12|entrance_wall#r0@0,13|entrance_wall#r0@0,14|entrance_wall#r0@0,15|entrance_wall#r0@0,16|entrance_wall#r0@0,17|entrance_wall#r0@0,18|entrance_wall#r0@0,19|entrance_wall#r0@0,20|entrance_wall#r0@0,21|entrance_wall#r0@0,22|entrance_wall#r0@0,23|entrance_wall#r0@0,24|entrance_wall#r0@0,25|entrance_wall#r0@0,26|entrance_wall#r0@0,27|entrance_wall#r0@0,32|entrance_wall#r0@0,33|entrance_wall#r0@0,34|entrance_wall#r0@0,35|entrance_wall#r0@0,36|entrance_wall#r0@0,37|entrance_wall#r0@0,38|entrance_wall#r0@0,39|entrance_wall#r0@0,40|entrance_wall#r0@0,41|entrance_wall#r0@0,42|entrance_wall#r0@0,43|entrance_wall#r0@0,44|entrance_wall#r0@0,45|entrance_wall#r0@0,46|entrance_wall#r0@0,47|entrance_wall#r0@0,48|entrance_wall#r0@0,49|entrance_wall#r0@0,50|entrance_wall#r0@0,51|entrance_wall#r0@0,52|entrance_wall#r0@0,53|entrance_wall#r0@0,54|entrance_wall#r0@0,55|entrance_wall#r0@0,56|entrance_wall#r0@0,57|entrance_wall#r0@0,58|entrance_wall#r0@0,59|entrance_wall#r1@1,0|entrance_wall#r1@1,1|entrance_wall#r1@1,2|entrance_wall#r1@1,3|entrance_wall#r1@1,4|entrance_wall#r1@1,5|entrance_wall#r1@1,6|entrance_wall#r1@1,7|entrance_wall#r1@1,8|entrance_wall#r1@1,9|entrance_wall#r1@1,10|entrance_wall#r1@1,11|entrance_wall#r1@1,12|entrance_wall#r1@1,13|entrance_wall#r1@1,14|entrance_wall#r1@1,15|entrance_wall#r1@1,16|entrance_wall#r1@1,17|entrance_wall#r1@1,18|entrance_wall#r1@1,19|entrance_wall#r1@1,20|entrance_wall#r1@1,21|entrance_wall#r1@1,22|entrance_wall#r1@1,23|entrance_wall#r1@1,24|entrance_wall#r1@1,25|entrance_wall#r1@1,26|entrance_wall#r1@1,27|entrance_wall#r1@1,32|entrance_wall#r1@1,33|entrance_wall#r1@1,34|entrance_wall#r1@1,35|entrance_wall#r1@1,36|entrance_wall#r1@1,37|entrance_wall#r1@1,38|entrance_wall#r1@1,39|entrance_wall#r1@1,40|entrance_wall#r1@1,41|entrance_wall#r1@1,42|entrance_wall#r1@1,43|entrance_wall#r1@1,44|entrance_wall#r1@1,45|entrance_wall#r1@1,46|entrance_wall#r1@1,47|entrance_wall#r1@1,48|entrance_wall#r1@1,49|entrance_wall#r1@1,50|entrance_wall#r1@1,51|entrance_wall#r1@1,52|entrance_wall#r1@1,53|entrance_wall#r1@1,54|entrance_wall#r1@1,55|entrance_wall#r1@1,56|entrance_wall#r1@1,57|entrance_wall#r1@1,58|entrance_wall#r1@1,59|entrance_wall#r2@2,0|entrance_wall#r2@2,1|entrance_wall#r2@2,2|entrance_wall#r2@2,3|entrance_wall#r2@2,4|entrance_wall#r2@2,5|entrance_wall#r2@2,6|entrance_wall#r2@2,7|entrance_wall#r2@2,8|entrance_wall#r2@2,9|entrance_wall#r2@2,10|entrance_wall#r2@2,11|entrance_wall#r2@2,12|entrance_wall#r2@2,13|entrance_wall#r2@2,14|entrance_wall#r2@2,15|entrance_wall#r2@2,16|entrance_wall#r2@2,17|entrance_wall#r2@2,18|entrance_wall#r2@2,19|entrance_wall#r2@2,20|entrance_wall#r2@2,21|entrance_wall#r2@2,22|entrance_wall#r2@2,23|entrance_wall#r2@2,24|entrance_wall#r2@2,25|entrance_wall#r2@2,26|entrance_wall#r2@2,27|entrance_wall#r2@2,32|entrance_wall#r2@2,33|entrance_wall#r2@2,34|entrance_wall#r2@2,35|entrance_wall#r2@2,36|entrance_wall#r2@2,37|entrance_wall#r2@2,38|entrance_wall#r2@2,39|entrance_wall#r2@2,40|entrance_wall#r2@2,41|entrance_wall#r2@2,42|entrance_wall#r2@2,43|entrance_wall#r2@2,44|entrance_wall#r2@2,45|entrance_wall#r2@2,46|entrance_wall#r2@2,47|entrance_wall#r2@2,48|entrance_wall#r2@2,49|entrance_wall#r2@2,50|entrance_wall#r2@2,51|entrance_wall#r2@2,52|entrance_wall#r2@2,53|entrance_wall#r2@2,54|entrance_wall#r2@2,55|entrance_wall#r2@2,56|entrance_wall#r2@2,57|entrance_wall#r2@2,58|entrance_wall#r2@2,59|entrance_wall#r3@3,0|entrance_wall#r3@3,1|entrance_wall#r3@3,2|entrance_wall#r3@3,3|entrance_wall#r3@3,4|entrance_wall#r3@3,5|entrance_wall#r3@3,6|entrance_wall#r3@3,7|entrance_wall#r3@3,8|entrance_wall#r3@3,9|entrance_wall#r3@3,10|entrance_wall#r3@3,11|entrance_wall#r3@3,12|entrance_wall#r3@3,13|entrance_wall#r3@3,14|entrance_wall#r3@3,15|entrance_wall#r3@3,16|entrance_wall#r3@3,17|entrance_wall#r3@3,18|entrance_wall#r3@3,19|entrance_wall#r3@3,20|entrance_wall#r3@3,21|entrance_wall#r3@3,22|entrance_wall#r3@3,23|entrance_wall#r3@3,24|entrance_wall#r3@3,25|entrance_wall#r3@3,26|entrance_wall#r3@3,27|entrance_wall#r3@3,32|entrance_wall#r3@3,33|entrance_wall#r3@3,34|entrance_wall#r3@3,35|entrance_wall#r3@3,36|entrance_wall#r3@3,37|entrance_wall#r3@3,38|entrance_wall#r3@3,39|entrance_wall#r3@3,40|entrance_wall#r3@3,41|entrance_wall#r3@3,42|entrance_wall#r3@3,43|entrance_wall#r3@3,44|entrance_wall#r3@3,45|entrance_wall#r3@3,46|entrance_wall#r3@3,47|entrance_wall#r3@3,48|entrance_wall#r3@3,49|entrance_wall#r3@3,50|entrance_wall#r3@3,51|entrance_wall#r3@3,52|entrance_wall#r3@3,53|entrance_wall#r3@3,54|entrance_wall#r3@3,55|entrance_wall#r3@3,56|entrance_wall#r3@3,57|entrance_wall#r3@3,58|entrance_wall#r3@3,59|entrance_gate#r0c0@0,28|entrance_gate#r0c1@0,29|entrance_gate#r0c3@0,31|entrance_gate#r1c0@1,28|entrance_gate#r1c1@1,29|entrance_gate#r1c3@1,31|entrance_gate#r2c0@2,28|entrance_gate#r2c1@2,29|entrance_gate#r2c2@2,30|entrance_gate#r2c3@2,31|entrance_gate#r3c3@3,31|book_stump@5,32(0,-8)|book_stump@5,33(0,-8)|book_stump@4,32(0,-8)|book_stump@4,33(0,-8)|chest_rainbow#closed@3,27(-24,40)",
-      "floor=0 kind=entrance rows=34 cols=60 map=r0=W0-27,G28-32,W33-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-19,G20-39,W40-59|r5=W0-20,G21-38,W39-59|r6=W0-22,G23-37,W38-59|r7=W0-23,G24-35,W36-59|r8=W0-25,G26-34,W35-59|r9=W0-26,G27-32,W33-59|r10=W0-26,G27-32,W33-59|r11=W0-26,G27-32,W33-59|r12=W0-26,G27-32,W33-59|r13=W0-26,G27-32,W33-59|r14=W0-26,G27-32,W33-59|r15=W0-26,G27-32,W33-59|r16=W0-26,G27-32,W33-59|r17=W0-26,G27-32,W33-59|r18=W0-26,G27-32,W33-59|r19=W0-26,G27-32,W33-59|r20=W0-26,G27-32,W33-59|r21=W0-26,G27-32,W33-59|r22=W0-26,G27-32,W33-59|r23=W0-26,G27-32,W33-59|r24=W0-26,G27-32,W33-59|r25=W0-26,G27-32,W33-59|r26=W0-26,G27-32,W33-59|r27=W0-26,G27-32,W33-59|r28=W0-26,G27-32,W33-59|r29=W0-26,G27-32,W33-59|r30=W0-26,G27-32,W33-59|r31=W0-26,G27-32,W33-59|r32=W0-26,G27-32,W33-59|r33=W0-59 props=teleport_rune@1,30(-16,0)|entrance_door@3,28|book_stump@5,32(0,-8)|book_memories@0@4,33(0,-8)|stairs_statue@0,30(-16,0)|entrance_wall#r0@0,0|entrance_wall#r0@0,1|entrance_wall#r0@0,2|entrance_wall#r0@0,3|entrance_wall#r0@0,4|entrance_wall#r0@0,5|entrance_wall#r0@0,6|entrance_wall#r0@0,7|entrance_wall#r0@0,8|entrance_wall#r0@0,9|entrance_wall#r0@0,10|entrance_wall#r0@0,11|entrance_wall#r0@0,12|entrance_wall#r0@0,13|entrance_wall#r0@0,14|entrance_wall#r0@0,15|entrance_wall#r0@0,16|entrance_wall#r0@0,17|entrance_wall#r0@0,18|entrance_wall#r0@0,19|entrance_wall#r0@0,20|entrance_wall#r0@0,21|entrance_wall#r0@0,22|entrance_wall#r0@0,23|entrance_wall#r0@0,24|entrance_wall#r0@0,25|entrance_wall#r0@0,26|entrance_wall#r0@0,27|entrance_wall#r0@0,32|entrance_wall#r0@0,33|entrance_wall#r0@0,34|entrance_wall#r0@0,35|entrance_wall#r0@0,36|entrance_wall#r0@0,37|entrance_wall#r0@0,38|entrance_wall#r0@0,39|entrance_wall#r0@0,40|entrance_wall#r0@0,41|entrance_wall#r0@0,42|entrance_wall#r0@0,43|entrance_wall#r0@0,44|entrance_wall#r0@0,45|entrance_wall#r0@0,46|entrance_wall#r0@0,47|entrance_wall#r0@0,48|entrance_wall#r0@0,49|entrance_wall#r0@0,50|entrance_wall#r0@0,51|entrance_wall#r0@0,52|entrance_wall#r0@0,53|entrance_wall#r0@0,54|entrance_wall#r0@0,55|entrance_wall#r0@0,56|entrance_wall#r0@0,57|entrance_wall#r0@0,58|entrance_wall#r0@0,59|entrance_wall#r1@1,0|entrance_wall#r1@1,1|entrance_wall#r1@1,2|entrance_wall#r1@1,3|entrance_wall#r1@1,4|entrance_wall#r1@1,5|entrance_wall#r1@1,6|entrance_wall#r1@1,7|entrance_wall#r1@1,8|entrance_wall#r1@1,9|entrance_wall#r1@1,10|entrance_wall#r1@1,11|entrance_wall#r1@1,12|entrance_wall#r1@1,13|entrance_wall#r1@1,14|entrance_wall#r1@1,15|entrance_wall#r1@1,16|entrance_wall#r1@1,17|entrance_wall#r1@1,18|entrance_wall#r1@1,19|entrance_wall#r1@1,20|entrance_wall#r1@1,21|entrance_wall#r1@1,22|entrance_wall#r1@1,23|entrance_wall#r1@1,24|entrance_wall#r1@1,25|entrance_wall#r1@1,26|entrance_wall#r1@1,27|entrance_wall#r1@1,32|entrance_wall#r1@1,33|entrance_wall#r1@1,34|entrance_wall#r1@1,35|entrance_wall#r1@1,36|entrance_wall#r1@1,37|entrance_wall#r1@1,38|entrance_wall#r1@1,39|entrance_wall#r1@1,40|entrance_wall#r1@1,41|entrance_wall#r1@1,42|entrance_wall#r1@1,43|entrance_wall#r1@1,44|entrance_wall#r1@1,45|entrance_wall#r1@1,46|entrance_wall#r1@1,47|entrance_wall#r1@1,48|entrance_wall#r1@1,49|entrance_wall#r1@1,50|entrance_wall#r1@1,51|entrance_wall#r1@1,52|entrance_wall#r1@1,53|entrance_wall#r1@1,54|entrance_wall#r1@1,55|entrance_wall#r1@1,56|entrance_wall#r1@1,57|entrance_wall#r1@1,58|entrance_wall#r1@1,59|entrance_wall#r2@2,0|entrance_wall#r2@2,1|entrance_wall#r2@2,2|entrance_wall#r2@2,3|entrance_wall#r2@2,4|entrance_wall#r2@2,5|entrance_wall#r2@2,6|entrance_wall#r2@2,7|entrance_wall#r2@2,8|entrance_wall#r2@2,9|entrance_wall#r2@2,10|entrance_wall#r2@2,11|entrance_wall#r2@2,12|entrance_wall#r2@2,13|entrance_wall#r2@2,14|entrance_wall#r2@2,15|entrance_wall#r2@2,16|entrance_wall#r2@2,17|entrance_wall#r2@2,18|entrance_wall#r2@2,19|entrance_wall#r2@2,20|entrance_wall#r2@2,21|entrance_wall#r2@2,22|entrance_wall#r2@2,23|entrance_wall#r2@2,24|entrance_wall#r2@2,25|entrance_wall#r2@2,26|entrance_wall#r2@2,27|entrance_wall#r2@2,32|entrance_wall#r2@2,33|entrance_wall#r2@2,34|entrance_wall#r2@2,35|entrance_wall#r2@2,36|entrance_wall#r2@2,37|entrance_wall#r2@2,38|entrance_wall#r2@2,39|entrance_wall#r2@2,40|entrance_wall#r2@2,41|entrance_wall#r2@2,42|entrance_wall#r2@2,43|entrance_wall#r2@2,44|entrance_wall#r2@2,45|entrance_wall#r2@2,46|entrance_wall#r2@2,47|entrance_wall#r2@2,48|entrance_wall#r2@2,49|entrance_wall#r2@2,50|entrance_wall#r2@2,51|entrance_wall#r2@2,52|entrance_wall#r2@2,53|entrance_wall#r2@2,54|entrance_wall#r2@2,55|entrance_wall#r2@2,56|entrance_wall#r2@2,57|entrance_wall#r2@2,58|entrance_wall#r2@2,59|entrance_wall#r3@3,0|entrance_wall#r3@3,1|entrance_wall#r3@3,2|entrance_wall#r3@3,3|entrance_wall#r3@3,4|entrance_wall#r3@3,5|entrance_wall#r3@3,6|entrance_wall#r3@3,7|entrance_wall#r3@3,8|entrance_wall#r3@3,9|entrance_wall#r3@3,10|entrance_wall#r3@3,11|entrance_wall#r3@3,12|entrance_wall#r3@3,13|entrance_wall#r3@3,14|entrance_wall#r3@3,15|entrance_wall#r3@3,16|entrance_wall#r3@3,17|entrance_wall#r3@3,18|entrance_wall#r3@3,19|entrance_wall#r3@3,20|entrance_wall#r3@3,21|entrance_wall#r3@3,22|entrance_wall#r3@3,23|entrance_wall#r3@3,24|entrance_wall#r3@3,25|entrance_wall#r3@3,26|entrance_wall#r3@3,27|entrance_wall#r3@3,32|entrance_wall#r3@3,33|entrance_wall#r3@3,34|entrance_wall#r3@3,35|entrance_wall#r3@3,36|entrance_wall#r3@3,37|entrance_wall#r3@3,38|entrance_wall#r3@3,39|entrance_wall#r3@3,40|entrance_wall#r3@3,41|entrance_wall#r3@3,42|entrance_wall#r3@3,43|entrance_wall#r3@3,44|entrance_wall#r3@3,45|entrance_wall#r3@3,46|entrance_wall#r3@3,47|entrance_wall#r3@3,48|entrance_wall#r3@3,49|entrance_wall#r3@3,50|entrance_wall#r3@3,51|entrance_wall#r3@3,52|entrance_wall#r3@3,53|entrance_wall#r3@3,54|entrance_wall#r3@3,55|entrance_wall#r3@3,56|entrance_wall#r3@3,57|entrance_wall#r3@3,58|entrance_wall#r3@3,59|entrance_gate#r0c0@0,28|entrance_gate#r0c1@0,29|entrance_gate#r0c3@0,31|entrance_gate#r1c0@1,28|entrance_gate#r1c1@1,29|entrance_gate#r1c3@1,31|entrance_gate#r2c0@2,28|entrance_gate#r2c1@2,29|entrance_gate#r2c2@2,30|entrance_gate#r2c3@2,31|entrance_gate#r3c3@3,31|book_stump@5,32(0,-8)|book_stump@5,33(0,-8)|book_stump@4,32(0,-8)|book_stump@4,33(0,-8)|chest_rainbow#closed@3,27(-24,40)"
+      "floor=0 kind=entrance rows=34 cols=60 map=r0=W0-27,G28-32,W33-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-19,G20-39,W40-59|r5=W0-20,G21-38,W39-59|r6=W0-22,G23-37,W38-59|r7=W0-23,G24-35,W36-59|r8=W0-25,G26-34,W35-59|r9=W0-26,G27-32,W33-59|r10=W0-26,G27-32,W33-59|r11=W0-26,G27-32,W33-59|r12=W0-26,G27-32,W33-59|r13=W0-26,G27-32,W33-59|r14=W0-26,G27-32,W33-59|r15=W0-26,G27-32,W33-59|r16=W0-26,G27-32,W33-59|r17=W0-26,G27-32,W33-59|r18=W0-26,G27-32,W33-59|r19=W0-26,G27-32,W33-59|r20=W0-26,G27-32,W33-59|r21=W0-26,G27-32,W33-59|r22=W0-26,G27-32,W33-59|r23=W0-26,G27-32,W33-59|r24=W0-26,G27-32,W33-59|r25=W0-26,G27-32,W33-59|r26=W0-26,G27-32,W33-59|r27=W0-26,G27-32,W33-59|r28=W0-26,G27-32,W33-59|r29=W0-26,G27-32,W33-59|r30=W0-26,G27-32,W33-59|r31=W0-26,G27-32,W33-59|r32=W0-26,G27-32,W33-59|r33=W0-59 props=teleport_rune@1,30(-16,0)|entrance_door@3,28|teleport_rune_testing@31,32|book_stump@5,32(0,-8)|book_memories@0@4,33(0,-8)|stairs_statue@0,30(-16,0)|entrance_wall#r0@0,0|entrance_wall#r0@0,1|entrance_wall#r0@0,2|entrance_wall#r0@0,3|entrance_wall#r0@0,4|entrance_wall#r0@0,5|entrance_wall#r0@0,6|entrance_wall#r0@0,7|entrance_wall#r0@0,8|entrance_wall#r0@0,9|entrance_wall#r0@0,10|entrance_wall#r0@0,11|entrance_wall#r0@0,12|entrance_wall#r0@0,13|entrance_wall#r0@0,14|entrance_wall#r0@0,15|entrance_wall#r0@0,16|entrance_wall#r0@0,17|entrance_wall#r0@0,18|entrance_wall#r0@0,19|entrance_wall#r0@0,20|entrance_wall#r0@0,21|entrance_wall#r0@0,22|entrance_wall#r0@0,23|entrance_wall#r0@0,24|entrance_wall#r0@0,25|entrance_wall#r0@0,26|entrance_wall#r0@0,27|entrance_wall#r0@0,32|entrance_wall#r0@0,33|entrance_wall#r0@0,34|entrance_wall#r0@0,35|entrance_wall#r0@0,36|entrance_wall#r0@0,37|entrance_wall#r0@0,38|entrance_wall#r0@0,39|entrance_wall#r0@0,40|entrance_wall#r0@0,41|entrance_wall#r0@0,42|entrance_wall#r0@0,43|entrance_wall#r0@0,44|entrance_wall#r0@0,45|entrance_wall#r0@0,46|entrance_wall#r0@0,47|entrance_wall#r0@0,48|entrance_wall#r0@0,49|entrance_wall#r0@0,50|entrance_wall#r0@0,51|entrance_wall#r0@0,52|entrance_wall#r0@0,53|entrance_wall#r0@0,54|entrance_wall#r0@0,55|entrance_wall#r0@0,56|entrance_wall#r0@0,57|entrance_wall#r0@0,58|entrance_wall#r0@0,59|entrance_wall#r1@1,0|entrance_wall#r1@1,1|entrance_wall#r1@1,2|entrance_wall#r1@1,3|entrance_wall#r1@1,4|entrance_wall#r1@1,5|entrance_wall#r1@1,6|entrance_wall#r1@1,7|entrance_wall#r1@1,8|entrance_wall#r1@1,9|entrance_wall#r1@1,10|entrance_wall#r1@1,11|entrance_wall#r1@1,12|entrance_wall#r1@1,13|entrance_wall#r1@1,14|entrance_wall#r1@1,15|entrance_wall#r1@1,16|entrance_wall#r1@1,17|entrance_wall#r1@1,18|entrance_wall#r1@1,19|entrance_wall#r1@1,20|entrance_wall#r1@1,21|entrance_wall#r1@1,22|entrance_wall#r1@1,23|entrance_wall#r1@1,24|entrance_wall#r1@1,25|entrance_wall#r1@1,26|entrance_wall#r1@1,27|entrance_wall#r1@1,32|entrance_wall#r1@1,33|entrance_wall#r1@1,34|entrance_wall#r1@1,35|entrance_wall#r1@1,36|entrance_wall#r1@1,37|entrance_wall#r1@1,38|entrance_wall#r1@1,39|entrance_wall#r1@1,40|entrance_wall#r1@1,41|entrance_wall#r1@1,42|entrance_wall#r1@1,43|entrance_wall#r1@1,44|entrance_wall#r1@1,45|entrance_wall#r1@1,46|entrance_wall#r1@1,47|entrance_wall#r1@1,48|entrance_wall#r1@1,49|entrance_wall#r1@1,50|entrance_wall#r1@1,51|entrance_wall#r1@1,52|entrance_wall#r1@1,53|entrance_wall#r1@1,54|entrance_wall#r1@1,55|entrance_wall#r1@1,56|entrance_wall#r1@1,57|entrance_wall#r1@1,58|entrance_wall#r1@1,59|entrance_wall#r2@2,0|entrance_wall#r2@2,1|entrance_wall#r2@2,2|entrance_wall#r2@2,3|entrance_wall#r2@2,4|entrance_wall#r2@2,5|entrance_wall#r2@2,6|entrance_wall#r2@2,7|entrance_wall#r2@2,8|entrance_wall#r2@2,9|entrance_wall#r2@2,10|entrance_wall#r2@2,11|entrance_wall#r2@2,12|entrance_wall#r2@2,13|entrance_wall#r2@2,14|entrance_wall#r2@2,15|entrance_wall#r2@2,16|entrance_wall#r2@2,17|entrance_wall#r2@2,18|entrance_wall#r2@2,19|entrance_wall#r2@2,20|entrance_wall#r2@2,21|entrance_wall#r2@2,22|entrance_wall#r2@2,23|entrance_wall#r2@2,24|entrance_wall#r2@2,25|entrance_wall#r2@2,26|entrance_wall#r2@2,27|entrance_wall#r2@2,32|entrance_wall#r2@2,33|entrance_wall#r2@2,34|entrance_wall#r2@2,35|entrance_wall#r2@2,36|entrance_wall#r2@2,37|entrance_wall#r2@2,38|entrance_wall#r2@2,39|entrance_wall#r2@2,40|entrance_wall#r2@2,41|entrance_wall#r2@2,42|entrance_wall#r2@2,43|entrance_wall#r2@2,44|entrance_wall#r2@2,45|entrance_wall#r2@2,46|entrance_wall#r2@2,47|entrance_wall#r2@2,48|entrance_wall#r2@2,49|entrance_wall#r2@2,50|entrance_wall#r2@2,51|entrance_wall#r2@2,52|entrance_wall#r2@2,53|entrance_wall#r2@2,54|entrance_wall#r2@2,55|entrance_wall#r2@2,56|entrance_wall#r2@2,57|entrance_wall#r2@2,58|entrance_wall#r2@2,59|entrance_wall#r3@3,0|entrance_wall#r3@3,1|entrance_wall#r3@3,2|entrance_wall#r3@3,3|entrance_wall#r3@3,4|entrance_wall#r3@3,5|entrance_wall#r3@3,6|entrance_wall#r3@3,7|entrance_wall#r3@3,8|entrance_wall#r3@3,9|entrance_wall#r3@3,10|entrance_wall#r3@3,11|entrance_wall#r3@3,12|entrance_wall#r3@3,13|entrance_wall#r3@3,14|entrance_wall#r3@3,15|entrance_wall#r3@3,16|entrance_wall#r3@3,17|entrance_wall#r3@3,18|entrance_wall#r3@3,19|entrance_wall#r3@3,20|entrance_wall#r3@3,21|entrance_wall#r3@3,22|entrance_wall#r3@3,23|entrance_wall#r3@3,24|entrance_wall#r3@3,25|entrance_wall#r3@3,26|entrance_wall#r3@3,27|entrance_wall#r3@3,32|entrance_wall#r3@3,33|entrance_wall#r3@3,34|entrance_wall#r3@3,35|entrance_wall#r3@3,36|entrance_wall#r3@3,37|entrance_wall#r3@3,38|entrance_wall#r3@3,39|entrance_wall#r3@3,40|entrance_wall#r3@3,41|entrance_wall#r3@3,42|entrance_wall#r3@3,43|entrance_wall#r3@3,44|entrance_wall#r3@3,45|entrance_wall#r3@3,46|entrance_wall#r3@3,47|entrance_wall#r3@3,48|entrance_wall#r3@3,49|entrance_wall#r3@3,50|entrance_wall#r3@3,51|entrance_wall#r3@3,52|entrance_wall#r3@3,53|entrance_wall#r3@3,54|entrance_wall#r3@3,55|entrance_wall#r3@3,56|entrance_wall#r3@3,57|entrance_wall#r3@3,58|entrance_wall#r3@3,59|entrance_gate#r0c0@0,28|entrance_gate#r0c1@0,29|entrance_gate#r0c3@0,31|entrance_gate#r1c0@1,28|entrance_gate#r1c1@1,29|entrance_gate#r1c3@1,31|entrance_gate#r2c0@2,28|entrance_gate#r2c1@2,29|entrance_gate#r2c2@2,30|entrance_gate#r2c3@2,31|entrance_gate#r3c3@3,31|book_stump@5,32(0,-8)|book_stump@5,33(0,-8)|book_stump@4,32(0,-8)|book_stump@4,33(0,-8)|chest_rainbow#closed@3,27(-24,40)",
+      "floor=0 kind=entrance rows=34 cols=60 map=r0=W0-27,G28-32,W33-59|r1=W0-0,G1-58,W59-59|r2=W0-0,G1-58,W59-59|r3=W0-0,G1-58,W59-59|r4=W0-19,G20-39,W40-59|r5=W0-20,G21-38,W39-59|r6=W0-22,G23-37,W38-59|r7=W0-23,G24-35,W36-59|r8=W0-25,G26-34,W35-59|r9=W0-26,G27-32,W33-59|r10=W0-26,G27-32,W33-59|r11=W0-26,G27-32,W33-59|r12=W0-26,G27-32,W33-59|r13=W0-26,G27-32,W33-59|r14=W0-26,G27-32,W33-59|r15=W0-26,G27-32,W33-59|r16=W0-26,G27-32,W33-59|r17=W0-26,G27-32,W33-59|r18=W0-26,G27-32,W33-59|r19=W0-26,G27-32,W33-59|r20=W0-26,G27-32,W33-59|r21=W0-26,G27-32,W33-59|r22=W0-26,G27-32,W33-59|r23=W0-26,G27-32,W33-59|r24=W0-26,G27-32,W33-59|r25=W0-26,G27-32,W33-59|r26=W0-26,G27-32,W33-59|r27=W0-26,G27-32,W33-59|r28=W0-26,G27-32,W33-59|r29=W0-26,G27-32,W33-59|r30=W0-26,G27-32,W33-59|r31=W0-26,G27-32,W33-59|r32=W0-26,G27-32,W33-59|r33=W0-59 props=teleport_rune@1,30(-16,0)|entrance_door@3,28|teleport_rune_testing@31,32|book_stump@5,32(0,-8)|book_memories@0@4,33(0,-8)|stairs_statue@0,30(-16,0)|entrance_wall#r0@0,0|entrance_wall#r0@0,1|entrance_wall#r0@0,2|entrance_wall#r0@0,3|entrance_wall#r0@0,4|entrance_wall#r0@0,5|entrance_wall#r0@0,6|entrance_wall#r0@0,7|entrance_wall#r0@0,8|entrance_wall#r0@0,9|entrance_wall#r0@0,10|entrance_wall#r0@0,11|entrance_wall#r0@0,12|entrance_wall#r0@0,13|entrance_wall#r0@0,14|entrance_wall#r0@0,15|entrance_wall#r0@0,16|entrance_wall#r0@0,17|entrance_wall#r0@0,18|entrance_wall#r0@0,19|entrance_wall#r0@0,20|entrance_wall#r0@0,21|entrance_wall#r0@0,22|entrance_wall#r0@0,23|entrance_wall#r0@0,24|entrance_wall#r0@0,25|entrance_wall#r0@0,26|entrance_wall#r0@0,27|entrance_wall#r0@0,32|entrance_wall#r0@0,33|entrance_wall#r0@0,34|entrance_wall#r0@0,35|entrance_wall#r0@0,36|entrance_wall#r0@0,37|entrance_wall#r0@0,38|entrance_wall#r0@0,39|entrance_wall#r0@0,40|entrance_wall#r0@0,41|entrance_wall#r0@0,42|entrance_wall#r0@0,43|entrance_wall#r0@0,44|entrance_wall#r0@0,45|entrance_wall#r0@0,46|entrance_wall#r0@0,47|entrance_wall#r0@0,48|entrance_wall#r0@0,49|entrance_wall#r0@0,50|entrance_wall#r0@0,51|entrance_wall#r0@0,52|entrance_wall#r0@0,53|entrance_wall#r0@0,54|entrance_wall#r0@0,55|entrance_wall#r0@0,56|entrance_wall#r0@0,57|entrance_wall#r0@0,58|entrance_wall#r0@0,59|entrance_wall#r1@1,0|entrance_wall#r1@1,1|entrance_wall#r1@1,2|entrance_wall#r1@1,3|entrance_wall#r1@1,4|entrance_wall#r1@1,5|entrance_wall#r1@1,6|entrance_wall#r1@1,7|entrance_wall#r1@1,8|entrance_wall#r1@1,9|entrance_wall#r1@1,10|entrance_wall#r1@1,11|entrance_wall#r1@1,12|entrance_wall#r1@1,13|entrance_wall#r1@1,14|entrance_wall#r1@1,15|entrance_wall#r1@1,16|entrance_wall#r1@1,17|entrance_wall#r1@1,18|entrance_wall#r1@1,19|entrance_wall#r1@1,20|entrance_wall#r1@1,21|entrance_wall#r1@1,22|entrance_wall#r1@1,23|entrance_wall#r1@1,24|entrance_wall#r1@1,25|entrance_wall#r1@1,26|entrance_wall#r1@1,27|entrance_wall#r1@1,32|entrance_wall#r1@1,33|entrance_wall#r1@1,34|entrance_wall#r1@1,35|entrance_wall#r1@1,36|entrance_wall#r1@1,37|entrance_wall#r1@1,38|entrance_wall#r1@1,39|entrance_wall#r1@1,40|entrance_wall#r1@1,41|entrance_wall#r1@1,42|entrance_wall#r1@1,43|entrance_wall#r1@1,44|entrance_wall#r1@1,45|entrance_wall#r1@1,46|entrance_wall#r1@1,47|entrance_wall#r1@1,48|entrance_wall#r1@1,49|entrance_wall#r1@1,50|entrance_wall#r1@1,51|entrance_wall#r1@1,52|entrance_wall#r1@1,53|entrance_wall#r1@1,54|entrance_wall#r1@1,55|entrance_wall#r1@1,56|entrance_wall#r1@1,57|entrance_wall#r1@1,58|entrance_wall#r1@1,59|entrance_wall#r2@2,0|entrance_wall#r2@2,1|entrance_wall#r2@2,2|entrance_wall#r2@2,3|entrance_wall#r2@2,4|entrance_wall#r2@2,5|entrance_wall#r2@2,6|entrance_wall#r2@2,7|entrance_wall#r2@2,8|entrance_wall#r2@2,9|entrance_wall#r2@2,10|entrance_wall#r2@2,11|entrance_wall#r2@2,12|entrance_wall#r2@2,13|entrance_wall#r2@2,14|entrance_wall#r2@2,15|entrance_wall#r2@2,16|entrance_wall#r2@2,17|entrance_wall#r2@2,18|entrance_wall#r2@2,19|entrance_wall#r2@2,20|entrance_wall#r2@2,21|entrance_wall#r2@2,22|entrance_wall#r2@2,23|entrance_wall#r2@2,24|entrance_wall#r2@2,25|entrance_wall#r2@2,26|entrance_wall#r2@2,27|entrance_wall#r2@2,32|entrance_wall#r2@2,33|entrance_wall#r2@2,34|entrance_wall#r2@2,35|entrance_wall#r2@2,36|entrance_wall#r2@2,37|entrance_wall#r2@2,38|entrance_wall#r2@2,39|entrance_wall#r2@2,40|entrance_wall#r2@2,41|entrance_wall#r2@2,42|entrance_wall#r2@2,43|entrance_wall#r2@2,44|entrance_wall#r2@2,45|entrance_wall#r2@2,46|entrance_wall#r2@2,47|entrance_wall#r2@2,48|entrance_wall#r2@2,49|entrance_wall#r2@2,50|entrance_wall#r2@2,51|entrance_wall#r2@2,52|entrance_wall#r2@2,53|entrance_wall#r2@2,54|entrance_wall#r2@2,55|entrance_wall#r2@2,56|entrance_wall#r2@2,57|entrance_wall#r2@2,58|entrance_wall#r2@2,59|entrance_wall#r3@3,0|entrance_wall#r3@3,1|entrance_wall#r3@3,2|entrance_wall#r3@3,3|entrance_wall#r3@3,4|entrance_wall#r3@3,5|entrance_wall#r3@3,6|entrance_wall#r3@3,7|entrance_wall#r3@3,8|entrance_wall#r3@3,9|entrance_wall#r3@3,10|entrance_wall#r3@3,11|entrance_wall#r3@3,12|entrance_wall#r3@3,13|entrance_wall#r3@3,14|entrance_wall#r3@3,15|entrance_wall#r3@3,16|entrance_wall#r3@3,17|entrance_wall#r3@3,18|entrance_wall#r3@3,19|entrance_wall#r3@3,20|entrance_wall#r3@3,21|entrance_wall#r3@3,22|entrance_wall#r3@3,23|entrance_wall#r3@3,24|entrance_wall#r3@3,25|entrance_wall#r3@3,26|entrance_wall#r3@3,27|entrance_wall#r3@3,32|entrance_wall#r3@3,33|entrance_wall#r3@3,34|entrance_wall#r3@3,35|entrance_wall#r3@3,36|entrance_wall#r3@3,37|entrance_wall#r3@3,38|entrance_wall#r3@3,39|entrance_wall#r3@3,40|entrance_wall#r3@3,41|entrance_wall#r3@3,42|entrance_wall#r3@3,43|entrance_wall#r3@3,44|entrance_wall#r3@3,45|entrance_wall#r3@3,46|entrance_wall#r3@3,47|entrance_wall#r3@3,48|entrance_wall#r3@3,49|entrance_wall#r3@3,50|entrance_wall#r3@3,51|entrance_wall#r3@3,52|entrance_wall#r3@3,53|entrance_wall#r3@3,54|entrance_wall#r3@3,55|entrance_wall#r3@3,56|entrance_wall#r3@3,57|entrance_wall#r3@3,58|entrance_wall#r3@3,59|entrance_gate#r0c0@0,28|entrance_gate#r0c1@0,29|entrance_gate#r0c3@0,31|entrance_gate#r1c0@1,28|entrance_gate#r1c1@1,29|entrance_gate#r1c3@1,31|entrance_gate#r2c0@2,28|entrance_gate#r2c1@2,29|entrance_gate#r2c2@2,30|entrance_gate#r2c3@2,31|entrance_gate#r3c3@3,31|book_stump@5,32(0,-8)|book_stump@5,33(0,-8)|book_stump@4,32(0,-8)|book_stump@4,33(0,-8)|chest_rainbow#closed@3,27(-24,40)"
     ],
     "map": {
       "floor": {
@@ -3957,6 +3957,22 @@
         },
         {
           "kind": "trigger",
+          "name": "teleport_rune_testing",
+          "base": "teleport_rune_testing",
+          "r": 31,
+          "c": 32,
+          "offX": 0,
+          "offY": 0,
+          "x": 1040,
+          "y": 1008,
+          "left": 1008,
+          "top": 976,
+          "w": 64,
+          "h": 64,
+          "nativeOutline": null
+        },
+        {
+          "kind": "trigger",
           "name": "book_stump",
           "base": "book_stump",
           "r": 5,
@@ -3989,6 +4005,21 @@
         }
       ],
       "interactables": [
+        {
+          "name": "teleport_rune_testing",
+          "base": "teleport_rune_testing",
+          "r": 31,
+          "c": 32,
+          "offX": 0,
+          "offY": 0,
+          "x": 1040,
+          "y": 1008,
+          "left": 1039,
+          "top": 1007,
+          "w": 1,
+          "h": 1,
+          "nativeOutline": null
+        },
         {
           "name": "book_memories@0",
           "base": "book_memories",
@@ -4125,7 +4156,7 @@
         "visible": true,
         "alpha": 1,
         "nonEmpty": 2040,
-        "rows": "r0:0=369,1-2=371,3=370,4-5=369,6-8=370,9-10=369,11=371,12-13=369,14-15=371,16-20=369,21=370,22=371,23=369,24=370,25=369,26=371,27=370,28=369,29-31=370,32=369,33=371,34-36=369,37=370,38=369,39=371,40=370,41=371,42-44=369,45-46=371,47-49=370,50=369,51=370,52=371,53=369,54=370,55=369,56=371,57-58=369,59=370|r1:0=371,1=370,2-3=369,4=371,5=369,6=371,7-9=369,10-11=371,12-13=370,14-17=371,18=370,19=371,20=370,21=369,22=370,23-25=369,26-28=371,29=369,30-31=371,32=370,33=369,34=371,35-39=370,40=371,41=369,42-43=370,44-47=369,48=370,49=371,50=369,51=370,52=369,53=371,54=369,55-56=371,57=369,58=370,59=371|r2:0=369,1-2=370,3=371,4-5=369,6=370,7=369,8=371,9-10=369,11-12=370,13=371,14=370,15-16=369,17=370,18=371,19=370,20=369,21=370,22=369,23=370,24=371,25-28=370,29=371,30-31=370,32=369,33=371,34=369,35=370,36=371,37=370,38-40=371,41-42=370,43=369,44=371,45=369,46=371,47=369,48=370,49-50=371,51=369,52=370,53=371,54=370,55-56=371,57=370,58=369,59=371|r3:0=370,1=371,2=370,3-7=369,8-10=370,11=371,12=369,13-15=370,16-17=371,18=369,19-20=370,21=371,22=369,23=370,24=369,25=370,26-27=371,28=370,29=371,30-31=370,32-33=369,34=371,35-38=370,39-40=371,41-42=370,43-46=369,47=370,48=371,49-50=369,51=371,52-53=370,54=371,55=370,56-58=371,59=369|r4:0=370,1=369,2-3=370,4-5=371,6=369,7=371,8=370,9=371,10-11=369,12=371,13=370,14=371,15-18=369,19=371,20-22=369,23=371,24=369,25=370,26-27=371,28=370,29=369,30-31=371,32=369,33=370,34-35=371,36=370,37=371,38-39=370,40=369,41-42=371,43-44=370,45=371,46=369,47=370,48-49=369,50=371,51-53=369,54=371,55=370,56=369,57-58=370,59=369|r5:0=370,1=369,2-4=371,5=370,6-7=371,8=369,9-11=371,12=370,13=371,14-15=369,16=370,17=369,18=370,19-20=371,21=370,22-23=369,24=371,25-27=369,28=370,29-30=371,31=369,32=370,33-34=371,35-36=369,37-38=370,39-40=371,41=370,42=371,43-48=369,49-50=370,51-52=369,53=371,54-55=370,56-58=371,59=370|r6:0=369,1=370,2=371,3=370,4=369,5-6=370,7=371,8-9=369,10=371,11-15=369,16-18=371,19=370,20-21=371,22=370,23-24=369,25=370,26=369,27=370,28-32=371,33-34=370,35=369,36=370,37-38=371,39=369,40-41=371,42=369,43=371,44=369,45=370,46=371,47=369,48-49=371,50-51=369,52=370,53=371,54=370,55=371,56=370,57-58=371,59=369|r7:0=371,1=370,2-3=371,4-5=369,6-7=371,8-9=370,10=371,11=370,12-13=371,14=370,15=369,16=371,17-18=369,19=371,20=370,21-22=371,23=369,24=370,25=371,26=369,27-28=371,29=369,30=371,31=369,32=371,33=369,34=371,35=369,36-37=371,38=369,39-40=370,41-42=371,43-44=370,45=371,46=369,47=371,48=369,49=370,50=369,51=371,52=369,53=370,54=371,55=369,56-58=371,59=370|r8:0=371,1=369,2-3=371,4=370,5-6=369,7-8=371,9=370,10-11=371,12=370,13=369,14=370,15=371,16=370,17=369,18=370,19=371,20=370,21-23=369,24=370,25=371,26=370,27-28=369,29=370,30=371,31=369,32=370,33-36=369,37=371,38=370,39-41=369,42=371,43-44=370,45=371,46=369,47=370,48-49=369,50=370,51=369,52-53=371,54=369,55=371,56-57=369,58=371,59=369|r9:0=369,1=371,2=370,3=369,4=370,5=369,6=370,7=369,8=371,9-11=370,12=369,13-16=370,17=369,18=370,19-20=369,21-23=371,24=369,25=371,26-27=369,28=370,29=371,30-32=369,33=370,34-37=371,38=370,39=371,40-42=370,43=371,44=369,45-46=371,47=370,48-49=371,50=370,51=369,52=371,53=369,54-56=370,57=369,58=371,59=370|r10:0=370,1=369,2-4=371,5=369,6=371,7-8=369,9-11=370,12=371,13=370,14=369,15-16=370,17=371,18-19=369,20=370,21=369,22-24=370,25=369,26-27=371,28-30=369,31=370,32-34=369,35=371,36=369,37-40=370,41=371,42=370,43=371,44-45=370,46=371,47=369,48-49=370,50=371,51-52=369,53=370,54-57=369,58-59=370|r11:0=369,1=371,2-4=370,5=371,6=370,7=369,8-11=371,12=370,13=369,14=371,15=370,16=371,17=369,18=371,19-20=370,21=371,22-23=369,24-27=371,28=369,29=370,30=371,31=370,32-33=369,34=370,35=369,36-37=371,38=370,39-40=369,41=370,42-43=371,44=369,45=371,46=370,47=371,48=370,49=371,50-51=370,52=371,53=370,54-56=369,57-59=371|r12:0=371,1=370,2=371,3=369,4-5=371,6=369,7=370,8=371,9=370,10=369,11-12=371,13=369,14=370,15=371,16=369,17=370,18-19=371,20-21=369,22=371,23-24=369,25=370,26=369,27=371,28=369,29-30=371,31=370,32-34=369,35=370,36=371,37-38=369,39=370,40=371,41-44=369,45=370,46=371,47=369,48=370,49=369,50=371,51=369,52=370,53-55=369,56=370,57-58=369,59=371|r13:0=370,1-2=369,3-4=371,5=370,6=371,7=370,8=369,9-10=371,11=370,12=371,13-16=369,17=371,18=370,19-20=369,21=370,22-23=371,24=370,25=369,26-27=371,28-30=369,31-33=370,34-35=369,36=370,37=371,38=369,39-40=371,41=369,42=371,43=369,44=371,45=369,46-49=371,50=369,51-52=370,53=371,54=369,55=371,56=370,57=371,58=370,59=371|r14:0=370,1=371,2-3=370,4=369,5-6=370,7-8=369,9=370,10=371,11=370,12=371,13=370,14-15=371,16-18=369,19-22=371,23=369,24-25=371,26=369,27=371,28=369,29=371,30-31=370,32=369,33=371,34=369,35=370,36=369,37-39=371,40=370,41-42=371,43-45=369,46=371,47-48=370,49=369,50=371,51=370,52-53=371,54-55=369,56-58=371,59=369|r15:0=371,1=370,2=369,3=371,4=370,5=369,6=371,7-8=369,9=370,10=369,11-13=370,14=371,15=369,16=370,17=371,18=369,19=370,20=369,21-24=371,25=369,26=370,27-28=371,29-32=369,33=370,34-37=371,38=370,39-40=369,41-45=371,46=370,47=369,48=371,49=370,50-52=369,53=370,54-55=369,56=370,57-58=371,59=370|r16:0=371,1-3=369,4=370,5-7=369,8-10=370,11=369,12=371,13=369,14=371,15-16=370,17=369,18=370,19=371,20=370,21-22=369,23-25=371,26=370,27=371,28=370,29=371,30=370,31=369,32=370,33=369,34=370,35-36=369,37=370,38=369,39-40=370,41=371,42=370,43=371,44=370,45=369,46=370,47=371,48=369,49=370,50=369,51=371,52=370,53=371,54=370,55-59=371|r17:0=369,1-3=371,4=369,5=371,6-10=370,11-12=371,13-14=369,15-17=370,18-20=371,21=369,22-23=371,24=370,25=369,26=371,27=370,28=369,29=371,30=369,31=370,32-36=371,37=370,38=371,39=370,40=371,41=370,42-43=371,44=369,45=370,46=371,47-49=370,50=371,51=369,52=371,53=369,54=371,55-57=370,58-59=371|r18:0=370,1=371,2-3=370,4-8=369,9=371,10=370,11-12=371,13=370,14=369,15=371,16=370,17=369,18=370,19=371,20-21=370,22=371,23=369,24=371,25=369,26=371,27=369,28-29=371,30=369,31-32=371,33-34=370,35-36=369,37-40=371,41-43=369,44=371,45=369,46-48=370,49=369,50=370,51=369,52=371,53=369,54-55=370,56-58=369,59=370|r19:0=371,1=370,2=371,3-4=369,5=371,6=370,7=371,8=370,9=371,10=370,11-12=371,13=370,14=369,15=371,16=369,17=370,18=369,19=371,20=369,21=370,22=371,23=370,24=371,25=369,26=370,27=369,28=371,29=369,30=371,31=370,32=371,33=369,34=370,35=371,36=370,37=369,38-39=371,40-41=369,42=371,43=370,44=371,45=370,46=371,47-50=370,51-52=371,53-55=370,56=371,57-59=370|r20:0=370,1-2=369,3=371,4-5=370,6=371,7-8=370,9-10=369,11=371,12=370,13=371,14=369,15-17=371,18=369,19=370,20=369,21=370,22=369,23=370,24=371,25=370,26=371,27-29=370,30=369,31=371,32=369,33-35=370,36-37=369,38-39=371,40-44=370,45=369,46=370,47-51=369,52=371,53-56=369,57-58=370,59=369|r21:0=370,1=369,2-3=371,4=369,5=370,6=371,7=369,8=371,9=370,10-11=369,12-13=371,14=369,15=371,16=370,17=369,18=370,19=369,20=371,21-22=370,23-24=369,25=371,26=369,27-28=371,29=369,30=371,31-32=370,33=371,34=369,35=371,36=369,37-38=371,39-40=370,41=369,42=370,43=369,44=371,45=369,46=370,47=371,48=370,49=369,50=371,51=369,52-55=370,56=369,57=371,58=369,59=371|r22:0-1=370,2-4=369,5=370,6-8=369,9=371,10=370,11-12=369,13-14=371,15=369,16=371,17=369,18=371,19-22=370,23-24=371,25-27=369,28-29=370,30=369,31=371,32-35=370,36-40=371,41=369,42=370,43=371,44=369,45=371,46=369,47-48=371,49-50=369,51=371,52-53=370,54-56=369,57=370,58-59=371|r23:0=370,1=371,2=369,3=371,4=370,5=371,6=369,7=371,8=370,9=369,10-11=371,12-13=370,14=371,15=369,16=371,17=369,18-19=370,20-21=369,22=370,23=369,24-25=371,26=370,27=369,28=370,29=371,30=370,31-32=371,33=370,34-35=369,36-37=370,38=371,39-40=370,41-44=369,45-46=371,47=369,48=371,49-50=369,51=370,52=371,53=370,54=371,55=370,56-57=369,58=370,59=371|r24:0-1=371,2=370,3=371,4=369,5-6=370,7-8=371,9=369,10-14=370,15=369,16=370,17=369,18=370,19-20=369,21-23=371,24=370,25-26=369,27=371,28-29=369,30=371,31=369,32=371,33=370,34=371,35-37=370,38=369,39=370,40=371,41=370,42-43=369,44-45=371,46=370,47-49=371,50=369,51-52=370,53=371,54-55=369,56-57=371,58=370,59=369|r25:0-1=370,2-4=371,5=370,6=369,7-8=370,9=371,10-11=369,12=370,13-14=369,15-16=370,17-18=371,19-20=369,21=370,22-23=369,24-25=370,26-27=369,28=370,29=369,30=370,31-32=369,33-35=371,36=370,37-40=369,41-42=370,43=369,44=371,45-47=370,48-49=369,50=370,51=371,52=369,53-54=370,55=369,56=370,57-58=371,59=370|r26:0=370,1=371,2=370,3=371,4-7=370,8=369,9=370,10=369,11-14=370,15=369,16-17=371,18=370,19=369,20-21=370,22=369,23-24=371,25-26=369,27=370,28=371,29=370,30=369,31-32=370,33-35=371,36=369,37-38=370,39=371,40=369,41=371,42=370,43=371,44-46=369,47=371,48-50=369,51-53=370,54=369,55=370,56=371,57=370,58=369,59=371|r27:0=370,1-2=369,3-4=371,5-6=370,7-8=369,9-10=370,11-12=369,13=371,14=369,15=370,16=371,17=370,18=371,19=369,20=371,21-23=370,24=369,25=370,26-28=369,29=370,30=369,31-33=370,34=371,35=369,36-37=371,38=369,39-40=371,41-42=370,43=371,44=370,45=371,46-47=370,48=371,49=369,50=370,51-52=371,53=370,54=371,55=370,56-57=369,58=371,59=370|r28:0-1=371,2=370,3-5=369,6=370,7=371,8=370,9=371,10=369,11-14=371,15-18=370,19=369,20=370,21-22=371,23=369,24-26=371,27=369,28=371,29=369,30=371,31=369,32=370,33-34=369,35=371,36-39=370,40-41=369,42=371,43=370,44-46=369,47=371,48=370,49=371,50=370,51=369,52=370,53=371,54=369,55=371,56-58=370,59=369|r29:0=369,1=370,2=369,3=370,4-5=371,6=370,7=369,8-10=371,11=369,12=370,13=369,14=371,15=370,16-17=371,18-19=369,20-23=370,24-26=371,27=369,28=370,29=371,30=369,31-32=370,33-34=371,35-36=369,37=371,38-41=369,42=370,43-45=369,46-47=371,48=369,49=370,50=369,51=371,52-53=369,54=370,55=369,56=371,57-59=369|r30:0-1=369,2=371,3-4=370,5=369,6=371,7=370,8-9=371,10=369,11=370,12=369,13-14=370,15=371,16=370,17=369,18-19=370,20=371,21-22=370,23=371,24-25=370,26=369,27-28=371,29=369,30=370,31-32=371,33=370,34-36=371,37=370,38=371,39=370,40-41=371,42-43=369,44=371,45-46=370,47=369,48-49=370,50=371,51=370,52-53=369,54=370,55-56=371,57=369,58=370,59=369|r31:0=371,1=369,2=370,3-5=371,6=370,7=371,8-9=370,10=371,11-13=370,14=371,15=370,16=369,17=370,18-20=371,21-22=370,23=371,24=369,25-26=370,27=369,28=370,29=371,30=370,31=371,32=369,33=370,34=371,35=370,36=369,37=371,38=369,39-40=370,41-45=369,46=371,47=370,48=371,49=370,50-51=369,52=371,53=370,54=371,55=370,56-58=369,59=371|r32:0=371,1=370,2=369,3-4=371,5=370,6=369,7=371,8-9=370,10=371,11-12=369,13=370,14=369,15=371,16=370,17-18=369,19-22=371,23=369,24=371,25=369,26=370,27-28=369,29=370,30=371,31=370,32-33=369,34-39=370,40=369,41=370,42=371,43-44=369,45=370,46-48=371,49=370,50=371,51=370,52=371,53=369,54=371,55=369,56-57=370,58=369,59=371|r33:0=371,1=369,2=371,3=369,4-5=370,6-8=369,9-10=370,11=371,12=369,13=370,14=371,15-16=370,17=371,18=369,19=370,20=369,21-22=371,23-24=370,25-26=369,27=371,28=370,29=371,30=370,31-32=371,33=369,34=371,35-36=370,37=369,38=371,39=369,40-41=371,42=370,43=369,44=371,45-46=369,47=371,48=370,49=371,50=369,51-52=370,53=371,54=370,55=369,56=371,57=370,58=369,59=371"
+        "rows": "r0:0=371,1=369,2=371,3-6=369,7=371,8=369,9=371,10=370,11=369,12=370,13=369,14=370,15=371,16=369,17-18=370,19=371,20=369,21=371,22=370,23-26=371,27-28=370,29=371,30=369,31=370,32=371,33=369,34=370,35=371,36-39=370,40-41=369,42-43=370,44-46=371,47=370,48=369,49=371,50=369,51=371,52=370,53=369,54-55=370,56-59=371|r1:0=369,1=370,2=369,3=370,4-9=369,10=371,11-12=370,13-14=371,15=370,16=371,17=369,18=371,19=369,20=370,21=371,22=370,23=371,24=370,25-27=371,28=369,29-32=371,33=370,34-37=371,38=369,39=371,40=369,41=371,42=370,43=369,44-45=371,46=370,47=369,48=370,49=369,50=371,51=370,52=371,53=370,54=371,55-57=369,58-59=370|r2:0=369,1=371,2=369,3=371,4=370,5=369,6=370,7=371,8=369,9=370,10=371,11=369,12=371,13-14=369,15=370,16=369,17-18=370,19=371,20=370,21=371,22-23=369,24=371,25=369,26=370,27=369,28=370,29=371,30=370,31-33=371,34-35=369,36=370,37=369,38-42=370,43-44=369,45=370,46=371,47-49=370,50=369,51=371,52=369,53=371,54=369,55=371,56=370,57=371,58=370,59=371|r3:0=370,1=369,2-3=371,4=369,5=371,6=370,7-10=369,11=371,12=369,13=370,14-15=371,16=370,17=369,18=371,19-20=370,21=369,22-24=371,25-27=370,28=369,29-30=370,31=369,32-33=371,34=370,35=369,36=370,37=371,38-39=370,40-42=369,43=370,44=371,45=369,46=371,47=370,48=369,49=371,50-52=370,53=369,54=371,55-56=369,57=371,58=369,59=371|r4:0-1=369,2=371,3=370,4=371,5=369,6-7=371,8=370,9=371,10=369,11-15=371,16-19=370,20-22=369,23=371,24=369,25=370,26=369,27=370,28=371,29=369,30=370,31=369,32-33=370,34=369,35-36=371,37=369,38-39=370,40-41=371,42-43=370,44=371,45-47=369,48=371,49=370,50-52=371,53-55=370,56=369,57=370,58=369,59=370|r5:0=370,1=371,2=370,3=369,4-5=370,6=371,7=369,8-11=370,12=371,13=370,14-15=371,16=369,17=371,18-20=370,21-22=371,23=369,24-25=370,26-27=369,28=371,29-30=369,31=370,32=371,33=369,34-35=370,36=371,37=370,38=369,39=370,40=371,41=369,42-43=370,44=371,45-47=370,48=369,49=370,50=371,51=370,52-53=371,54=370,55-56=371,57-59=370|r6:0-1=370,2=371,3=369,4=371,5=370,6-7=371,8-11=370,12-13=371,14=369,15-16=370,17=371,18=370,19=371,20-21=369,22=371,23=370,24-25=369,26-27=370,28-29=371,30=370,31=369,32-37=370,38-41=369,42=371,43-44=370,45=371,46-47=369,48-50=370,51-52=369,53-54=371,55-56=370,57=369,58=371,59=369|r7:0-1=369,2=370,3=371,4=370,5-6=371,7=370,8=371,9-13=369,14=371,15-16=370,17-18=369,19-20=371,21=369,22=370,23=369,24=371,25=370,26=371,27=369,28=370,29=369,30-31=371,32=369,33=370,34=371,35-36=369,37=370,38=371,39-41=369,42=370,43=369,44=370,45-46=369,47=370,48=369,49=371,50=369,51=370,52=371,53-54=370,55-56=369,57-58=370,59=369|r8:0-1=371,2=370,3=369,4=371,5=370,6=371,7=370,8-9=369,10=370,11-12=369,13-16=371,17=369,18-19=370,20=369,21=370,22=371,23-24=370,25=371,26-27=370,28-29=369,30=371,31=370,32=371,33-37=369,38=370,39=371,40=370,41-42=371,43=370,44=371,45-47=369,48-49=371,50-51=370,52-53=369,54-55=371,56-58=370,59=371|r9:0=369,1=371,2=370,3=369,4-5=371,6-7=369,8=370,9=369,10=370,11=371,12=370,13=371,14=369,15=370,16=369,17-20=371,21=370,22=371,23-24=369,25-31=370,32=371,33=369,34-35=370,36=371,37-38=369,39-40=370,41=369,42=370,43=371,44=369,45-46=371,47=370,48-49=369,50=370,51-52=371,53=370,54=371,55=369,56-57=370,58=371,59=370|r10:0=369,1-2=370,3-4=369,5-6=371,7-8=369,9-10=371,11=369,12=370,13=371,14=370,15=369,16=370,17=369,18=370,19=371,20=370,21=369,22=371,23=370,24=369,25=371,26-27=369,28=371,29-30=370,31=369,32=371,33=370,34=371,35=369,36-38=370,39=371,40-41=370,42-43=369,44-45=370,46=369,47-50=371,51=370,52=371,53=369,54-55=371,56=370,57=369,58-59=370|r11:0=371,1-2=370,3-9=369,10=371,11-12=370,13=369,14=371,15-16=370,17-21=371,22-23=370,24-25=369,26=371,27-28=369,29=370,30=371,31=369,32=370,33=369,34-35=371,36=369,37=370,38=369,39-40=370,41-46=371,47=369,48=370,49=371,50=370,51=369,52=371,53-54=370,55=369,56=370,57-58=371,59=369|r12:0-1=370,2=371,3=370,4=371,5=369,6=371,7=369,8=371,9=369,10=371,11=369,12-14=371,15-17=370,18-19=369,20=370,21=371,22=370,23=371,24=370,25=371,26=370,27-30=369,31-32=370,33=371,34-35=369,36-37=370,38=371,39=369,40=371,41=369,42=371,43=370,44=369,45-46=370,47=369,48=371,49=369,50-51=371,52=370,53-54=371,55-57=369,58=371,59=370|r13:0-1=371,2-4=370,5=371,6=369,7=370,8=371,9=369,10-11=370,12=369,13-14=371,15=369,16=370,17=371,18-19=369,20=370,21=371,22=370,23-24=371,25-28=369,29=371,30-32=370,33=371,34-35=369,36=371,37-38=370,39=369,40=370,41=371,42=369,43-44=371,45=369,46=371,47=369,48=371,49-50=370,51=369,52=371,53=369,54=371,55-58=369,59=371|r14:0-2=370,3=371,4-5=370,6=371,7=369,8=370,9=371,10-13=370,14=371,15=369,16=371,17-18=370,19=369,20-21=371,22=369,23-24=371,25=370,26-27=371,28=369,29-31=370,32=369,33=370,34=369,35-36=371,37-38=370,39=369,40=370,41=369,42=371,43=370,44=371,45-46=370,47-48=369,49=370,50=369,51=371,52-53=369,54-56=370,57-59=369|r15:0=371,1=370,2-5=371,6=370,7=371,8-9=370,10-11=369,12=370,13=371,14=370,15=371,16=370,17-18=371,19-20=369,21=371,22-24=370,25=369,26-28=371,29-30=370,31=369,32=370,33=371,34=370,35=369,36=371,37=369,38=370,39=371,40-41=369,42=370,43=369,44=371,45=370,46-48=369,49-50=371,51-52=369,53-55=370,56=371,57=370,58=369,59=371|r16:0=371,1-2=370,3=369,4-7=370,8-9=371,10-12=370,13-14=371,15=370,16-18=371,19=369,20-21=370,22-23=369,24=371,25-26=369,27=370,28=369,29=371,30=370,31=369,32-33=371,34-36=370,37=371,38-41=369,42-43=370,44=369,45-47=370,48-49=369,50-51=370,52=369,53=371,54=370,55-56=371,57=369,58=371,59=370|r17:0-2=371,3=370,4=371,5-7=369,8=370,9-10=369,11=371,12=369,13=370,14-16=369,17=371,18-19=370,20=369,21-23=371,24-25=370,26=371,27-28=370,29-31=369,32=370,33=371,34=370,35-36=371,37=369,38-39=370,40=371,41-44=369,45=371,46-47=370,48-49=369,50-51=370,52=369,53=371,54=369,55=371,56=369,57-58=370,59=369|r18:0-1=371,2=370,3=369,4=371,5=370,6-9=369,10-12=370,13-14=369,15=371,16-17=369,18-19=371,20-21=370,22=371,23=370,24-25=369,26-29=371,30=370,31-33=369,34=371,35=369,36=370,37=371,38=370,39=371,40=370,41=369,42-43=370,44=371,45-46=369,47=371,48-49=370,50=369,51=370,52-55=371,56=370,57=371,58=369,59=370|r19:0=370,1=369,2-3=370,4=371,5=369,6=371,7-8=370,9-10=369,11-13=371,14-18=370,19=369,20=371,21=370,22-25=369,26=371,27=369,28-29=370,30-33=371,34-35=369,36-38=371,39=369,40=370,41-42=369,43-46=370,47=371,48=369,49-50=370,51=369,52=370,53=371,54-55=369,56=371,57=369,58-59=371|r20:0=369,1=371,2=370,3=369,4-6=370,7-9=369,10=370,11=371,12=369,13=371,14=370,15=371,16=369,17=371,18=369,19=370,20=369,21=371,22=369,23=370,24=369,25=370,26-27=371,28=369,29=371,30=369,31-33=370,34=369,35-36=370,37=371,38=370,39-43=369,44=371,45-46=370,47=369,48-49=371,50-51=370,52=369,53-54=370,55=369,56=370,57=371,58=369,59=371|r21:0=369,1-3=370,4=371,5=370,6-7=371,8=370,9=369,10=371,11=369,12=371,13=370,14=371,15=369,16-17=371,18-19=369,20=371,21-22=369,23=371,24=370,25-26=371,27=369,28=371,29=370,30=371,31=369,32-33=370,34=371,35=369,36-37=370,38-40=371,41-42=370,43=369,44=370,45-46=371,47=370,48=371,49-50=370,51=371,52-53=369,54-58=371,59=370|r22:0=371,1-3=369,4=370,5=371,6=369,7=371,8=369,9=371,10=369,11=370,12=371,13-14=369,15-21=371,22=370,23-24=369,25=370,26=371,27=369,28=370,29-31=369,32=371,33=369,34=370,35-36=369,37=370,38-39=369,40=371,41=370,42=371,43=369,44=370,45=369,46-48=371,49-50=369,51=370,52=369,53-54=371,55-56=369,57-58=370,59=371|r23:0=369,1=371,2=369,3-4=371,5=369,6=371,7=369,8=370,9-10=369,11=370,12=371,13-15=370,16=369,17=370,18-19=371,20-21=369,22=371,23=369,24=370,25=371,26=369,27=370,28-34=371,35=370,36=371,37-38=370,39=369,40=371,41-43=369,44-45=371,46=369,47-49=371,50-54=370,55-56=369,57=370,58=371,59=370|r24:0=371,1=369,2=371,3=369,4-8=370,9=369,10=371,11=370,12=369,13=370,14=369,15=370,16=371,17=369,18-20=371,21=370,22=371,23=370,24-25=369,26=370,27-28=371,29-30=370,31=371,32-33=369,34-35=371,36=369,37=370,38-39=371,40=370,41=371,42-44=370,45-47=369,48=371,49-51=369,52=370,53=369,54-55=371,56=369,57=371,58=370,59=371|r25:0=370,1=371,2-3=369,4-6=371,7=369,8=370,9-11=369,12=371,13-15=369,16-18=370,19-20=369,21-25=370,26=369,27=370,28-30=369,31=371,32=370,33-35=369,36-38=370,39=371,40-41=370,42=371,43=370,44=371,45-47=369,48-50=370,51=369,52=370,53=369,54=370,55=371,56=370,57=369,58-59=371|r26:0-1=369,2=370,3-4=371,5=369,6=370,7=371,8=369,9=370,10-15=369,16-17=371,18-19=370,20-21=371,22=369,23=371,24=370,25=369,26=371,27=369,28=371,29=370,30=369,31-33=371,34-37=369,38-40=371,41=370,42=371,43=369,44=371,45=369,46-47=371,48=369,49=371,50=369,51=370,52-53=371,54-55=369,56=371,57=370,58-59=369|r27:0-1=369,2=371,3=370,4=371,5=370,6-7=369,8-10=370,11-13=371,14-17=369,18-19=370,20=371,21=370,22=371,23=369,24=370,25-27=369,28=371,29-30=369,31=370,32=371,33=369,34=370,35-36=369,37-39=370,40=369,41-42=371,43-44=369,45=371,46-48=369,49=371,50=369,51=370,52=371,53-54=369,55-57=371,58=370,59=371|r28:0-1=371,2=369,3=371,4=369,5-8=370,9=371,10=369,11=371,12=369,13-16=371,17-18=370,19-21=371,22=370,23-24=369,25-26=371,27=369,28=371,29=370,30=369,31-35=370,36=371,37=369,38-40=371,41=369,42=371,43-45=370,46-47=371,48-49=369,50=371,51-53=370,54-56=371,57-58=369,59=370|r29:0=369,1=371,2-3=369,4=371,5=370,6-8=369,9=371,10-11=370,12-14=369,15-16=371,17=369,18=371,19-22=369,23-24=370,25=369,26-27=370,28=371,29=369,30=371,31=370,32=369,33=371,34=370,35=371,36=370,37=371,38-40=369,41=371,42=369,43=370,44=369,45-46=370,47=369,48=370,49=371,50=369,51=371,52-53=370,54=369,55-56=371,57=369,58=371,59=369|r30:0-1=371,2-3=369,4=371,5-6=370,7=371,8=370,9=369,10-12=370,13-14=371,15=370,16=371,17=370,18=371,19=370,20-21=371,22=369,23=370,24=369,25=371,26-29=369,30=370,31-32=369,33=370,34=369,35-37=371,38=370,39=371,40=370,41=371,42=369,43-46=370,47-50=371,51-53=369,54-55=371,56=369,57-59=370|r31:0-1=369,2=370,3-6=369,7=371,8=369,9=371,10=369,11=370,12=371,13=370,14=371,15-16=369,17=370,18=369,19=370,20=369,21-22=371,23=369,24=370,25-26=369,27=370,28=371,29=370,30=371,31-32=370,33=371,34=369,35=370,36=371,37=369,38=370,39=371,40=370,41=369,42-43=371,44=370,45-46=371,47=370,48=369,49=370,50=369,51-52=370,53=369,54=370,55-57=371,58=369,59=371|r32:0-2=370,3=371,4=369,5=371,6-8=369,9=370,10-12=371,13=370,14-15=369,16=371,17=370,18=369,19=370,20=369,21-24=371,25=369,26=371,27=370,28=371,29=369,30=371,31-32=370,33=369,34=370,35=369,36-37=371,38=370,39-40=371,41=369,42-43=371,44=370,45-46=369,47=370,48=371,49=370,50=371,51=370,52=371,53=370,54-59=371|r33:0-1=369,2=371,3-4=369,5-7=370,8=369,9=371,10-11=369,12=371,13-14=369,15=370,16-17=371,18=370,19=371,20-21=369,22=371,23-24=370,25=371,26-27=369,28=370,29=371,30-31=369,32=370,33=369,34-35=370,36=371,37-39=370,40=371,41=370,42=371,43=370,44-45=371,46=370,47=369,48=370,49=371,50-53=369,54=370,55=369,56=370,57=369,58-59=370"
       },
       {
         "name": "chasm",
@@ -4133,7 +4164,7 @@
         "visible": true,
         "alpha": 1,
         "nonEmpty": 1643,
-        "rows": "r0:0=16,1-26=100,27=101,33=99,34-58=100,59=17|r1:0=80,59=78|r2:0=80,59=78|r3:0=80,59=78|r4:0=37,1-18=58,19=59,40=57,41-58=58,59=38|r5:0=121,1-3=122,4-5=120,6=122,7=120,8=121,9=120,10=122,11=121,12=122,13-14=121,15=120,16=121,17=120,18=121,19=37,20=59,39=57,40=38,41=120,42=121,43=122,44=120,45=121,46=120,47=122,48=121,49=120,50=122,51=121,52=122,53-54=121,55-56=122,57=120,58-59=121|r6:0=121,1-2=122,3=120,4=122,5-6=121,7=122,8=121,9=122,10=120,11=121,12-13=122,14=121,15=120,16-17=122,18-19=121,20=37,21=58,22=59,38=57,39=38,40=121,41=122,42=120,43-46=121,47=120,48=121,49-52=120,53-56=121,57=122,58=120,59=121|r7:0=121,1=120,2-3=121,4-5=122,6=121,7=120,8=121,9-11=122,12=121,13-16=122,17-18=120,19=122,20=120,21=122,22=37,23=59,36=57,37=58,38=38,39=122,40=121,41=122,42-43=120,44=121,45=120,46=122,47=121,48=120,49-53=122,54-57=120,58-59=122|r8:0=120,1-3=122,4=120,5=121,6=122,7-8=121,9=122,10-12=121,13-14=120,15=122,16=120,17=122,18=120,19=121,20-21=120,22=121,23=37,24=58,25=59,35=57,36=38,37=122,38=120,39=122,40=121,41=120,42=121,43-44=122,45=121,46=122,47-48=121,49-50=120,51=122,52=121,53-54=122,55=121,56-57=120,58-59=122|r9:0=120,1=122,2=120,3=121,4-6=122,7-8=120,9-10=121,11-13=120,14=122,15=121,16-18=122,19=121,20=122,21-23=120,24=121,25=37,26=59,33=57,34=58,35=38,36=122,37-39=121,40=122,41=121,42-43=122,44=120,45-46=122,47=121,48=120,49=122,50=121,51-52=122,53-56=120,57=122,58-59=120|r10:0=121,1-3=122,4=120,5=121,6=120,7-8=121,9-10=120,11=121,12=120,13=122,14-15=120,16=121,17=122,18=121,19=120,20=121,21=120,22=122,23=120,24-25=122,26=80,33=78,34=121,35=122,36-37=120,38=122,39=121,40-41=120,42-43=122,44=121,45-46=122,47-48=121,49=120,50=122,51-52=121,53=120,54=122,55=120,56=121,57=122,58=120,59=121|r11:0-2=120,3=121,4=122,5=120,6-7=121,8-11=122,12-14=121,15=122,16-20=120,21=122,22=121,23=120,24=121,25=120,26=80,33=78,34=121,35-38=122,39=121,40=120,41=122,42=120,43-44=121,45=120,46=122,47=120,48=121,49=122,50=121,51-52=120,53=122,54=120,55-56=122,57=120,58-59=122|r12:0-1=122,2-3=121,4-5=120,6=121,7=122,8-9=121,10=122,11=121,12-13=120,14=121,15=122,16=120,17=122,18=120,19-21=121,22=122,23-25=120,26=80,33=78,34=120,35=121,36-37=120,38=122,39=120,40=121,41=120,42-44=121,45=122,46=120,47=121,48=122,49=120,50=121,51=122,52-53=120,54=121,55-56=120,57=122,58=121,59=122|r13:0-1=121,2-3=120,4=121,5-6=122,7=120,8-9=121,10-11=120,12-13=122,14=121,15=120,16-17=121,18=120,19-21=121,22-23=120,24=122,25=120,26=80,33=78,34-35=122,36=120,37=122,38=120,39=121,40=122,41=121,42=122,43-44=121,45=120,46=122,47=120,48=121,49=120,50=121,51-52=122,53=120,54-55=122,56-57=120,58-59=121|r14:0=121,1=122,2=121,3-5=122,6=120,7=122,8=120,9=121,10-11=120,12-13=122,14=121,15-16=120,17=121,18-20=120,21=122,22=120,23-25=121,26=80,33=78,34=120,35-36=122,37=121,38=122,39-41=120,42=122,43=121,44=122,45=120,46=121,47=120,48-50=122,51-52=121,53=120,54=121,55=122,56=121,57-58=122,59=120|r15:0=121,1=120,2=122,3=120,4=122,5-7=120,8-10=121,11-12=122,13=120,14=121,15=122,16=121,17=120,18=122,19=121,20-21=120,22=122,23=121,24=122,25=120,26=80,33=78,34=122,35=121,36=120,37-39=122,40-41=120,42=121,43=122,44-47=121,48=120,49-50=121,51=122,52-53=121,54=120,55=121,56-57=122,58=120,59=121|r16:0=122,1=121,2=120,3=122,4=120,5=121,6=122,7=121,8=120,9=122,10-12=120,13=122,14=121,15=122,16=121,17-18=120,19=122,20=120,21-24=122,25=121,26=80,33=78,34=122,35-37=120,38-40=121,41=120,42=122,43=120,44-45=121,46-47=120,48-50=122,51=121,52=120,53-54=121,55=122,56=121,57=120,58-59=121|r17:0=120,1-4=122,5=120,6=121,7=120,8=121,9-10=122,11-13=121,14=120,15=121,16=122,17=121,18=122,19-20=120,21-23=122,24=120,25=121,26=80,33=78,34-35=122,36-37=120,38-40=121,41=120,42=121,43=122,44=121,45=120,46-47=121,48-49=122,50=121,51=122,52-53=121,54=120,55=122,56-58=120,59=122|r18:0=121,1=120,2-3=121,4=122,5=120,6=121,7=122,8-9=121,10=120,11=121,12=120,13=121,14-16=122,17-19=121,20=120,21-23=121,24=120,25=121,26=80,33=78,34-35=120,36=121,37=122,38=121,39-40=122,41=121,42-46=120,47=122,48=121,49-50=122,51-52=120,53=122,54-55=121,56=122,57=121,58=122,59=121|r19:0=120,1=122,2-3=120,4-5=121,6=120,7=121,8-9=122,10-12=121,13=122,14=120,15=122,16=120,17=121,18=120,19=121,20-21=122,22=121,23=120,24=121,25=122,26=80,33=78,34=120,35=121,36=120,37=122,38=121,39=120,40=122,41-44=120,45=121,46-47=120,48-50=122,51=120,52=122,53=121,54=120,55-58=121,59=120|r20:0-1=120,2-3=122,4=120,5=121,6-7=122,8-9=120,10=121,11=120,12=121,13-14=122,15-16=120,17-18=122,19=120,20=122,21-22=121,23=122,24=120,25=122,26=80,33=78,34-35=122,36=121,37=122,38-42=120,43=122,44=121,45=120,46-48=121,49=122,50-52=121,53-54=120,55-56=122,57=121,58=120,59=122|r21:0=120,1-3=122,4-6=121,7=122,8-9=120,10=122,11-12=120,13=121,14-15=122,16=120,17=122,18=121,19=120,20=122,21-23=120,24=122,25=120,26=80,33=78,34-36=121,37-38=120,39=121,40-41=122,42=121,43-48=122,49=120,50=121,51=120,52-53=121,54=122,55=121,56=120,57=121,58-59=120|r22:0-2=122,3=120,4-5=122,6=121,7=120,8=121,9=122,10=120,11=121,12=120,13-15=122,16-18=120,19-21=122,22=121,23-24=122,25=120,26=80,33=78,34=121,35=120,36-37=121,38-39=120,40=121,41=122,42-44=121,45-46=122,47-49=120,50-51=121,52=120,53=122,54=121,55-56=122,57-58=120,59=122|r23:0=122,1=121,2=122,3=120,4=121,5=120,6=121,7=120,8-9=121,10-11=120,12-14=121,15=122,16-17=121,18=120,19-20=122,21-22=121,23=120,24=121,25=122,26=80,33=78,34-36=121,37-39=122,40-42=121,43-44=120,45=122,46=120,47=121,48=120,49=121,50=120,51=121,52=122,53=120,54=122,55=120,56=122,57=120,58=121,59=120|r24:0=121,1=120,2-3=122,4-6=120,7=122,8-9=121,10=120,11-13=121,14=122,15-17=120,18=122,19-20=120,21=121,22=120,23=121,24=120,25=121,26=80,33=78,34=122,35-36=121,37=122,38=121,39=120,40=122,41=121,42-43=122,44-45=121,46=122,47-48=120,49=121,50=120,51-52=122,53=121,54=122,55-56=120,57=122,58=121,59=120|r25:0-1=120,2=122,3=121,4=122,5=120,6=121,7=120,8=121,9=122,10-11=120,12=122,13=120,14=121,15=120,16=122,17=121,18=120,19=121,20=122,21-22=120,23-25=122,26=80,33=78,34-35=121,36-37=122,38=121,39-40=122,41-43=121,44-46=120,47-49=121,50=122,51-52=121,53=120,54-55=122,56=120,57=121,58=122,59=121|r26:0-2=120,3=121,4=120,5=122,6=121,7=120,8=122,9=120,10-12=122,13=120,14-15=121,16=122,17-18=120,19-21=122,22=120,23=122,24=120,25=121,26=80,33=78,34=120,35=121,36-38=120,39-40=121,41=120,42=122,43=121,44=122,45=120,46=121,47-48=120,49-50=121,51=120,52=121,53-57=122,58=121,59=120|r27:0-1=121,2=122,3-4=121,5-6=122,7=120,8-9=122,10-11=121,12=122,13=120,14=122,15=120,16=121,17=120,18-19=122,20=120,21-22=121,23=120,24=121,25=122,26=80,33=78,34=121,35-36=122,37=120,38-40=122,41-42=121,43=120,44-46=122,47-49=121,50=122,51-57=120,58=121,59=120|r28:0=122,1-4=120,5-6=121,7=120,8=122,9-10=120,11=121,12=120,13=121,14=120,15=121,16=120,17-18=122,19=121,20=120,21-22=121,23-25=122,26=80,33=78,34-35=120,36-37=122,38=121,39=122,40=120,41=121,42=120,43=122,44-45=120,46=121,47=122,48=120,49-51=122,52-53=120,54=121,55=122,56=121,57=120,58-59=122|r29:0=122,1=121,2=120,3=121,4=122,5=120,6=122,7=121,8=120,9=122,10=120,11-12=122,13=121,14=120,15=121,16-18=122,19=120,20=122,21=121,22=122,23=120,24-25=122,26=80,33=78,34=120,35=122,36=121,37=122,38=121,39=122,40=121,41=120,42=122,43-45=121,46-47=120,48-52=122,53-55=121,56-57=120,58=122,59=120|r30:0=122,1=121,2-4=122,5=121,6=120,7-8=121,9-10=120,11=122,12-13=120,14-15=122,16-17=121,18-19=122,20-21=120,22-24=122,25=121,26=80,33=78,34-36=121,37=122,38=121,39=122,40=121,41=122,42=120,43-44=121,45=120,46=121,47=120,48=121,49=122,50=121,51=120,52=122,53=121,54=120,55=121,56=122,57=120,58-59=121|r31:0-2=121,3=122,4=120,5=122,6=121,7-12=120,13=122,14=121,15=120,16-17=121,18=122,19=120,20-21=121,22=120,23=122,24=121,25=120,26=80,33=78,34=120,35=122,36=120,37=121,38-39=120,40-42=122,43=120,44=121,45-47=122,48=121,49-50=120,51=121,52-53=122,54=120,55=121,56-57=122,58=121,59=120|r32:0=120,1=121,2=122,3=120,4=121,5-6=120,7-8=121,9=120,10-11=122,12-13=120,14=122,15=120,16-17=121,18-19=120,20=121,21=122,22=120,23-24=121,25=120,26=80,33=78,34-35=121,36-37=122,38=120,39=121,40-42=122,43=120,44=121,45-46=120,47=122,48=121,49-50=120,51-52=121,53=120,54-55=121,56-57=120,58=121,59=122|r33:0-1=121,2=120,3=121,4=120,5=121,6-8=122,9=121,10-13=122,14=121,15-16=122,17=121,18=120,19-21=122,22-23=121,24-25=122,26=37,27-32=58,33=38,34=122,35-36=121,37=120,38=121,39-41=122,42=120,43-44=121,45-46=122,47-49=120,50=122,51=121,52-53=120,54=121,55-57=120,58=122,59=120"
+        "rows": "r0:0=16,1-26=100,27=101,33=99,34-58=100,59=17|r1:0=80,59=78|r2:0=80,59=78|r3:0=80,59=78|r4:0=37,1-18=58,19=59,40=57,41-58=58,59=38|r5:0=120,1-2=122,3=121,4-5=122,6=121,7=120,8=122,9=121,10=122,11-12=120,13=122,14=120,15=122,16=120,17=122,18=120,19=37,20=59,39=57,40=38,41=120,42=122,43=120,44=122,45=120,46-49=122,50=120,51=121,52=120,53=122,54-55=121,56=122,57-59=120|r6:0-6=120,7=122,8=120,9-11=122,12-14=120,15-16=121,17-18=122,19=120,20=37,21=58,22=59,38=57,39=38,40=120,41-42=122,43=121,44-45=120,46=121,47-49=120,50=121,51-52=122,53-54=121,55=120,56-59=122|r7:0-4=121,5-6=122,7=121,8-9=122,10=120,11=121,12=120,13=122,14-15=120,16=122,17=121,18=120,19=121,20-21=120,22=37,23=59,36=57,37=58,38=38,39=122,40=120,41-43=121,44-46=122,47=121,48=122,49=120,50=121,51-52=120,53=122,54=120,55=121,56=120,57=122,58=121,59=122|r8:0=122,1-4=120,5=121,6=120,7=122,8=121,9-10=120,11-14=122,15=120,16=121,17=120,18-20=122,21=121,22=122,23=37,24=58,25=59,35=57,36=38,37=121,38-39=120,40=122,41=120,42=122,43=120,44=121,45=122,46=121,47=120,48=122,49=120,50-51=122,52=120,53-55=122,56=121,57=122,58=121,59=122|r9:0=120,1=121,2-3=120,4-5=121,6=120,7=121,8=122,9=120,10=122,11=121,12=120,13-14=122,15-16=120,17=121,18-20=122,21=121,22=122,23=121,24=122,25=37,26=59,33=57,34=58,35=38,36-40=122,41-42=121,43=120,44=121,45=120,46=122,47=120,48-49=122,50-51=121,52=122,53-54=120,55=121,56=120,57=122,58-59=121|r10:0=121,1=120,2-4=121,5=122,6=120,7=122,8-10=120,11-12=122,13=121,14=122,15=120,16=121,17-18=122,19-22=121,23-24=122,25=120,26=80,33=78,34=121,35=122,36-37=121,38-40=120,41=122,42=120,43=121,44=122,45=121,46-48=122,49=120,50-52=121,53-56=120,57-59=121|r11:0=121,1-3=120,4=121,5-6=122,7=121,8-9=120,10=122,11=121,12-13=122,14=121,15=122,16=120,17=122,18=120,19=122,20=120,21=122,22-25=121,26=80,33=78,34-35=121,36=120,37=121,38-41=122,42=120,43=121,44-45=120,46=122,47-48=121,49=120,50=121,51=120,52=122,53-54=121,55=122,56=120,57-58=121,59=122|r12:0-1=122,2-3=121,4-5=120,6=122,7-8=120,9-10=122,11=121,12=122,13=120,14=122,15=121,16=122,17=121,18=120,19-20=122,21=120,22=121,23-24=120,25=121,26=80,33=78,34=120,35-40=122,41-43=121,44=122,45=121,46=120,47=121,48-49=120,50=121,51-52=120,53-55=122,56=121,57=122,58=121,59=120|r13:0=120,1=121,2-3=120,4-5=122,6=121,7-8=122,9=121,10=120,11=122,12=121,13=120,14=122,15=120,16=121,17-18=122,19-24=120,25=121,26=80,33=78,34-36=121,37=120,38=122,39=121,40=120,41=122,42=121,43=120,44=121,45-46=120,47=122,48=120,49-53=122,54=121,55=122,56-57=121,58-59=122|r14:0-1=122,2=121,3=120,4=121,5-6=120,7=122,8-9=121,10-11=120,12=122,13=121,14=120,15=122,16-17=120,18=121,19=122,20-21=120,22=121,23-24=120,25=121,26=80,33=78,34-35=122,36-38=120,39=122,40=120,41=121,42=120,43=121,44=122,45=121,46=120,47-48=122,49=121,50=122,51=120,52=121,53-54=122,55=121,56=120,57=121,58=122,59=121|r15:0=122,1-3=121,4-5=122,6-8=120,9=121,10=120,11=122,12=120,13-14=121,15=120,16=122,17=120,18=122,19=120,20-22=122,23=120,24-25=122,26=80,33=78,34=120,35=121,36-37=122,38=121,39=122,40-43=121,44=122,45-47=120,48=121,49=122,50=121,51=122,52-54=121,55=122,56-57=120,58=121,59=122|r16:0=122,1=121,2-3=120,4-5=122,6=120,7=122,8=121,9=122,10=120,11-12=121,13=120,14=122,15=121,16=120,17=122,18=121,19=122,20-21=120,22=121,23=120,24-25=122,26=80,33=78,34=121,35-36=120,37=122,38-39=120,40-41=122,42=120,43=121,44=120,45-48=122,49=120,50-54=122,55=121,56-57=122,58-59=121|r17:0=121,1-2=122,3=121,4=122,5-6=120,7=121,8=120,9-10=122,11-13=120,14-15=122,16-17=120,18=121,19-20=122,21=120,22=122,23-24=121,25=122,26=80,33=78,34=122,35=120,36=122,37-38=121,39=122,40-42=121,43-45=120,46-47=122,48=121,49=122,50-52=121,53-54=122,55=121,56=122,57=121,58=122,59=120|r18:0=121,1=122,2=121,3=122,4=120,5=121,6-8=122,9-10=121,11=120,12=122,13-14=121,15-20=122,21=120,22-23=121,24=122,25=121,26=80,33=78,34=121,35-37=122,38=121,39=120,40=121,41=120,42=121,43=120,44-45=122,46=120,47=122,48-50=121,51-52=122,53=121,54=120,55=122,56=121,57=120,58=122,59=121|r19:0=121,1=120,2=122,3=120,4=122,5=121,6=120,7=121,8-13=120,14-15=121,16=122,17=120,18-19=121,20=122,21-22=121,23-24=120,25=121,26=80,33=78,34=121,35=120,36=121,37=120,38=122,39=120,40=121,41=120,42=121,43-44=122,45=121,46-48=120,49=122,50=120,51=122,52-53=120,54-55=122,56=121,57=122,58=120,59=122|r20:0=122,1=120,2-4=121,5=120,6=121,7=122,8=121,9=122,10-12=120,13=122,14=121,15=120,16=122,17-19=121,20=120,21=121,22=120,23-25=122,26=80,33=78,34-36=120,37-43=122,44=121,45=120,46-47=121,48=120,49-50=122,51=120,52=121,53=120,54-55=122,56-57=120,58-59=122|r21:0=121,1=120,2-3=121,4=120,5=122,6-8=121,9-10=122,11=120,12=121,13=122,14=120,15=121,16-17=120,18=122,19=120,20=121,21=120,22=122,23=121,24-25=122,26=80,33=78,34=120,35=121,36=120,37=122,38=120,39=122,40=121,41=120,42=122,43=120,44-45=121,46=120,47-48=122,49=121,50-51=122,52=121,53=122,54=121,55=122,56=120,57=122,58=120,59=122|r22:0=120,1=122,2-4=121,5=122,6=121,7=122,8-11=120,12-14=121,15-16=122,17-18=120,19-20=122,21=120,22=122,23=121,24=122,25=121,26=80,33=78,34-35=122,36=121,37-40=120,41=122,42=120,43-44=122,45-47=121,48=122,49=120,50-51=122,52=121,53=120,54=121,55-58=120,59=122|r23:0-1=120,2=121,3=122,4=121,5=122,6-7=121,8=120,9-10=122,11=120,12=122,13-15=120,16-17=122,18=120,19-21=121,22-23=120,24=121,25=120,26=80,33=78,34-35=121,36=120,37-39=122,40=121,41=122,42=121,43-46=120,47=122,48-51=120,52=122,53=121,54=122,55=121,56-57=120,58=121,59=122|r24:0=121,1=122,2=120,3-4=121,5=120,6=121,7=122,8=121,9=122,10=120,11-12=122,13=120,14-16=121,17=122,18-21=121,22=120,23-25=121,26=80,33=78,34-36=121,37=122,38-40=120,41-42=122,43=120,44-45=121,46=122,47=120,48=122,49-50=121,51=120,52-53=122,54-59=121|r25:0-1=120,2=121,3=120,4-5=121,6-8=122,9-10=121,11=122,12-13=120,14=121,15-16=122,17=121,18=122,19=121,20-21=120,22-24=121,25=120,26=80,33=78,34=121,35=120,36=121,37=122,38-39=121,40=122,41=120,42=121,43=120,44=121,45=122,46-47=121,48-49=120,50=122,51-52=120,53-57=122,58=121,59=120|r26:0=121,1-2=122,3=121,4=122,5-6=120,7=121,8-9=120,10=121,11-12=122,13=120,14=122,15=121,16=122,17=120,18=122,19-20=120,21=122,22-25=121,26=80,33=78,34=122,35=120,36=122,37-38=120,39=121,40=122,41=120,42=122,43-44=121,45=122,46=120,47=122,48=120,49=121,50=122,51=121,52=120,53=121,54=122,55=120,56=121,57-59=120|r27:0=121,1=122,2=120,3=121,4=120,5=121,6-7=120,8=122,9=121,10=122,11-12=121,13=122,14=120,15-17=121,18=120,19=122,20=121,21=122,22=120,23-25=122,26=80,33=78,34=122,35=121,36-37=120,38-41=122,42=120,43-44=122,45-46=121,47-48=120,49-51=122,52=120,53-54=122,55=120,56-59=122|r28:0=122,1-2=121,3-5=122,6-7=120,8=121,9=122,10-11=121,12-14=120,15=122,16-18=121,19=122,20=121,21-23=120,24=121,25=120,26=80,33=78,34=121,35=122,36-38=120,39-40=122,41=121,42=122,43=121,44-45=122,46=120,47=122,48=120,49-51=122,52=120,53=122,54=120,55-56=122,57=120,58=122,59=120|r29:0-2=122,3=121,4=120,5-6=121,7-8=122,9=120,10=121,11-13=120,14=121,15=120,16=121,17=120,18-20=121,21-22=120,23=122,24=120,25=121,26=80,33=78,34-35=121,36-37=122,38-39=121,40=120,41=122,42=120,43=122,44=120,45=122,46=121,47-48=120,49=122,50-51=120,52-54=122,55=120,56=121,57=122,58=121,59=122|r30:0=122,1=120,2-3=122,4=120,5-6=122,7-9=120,10-11=122,12-13=120,14-15=122,16=120,17=122,18=121,19=120,20=121,21-22=120,23=122,24-25=121,26=80,33=78,34=120,35-36=121,37=122,38=121,39-43=122,44=121,45-46=120,47=122,48=121,49=120,50=121,51-52=120,53=121,54-56=120,57-59=122|r31:0=121,1=120,2=122,3-4=121,5=122,6-8=121,9=122,10=120,11-12=122,13-14=121,15-16=122,17-18=121,19=120,20-23=121,24-25=122,26=80,33=78,34-35=120,36=122,37=120,38-40=121,41=122,42=121,43-44=120,45-46=121,47=120,48=122,49=120,50=121,51=120,52-54=121,55=120,56=122,57=120,58=121,59=122|r32:0=120,1-2=122,3-4=121,5=122,6=121,7=120,8=121,9-12=120,13=121,14-16=120,17-21=122,22-23=121,24=120,25=122,26=80,33=78,34=122,35=120,36=121,37=120,38-41=122,42-43=120,44=122,45-47=120,48-49=122,50-51=120,52=121,53=122,54=120,55-57=122,58-59=120|r33:0-1=120,2=122,3=120,4=122,5=121,6-7=120,8=122,9-11=121,12=120,13-14=122,15=120,16-17=122,18=121,19=122,20=121,21=122,22=120,23=121,24=120,25=122,26=37,27-32=58,33=38,34=121,35-36=120,37=121,38-39=122,40-41=121,42=122,43=120,44-47=122,48-50=120,51=121,52=120,53=121,54=120,55=121,56=120,57-59=122"
       },
       {
         "name": "chasmOverlay",
@@ -4772,8 +4803,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 862,
-              "y": -356,
+              "x": 293,
+              "y": -604,
               "w": 32,
               "h": 32
             },
@@ -4801,24 +4832,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 862,
-                "y": -356
+                "x": 293,
+                "y": -604
               },
               "tr": {
-                "x": 893,
-                "y": -356
+                "x": 324,
+                "y": -604
               },
               "bl": {
-                "x": 862,
-                "y": -325
+                "x": 293,
+                "y": -573
               },
               "br": {
-                "x": 893,
-                "y": -325
+                "x": 324,
+                "y": -573
               },
               "c": {
-                "x": 878,
-                "y": -340
+                "x": 309,
+                "y": -588
               }
             }
           }
@@ -4837,8 +4868,8 @@
             "h": 0
           },
           "screenBounds": {
-            "x": 878,
-            "y": -372,
+            "x": 309,
+            "y": -620,
             "w": 0,
             "h": 0
           },
@@ -4858,8 +4889,8 @@
                 "h": 34
               },
               "screenBounds": {
-                "x": 861,
-                "y": -357,
+                "x": 292,
+                "y": -605,
                 "w": 34,
                 "h": 34
               },
@@ -4887,24 +4918,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 861,
-                  "y": -357
+                  "x": 292,
+                  "y": -605
                 },
                 "tr": {
-                  "x": 894,
-                  "y": -357
+                  "x": 325,
+                  "y": -605
                 },
                 "bl": {
-                  "x": 861,
-                  "y": -324
+                  "x": 292,
+                  "y": -572
                 },
                 "br": {
-                  "x": 894,
-                  "y": -324
+                  "x": 325,
+                  "y": -572
                 },
                 "c": {
-                  "x": 878,
-                  "y": -340
+                  "x": 309,
+                  "y": -588
                 }
               }
             }
@@ -6364,8 +6395,8 @@
               "h": 64
             },
             "screenBounds": {
-              "x": 846,
-              "y": -328,
+              "x": 277,
+              "y": -576,
               "w": 64,
               "h": 64
             },
@@ -6393,24 +6424,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 846,
-                "y": -328
+                "x": 277,
+                "y": -576
               },
               "tr": {
-                "x": 909,
-                "y": -328
+                "x": 340,
+                "y": -576
               },
               "bl": {
-                "x": 846,
-                "y": -265
+                "x": 277,
+                "y": -513
               },
               "br": {
-                "x": 909,
-                "y": -265
+                "x": 340,
+                "y": -513
               },
               "c": {
-                "x": 878,
-                "y": -296
+                "x": 309,
+                "y": -544
               }
             }
           }
@@ -6429,8 +6460,8 @@
             "h": 0
           },
           "screenBounds": {
-            "x": 878,
-            "y": -296,
+            "x": 309,
+            "y": -544,
             "w": 0,
             "h": 0
           },
@@ -6450,8 +6481,8 @@
                 "h": 74
               },
               "screenBounds": {
-                "x": 841,
-                "y": -333,
+                "x": 272,
+                "y": -581,
                 "w": 74,
                 "h": 74
               },
@@ -6479,24 +6510,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 841,
-                  "y": -333
+                  "x": 272,
+                  "y": -581
                 },
                 "tr": {
-                  "x": 914,
-                  "y": -333
+                  "x": 345,
+                  "y": -581
                 },
                 "bl": {
-                  "x": 841,
-                  "y": -260
+                  "x": 272,
+                  "y": -508
                 },
                 "br": {
-                  "x": 914,
-                  "y": -260
+                  "x": 345,
+                  "y": -508
                 },
                 "c": {
-                  "x": 878,
-                  "y": -296
+                  "x": 309,
+                  "y": -544
                 }
               }
             }
@@ -9300,8 +9331,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 758,
-              "y": -220,
+              "x": 189,
+              "y": -468,
               "w": 32,
               "h": 32
             },
@@ -9329,24 +9360,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 758,
-                "y": -220
+                "x": 189,
+                "y": -468
               },
               "tr": {
-                "x": 789,
-                "y": -220
+                "x": 220,
+                "y": -468
               },
               "bl": {
-                "x": 758,
-                "y": -189
+                "x": 189,
+                "y": -437
               },
               "br": {
-                "x": 789,
-                "y": -189
+                "x": 220,
+                "y": -437
               },
               "c": {
-                "x": 774,
-                "y": -204
+                "x": 205,
+                "y": -452
               }
             }
           }
@@ -9366,8 +9397,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 758,
-              "y": -220,
+              "x": 189,
+              "y": -468,
               "w": 32,
               "h": 32
             },
@@ -9395,24 +9426,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 758,
-                "y": -220
+                "x": 189,
+                "y": -468
               },
               "tr": {
-                "x": 789,
-                "y": -220
+                "x": 220,
+                "y": -468
               },
               "bl": {
-                "x": 758,
-                "y": -189
+                "x": 189,
+                "y": -437
               },
               "br": {
-                "x": 789,
-                "y": -189
+                "x": 220,
+                "y": -437
               },
               "c": {
-                "x": 774,
-                "y": -204
+                "x": 205,
+                "y": -452
               }
             }
           }
@@ -9430,8 +9461,8 @@
             "h": 0
           },
           "screenBounds": {
-            "x": 774,
-            "y": -204,
+            "x": 205,
+            "y": -452,
             "w": 0,
             "h": 0
           },
@@ -9451,8 +9482,8 @@
                 "h": 34
               },
               "screenBounds": {
-                "x": 757,
-                "y": -221,
+                "x": 188,
+                "y": -469,
                 "w": 34,
                 "h": 34
               },
@@ -9480,24 +9511,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 757,
-                  "y": -221
+                  "x": 188,
+                  "y": -469
                 },
                 "tr": {
-                  "x": 790,
-                  "y": -221
+                  "x": 221,
+                  "y": -469
                 },
                 "bl": {
-                  "x": 757,
-                  "y": -188
+                  "x": 188,
+                  "y": -436
                 },
                 "br": {
-                  "x": 790,
-                  "y": -188
+                  "x": 221,
+                  "y": -436
                 },
                 "c": {
-                  "x": 774,
-                  "y": -204
+                  "x": 205,
+                  "y": -452
                 }
               }
             }
@@ -9541,8 +9572,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 814,
-              "y": -356,
+              "x": 245,
+              "y": -604,
               "w": 32,
               "h": 32
             },
@@ -9570,24 +9601,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 814,
-                "y": -356
+                "x": 245,
+                "y": -604
               },
               "tr": {
-                "x": 845,
-                "y": -356
+                "x": 276,
+                "y": -604
               },
               "bl": {
-                "x": 814,
-                "y": -325
+                "x": 245,
+                "y": -573
               },
               "br": {
-                "x": 845,
-                "y": -325
+                "x": 276,
+                "y": -573
               },
               "c": {
-                "x": 830,
-                "y": -340
+                "x": 261,
+                "y": -588
               }
             }
           },
@@ -9605,8 +9636,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 846,
-              "y": -356,
+              "x": 277,
+              "y": -604,
               "w": 32,
               "h": 32
             },
@@ -9634,24 +9665,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 846,
-                "y": -356
+                "x": 277,
+                "y": -604
               },
               "tr": {
-                "x": 877,
-                "y": -356
+                "x": 308,
+                "y": -604
               },
               "bl": {
-                "x": 846,
-                "y": -325
+                "x": 277,
+                "y": -573
               },
               "br": {
-                "x": 877,
-                "y": -325
+                "x": 308,
+                "y": -573
               },
               "c": {
-                "x": 862,
-                "y": -340
+                "x": 293,
+                "y": -588
               }
             }
           },
@@ -9669,8 +9700,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 878,
-              "y": -356,
+              "x": 309,
+              "y": -604,
               "w": 32,
               "h": 32
             },
@@ -9698,24 +9729,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 878,
-                "y": -356
+                "x": 309,
+                "y": -604
               },
               "tr": {
-                "x": 909,
-                "y": -356
+                "x": 340,
+                "y": -604
               },
               "bl": {
-                "x": 878,
-                "y": -325
+                "x": 309,
+                "y": -573
               },
               "br": {
-                "x": 909,
-                "y": -325
+                "x": 340,
+                "y": -573
               },
               "c": {
-                "x": 894,
-                "y": -340
+                "x": 325,
+                "y": -588
               }
             }
           },
@@ -9733,8 +9764,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 910,
-              "y": -356,
+              "x": 341,
+              "y": -604,
               "w": 32,
               "h": 32
             },
@@ -9762,24 +9793,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 910,
-                "y": -356
+                "x": 341,
+                "y": -604
               },
               "tr": {
-                "x": 941,
-                "y": -356
+                "x": 372,
+                "y": -604
               },
               "bl": {
-                "x": 910,
-                "y": -325
+                "x": 341,
+                "y": -573
               },
               "br": {
-                "x": 941,
-                "y": -325
+                "x": 372,
+                "y": -573
               },
               "c": {
-                "x": 926,
-                "y": -340
+                "x": 357,
+                "y": -588
               }
             }
           },
@@ -9797,8 +9828,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 814,
-              "y": -324,
+              "x": 245,
+              "y": -572,
               "w": 32,
               "h": 32
             },
@@ -9826,24 +9857,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 814,
-                "y": -324
+                "x": 245,
+                "y": -572
               },
               "tr": {
-                "x": 845,
-                "y": -324
+                "x": 276,
+                "y": -572
               },
               "bl": {
-                "x": 814,
-                "y": -293
+                "x": 245,
+                "y": -541
               },
               "br": {
-                "x": 845,
-                "y": -293
+                "x": 276,
+                "y": -541
               },
               "c": {
-                "x": 830,
-                "y": -308
+                "x": 261,
+                "y": -556
               }
             }
           },
@@ -9861,8 +9892,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 846,
-              "y": -324,
+              "x": 277,
+              "y": -572,
               "w": 32,
               "h": 32
             },
@@ -9890,24 +9921,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 846,
-                "y": -324
+                "x": 277,
+                "y": -572
               },
               "tr": {
-                "x": 877,
-                "y": -324
+                "x": 308,
+                "y": -572
               },
               "bl": {
-                "x": 846,
-                "y": -293
+                "x": 277,
+                "y": -541
               },
               "br": {
-                "x": 877,
-                "y": -293
+                "x": 308,
+                "y": -541
               },
               "c": {
-                "x": 862,
-                "y": -308
+                "x": 293,
+                "y": -556
               }
             }
           },
@@ -9925,8 +9956,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 878,
-              "y": -324,
+              "x": 309,
+              "y": -572,
               "w": 32,
               "h": 32
             },
@@ -9954,24 +9985,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 878,
-                "y": -324
+                "x": 309,
+                "y": -572
               },
               "tr": {
-                "x": 909,
-                "y": -324
+                "x": 340,
+                "y": -572
               },
               "bl": {
-                "x": 878,
-                "y": -293
+                "x": 309,
+                "y": -541
               },
               "br": {
-                "x": 909,
-                "y": -293
+                "x": 340,
+                "y": -541
               },
               "c": {
-                "x": 894,
-                "y": -308
+                "x": 325,
+                "y": -556
               }
             }
           },
@@ -9989,8 +10020,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 910,
-              "y": -324,
+              "x": 341,
+              "y": -572,
               "w": 32,
               "h": 32
             },
@@ -10018,24 +10049,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 910,
-                "y": -324
+                "x": 341,
+                "y": -572
               },
               "tr": {
-                "x": 941,
-                "y": -324
+                "x": 372,
+                "y": -572
               },
               "bl": {
-                "x": 910,
-                "y": -293
+                "x": 341,
+                "y": -541
               },
               "br": {
-                "x": 941,
-                "y": -293
+                "x": 372,
+                "y": -541
               },
               "c": {
-                "x": 926,
-                "y": -308
+                "x": 357,
+                "y": -556
               }
             }
           },
@@ -10053,8 +10084,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 814,
-              "y": -292,
+              "x": 245,
+              "y": -540,
               "w": 32,
               "h": 32
             },
@@ -10082,24 +10113,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 814,
-                "y": -292
+                "x": 245,
+                "y": -540
               },
               "tr": {
-                "x": 845,
-                "y": -292
+                "x": 276,
+                "y": -540
               },
               "bl": {
-                "x": 814,
-                "y": -261
+                "x": 245,
+                "y": -509
               },
               "br": {
-                "x": 845,
-                "y": -261
+                "x": 276,
+                "y": -509
               },
               "c": {
-                "x": 830,
-                "y": -276
+                "x": 261,
+                "y": -524
               }
             }
           },
@@ -10117,8 +10148,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 846,
-              "y": -292,
+              "x": 277,
+              "y": -540,
               "w": 32,
               "h": 32
             },
@@ -10146,24 +10177,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 846,
-                "y": -292
+                "x": 277,
+                "y": -540
               },
               "tr": {
-                "x": 877,
-                "y": -292
+                "x": 308,
+                "y": -540
               },
               "bl": {
-                "x": 846,
-                "y": -261
+                "x": 277,
+                "y": -509
               },
               "br": {
-                "x": 877,
-                "y": -261
+                "x": 308,
+                "y": -509
               },
               "c": {
-                "x": 862,
-                "y": -276
+                "x": 293,
+                "y": -524
               }
             }
           },
@@ -10181,8 +10212,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 878,
-              "y": -292,
+              "x": 309,
+              "y": -540,
               "w": 32,
               "h": 32
             },
@@ -10210,24 +10241,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 878,
-                "y": -292
+                "x": 309,
+                "y": -540
               },
               "tr": {
-                "x": 909,
-                "y": -292
+                "x": 340,
+                "y": -540
               },
               "bl": {
-                "x": 878,
-                "y": -261
+                "x": 309,
+                "y": -509
               },
               "br": {
-                "x": 909,
-                "y": -261
+                "x": 340,
+                "y": -509
               },
               "c": {
-                "x": 894,
-                "y": -276
+                "x": 325,
+                "y": -524
               }
             }
           },
@@ -10245,8 +10276,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 910,
-              "y": -292,
+              "x": 341,
+              "y": -540,
               "w": 32,
               "h": 32
             },
@@ -10274,24 +10305,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 910,
-                "y": -292
+                "x": 341,
+                "y": -540
               },
               "tr": {
-                "x": 941,
-                "y": -292
+                "x": 372,
+                "y": -540
               },
               "bl": {
-                "x": 910,
-                "y": -261
+                "x": 341,
+                "y": -509
               },
               "br": {
-                "x": 941,
-                "y": -261
+                "x": 372,
+                "y": -509
               },
               "c": {
-                "x": 926,
-                "y": -276
+                "x": 357,
+                "y": -524
               }
             }
           },
@@ -10309,8 +10340,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 814,
-              "y": -260,
+              "x": 245,
+              "y": -508,
               "w": 32,
               "h": 32
             },
@@ -10338,24 +10369,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 814,
-                "y": -260
+                "x": 245,
+                "y": -508
               },
               "tr": {
-                "x": 845,
-                "y": -260
+                "x": 276,
+                "y": -508
               },
               "bl": {
-                "x": 814,
-                "y": -229
+                "x": 245,
+                "y": -477
               },
               "br": {
-                "x": 845,
-                "y": -229
+                "x": 276,
+                "y": -477
               },
               "c": {
-                "x": 830,
-                "y": -244
+                "x": 261,
+                "y": -492
               }
             }
           },
@@ -10373,8 +10404,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 846,
-              "y": -260,
+              "x": 277,
+              "y": -508,
               "w": 32,
               "h": 32
             },
@@ -10402,24 +10433,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 846,
-                "y": -260
+                "x": 277,
+                "y": -508
               },
               "tr": {
-                "x": 877,
-                "y": -260
+                "x": 308,
+                "y": -508
               },
               "bl": {
-                "x": 846,
-                "y": -229
+                "x": 277,
+                "y": -477
               },
               "br": {
-                "x": 877,
-                "y": -229
+                "x": 308,
+                "y": -477
               },
               "c": {
-                "x": 862,
-                "y": -244
+                "x": 293,
+                "y": -492
               }
             }
           },
@@ -10437,8 +10468,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 878,
-              "y": -260,
+              "x": 309,
+              "y": -508,
               "w": 32,
               "h": 32
             },
@@ -10466,24 +10497,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 878,
-                "y": -260
+                "x": 309,
+                "y": -508
               },
               "tr": {
-                "x": 909,
-                "y": -260
+                "x": 340,
+                "y": -508
               },
               "bl": {
-                "x": 878,
-                "y": -229
+                "x": 309,
+                "y": -477
               },
               "br": {
-                "x": 909,
-                "y": -229
+                "x": 340,
+                "y": -477
               },
               "c": {
-                "x": 894,
-                "y": -244
+                "x": 325,
+                "y": -492
               }
             }
           },
@@ -10501,8 +10532,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 910,
-              "y": -260,
+              "x": 341,
+              "y": -508,
               "w": 32,
               "h": 32
             },
@@ -10530,24 +10561,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 910,
-                "y": -260
+                "x": 341,
+                "y": -508
               },
               "tr": {
-                "x": 941,
-                "y": -260
+                "x": 372,
+                "y": -508
               },
               "bl": {
-                "x": 910,
-                "y": -229
+                "x": 341,
+                "y": -477
               },
               "br": {
-                "x": 941,
-                "y": -229
+                "x": 372,
+                "y": -477
               },
               "c": {
-                "x": 926,
-                "y": -244
+                "x": 357,
+                "y": -492
               }
             }
           }
@@ -10566,8 +10597,8 @@
             "h": 0
           },
           "screenBounds": {
-            "x": 878,
-            "y": -292,
+            "x": 309,
+            "y": -540,
             "w": 0,
             "h": 0
           },
@@ -10587,8 +10618,8 @@
                 "h": 34
               },
               "screenBounds": {
-                "x": 813,
-                "y": -357,
+                "x": 244,
+                "y": -605,
                 "w": 34,
                 "h": 34
               },
@@ -10616,24 +10647,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 813,
-                  "y": -357
+                  "x": 244,
+                  "y": -605
                 },
                 "tr": {
-                  "x": 846,
-                  "y": -357
+                  "x": 277,
+                  "y": -605
                 },
                 "bl": {
-                  "x": 813,
-                  "y": -324
+                  "x": 244,
+                  "y": -572
                 },
                 "br": {
-                  "x": 846,
-                  "y": -324
+                  "x": 277,
+                  "y": -572
                 },
                 "c": {
-                  "x": 830,
-                  "y": -340
+                  "x": 261,
+                  "y": -588
                 }
               }
             },
@@ -10652,8 +10683,8 @@
                 "h": 42
               },
               "screenBounds": {
-                "x": 841,
-                "y": -361,
+                "x": 272,
+                "y": -609,
                 "w": 42,
                 "h": 42
               },
@@ -10681,24 +10712,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 841,
-                  "y": -361
+                  "x": 272,
+                  "y": -609
                 },
                 "tr": {
-                  "x": 882,
-                  "y": -361
+                  "x": 313,
+                  "y": -609
                 },
                 "bl": {
-                  "x": 841,
-                  "y": -320
+                  "x": 272,
+                  "y": -568
                 },
                 "br": {
-                  "x": 882,
-                  "y": -320
+                  "x": 313,
+                  "y": -568
                 },
                 "c": {
-                  "x": 862,
-                  "y": -340
+                  "x": 293,
+                  "y": -588
                 }
               }
             },
@@ -10717,8 +10748,8 @@
                 "h": 42
               },
               "screenBounds": {
-                "x": 873,
-                "y": -361,
+                "x": 304,
+                "y": -609,
                 "w": 42,
                 "h": 42
               },
@@ -10746,24 +10777,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 873,
-                  "y": -361
+                  "x": 304,
+                  "y": -609
                 },
                 "tr": {
-                  "x": 914,
-                  "y": -361
+                  "x": 345,
+                  "y": -609
                 },
                 "bl": {
-                  "x": 873,
-                  "y": -320
+                  "x": 304,
+                  "y": -568
                 },
                 "br": {
-                  "x": 914,
-                  "y": -320
+                  "x": 345,
+                  "y": -568
                 },
                 "c": {
-                  "x": 894,
-                  "y": -340
+                  "x": 325,
+                  "y": -588
                 }
               }
             },
@@ -10782,8 +10813,8 @@
                 "h": 34
               },
               "screenBounds": {
-                "x": 909,
-                "y": -357,
+                "x": 340,
+                "y": -605,
                 "w": 34,
                 "h": 34
               },
@@ -10811,24 +10842,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 909,
-                  "y": -357
+                  "x": 340,
+                  "y": -605
                 },
                 "tr": {
-                  "x": 942,
-                  "y": -357
+                  "x": 373,
+                  "y": -605
                 },
                 "bl": {
-                  "x": 909,
-                  "y": -324
+                  "x": 340,
+                  "y": -572
                 },
                 "br": {
-                  "x": 942,
-                  "y": -324
+                  "x": 373,
+                  "y": -572
                 },
                 "c": {
-                  "x": 926,
-                  "y": -340
+                  "x": 357,
+                  "y": -588
                 }
               }
             },
@@ -10847,8 +10878,8 @@
                 "h": 34
               },
               "screenBounds": {
-                "x": 813,
-                "y": -325,
+                "x": 244,
+                "y": -573,
                 "w": 34,
                 "h": 34
               },
@@ -10876,24 +10907,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 813,
-                  "y": -325
+                  "x": 244,
+                  "y": -573
                 },
                 "tr": {
-                  "x": 846,
-                  "y": -325
+                  "x": 277,
+                  "y": -573
                 },
                 "bl": {
-                  "x": 813,
-                  "y": -292
+                  "x": 244,
+                  "y": -540
                 },
                 "br": {
-                  "x": 846,
-                  "y": -292
+                  "x": 277,
+                  "y": -540
                 },
                 "c": {
-                  "x": 830,
-                  "y": -308
+                  "x": 261,
+                  "y": -556
                 }
               }
             },
@@ -10912,8 +10943,8 @@
                 "h": 42
               },
               "screenBounds": {
-                "x": 841,
-                "y": -329,
+                "x": 272,
+                "y": -577,
                 "w": 42,
                 "h": 42
               },
@@ -10941,24 +10972,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 841,
-                  "y": -329
+                  "x": 272,
+                  "y": -577
                 },
                 "tr": {
-                  "x": 882,
-                  "y": -329
+                  "x": 313,
+                  "y": -577
                 },
                 "bl": {
-                  "x": 841,
-                  "y": -288
+                  "x": 272,
+                  "y": -536
                 },
                 "br": {
-                  "x": 882,
-                  "y": -288
+                  "x": 313,
+                  "y": -536
                 },
                 "c": {
-                  "x": 862,
-                  "y": -308
+                  "x": 293,
+                  "y": -556
                 }
               }
             },
@@ -10977,8 +11008,8 @@
                 "h": 42
               },
               "screenBounds": {
-                "x": 873,
-                "y": -329,
+                "x": 304,
+                "y": -577,
                 "w": 42,
                 "h": 42
               },
@@ -11006,24 +11037,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 873,
-                  "y": -329
+                  "x": 304,
+                  "y": -577
                 },
                 "tr": {
-                  "x": 914,
-                  "y": -329
+                  "x": 345,
+                  "y": -577
                 },
                 "bl": {
-                  "x": 873,
-                  "y": -288
+                  "x": 304,
+                  "y": -536
                 },
                 "br": {
-                  "x": 914,
-                  "y": -288
+                  "x": 345,
+                  "y": -536
                 },
                 "c": {
-                  "x": 894,
-                  "y": -308
+                  "x": 325,
+                  "y": -556
                 }
               }
             },
@@ -11042,8 +11073,8 @@
                 "h": 34
               },
               "screenBounds": {
-                "x": 909,
-                "y": -325,
+                "x": 340,
+                "y": -573,
                 "w": 34,
                 "h": 34
               },
@@ -11071,24 +11102,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 909,
-                  "y": -325
+                  "x": 340,
+                  "y": -573
                 },
                 "tr": {
-                  "x": 942,
-                  "y": -325
+                  "x": 373,
+                  "y": -573
                 },
                 "bl": {
-                  "x": 909,
-                  "y": -292
+                  "x": 340,
+                  "y": -540
                 },
                 "br": {
-                  "x": 942,
-                  "y": -292
+                  "x": 373,
+                  "y": -540
                 },
                 "c": {
-                  "x": 926,
-                  "y": -308
+                  "x": 357,
+                  "y": -556
                 }
               }
             },
@@ -11107,8 +11138,8 @@
                 "h": 34
               },
               "screenBounds": {
-                "x": 813,
-                "y": -293,
+                "x": 244,
+                "y": -541,
                 "w": 34,
                 "h": 34
               },
@@ -11136,24 +11167,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 813,
-                  "y": -293
+                  "x": 244,
+                  "y": -541
                 },
                 "tr": {
-                  "x": 846,
-                  "y": -293
+                  "x": 277,
+                  "y": -541
                 },
                 "bl": {
-                  "x": 813,
-                  "y": -260
+                  "x": 244,
+                  "y": -508
                 },
                 "br": {
-                  "x": 846,
-                  "y": -260
+                  "x": 277,
+                  "y": -508
                 },
                 "c": {
-                  "x": 830,
-                  "y": -276
+                  "x": 261,
+                  "y": -524
                 }
               }
             },
@@ -11172,8 +11203,8 @@
                 "h": 42
               },
               "screenBounds": {
-                "x": 841,
-                "y": -297,
+                "x": 272,
+                "y": -545,
                 "w": 42,
                 "h": 42
               },
@@ -11201,24 +11232,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 841,
-                  "y": -297
+                  "x": 272,
+                  "y": -545
                 },
                 "tr": {
-                  "x": 882,
-                  "y": -297
+                  "x": 313,
+                  "y": -545
                 },
                 "bl": {
-                  "x": 841,
-                  "y": -256
+                  "x": 272,
+                  "y": -504
                 },
                 "br": {
-                  "x": 882,
-                  "y": -256
+                  "x": 313,
+                  "y": -504
                 },
                 "c": {
-                  "x": 862,
-                  "y": -276
+                  "x": 293,
+                  "y": -524
                 }
               }
             },
@@ -11237,8 +11268,8 @@
                 "h": 42
               },
               "screenBounds": {
-                "x": 873,
-                "y": -297,
+                "x": 304,
+                "y": -545,
                 "w": 42,
                 "h": 42
               },
@@ -11266,24 +11297,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 873,
-                  "y": -297
+                  "x": 304,
+                  "y": -545
                 },
                 "tr": {
-                  "x": 914,
-                  "y": -297
+                  "x": 345,
+                  "y": -545
                 },
                 "bl": {
-                  "x": 873,
-                  "y": -256
+                  "x": 304,
+                  "y": -504
                 },
                 "br": {
-                  "x": 914,
-                  "y": -256
+                  "x": 345,
+                  "y": -504
                 },
                 "c": {
-                  "x": 894,
-                  "y": -276
+                  "x": 325,
+                  "y": -524
                 }
               }
             },
@@ -11302,8 +11333,8 @@
                 "h": 34
               },
               "screenBounds": {
-                "x": 909,
-                "y": -293,
+                "x": 340,
+                "y": -541,
                 "w": 34,
                 "h": 34
               },
@@ -11331,24 +11362,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 909,
-                  "y": -293
+                  "x": 340,
+                  "y": -541
                 },
                 "tr": {
-                  "x": 942,
-                  "y": -293
+                  "x": 373,
+                  "y": -541
                 },
                 "bl": {
-                  "x": 909,
-                  "y": -260
+                  "x": 340,
+                  "y": -508
                 },
                 "br": {
-                  "x": 942,
-                  "y": -260
+                  "x": 373,
+                  "y": -508
                 },
                 "c": {
-                  "x": 926,
-                  "y": -276
+                  "x": 357,
+                  "y": -524
                 }
               }
             },
@@ -11367,8 +11398,8 @@
                 "h": 34
               },
               "screenBounds": {
-                "x": 813,
-                "y": -261,
+                "x": 244,
+                "y": -509,
                 "w": 34,
                 "h": 34
               },
@@ -11396,24 +11427,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 813,
-                  "y": -261
+                  "x": 244,
+                  "y": -509
                 },
                 "tr": {
-                  "x": 846,
-                  "y": -261
+                  "x": 277,
+                  "y": -509
                 },
                 "bl": {
-                  "x": 813,
-                  "y": -228
+                  "x": 244,
+                  "y": -476
                 },
                 "br": {
-                  "x": 846,
-                  "y": -228
+                  "x": 277,
+                  "y": -476
                 },
                 "c": {
-                  "x": 830,
-                  "y": -244
+                  "x": 261,
+                  "y": -492
                 }
               }
             },
@@ -11432,8 +11463,8 @@
                 "h": 34
               },
               "screenBounds": {
-                "x": 845,
-                "y": -261,
+                "x": 276,
+                "y": -509,
                 "w": 34,
                 "h": 34
               },
@@ -11461,24 +11492,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 845,
-                  "y": -261
+                  "x": 276,
+                  "y": -509
                 },
                 "tr": {
-                  "x": 878,
-                  "y": -261
+                  "x": 309,
+                  "y": -509
                 },
                 "bl": {
-                  "x": 845,
-                  "y": -228
+                  "x": 276,
+                  "y": -476
                 },
                 "br": {
-                  "x": 878,
-                  "y": -228
+                  "x": 309,
+                  "y": -476
                 },
                 "c": {
-                  "x": 862,
-                  "y": -244
+                  "x": 293,
+                  "y": -492
                 }
               }
             },
@@ -11497,8 +11528,8 @@
                 "h": 34
               },
               "screenBounds": {
-                "x": 877,
-                "y": -261,
+                "x": 308,
+                "y": -509,
                 "w": 34,
                 "h": 34
               },
@@ -11526,24 +11557,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 877,
-                  "y": -261
+                  "x": 308,
+                  "y": -509
                 },
                 "tr": {
-                  "x": 910,
-                  "y": -261
+                  "x": 341,
+                  "y": -509
                 },
                 "bl": {
-                  "x": 877,
-                  "y": -228
+                  "x": 308,
+                  "y": -476
                 },
                 "br": {
-                  "x": 910,
-                  "y": -228
+                  "x": 341,
+                  "y": -476
                 },
                 "c": {
-                  "x": 894,
-                  "y": -244
+                  "x": 325,
+                  "y": -492
                 }
               }
             },
@@ -11562,8 +11593,8 @@
                 "h": 34
               },
               "screenBounds": {
-                "x": 909,
-                "y": -261,
+                "x": 340,
+                "y": -509,
                 "w": 34,
                 "h": 34
               },
@@ -11591,24 +11622,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 909,
-                  "y": -261
+                  "x": 340,
+                  "y": -509
                 },
                 "tr": {
-                  "x": 942,
-                  "y": -261
+                  "x": 373,
+                  "y": -509
                 },
                 "bl": {
-                  "x": 909,
-                  "y": -228
+                  "x": 340,
+                  "y": -476
                 },
                 "br": {
-                  "x": 942,
-                  "y": -228
+                  "x": 373,
+                  "y": -476
                 },
                 "c": {
-                  "x": 926,
-                  "y": -244
+                  "x": 357,
+                  "y": -492
                 }
               }
             }
@@ -12483,6 +12514,247 @@
       },
       {
         "anchor": {
+          "r": 31,
+          "c": 32
+        },
+        "rawKey": "teleport_rune_testing",
+        "baseName": "teleport_rune_testing",
+        "textureKey": "anims.teleportrune 64x64",
+        "baseRef": {
+          "row": 0,
+          "col": 0
+        },
+        "wTiles": 1,
+        "hTiles": 1,
+        "offset": {
+          "x": 0,
+          "y": 0
+        },
+        "baseDepth": 102000,
+        "state": "",
+        "objs": [
+          {
+            "x": 1040,
+            "y": 1020,
+            "depth": 102000,
+            "tex": "anims.teleportrune 64x64",
+            "frame": 0,
+            "vis": true,
+            "bounds": {
+              "x": 1008,
+              "y": 988,
+              "w": 64,
+              "h": 64
+            },
+            "screenBounds": {
+              "x": 357,
+              "y": 384,
+              "w": 64,
+              "h": 64
+            },
+            "boundsPts": {
+              "tl": {
+                "x": 1008,
+                "y": 988
+              },
+              "tr": {
+                "x": 1071,
+                "y": 988
+              },
+              "bl": {
+                "x": 1008,
+                "y": 1051
+              },
+              "br": {
+                "x": 1071,
+                "y": 1051
+              },
+              "c": {
+                "x": 1040,
+                "y": 1020
+              }
+            },
+            "screenPts": {
+              "tl": {
+                "x": 357,
+                "y": 384
+              },
+              "tr": {
+                "x": 420,
+                "y": 384
+              },
+              "bl": {
+                "x": 357,
+                "y": 447
+              },
+              "br": {
+                "x": 420,
+                "y": 447
+              },
+              "c": {
+                "x": 389,
+                "y": 416
+              }
+            }
+          }
+        ],
+        "overlays": [
+          {
+            "x": 1040,
+            "y": 1020,
+            "depth": 102001,
+            "tex": "anims.teleportrune 64x64",
+            "frame": 0,
+            "vis": true,
+            "bounds": {
+              "x": 1008,
+              "y": 988,
+              "w": 64,
+              "h": 64
+            },
+            "screenBounds": {
+              "x": 357,
+              "y": 384,
+              "w": 64,
+              "h": 64
+            },
+            "boundsPts": {
+              "tl": {
+                "x": 1008,
+                "y": 988
+              },
+              "tr": {
+                "x": 1071,
+                "y": 988
+              },
+              "bl": {
+                "x": 1008,
+                "y": 1051
+              },
+              "br": {
+                "x": 1071,
+                "y": 1051
+              },
+              "c": {
+                "x": 1040,
+                "y": 1020
+              }
+            },
+            "screenPts": {
+              "tl": {
+                "x": 357,
+                "y": 384
+              },
+              "tr": {
+                "x": 420,
+                "y": 384
+              },
+              "bl": {
+                "x": 357,
+                "y": 447
+              },
+              "br": {
+                "x": 420,
+                "y": 447
+              },
+              "c": {
+                "x": 389,
+                "y": 416
+              }
+            }
+          }
+        ],
+        "aura": {
+          "depth": 0,
+          "vis": false,
+          "alpha": 1,
+          "x": 1040,
+          "y": 1020,
+          "bounds": {
+            "x": 1040,
+            "y": 1020,
+            "w": 0,
+            "h": 0
+          },
+          "screenBounds": {
+            "x": 389,
+            "y": 416,
+            "w": 0,
+            "h": 0
+          },
+          "kids": [
+            {
+              "x": 1040,
+              "y": 1020,
+              "depth": 0,
+              "tex": "__auraPad__anims.teleportrune 64x64_aura_r1::0::p4::f::rb::rt",
+              "frame": "__BASE",
+              "vis": false,
+              "alpha": 1,
+              "bounds": {
+                "x": 1003,
+                "y": 983,
+                "w": 74,
+                "h": 74
+              },
+              "screenBounds": {
+                "x": 352,
+                "y": 379,
+                "w": 74,
+                "h": 74
+              },
+              "boundsPts": {
+                "tl": {
+                  "x": 1003,
+                  "y": 983
+                },
+                "tr": {
+                  "x": 1076,
+                  "y": 983
+                },
+                "bl": {
+                  "x": 1003,
+                  "y": 1056
+                },
+                "br": {
+                  "x": 1076,
+                  "y": 1056
+                },
+                "c": {
+                  "x": 1040,
+                  "y": 1020
+                }
+              },
+              "screenPts": {
+                "tl": {
+                  "x": 352,
+                  "y": 379
+                },
+                "tr": {
+                  "x": 425,
+                  "y": 379
+                },
+                "bl": {
+                  "x": 352,
+                  "y": 452
+                },
+                "br": {
+                  "x": 425,
+                  "y": 452
+                },
+                "c": {
+                  "x": 389,
+                  "y": 416
+                }
+              }
+            }
+          ],
+          "boundsPts": null,
+          "screenPts": null
+        }
+      },
+      {
+        "anchor": {
           "r": 4,
           "c": 33
         },
@@ -12504,65 +12776,65 @@
         "objs": [
           {
             "x": 1064,
-            "y": 119,
+            "y": 118,
             "depth": 16902,
             "tex": "anims.Book 32x40",
             "frame": 0,
             "vis": true,
             "bounds": {
               "x": 1048,
-              "y": 99,
+              "y": 98,
               "w": 32,
               "h": 40
             },
             "screenBounds": {
-              "x": 966,
-              "y": -257,
+              "x": 397,
+              "y": -506,
               "w": 32,
               "h": 40
             },
             "boundsPts": {
               "tl": {
                 "x": 1048,
-                "y": 99
+                "y": 98
               },
               "tr": {
                 "x": 1079,
-                "y": 99
+                "y": 98
               },
               "bl": {
                 "x": 1048,
-                "y": 138
+                "y": 137
               },
               "br": {
                 "x": 1079,
-                "y": 138
+                "y": 137
               },
               "c": {
                 "x": 1064,
-                "y": 119
+                "y": 118
               }
             },
             "screenPts": {
               "tl": {
-                "x": 966,
-                "y": -257
+                "x": 397,
+                "y": -506
               },
               "tr": {
-                "x": 997,
-                "y": -257
+                "x": 428,
+                "y": -506
               },
               "bl": {
-                "x": 966,
-                "y": -218
+                "x": 397,
+                "y": -467
               },
               "br": {
-                "x": 997,
-                "y": -218
+                "x": 428,
+                "y": -467
               },
               "c": {
-                "x": 982,
-                "y": -237
+                "x": 413,
+                "y": -486
               }
             }
           }
@@ -12581,8 +12853,8 @@
             "h": 0
           },
           "screenBounds": {
-            "x": 982,
-            "y": -235,
+            "x": 413,
+            "y": -483,
             "w": 0,
             "h": 0
           },
@@ -12602,8 +12874,8 @@
                 "h": 42
               },
               "screenBounds": {
-                "x": 965,
-                "y": -256,
+                "x": 396,
+                "y": -504,
                 "w": 34,
                 "h": 42
               },
@@ -12631,24 +12903,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 965,
-                  "y": -256
+                  "x": 396,
+                  "y": -504
                 },
                 "tr": {
-                  "x": 998,
-                  "y": -256
+                  "x": 429,
+                  "y": -504
                 },
                 "bl": {
-                  "x": 965,
-                  "y": -215
+                  "x": 396,
+                  "y": -463
                 },
                 "br": {
-                  "x": 998,
-                  "y": -215
+                  "x": 429,
+                  "y": -463
                 },
                 "c": {
-                  "x": 982,
-                  "y": -235
+                  "x": 413,
+                  "y": -483
                 }
               }
             }
@@ -12692,8 +12964,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 950,
-              "y": -236,
+              "x": 381,
+              "y": -484,
               "w": 32,
               "h": 32
             },
@@ -12721,24 +12993,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 950,
-                "y": -236
+                "x": 381,
+                "y": -484
               },
               "tr": {
-                "x": 981,
-                "y": -236
+                "x": 412,
+                "y": -484
               },
               "bl": {
-                "x": 950,
-                "y": -205
+                "x": 381,
+                "y": -453
               },
               "br": {
-                "x": 981,
-                "y": -205
+                "x": 412,
+                "y": -453
               },
               "c": {
-                "x": 966,
-                "y": -220
+                "x": 397,
+                "y": -468
               }
             }
           },
@@ -12756,8 +13028,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 982,
-              "y": -236,
+              "x": 413,
+              "y": -484,
               "w": 32,
               "h": 32
             },
@@ -12785,24 +13057,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 982,
-                "y": -236
+                "x": 413,
+                "y": -484
               },
               "tr": {
-                "x": 1013,
-                "y": -236
+                "x": 444,
+                "y": -484
               },
               "bl": {
-                "x": 982,
-                "y": -205
+                "x": 413,
+                "y": -453
               },
               "br": {
-                "x": 1013,
-                "y": -205
+                "x": 444,
+                "y": -453
               },
               "c": {
-                "x": 998,
-                "y": -220
+                "x": 429,
+                "y": -468
               }
             }
           },
@@ -12820,8 +13092,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 950,
-              "y": -204,
+              "x": 381,
+              "y": -452,
               "w": 32,
               "h": 32
             },
@@ -12849,24 +13121,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 950,
-                "y": -204
+                "x": 381,
+                "y": -452
               },
               "tr": {
-                "x": 981,
-                "y": -204
+                "x": 412,
+                "y": -452
               },
               "bl": {
-                "x": 950,
-                "y": -173
+                "x": 381,
+                "y": -421
               },
               "br": {
-                "x": 981,
-                "y": -173
+                "x": 412,
+                "y": -421
               },
               "c": {
-                "x": 966,
-                "y": -188
+                "x": 397,
+                "y": -436
               }
             }
           },
@@ -12884,8 +13156,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 982,
-              "y": -204,
+              "x": 413,
+              "y": -452,
               "w": 32,
               "h": 32
             },
@@ -12913,24 +13185,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 982,
-                "y": -204
+                "x": 413,
+                "y": -452
               },
               "tr": {
-                "x": 1013,
-                "y": -204
+                "x": 444,
+                "y": -452
               },
               "bl": {
-                "x": 982,
-                "y": -173
+                "x": 413,
+                "y": -421
               },
               "br": {
-                "x": 1013,
-                "y": -173
+                "x": 444,
+                "y": -421
               },
               "c": {
-                "x": 998,
-                "y": -188
+                "x": 429,
+                "y": -436
               }
             }
           }
@@ -12949,8 +13221,8 @@
             "h": 0
           },
           "screenBounds": {
-            "x": 982,
-            "y": -204,
+            "x": 413,
+            "y": -452,
             "w": 0,
             "h": 0
           },
@@ -12970,8 +13242,8 @@
                 "h": 42
               },
               "screenBounds": {
-                "x": 945,
-                "y": -241,
+                "x": 376,
+                "y": -489,
                 "w": 42,
                 "h": 42
               },
@@ -12999,24 +13271,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 945,
-                  "y": -241
+                  "x": 376,
+                  "y": -489
                 },
                 "tr": {
-                  "x": 986,
-                  "y": -241
+                  "x": 417,
+                  "y": -489
                 },
                 "bl": {
-                  "x": 945,
-                  "y": -200
+                  "x": 376,
+                  "y": -448
                 },
                 "br": {
-                  "x": 986,
-                  "y": -200
+                  "x": 417,
+                  "y": -448
                 },
                 "c": {
-                  "x": 966,
-                  "y": -220
+                  "x": 397,
+                  "y": -468
                 }
               }
             },
@@ -13035,8 +13307,8 @@
                 "h": 42
               },
               "screenBounds": {
-                "x": 977,
-                "y": -241,
+                "x": 408,
+                "y": -489,
                 "w": 42,
                 "h": 42
               },
@@ -13064,24 +13336,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 977,
-                  "y": -241
+                  "x": 408,
+                  "y": -489
                 },
                 "tr": {
-                  "x": 1018,
-                  "y": -241
+                  "x": 449,
+                  "y": -489
                 },
                 "bl": {
-                  "x": 977,
-                  "y": -200
+                  "x": 408,
+                  "y": -448
                 },
                 "br": {
-                  "x": 1018,
-                  "y": -200
+                  "x": 449,
+                  "y": -448
                 },
                 "c": {
-                  "x": 998,
-                  "y": -220
+                  "x": 429,
+                  "y": -468
                 }
               }
             },
@@ -13100,8 +13372,8 @@
                 "h": 42
               },
               "screenBounds": {
-                "x": 945,
-                "y": -209,
+                "x": 376,
+                "y": -457,
                 "w": 42,
                 "h": 42
               },
@@ -13129,24 +13401,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 945,
-                  "y": -209
+                  "x": 376,
+                  "y": -457
                 },
                 "tr": {
-                  "x": 986,
-                  "y": -209
+                  "x": 417,
+                  "y": -457
                 },
                 "bl": {
-                  "x": 945,
-                  "y": -168
+                  "x": 376,
+                  "y": -416
                 },
                 "br": {
-                  "x": 986,
-                  "y": -168
+                  "x": 417,
+                  "y": -416
                 },
                 "c": {
-                  "x": 966,
-                  "y": -188
+                  "x": 397,
+                  "y": -436
                 }
               }
             },
@@ -13165,8 +13437,8 @@
                 "h": 42
               },
               "screenBounds": {
-                "x": 977,
-                "y": -209,
+                "x": 408,
+                "y": -457,
                 "w": 42,
                 "h": 42
               },
@@ -13194,24 +13466,24 @@
               },
               "screenPts": {
                 "tl": {
-                  "x": 977,
-                  "y": -209
+                  "x": 408,
+                  "y": -457
                 },
                 "tr": {
-                  "x": 1018,
-                  "y": -209
+                  "x": 449,
+                  "y": -457
                 },
                 "bl": {
-                  "x": 977,
-                  "y": -168
+                  "x": 408,
+                  "y": -416
                 },
                 "br": {
-                  "x": 1018,
-                  "y": -168
+                  "x": 449,
+                  "y": -416
                 },
                 "c": {
-                  "x": 998,
-                  "y": -188
+                  "x": 429,
+                  "y": -436
                 }
               }
             }
@@ -16477,8 +16749,8 @@
               "h": 32
             },
             "screenBounds": {
-              "x": 758,
-              "y": -220,
+              "x": 189,
+              "y": -468,
               "w": 32,
               "h": 32
             },
@@ -16506,24 +16778,24 @@
             },
             "screenPts": {
               "tl": {
-                "x": 758,
-                "y": -220
+                "x": 189,
+                "y": -468
               },
               "tr": {
-                "x": 789,
-                "y": -220
+                "x": 220,
+                "y": -468
               },
               "bl": {
-                "x": 758,
-                "y": -189
+                "x": 189,
+                "y": -437
               },
               "br": {
-                "x": 789,
-                "y": -189
+                "x": 220,
+                "y": -437
               },
               "c": {
-                "x": 774,
-                "y": -204
+                "x": 205,
+                "y": -452
               }
             }
           }
@@ -17128,6 +17400,93 @@
         "overlays": []
       },
       {
+        "baseName": "teleport_rune_testing",
+        "anchor": {
+          "r": 31,
+          "c": 32
+        },
+        "basePos": {
+          "x": 1040,
+          "y": 1020
+        },
+        "auraPos": {
+          "x": 1040,
+          "y": 1020
+        },
+        "auraVis": 0,
+        "auraAlpha": 1,
+        "delta": {
+          "dx": 0,
+          "dy": 0
+        },
+        "overlays": [
+          {
+            "x": 1040,
+            "y": 1020,
+            "depth": 102001,
+            "tex": "anims.teleportrune 64x64",
+            "frame": 0,
+            "vis": true,
+            "bounds": {
+              "x": 1008,
+              "y": 988,
+              "w": 64,
+              "h": 64
+            },
+            "screenBounds": {
+              "x": 357,
+              "y": 384,
+              "w": 64,
+              "h": 64
+            },
+            "boundsPts": {
+              "tl": {
+                "x": 1008,
+                "y": 988
+              },
+              "tr": {
+                "x": 1071,
+                "y": 988
+              },
+              "bl": {
+                "x": 1008,
+                "y": 1051
+              },
+              "br": {
+                "x": 1071,
+                "y": 1051
+              },
+              "c": {
+                "x": 1040,
+                "y": 1020
+              }
+            },
+            "screenPts": {
+              "tl": {
+                "x": 357,
+                "y": 384
+              },
+              "tr": {
+                "x": 420,
+                "y": 384
+              },
+              "bl": {
+                "x": 357,
+                "y": 447
+              },
+              "br": {
+                "x": 420,
+                "y": 447
+              },
+              "c": {
+                "x": 389,
+                "y": 416
+              }
+            }
+          }
+        ]
+      },
+      {
         "baseName": "book_memories",
         "anchor": {
           "r": 4,
@@ -17135,7 +17494,7 @@
         },
         "basePos": {
           "x": 1064,
-          "y": 119
+          "y": 118
         },
         "auraPos": {
           "x": 1064,
@@ -17145,7 +17504,7 @@
         "auraAlpha": 1,
         "delta": {
           "dx": 0,
-          "dy": 2
+          "dy": 3
         },
         "overlays": []
       },
@@ -17177,7 +17536,7 @@
     "intervalMs": 250,
     "samples": [
       {
-        "t": 1317,
+        "t": 1372,
         "events": [
           {
             "type": "appear",
@@ -17672,6 +18031,74 @@
           },
           {
             "type": "appear",
+            "key": "prop:teleport_rune_testing:31,32:anims.teleportrune 64x64:teleport_rune_testing:base",
+            "data": {
+              "kind": "propBase",
+              "x": 1040,
+              "y": 1020,
+              "depth": 102000,
+              "tex": "anims.teleportrune 64x64",
+              "frame": 0,
+              "vis": true,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:teleport_rune_testing:31,32:anims.teleportrune 64x64:teleport_rune_testing:overlay:0",
+            "data": {
+              "kind": "overlay",
+              "x": 1040,
+              "y": 1020,
+              "depth": 102001,
+              "tex": "anims.teleportrune 64x64",
+              "frame": 0,
+              "vis": true,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:teleport_rune_testing:31,32:anims.teleportrune 64x64:teleport_rune_testing:aura",
+            "data": {
+              "kind": "aura",
+              "x": 1040,
+              "y": 1020,
+              "depth": 0,
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
+            "key": "prop:teleport_rune_testing:31,32:anims.teleportrune 64x64:teleport_rune_testing:auraKid:0",
+            "data": {
+              "kind": "auraKid",
+              "x": 1040,
+              "y": 1020,
+              "depth": 0,
+              "tex": "__auraPad__anims.teleportrune 64x64_aura_r1::0::p4::f::rb::rt",
+              "frame": "__BASE",
+              "vis": false,
+              "alpha": 1,
+              "bounds": null,
+              "boundsPts": null,
+              "screenBounds": null,
+              "screenPts": null
+            }
+          },
+          {
+            "type": "appear",
             "key": "prop:book_memories:4,33:anims.Book 32x40:book_memories@0:base",
             "data": {
               "kind": "propBase",
@@ -17840,13 +18267,13 @@
           {
             "type": "layer",
             "key": "layer:ground",
-            "hash": -516519058,
+            "hash": 764807281,
             "prev": 0
           },
           {
             "type": "layer",
             "key": "layer:chasm",
-            "hash": 421887034,
+            "hash": 212118411,
             "prev": 0
           },
           {

@@ -167,6 +167,7 @@ export const DEBUG_UI_LOGS = _studentOverride(_studentOverrides.uiLogs, false);
 export const DEBUG_UIAPI_LOGS = _studentOverride(_studentOverrides.uiApiLogs, false);
 export const DEBUG_SHOP_LOGS = false;
 export const DEBUG_COINS_LOGS = false;
+export const DEBUG_ENABLE_HANNA_CARD_GAME = false; // Feature toggle for Hanna's card game integration.
 export const DEBUG_DEV_COMMANDS = true; // Allow __heUiCommand debug actions (teleport, etc).
 export const DEBUG_TOWER_TRIAL_LOGS = false; // Tower Trial lifecycle + gating logs.
 export const DEBUG_TOWER_TRIAL_SIM = false; // Tower Trial simulator details.
