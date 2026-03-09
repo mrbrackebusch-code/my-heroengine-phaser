@@ -45,8 +45,8 @@ export const DEBUG_HERO_ANIM_STRENGTH_TRACE = false;
 export const DEBUG_STR_PROJECTILE_METRICS = false;
 export const DEBUG_STR_PROJECTILE_FRAMES = false;
 export const DEBUG_STR_PROJECTILE_FRAMES_THROTTLE_MS = 0;
-export const DEBUG_STR_TRACE = true; // [STR][TRACE] capture strength trace events for file dumps.
-export const DEBUG_STR_TRACE_AUTO_DUMP = true; // Auto-write strength trace dump to file.
+export const DEBUG_STR_TRACE = false; // [STR][TRACE] capture strength trace events for file dumps.
+export const DEBUG_STR_TRACE_AUTO_DUMP = false; // Auto-write strength trace dump to file.
 export const DEBUG_STR_TRACE_MAX = 800; // Max strength trace events to keep.
 export const DEBUG_STR_TRACE_DUMP_COOLDOWN_MS = 250; // Minimum ms between auto dumps.
 
@@ -80,8 +80,8 @@ export const DEBUG_AGI_COMET_ALIGN_LOG_VERBOSE = false;
 export const DEBUG_AGI_COMET_ALIGN_VIS = true; // Draw weapon bounds + tip for comet alignment debugging.
 export const DEBUG_AGI_COMET_ALIGN_VIS_HERO_INDEX = -1; // -1 = all heroes
 export const DEBUG_AGI_COMET_ALIGN_VIS_TIP_R = 6;
-export const DEBUG_AGI_DUMP = true; // Capture agility dump snapshots for the first N moves.
-export const DEBUG_AGI_DUMP_AUTO_DUMP = true; // Auto-write agility dump to file when complete.
+export const DEBUG_AGI_DUMP = false; // Capture agility dump snapshots for the first N moves.
+export const DEBUG_AGI_DUMP_AUTO_DUMP = false; // Auto-write agility dump to file when complete.
 export const DEBUG_AGI_DUMP_MOVES_MAX = 3; // Number of agility moves to capture after game start.
 export const DEBUG_AGI_DUMP_TICK_INTERVAL_MS = 120; // Sample interval for agility dump ticks.
 export const DEBUG_AGI_DUMP_MAX_SAMPLES_PER_MOVE = 160; // Cap per-move samples.
