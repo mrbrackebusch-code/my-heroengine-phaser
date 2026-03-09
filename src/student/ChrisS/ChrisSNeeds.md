@@ -1,132 +1,87 @@
-# ChrisS Amulet System — Status
+# ChrisS Amulet System - Teacher Handoff
 
-## ✅ CORE INTEGRATION COMPLETE
+Status: Student-side implementation is complete. Two core-engine hooks are still required.
 
-Amulet effects are **fully integrated** and working. Only Floor 1 reward trigger remains.
+Verified on local main branch (Mar 9, 2026):
+- `he:dungeonFloorComplete` is not dispatched from core.
+- `addRelicToHero` is not defined/exposed in core.
 
----
+## Already complete (student side)
 
-## ✅ What's Complete
+- 5 amulets implemented: Tides, Zephyrs, Embers, Venom, Stones.
+- Selection UI implemented, including real icon sprites from `ProjectUtumno_full`.
+- Strength/Intelligence/Wisdom behaviors and VFX implemented.
+- Wisdom shield invulnerability + cooldown implemented.
 
-### Student Code (100%)
-- **5 Amulets:** Tides, Zephyrs, Embers, Venom, Stones with full mechanics
-- **All VFX:** LightEffects, FireWrath, CosmicTime, EarthImpact particle effects
-- **Amulet Selection UI:** Modal with stats display and confirmation popup
-- **Effect Handlers:** Speed mods, DoT, stuns, knockback, area effects, cooldowns
-- **Safe Wrappers:** [amuletUtils.ts](amuletUtils.ts) prevents sprite corruption
-- **Floor 1 Listener:** [index.ts](index.ts) ready to show UI on event
+## Required core changes
 
-### Core Integration (100%)
-- ✅ `dispatchRelicModifyMoveStats` - imported & called (line 27842)
-- ✅ `dispatchRelicOnHitEnemy` - imported & called (line 84872)
-- ✅ `__heroEngineVfxRegistry` - exposed to globalThis (line 13105)
+### 1) Dispatch floor-complete event when objective chest flow completes
 
----
+File: `src/HeroEngineInPhaser.ts`
 
-## ⏳ NOT YET DONE: Floor 1 Reward Hooks
+Find this block (near the line with `chest opened by P${pid}; pad powered`):
 
-**✅ VERIFICATION COMPLETE: These are NOT in HeroEngineInPhaser.ts. Teacher must add them.**
-
-### 1️⃣ Event Dispatch — NOT FOUND IN CORE (REQUIRED)
-
-**File:** `src/HeroEngineInPhaser.ts`  
-**Search for:** `chest opened by P${pid}; pad powered` (around line 14252)  
-**Context:** Inside the chest opening function where `_dunObjectiveDone = true` is set
-
-**Add these lines AFTER `_dunLog(\`chest opened by P\${pid}; pad powered\`):`**
-
-```typescript
-// Dispatch floor completion event for student systems
-try {
-    globalThis.dispatchEvent(new CustomEvent("he:dungeonFloorComplete", {
-        detail: { floorIndex: _dunFloorIndex }
-    }));
-} catch { }
-```
-
-**Exact location (around line 14252):**
-```typescript
+```ts
 if (!pending) {
     _dunObjectiveDone = true
     _dunSetPadPowered(true)
     _dunLog(`chest opened by P${pid}; pad powered`)
-    
-    // ADD EVENT DISPATCH HERE ⬆️
 }
 ```
 
-### 2️⃣ Relic Grant Function — NOT FOUND IN CORE (REQUIRED)
+Add this immediately after the `_dunLog(...)` line:
 
-**File:** `src/HeroEngineInPhaser.ts`  
-**Search for:** `_relicGrantToPid` (around line 93428) or `export function` at module level  
-**Context:** Add this new exported function near other helper functions
+```ts
+try {
+    globalThis.dispatchEvent(new CustomEvent("he:dungeonFloorComplete", {
+        detail: { floorIndex: _dunFloorIndex }
+    }))
+} catch { }
+```
 
-**Add this function:**
+Why: Student system listens for this event and opens the amulet reward UI only when `floorIndex === 1`.
 
-```typescript
-/**
- * Grant a relic to a hero by heroIndex (for student systems).
- * Converts heroIndex to pid and uses internal _relicGrantToPid.
- */
+### 2) Add and expose `addRelicToHero(heroIndex, amuletId)`
+
+File: `src/HeroEngineInPhaser.ts`
+
+Add this helper at module scope (near relic helper functions):
+
+```ts
 export function addRelicToHero(heroIndex: number, amuletId: string): void {
-    const hi = heroIndex | 0;
-    if (hi < 0 || hi >= heroes.length) return;
-    
-    const hero = heroes[hi];
-    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return;
-    
-    // Convert heroIndex to player ID
-    const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
-    if (pid <= 0) return;
-    
-    // Grant the relic using internal function
-    _relicGrantToPid(pid, amuletId, "student-floor1-reward");
+    const hi = heroIndex | 0
+    const rid = String(amuletId || "").trim()
+    if (!rid) return
+
+    const pid = _relicResolvePidFromHeroIndex(hi) | 0
+    if (pid <= 0) return
+
+    _relicGrantToPid(pid, rid, "student-floor1-reward")
 }
 
-// Expose to globalThis for student systems
-(globalThis as any).addRelicToHero = addRelicToHero;
+(globalThis as any).addRelicToHero = addRelicToHero
 ```
 
-**Why:** Student UI ([index.ts](index.ts) line 81–82) calls `g.addRelicToHero(heroIndex, amuletId)` after player confirms amulet selection.
+Why: Student selection UI confirms an amulet and calls `globalThis.addRelicToHero(heroIndex, amuletId)`.
 
-**Note:** This function wraps the existing internal `_relicGrantToPid` (line 93428) which already handles:
-- Checking if relic already owned
-- Adding to `_relicOwnedByPid[pid]` array
-- Special handling (e.g., Loaf of Bread HP bonus)
-- Debug logging
+## Acceptance checks (teacher)
 
----
+After implementing the two changes above:
 
-## 🧪 Testing
+1. Search in `src/HeroEngineInPhaser.ts` for `he:dungeonFloorComplete` and `addRelicToHero`.
+2. Run game and trigger this in browser console:
 
-**Test UI manually (without teacher hooks):**
+```js
+globalThis.dispatchEvent(new CustomEvent("he:dungeonFloorComplete", { detail: { floorIndex: 1 } }))
+```
 
-1. Run `npm run dev`
-2. Open game in browser
-3. Open DevTools Console
-4. Run: `globalThis.dispatchEvent(new CustomEvent("he:dungeonFloorComplete",{detail:{floorIndex:1}}))`
-5. Amulet selection UI should appear
-6. Select amulet → view stats → confirm → see "Are you sure?" popup
+Expected: Amulet selection UI appears.
 
-**Test with floor 1 reward (after teacher adds hooks):**
+3. Complete floor 1 chest objective normally.
 
-1. Start game normally
-2. Complete floor 1 (reach treasure)
-3. UI appears automatically
-4. Select & confirm amulet
-5. Amulet is granted to hero
-6. Test effects in combat on floor 2+
-
----
-
-## 📊 Expected Behaviors
-
-Once integrated:
-
-- **Tides:** +15% speed | Every 5 Strength = knockback wave | Intelligence = bubble trap (2.5s)
-- **Zephyrs:** +15% speed | Strength +5% speed | Intelligence = tornado pull
-- **Embers:** +10% speed | Burn on hit (8% total HP) | Every 3 Strength = 1s stun
-- **Venom:** +12% speed | Poison on hit (6% total HP) | Debuff stacks to -20%
-- **Stones:** -10% speed, +20% def | Strength = 360° knockback | Intelligence = rock stun (2s)
+Expected:
+- Reward UI appears automatically.
+- Confirming an amulet grants the relic.
+- Amulet effects work on later floors.
 
 
