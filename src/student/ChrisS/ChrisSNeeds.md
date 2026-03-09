@@ -25,39 +25,75 @@ Amulet effects are **fully integrated** and working. Only Floor 1 reward trigger
 
 ## ⏳ NOT YET DONE: Floor 1 Reward Hooks
 
-**VERIFICATION: These are NOT in HeroEngineInPhaser.ts. Teacher must add them.**
+**✅ VERIFICATION COMPLETE: These are NOT in HeroEngineInPhaser.ts. Teacher must add them.**
 
-### 1️⃣ Event Dispatch — NOT FOUND IN CORE
+### 1️⃣ Event Dispatch — NOT FOUND IN CORE (REQUIRED)
 
-**Location:** Find where floor 1 treasure is opened in HeroEngineInPhaser.ts  
-**Search for:** `treasureChest`, `openTreasure`, or floor index `=== 1`  
-**Add this line:**
+**File:** `src/HeroEngineInPhaser.ts`  
+**Search for:** `chest opened by P${pid}; pad powered` (around line 14252)  
+**Context:** Inside the chest opening function where `_dunObjectiveDone = true` is set
+
+**Add these lines AFTER `_dunLog(\`chest opened by P\${pid}; pad powered\`):`**
 
 ```typescript
-globalThis.dispatchEvent(new CustomEvent("he:dungeonFloorComplete", {
-    detail: { floorIndex: 1 }
-}));
+// Dispatch floor completion event for student systems
+try {
+    globalThis.dispatchEvent(new CustomEvent("he:dungeonFloorComplete", {
+        detail: { floorIndex: _dunFloorIndex }
+    }));
+} catch { }
 ```
 
-### 2️⃣ Relic Grant Function — NOT FOUND IN CORE
+**Exact location (around line 14252):**
+```typescript
+if (!pending) {
+    _dunObjectiveDone = true
+    _dunSetPadPowered(true)
+    _dunLog(`chest opened by P${pid}; pad powered`)
+    
+    // ADD EVENT DISPATCH HERE ⬆️
+}
+```
 
-**Add at module level in HeroEngineInPhaser.ts** (after other helpers):
+### 2️⃣ Relic Grant Function — NOT FOUND IN CORE (REQUIRED)
+
+**File:** `src/HeroEngineInPhaser.ts`  
+**Search for:** `_relicGrantToPid` (around line 93428) or `export function` at module level  
+**Context:** Add this new exported function near other helper functions
+
+**Add this function:**
 
 ```typescript
+/**
+ * Grant a relic to a hero by heroIndex (for student systems).
+ * Converts heroIndex to pid and uses internal _relicGrantToPid.
+ */
 export function addRelicToHero(heroIndex: number, amuletId: string): void {
-    const hero = /* get hero sprite by heroIndex from your hero array */;
-    if (!hero) return;
+    const hi = heroIndex | 0;
+    if (hi < 0 || hi >= heroes.length) return;
     
-    // Use your relic system to add the relic
-    // Example: heroes[heroIndex].addRelic(amuletId);
-    // or: relicInventory.add(heroIndex, amuletId);
+    const hero = heroes[hi];
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return;
+    
+    // Convert heroIndex to player ID
+    const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0;
+    if (pid <= 0) return;
+    
+    // Grant the relic using internal function
+    _relicGrantToPid(pid, amuletId, "student-floor1-reward");
 }
 
-// Expose to globalThis
+// Expose to globalThis for student systems
 (globalThis as any).addRelicToHero = addRelicToHero;
 ```
 
 **Why:** Student UI ([index.ts](index.ts) line 81–82) calls `g.addRelicToHero(heroIndex, amuletId)` after player confirms amulet selection.
+
+**Note:** This function wraps the existing internal `_relicGrantToPid` (line 93428) which already handles:
+- Checking if relic already owned
+- Adding to `_relicOwnedByPid[pid]` array
+- Special handling (e.g., Loaf of Bread HP bonus)
+- Debug logging
 
 ---
 
