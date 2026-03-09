@@ -154,11 +154,20 @@ function readPng(filePath) {
 function buildMaskBits(png, frameW, frameH) {
   const srcW = png.width | 0;
   const srcH = png.height | 0;
-  if (srcW % frameW !== 0 || srcH % frameH !== 0) {
-    throw new Error(`size ${srcW}x${srcH} not divisible by ${frameW}x${frameH}`);
+  if (srcW < frameW || srcH < frameH) {
+    throw new Error(`size ${srcW}x${srcH} smaller than frame ${frameW}x${frameH}`);
   }
-  const cols = (srcW / frameW) | 0;
-  const rows = (srcH / frameH) | 0;
+  // Allow source images that have extra padding by cropping to the largest whole-frame grid.
+  // Previously this was a hard error; instead compute integer cols/rows using floor division
+  // and ignore any extra pixels at the right/bottom of the image.
+  const cols = Math.floor(srcW / frameW) | 0;
+  const rows = Math.floor(srcH / frameH) | 0;
+  if (cols === 0 || rows === 0) {
+    throw new Error(`size ${srcW}x${srcH} yields zero frames for ${frameW}x${frameH}`);
+  }
+  if ((srcW % frameW) !== 0 || (srcH % frameH) !== 0) {
+    console.warn(`[aura-masks][WARN] source ${srcW}x${srcH} not divisible by ${frameW}x${frameH}; cropping to ${cols*frameW}x${rows*frameH}`);
+  }
   const frames = (cols * rows) | 0;
   const bitsPerFrame = ((frameW * frameH) | 0);
   const wordsPerFrame = ((bitsPerFrame + 31) >>> 5) | 0;

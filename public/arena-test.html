@@ -1,0 +1,1537 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Combat Arena System - Visual Test</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            background: linear-gradient(135deg, #1e3c72 0%, #2a5298 100%);
+            color: #fff;
+            padding: 20px;
+            min-height: 100vh;
+        }
+
+        .container {
+            max-width: 1400px;
+            margin: 0 auto;
+        }
+
+        h1 {
+            text-align: center;
+            margin-bottom: 30px;
+            font-size: 2.5em;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+        }
+
+        .test-section {
+            background: rgba(0,0,0,0.3);
+            border-radius: 10px;
+            padding: 20px;
+            margin-bottom: 20px;
+            border: 2px solid #4da6ff;
+        }
+
+        .test-title {
+            font-size: 1.3em;
+            font-weight: bold;
+            margin-bottom: 15px;
+            color: #4da6ff;
+        }
+
+        .controls {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 15px;
+        }
+
+        button {
+            padding: 10px 15px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-weight: bold;
+            transition: all 0.3s;
+            font-size: 0.9em;
+        }
+
+        button:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 12px rgba(0,0,0,0.3);
+        }
+
+        .btn-primary {
+            background: #4da6ff;
+            color: #000;
+        }
+
+        .btn-primary:hover {
+            background: #66b3ff;
+        }
+
+        .btn-success {
+            background: #4caf50;
+            color: white;
+        }
+
+        .btn-success:hover {
+            background: #66bb6a;
+        }
+
+        .btn-warning {
+            background: #ff9800;
+            color: white;
+        }
+
+        .btn-warning:hover {
+            background: #ffaa33;
+        }
+
+        .btn-danger {
+            background: #f44336;
+            color: white;
+        }
+
+        .btn-danger:hover {
+            background: #ff6b6b;
+        }
+
+        button:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .players-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 15px;
+            margin: 20px 0;
+        }
+
+        .player-card {
+            background: rgba(0,0,0,0.4);
+            border: 2px solid #4da6ff;
+            border-radius: 8px;
+            padding: 15px;
+            transition: all 0.3s;
+        }
+
+        .player-card.ready {
+            border-color: #4caf50;
+            background: rgba(76, 175, 80, 0.1);
+        }
+
+        .player-card.team-a {
+            border-color: #ff6b6b;
+            background: rgba(255, 107, 107, 0.1);
+        }
+
+        .player-card.team-b {
+            border-color: #4da6ff;
+            background: rgba(77, 166, 255, 0.1);
+        }
+
+        .player-name {
+            font-size: 1.1em;
+            font-weight: bold;
+            margin-bottom: 10px;
+        }
+
+        .player-status {
+            font-size: 0.9em;
+            margin-bottom: 10px;
+            color: #aaa;
+        }
+
+        .player-status.active {
+            color: #4caf50;
+            font-weight: bold;
+        }
+
+        .player-buttons {
+            display: flex;
+            gap: 8px;
+            flex-wrap: wrap;
+            margin-top: 10px;
+        }
+
+        .player-buttons button {
+            font-size: 0.8em;
+            padding: 8px 12px;
+            flex: 1;
+            min-width: 80px;
+        }
+
+        .state-display {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #666;
+            border-radius: 5px;
+            padding: 15px;
+            font-family: 'Courier New', monospace;
+            font-size: 0.9em;
+            max-height: 300px;
+            overflow-y: auto;
+            margin: 15px 0;
+        }
+
+        .state-line {
+            padding: 3px 0;
+            border-bottom: 1px solid #333;
+        }
+
+        .state-line:last-child {
+            border-bottom: none;
+        }
+
+        .countdown {
+            font-size: 3em;
+            font-weight: bold;
+            text-align: center;
+            color: #ff9800;
+            text-shadow: 2px 2px 4px rgba(0,0,0,0.5);
+            margin: 20px 0;
+        }
+
+        .phase-badge {
+            display: inline-block;
+            background: #4da6ff;
+            color: black;
+            padding: 8px 15px;
+            border-radius: 20px;
+            font-weight: bold;
+            margin: 10px 5px 10px 0;
+        }
+
+        .phase-badge.entrance {
+            background: #9c27b0;
+        }
+
+        .phase-badge.waiting {
+            background: #ff9800;
+        }
+
+        .phase-badge.countdown {
+            background: #f44336;
+        }
+
+        .phase-badge.combat {
+            background: #2196f3;
+        }
+
+        .phase-badge.post-combat {
+            background: #4caf50;
+        }
+
+        .vote-display {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 10px;
+            margin: 15px 0;
+        }
+
+        .vote-item {
+            background: rgba(0,0,0,0.3);
+            padding: 10px;
+            border-radius: 5px;
+            text-align: center;
+        }
+
+        .log-panel {
+            background: rgba(0,0,0,0.5);
+            border: 1px solid #666;
+            border-radius: 5px;
+            padding: 15px;
+            margin-top: 20px;
+            max-height: 200px;
+            overflow-y: auto;
+        }
+
+        .log-entry {
+            font-size: 0.85em;
+            padding: 3px 0;
+            color: #aaa;
+            font-family: 'Courier New', monospace;
+        }
+
+        .log-entry.info {
+            color: #4da6ff;
+        }
+
+        .log-entry.success {
+            color: #4caf50;
+        }
+
+        .log-entry.warning {
+            color: #ff9800;
+        }
+
+        .log-entry.error {
+            color: #f44336;
+        }
+
+        .partner-selection {
+            background: rgba(0,0,0,0.3);
+            border: 2px solid #4da6ff;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 15px 0;
+        }
+
+        .partner-buttons {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+            gap: 10px;
+            margin-top: 10px;
+        }
+
+        .partner-buttons button {
+            font-size: 0.85em;
+            padding: 10px;
+        }
+
+        .practice-toolbar {
+            display: flex;
+            gap: 10px;
+            flex-wrap: wrap;
+            margin-bottom: 12px;
+        }
+
+        .practice-hint {
+            margin-top: 8px;
+            font-size: 0.9em;
+            color: #cfe8ff;
+        }
+
+        .practice-stage {
+            border: 2px solid #4da6ff;
+            border-radius: 8px;
+            overflow: hidden;
+            background: rgba(0, 0, 0, 0.35);
+        }
+
+        #practice-canvas {
+            width: 100%;
+            max-width: 100%;
+            display: block;
+            background: #0e1d2f;
+        }
+
+        .practice-result {
+            margin-top: 10px;
+            font-weight: bold;
+            color: #ffd54f;
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <h1>⚔️ Combat Arena System Test</h1>
+
+        <!-- Setup Section -->
+        <div class="test-section">
+            <div class="test-title">🎮 Setup & Scenario</div>
+            <div class="controls">
+                <button class="btn-primary" onclick="testManager.setup1v1()">Setup 1v1 (2 Players)</button>
+                <button class="btn-primary" onclick="testManager.setup2v2()">Setup 2v2 (4 Players)</button>
+                <button class="btn-warning" onclick="testManager.reset()">Reset All</button>
+            </div>
+            <div style="margin-top: 15px; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px;">
+                <strong>Current Phase:</strong>
+                <span id="phase-display" class="phase-badge">None</span>
+                <div id="countdown-display" class="countdown" style="display: none;"></div>
+            </div>
+        </div>
+
+        <!-- Players Section -->
+        <div class="test-section">
+            <div class="test-title">👥 Players</div>
+            <div class="players-grid" id="players-container">
+                <!-- Players will be generated here -->
+            </div>
+        </div>
+
+        <!-- State Display -->
+        <div class="test-section">
+            <div class="test-title">📊 System State</div>
+            <div class="state-display" id="state-display">
+                <div class="state-line">Waiting for setup...</div>
+            </div>
+            <div id="action-guide" style="margin-top: 15px; padding: 15px; background: rgba(76, 175, 80, 0.2); border: 2px solid #4caf50; border-radius: 5px; display: none;">
+                <strong>📋 Next Steps:</strong>
+                <div id="action-guide-text" style="margin-top: 10px; font-size: 0.95em;"></div>
+            </div>
+        </div>
+
+        <!-- Practice Fight -->
+        <div class="test-section">
+            <div class="test-title">🥊 Live Practice Fight</div>
+            <div class="practice-toolbar">
+                <button class="btn-warning" onclick="testManager.resetPractice()">Reset Practice</button>
+            </div>
+            <div class="practice-stage">
+                <canvas id="practice-canvas" width="900" height="500"></canvas>
+            </div>
+            <div class="practice-hint">Practice is linked to Setup & Scenario. Controls: W/A/S/D move, Space attack. Friendly fire is disabled in 2v2.</div>
+            <div id="practice-result" class="practice-result">Choose Setup 1v1 or 2v2 to link scenario, then Ready up to start combat.</div>
+        </div>
+
+        <!-- Logs -->
+        <div class="test-section">
+            <div class="test-title">📝 Event Log</div>
+            <button class="btn-warning" onclick="testManager.clearLog()">Clear Log</button>
+            <div class="log-panel" id="log-panel">
+                <div class="log-entry info">System ready. Setup a scenario to begin.</div>
+            </div>
+        </div>
+    </div>
+
+    <script type="module">
+        // Mock the Daniel imports for testing
+        class MockCombatArenaFloor {
+            constructor() {
+                this.players = new Map();
+                this.combatMode = null;
+                this.combats = new Map();
+            }
+
+            playerEnterArena(playerId, displayName, posX, posY) {
+                this.players.set(playerId, { playerId, displayName, posX, posY });
+                window.testManager?.log(`Player ${displayName} entered arena`, 'success');
+            }
+
+            getCombatMode() {
+                if (this.players.size === 0) return 'waiting';
+                if (this.players.size === 2) return '1v1';
+                if (this.players.size >= 4) return '2v2';
+                return 'waiting';
+            }
+
+            choosePartner(playerId, partnerId) {
+                window.testManager?.log(`Player ${playerId} chose partner ${partnerId}`, 'info');
+            }
+
+            randomizePartner() {
+                window.testManager?.log(`Partners randomized`, 'info');
+            }
+
+            start1v1() {
+                window.testManager?.log(`1v1 Combat started!`, 'success');
+                this.combatMode = '1v1';
+            }
+
+            start2v2() {
+                window.testManager?.log(`2v2 Combat started!`, 'success');
+                this.combatMode = '2v2';
+            }
+
+            getOpponents(playerId) {
+                // Mock implementation
+                return Array.from(this.players.keys()).filter(id => id !== playerId).slice(0, 2);
+            }
+        }
+
+        class MockArenaEntrance {
+            constructor() {
+                this.state = 'empty';
+                this.players = new Map();
+                this.readyPlayers = new Set();
+                this.countdownValue = 0;
+                this.countdownActive = false;
+            }
+
+            playerArrivesAtEntrance(playerId, displayName) {
+                this.players.set(playerId, { playerId, displayName, isReady: false });
+                window.testManager?.log(`${displayName} arrived at entrance`, 'info');
+            }
+
+            playerEntersArena(playerId) {
+                window.testManager?.log(`${this.players.get(playerId)?.displayName} entered arena through door`, 'success');
+            }
+
+            playerReady(playerId) {
+                const player = this.players.get(playerId);
+                if (player) {
+                    player.isReady = true;
+                    this.readyPlayers.add(playerId);
+                    window.testManager?.log(`${player.displayName} is READY ✓`, 'success');
+                }
+            }
+
+            playerNotReady(playerId) {
+                const player = this.players.get(playerId);
+                if (player) {
+                    player.isReady = false;
+                    this.readyPlayers.delete(playerId);
+                    window.testManager?.log(`${player.displayName} is NOT READY ✗`, 'warning');
+                }
+            }
+
+            areAllPlayersReady() {
+                return this.players.size > 0 && this.players.size === this.readyPlayers.size;
+            }
+
+            startCountdown(callback, onComplete) {
+                this.countdownActive = true;
+                this.countdownValue = 5;
+                window.testManager?.log(`Starting 5-second countdown...`, 'warning');
+
+                const interval = setInterval(() => {
+                    callback?.(this.countdownValue);
+                    this.countdownValue--;
+                    if (this.countdownValue < 0) {
+                        clearInterval(interval);
+                        this.countdownActive = false;
+                        window.testManager?.log(`Countdown complete! Combat starting...`, 'success');
+                        onComplete?.();
+                    }
+                }, 1000);
+            }
+
+            playerUsesExitDoor(playerId) {
+                const player = this.players.get(playerId);
+                window.testManager?.log(`${player?.displayName} used EXIT DOOR and left!`, 'warning');
+            }
+        }
+
+        class MockPostCombatManager {
+            constructor() {
+                this.activeSessions = new Map();
+                this.sessionCounter = 0;
+            }
+
+            startPostCombatSession(combatType, playerIds, playerNames) {
+                const sessionId = `postcombat_${this.sessionCounter++}`;
+                const players = new Map();
+
+                playerIds.forEach(pId => {
+                    players.set(pId, {
+                        playerId: pId,
+                        displayName: playerNames.get(pId) || 'Unknown',
+                        wantsRematch: null,
+                        wantsTeamChange: false
+                    });
+                });
+
+                const session = {
+                    sessionId,
+                    combatType,
+                    players,
+                    startTime: Date.now(),
+                    countdownActive: false,
+                    countdownValue: 5,
+                    teamChangeMode: false,
+                    teamSelectors: [],
+                    newTeamSelections: new Map()
+                };
+
+                this.activeSessions.set(sessionId, session);
+                window.testManager?.log(`Post-combat session started (${combatType})`, 'info');
+                return session;
+            }
+
+            playerVotesRematch(sessionId, playerId) {
+                const session = this.activeSessions.get(sessionId);
+                if (session) {
+                    const player = session.players.get(playerId);
+                    if (player) {
+                        player.wantsRematch = true;
+                        window.testManager?.log(`${player.displayName} votes REMATCH`, 'success');
+                    }
+                }
+            }
+
+            playerVotesExit(sessionId, playerId) {
+                const session = this.activeSessions.get(sessionId);
+                if (session) {
+                    const player = session.players.get(playerId);
+                    if (player) {
+                        player.wantsRematch = false;
+                        window.testManager?.log(`${player.displayName} votes EXIT`, 'warning');
+                    }
+                }
+            }
+
+            playerVotesTeamChange(sessionId, playerId) {
+                const session = this.activeSessions.get(sessionId);
+                if (session && session.combatType === '2v2') {
+                    const player = session.players.get(playerId);
+                    if (player) {
+                        player.wantsTeamChange = true;
+                        window.testManager?.log(`${player.displayName} votes to CHANGE TEAMMATES`, 'info');
+                        this.checkTeamChangeStatus(sessionId);
+                    }
+                }
+            }
+
+            checkTeamChangeStatus(sessionId) {
+                const session = this.activeSessions.get(sessionId);
+                if (!session) return;
+
+                const wantChange = Array.from(session.players.values()).filter(p => p.wantsTeamChange).length;
+                if (wantChange === session.players.size) {
+                    session.teamChangeMode = true;
+                    const allIds = Array.from(session.players.keys());
+                    const shuffled = [...allIds].sort(() => Math.random() - 0.5);
+                    session.teamSelectors = shuffled.slice(0, 2);
+                    const selectorNames = session.teamSelectors
+                        .map(id => session.players.get(id)?.displayName || id)
+                        .join(' and ');
+                    window.testManager?.log(`ALL players agreed. Random selectors: ${selectorNames}`, 'success');
+                }
+            }
+
+            getTeamSelectors(sessionId) {
+                const session = this.activeSessions.get(sessionId);
+                if (!session) return [];
+                return session.teamSelectors ?? [];
+            }
+
+            getAvailableTeammates(sessionId, playerId) {
+                const session = this.activeSessions.get(sessionId);
+                if (!session || !session.teamChangeMode) return new Map();
+
+                const selectors = session.teamSelectors ?? [];
+                if (!selectors.includes(playerId)) return new Map();
+
+                const available = new Map();
+                const alreadyChosen = Array.from(session.newTeamSelections?.values() ?? []);
+                session.players.forEach((player, id) => {
+                    if (id !== playerId && !selectors.includes(id) && !alreadyChosen.includes(id)) {
+                        available.set(id, player.displayName);
+                    }
+                });
+
+                return available;
+            }
+
+            selectNewTeammate(sessionId, playerId, partnerId) {
+                const session = this.activeSessions.get(sessionId);
+                if (session) {
+                    const selectors = session.teamSelectors ?? [];
+                    if (!selectors.includes(playerId)) {
+                        window.testManager?.log(`Only random selectors can choose teammates`, 'warning');
+                        return;
+                    }
+
+                    if (selectors.includes(partnerId)) {
+                        window.testManager?.log(`Selectors must pick from non-selector players`, 'warning');
+                        return;
+                    }
+
+                    const alreadyChosen = Array.from(session.newTeamSelections?.values() ?? []);
+                    if (alreadyChosen.includes(partnerId)) {
+                        window.testManager?.log(`That player has already been selected`, 'warning');
+                        return;
+                    }
+
+                    const player = session.players.get(playerId);
+                    const partner = session.players.get(partnerId);
+                    if (player && partner) {
+                        session.newTeamSelections.set(playerId, partnerId);
+                        window.testManager?.log(`${player.displayName} selected ${partner.displayName} as new teammate`, 'success');
+                    }
+                }
+            }
+
+            getRematchStatus(sessionId) {
+                const session = this.activeSessions.get(sessionId);
+                if (!session) return { approved: false, reason: 'Session not found' };
+
+                const rematchVotes = Array.from(session.players.values()).filter(p => p.wantsRematch === true).length;
+                const exitVotes = Array.from(session.players.values()).filter(p => p.wantsRematch === false).length;
+                const totalPlayers = session.players.size;
+
+                if (session.combatType === '1v1') {
+                    return { approved: rematchVotes === 2, rematchVotes, exitVotes, totalPlayers };
+                } else { // 2v2
+                    return { approved: rematchVotes >= 3, rematchVotes, exitVotes, totalPlayers };
+                }
+            }
+        }
+
+        class PracticeCombatSimulator {
+            constructor(testManager) {
+                this.testManager = testManager;
+                this.canvas = document.getElementById('practice-canvas');
+                this.ctx = this.canvas.getContext('2d');
+                this.mode = '1v1';
+                this.scenarioMode = null;
+                this.players = [];
+                this.running = false;
+                this.keys = new Set();
+                this.lastTime = 0;
+                this.simTime = 0;
+                this.localPlayerId = 'p1';
+                this.winnerText = '';
+                this.obstacles = [
+                    { x: 250, y: 170, w: 42, h: 80 },
+                    { x: 608, y: 170, w: 42, h: 80 },
+                    { x: 410, y: 220, w: 80, h: 42 }
+                ];
+
+                window.addEventListener('keydown', (event) => {
+                    if (event.code === 'Space') {
+                        event.preventDefault();
+                    }
+                    this.keys.add(event.code);
+                });
+
+                window.addEventListener('keyup', (event) => {
+                    this.keys.delete(event.code);
+                });
+
+                this.render();
+            }
+
+            buildPlayers(mode) {
+                return mode === '1v1'
+                    ? [
+                        this.createPlayer('p1', 'Player 1', 'A', 120, 250, false),
+                        this.createPlayer('p3', 'Player 3', 'B', 780, 250, true)
+                    ]
+                    : [
+                        this.createPlayer('p1', 'Player 1', 'A', 120, 220, false),
+                        this.createPlayer('p2', 'Player 2', 'A', 120, 300, true),
+                        this.createPlayer('p3', 'Player 3', 'B', 780, 220, true),
+                        this.createPlayer('p4', 'Player 4', 'B', 780, 300, true)
+                    ];
+            }
+
+            setScenarioMode(mode) {
+                this.scenarioMode = mode;
+                this.mode = mode;
+                this.winnerText = '';
+                this.running = false;
+                this.players = this.buildPlayers(mode);
+                this.setResult(`Scenario linked: ${mode}. Mark players ready to begin live combat.`);
+                this.render();
+            }
+
+            startFromScenario() {
+                const mode = this.scenarioMode || this.mode;
+                if (!mode) return;
+                this.setup(mode);
+            }
+
+            setup(mode) {
+                this.mode = mode;
+                this.winnerText = '';
+                this.players = this.buildPlayers(mode);
+
+                this.running = true;
+                this.lastTime = performance.now();
+                this.simTime = 0;
+                this.testManager.log(`[PRACTICE] ${mode} practice combat started`, 'success');
+                this.setResult(`Practice ${mode} running... Fight!`);
+                requestAnimationFrame((timestamp) => this.loop(timestamp));
+            }
+
+            reset() {
+                this.running = false;
+                this.players = [];
+                this.winnerText = '';
+                this.scenarioMode = null;
+                this.simTime = 0;
+                this.setResult('Practice cleared. Choose Setup 1v1 or 2v2 to relink scenario.');
+                this.render();
+            }
+
+            createPlayer(id, name, team, x, y, bot) {
+                return {
+                    id,
+                    name,
+                    team,
+                    x,
+                    y,
+                    radius: 16,
+                    hp: 100,
+                    maxHp: 100,
+                    speed: bot ? 112 : 150,
+                    damage: 14,
+                    range: 48,
+                    cooldown: 0,
+                    healPerSecond: 6,
+                    outOfCombatDelay: 5,
+                    lastCombatAt: 0,
+                    alive: true,
+                    bot,
+                    intentAttack: false
+                };
+            }
+
+            setResult(text) {
+                const result = document.getElementById('practice-result');
+                if (result) result.textContent = text;
+            }
+
+            loop(timestamp) {
+                if (!this.running) {
+                    this.render();
+                    return;
+                }
+
+                const dt = Math.min((timestamp - this.lastTime) / 1000, 0.05);
+                this.lastTime = timestamp;
+                this.simTime += dt;
+
+                this.updatePlayers(dt);
+                this.resolveAttacks();
+                this.applyOutOfCombatHealing(dt);
+                this.checkWinner();
+                this.render();
+
+                if (this.running) {
+                    requestAnimationFrame((next) => this.loop(next));
+                }
+            }
+
+            updatePlayers(dt) {
+                for (const player of this.players) {
+                    if (!player.alive) continue;
+                    player.cooldown = Math.max(0, player.cooldown - dt);
+                    player.intentAttack = false;
+
+                    if (player.bot) {
+                        const target = this.closestEnemy(player);
+                        if (!target) continue;
+                        const dx = target.x - player.x;
+                        const dy = target.y - player.y;
+                        const distance = Math.hypot(dx, dy) || 1;
+                        if (distance > player.range - 4) {
+                            const vx = (dx / distance) * player.speed;
+                            const vy = (dy / distance) * player.speed;
+                            this.tryMove(player, vx * dt, vy * dt);
+                        } else {
+                            player.intentAttack = true;
+                        }
+                    } else {
+                        let moveX = 0;
+                        let moveY = 0;
+                        if (this.keys.has('KeyW')) moveY -= 1;
+                        if (this.keys.has('KeyS')) moveY += 1;
+                        if (this.keys.has('KeyA')) moveX -= 1;
+                        if (this.keys.has('KeyD')) moveX += 1;
+
+                        if (moveX !== 0 || moveY !== 0) {
+                            const len = Math.hypot(moveX, moveY);
+                            const vx = (moveX / len) * player.speed;
+                            const vy = (moveY / len) * player.speed;
+                            this.tryMove(player, vx * dt, vy * dt);
+                        }
+
+                        if (this.keys.has('Space')) {
+                            player.intentAttack = true;
+                        }
+                    }
+                }
+            }
+
+            tryMove(player, dx, dy) {
+                const nextX = player.x + dx;
+                const nextY = player.y + dy;
+                const margin = player.radius + 4;
+                const clampedX = Math.max(margin, Math.min(this.canvas.width - margin, nextX));
+                const clampedY = Math.max(margin, Math.min(this.canvas.height - margin, nextY));
+
+                if (!this.collidesObstacle(clampedX, clampedY, player.radius)) {
+                    player.x = clampedX;
+                    player.y = clampedY;
+                }
+            }
+
+            collidesObstacle(x, y, radius) {
+                return this.obstacles.some((obstacle) => {
+                    const nearestX = Math.max(obstacle.x, Math.min(x, obstacle.x + obstacle.w));
+                    const nearestY = Math.max(obstacle.y, Math.min(y, obstacle.y + obstacle.h));
+                    const distX = x - nearestX;
+                    const distY = y - nearestY;
+                    return (distX * distX + distY * distY) < (radius * radius);
+                });
+            }
+
+            closestEnemy(attacker) {
+                let best = null;
+                let bestDistance = Infinity;
+                for (const candidate of this.players) {
+                    if (!candidate.alive || candidate.team === attacker.team || candidate.id === attacker.id) continue;
+                    const distance = Math.hypot(candidate.x - attacker.x, candidate.y - attacker.y);
+                    if (distance < bestDistance) {
+                        bestDistance = distance;
+                        best = candidate;
+                    }
+                }
+                return best;
+            }
+
+            resolveAttacks() {
+                for (const attacker of this.players) {
+                    if (!attacker.alive || !attacker.intentAttack || attacker.cooldown > 0) continue;
+                    const candidates = this.players.filter((target) => {
+                        if (!target.alive || target.id === attacker.id) return false;
+                        if (target.team === attacker.team) return false;
+                        const distance = Math.hypot(target.x - attacker.x, target.y - attacker.y);
+                        return distance <= attacker.range;
+                    });
+
+                    if (candidates.length === 0) continue;
+
+                    const target = candidates.sort((a, b) => {
+                        const da = Math.hypot(a.x - attacker.x, a.y - attacker.y);
+                        const db = Math.hypot(b.x - attacker.x, b.y - attacker.y);
+                        return da - db;
+                    })[0];
+
+                    target.hp = Math.max(0, target.hp - attacker.damage);
+                    attacker.cooldown = 0.5;
+                    attacker.lastCombatAt = this.simTime;
+                    target.lastCombatAt = this.simTime;
+
+                    if (target.hp <= 0 && target.alive) {
+                        target.alive = false;
+                        this.testManager.log(`[PRACTICE] ${attacker.name} KO'd ${target.name}`, 'warning');
+                    }
+                }
+            }
+
+            applyOutOfCombatHealing(dt) {
+                for (const player of this.players) {
+                    if (!player.alive || player.hp >= player.maxHp) continue;
+                    const timeSinceCombat = this.simTime - player.lastCombatAt;
+                    if (timeSinceCombat < player.outOfCombatDelay) continue;
+
+                    player.hp = Math.min(player.maxHp, player.hp + player.healPerSecond * dt);
+                }
+            }
+
+            checkWinner() {
+                const aliveA = this.players.filter((p) => p.alive && p.team === 'A').length;
+                const aliveB = this.players.filter((p) => p.alive && p.team === 'B').length;
+
+                if (aliveA > 0 && aliveB > 0) return;
+                if (!this.running) return;
+
+                this.running = false;
+                if (aliveA > 0) {
+                    this.winnerText = 'Team A wins practice fight!';
+                } else if (aliveB > 0) {
+                    this.winnerText = 'Team B wins practice fight!';
+                } else {
+                    this.winnerText = 'Draw! Both teams were defeated.';
+                }
+                this.setResult(this.winnerText);
+                this.testManager.log(`[PRACTICE] ${this.winnerText}`, 'success');
+            }
+
+            render() {
+                const ctx = this.ctx;
+                if (!ctx) return;
+
+                ctx.clearRect(0, 0, this.canvas.width, this.canvas.height);
+                this.drawArena(ctx);
+                this.drawPlayers(ctx);
+                this.drawHud(ctx);
+            }
+
+            drawArena(ctx) {
+                ctx.fillStyle = '#17334f';
+                ctx.fillRect(0, 0, this.canvas.width, this.canvas.height);
+
+                ctx.strokeStyle = '#2f5d85';
+                ctx.lineWidth = 2;
+                ctx.strokeRect(6, 6, this.canvas.width - 12, this.canvas.height - 12);
+
+                ctx.strokeStyle = '#355d80';
+                ctx.beginPath();
+                ctx.moveTo(this.canvas.width / 2, 8);
+                ctx.lineTo(this.canvas.width / 2, this.canvas.height - 8);
+                ctx.stroke();
+
+                ctx.fillStyle = 'rgba(255, 120, 120, 0.2)';
+                ctx.fillRect(12, 12, 150, this.canvas.height - 24);
+                ctx.fillStyle = 'rgba(120, 170, 255, 0.2)';
+                ctx.fillRect(this.canvas.width - 162, 12, 150, this.canvas.height - 24);
+
+                ctx.fillStyle = '#30475f';
+                for (const obstacle of this.obstacles) {
+                    ctx.fillRect(obstacle.x, obstacle.y, obstacle.w, obstacle.h);
+                }
+            }
+
+            drawPlayers(ctx) {
+                for (const player of this.players) {
+                    const baseColor = player.team === 'A' ? '#ff6b6b' : '#4da6ff';
+                    const fillColor = player.alive ? baseColor : '#5a5a5a';
+
+                    ctx.beginPath();
+                    ctx.fillStyle = fillColor;
+                    ctx.arc(player.x, player.y, player.radius, 0, Math.PI * 2);
+                    ctx.fill();
+
+                    if (player.id === this.localPlayerId && player.alive) {
+                        ctx.strokeStyle = '#ffffff';
+                        ctx.lineWidth = 2;
+                        ctx.beginPath();
+                        ctx.arc(player.x, player.y, player.radius + 4, 0, Math.PI * 2);
+                        ctx.stroke();
+                    }
+
+                    ctx.fillStyle = '#ffffff';
+                    ctx.font = '12px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(player.name, player.x, player.y - 24);
+
+                    const barWidth = 46;
+                    const barHeight = 6;
+                    const hpPct = player.hp / player.maxHp;
+                    ctx.fillStyle = '#202a34';
+                    ctx.fillRect(player.x - barWidth / 2, player.y + 20, barWidth, barHeight);
+                    ctx.fillStyle = hpPct > 0.4 ? '#4caf50' : '#f44336';
+                    ctx.fillRect(player.x - barWidth / 2, player.y + 20, barWidth * hpPct, barHeight);
+                }
+            }
+
+            drawHud(ctx) {
+                ctx.fillStyle = '#ffffff';
+                ctx.font = '13px Segoe UI';
+                ctx.textAlign = 'left';
+                ctx.fillText(`Mode: ${this.mode} | Friendly Fire: OFF`, 14, 22);
+                ctx.fillText(`You control Player 1 (Team A)`, 14, 42);
+                ctx.fillText(`Healing: starts after 5s out of combat`, 14, 62);
+                if (this.winnerText) {
+                    ctx.fillStyle = '#ffd54f';
+                    ctx.font = 'bold 20px Segoe UI';
+                    ctx.textAlign = 'center';
+                    ctx.fillText(this.winnerText, this.canvas.width / 2, 42);
+                }
+            }
+        }
+
+        // Test Manager
+        class TestManager {
+            constructor() {
+                this.arena = new MockCombatArenaFloor();
+                this.entrance = new MockArenaEntrance();
+                this.postCombat = new MockPostCombatManager();
+                this.currentPhase = 'none';
+                this.players = [];
+                this.logs = [];
+                this.practice = new PracticeCombatSimulator(this);
+            }
+
+            log(message, type = 'info') {
+                const timestamp = new Date().toLocaleTimeString();
+                const entry = { message, type, timestamp };
+                this.logs.push(entry);
+
+                const logPanel = document.getElementById('log-panel');
+                const logDiv = document.createElement('div');
+                logDiv.className = `log-entry ${type}`;
+                logDiv.textContent = `[${timestamp}] ${message}`;
+                logPanel.appendChild(logDiv);
+                logPanel.scrollTop = logPanel.scrollHeight;
+
+                if (this.logs.length > 50) {
+                    this.logs.shift();
+                    logPanel.removeChild(logPanel.firstChild);
+                }
+            }
+
+            clearLog() {
+                this.logs = [];
+                document.getElementById('log-panel').innerHTML = '';
+                this.log('Log cleared', 'info');
+            }
+
+            setup1v1() {
+                this.reset();
+                this.currentPhase = 'entrance';
+                this.players = [
+                    { id: 'p1', name: 'Player 1' },
+                    { id: 'p2', name: 'Player 2' }
+                ];
+                this.practice.setScenarioMode('1v1');
+
+                this.log('=== 1v1 SCENARIO STARTING ===', 'info');
+                this.log('2 players will compete in 1v1 combat', 'info');
+
+                this.players.forEach(p => {
+                    this.arena.playerEnterArena(p.id, p.name, 0, 0);
+                    this.entrance.playerArrivesAtEntrance(p.id, p.name);
+                });
+
+                this.updateUI();
+            }
+
+            setup2v2() {
+                this.reset();
+                this.currentPhase = 'entrance';
+                this.players = [
+                    { id: 'p1', name: 'Player 1' },
+                    { id: 'p2', name: 'Player 2' },
+                    { id: 'p3', name: 'Player 3' },
+                    { id: 'p4', name: 'Player 4' }
+                ];
+                this.practice.setScenarioMode('2v2');
+
+                this.log('=== 2v2 SCENARIO STARTING ===', 'info');
+                this.log('4 players will compete in 2v2 combat', 'info');
+
+                this.players.forEach(p => {
+                    this.arena.playerEnterArena(p.id, p.name, 0, 0);
+                    this.entrance.playerArrivesAtEntrance(p.id, p.name);
+                });
+
+                this.updateUI();
+            }
+
+            reset() {
+                this.arena = new MockCombatArenaFloor();
+                this.entrance = new MockArenaEntrance();
+                this.postCombat = new MockPostCombatManager();
+                this.currentPhase = 'none';
+                this.players = [];
+                this.currentSession = null;
+                this.practice.reset();
+                this.log('System reset', 'warning');
+                this.updateUI();
+            }
+
+            togglePlayerReady(playerId) {
+                const player = this.entrance.players.get(playerId);
+                if (!player) return;
+
+                if (player.isReady) {
+                    this.entrance.playerNotReady(playerId);
+                } else {
+                    this.entrance.playerReady(playerId);
+                }
+
+                // Check if all ready
+                if (this.entrance.areAllPlayersReady()) {
+                    this.log('✓ All players ready! Starting countdown...', 'success');
+                    this.currentPhase = 'countdown';
+                    setTimeout(
+                        () => this.entrance.startCountdown(() => this.updateUI(), () => this.startCombat()),
+                        500
+                    );
+                }
+
+                this.updateUI();
+            }
+
+            startCombat() {
+                this.currentPhase = 'combat';
+                if (this.players.length === 2) {
+                    this.arena.start1v1();
+                } else {
+                    this.arena.start2v2();
+                }
+                this.practice.startFromScenario();
+                this.log(`Combat started!`, 'success');
+                this.updateUI();
+            }
+
+            endCombat() {
+                this.currentPhase = 'post-combat';
+                const playerNames = new Map();
+                this.players.forEach(p => playerNames.set(p.id, p.name));
+
+                const session = this.postCombat.startPostCombatSession(
+                    this.players.length === 2 ? '1v1' : '2v2',
+                    this.players.map(p => p.id),
+                    playerNames
+                );
+
+                this.currentSession = session;
+                this.updateUI();
+            }
+
+            playerVoteRematch(playerId) {
+                this.postCombat.playerVotesRematch(this.currentSession.sessionId, playerId);
+                this.checkRematchStatus();
+            }
+
+            playerVoteExit(playerId) {
+                this.postCombat.playerVotesExit(this.currentSession.sessionId, playerId);
+                this.checkRematchStatus();
+            }
+
+            playerVoteTeamChange(playerId) {
+                this.postCombat.playerVotesTeamChange(this.currentSession.sessionId, playerId);
+                this.updateUI();
+            }
+
+            playerSelectPartner(playerId, partnerId) {
+                this.postCombat.selectNewTeammate(this.currentSession.sessionId, playerId, partnerId);
+                
+                // Check if both random selectors made choices
+                if (this.currentSession.newTeamSelections.size === 2) {
+                    this.log(`🔄 Team selectors finished choices. Teams reshuffled.`, 'success');
+                    setTimeout(() => {
+                        this.currentPhase = 'combat';
+                        this.currentSession.teamChangeMode = false;
+                        this.currentSession.teamSelectors = [];
+                        this.log(`New teams formed! Starting rematch...`, 'success');
+                        this.updateUI();
+                    }, 1500);
+                }
+                
+                this.updateUI();
+            }
+
+            checkRematchStatus() {
+                const status = this.postCombat.getRematchStatus(this.currentSession.sessionId);
+                this.log(`Vote Status: Rematch: ${status.rematchVotes}/${status.totalPlayers}, Exit: ${status.exitVotes}/${status.totalPlayers}`, 'info');
+                
+                // Check if all players have voted
+                const allVoted = Array.from(this.currentSession.players.values()).every(p => p.wantsRematch !== null);
+                
+                if (allVoted) {
+                    // Determine outcome
+                    let rematchApproved = false;
+                    if (this.currentSession.combatType === '1v1') {
+                        // Both must agree
+                        rematchApproved = status.rematchVotes === 2;
+                    } else { // 2v2
+                        // 3 or 4 must agree
+                        rematchApproved = status.rematchVotes >= 3;
+                    }
+
+                    if (rematchApproved) {
+                        this.log(`✅ REMATCH APPROVED! Starting new combat...`, 'success');
+                        setTimeout(() => {
+                            this.currentPhase = 'combat';
+                            // Reset votes for all players
+                            this.currentSession.players.forEach(p => {
+                                p.wantsRematch = null;
+                                p.wantsTeamChange = false;
+                            });
+                            this.currentSession.teamChangeMode = false;
+                            this.currentSession.teamSelectors = [];
+                            this.currentSession.newTeamSelections = new Map();
+                            this.practice.setup(this.currentSession.combatType);
+                            this.log(`New rematch combat started!`, 'success');
+                            this.updateUI();
+                        }, 1500);
+                    } else {
+                        this.log(`❌ EXIT APPROVED! Players are leaving the arena...`, 'warning');
+                        setTimeout(() => {
+                            this.players = [];
+                            this.currentPhase = 'none';
+                            this.currentSession = null;
+                            this.log(`Arena is now empty`, 'warning');
+                            this.updateUI();
+                        }, 1500);
+                    }
+                }
+                
+                this.updateUI();
+            }
+
+            useExitDoor(playerId) {
+                this.entrance.playerUsesExitDoor(playerId);
+                const player = this.players.find(p => p.id === playerId);
+                if (player) {
+                    this.players = this.players.filter(p => p.id !== playerId);
+                }
+                this.updateUI();
+            }
+
+            updateUI() {
+                this.updatePhaseDisplay();
+                this.updatePlayersDisplay();
+                this.updateStateDisplay();
+            }
+
+            resetPractice() {
+                this.practice.reset();
+            }
+
+            updatePhaseDisplay() {
+                const phaseDisplay = document.getElementById('phase-display');
+                const countdownDisplay = document.getElementById('countdown-display');
+
+                const phaseMap = {
+                    'entrance': 'entrance',
+                    'waiting': 'waiting',
+                    'countdown': 'countdown',
+                    'combat': 'combat',
+                    'post-combat': 'post-combat',
+                    'none': 'none'
+                };
+
+                phaseDisplay.textContent = this.currentPhase.toUpperCase();
+                phaseDisplay.className = `phase-badge ${phaseMap[this.currentPhase]}`;
+
+                if (this.currentPhase === 'countdown' && this.entrance.countdownActive) {
+                    countdownDisplay.style.display = 'block';
+                    countdownDisplay.textContent = `${this.entrance.countdownValue}`;
+                } else {
+                    countdownDisplay.style.display = 'none';
+                }
+            }
+
+            updatePlayersDisplay() {
+                const container = document.getElementById('players-container');
+                container.innerHTML = '';
+
+                if (this.players.length === 0) {
+                    container.innerHTML = '<div style="grid-column: 1/-1; padding: 20px; text-align: center; background: rgba(0,0,0,0.3); border-radius: 5px;"><strong>No players yet. Click Setup to begin.</strong></div>';
+                    return;
+                }
+
+                this.players.forEach((p, idx) => {
+                    const player = this.entrance.players.get(p.id);
+                    const postPlayer = this.currentSession?.players.get(p.id);
+
+                    const card = document.createElement('div');
+                    card.className = 'player-card';
+                    
+                    if (this.currentPhase === 'post-combat') {
+                        if (postPlayer?.wantsRematch === true) {
+                            card.style.borderColor = '#4caf50';
+                            card.style.background = 'rgba(76, 175, 80, 0.1)';
+                        } else if (postPlayer?.wantsRematch === false) {
+                            card.style.borderColor = '#f44336';
+                            card.style.background = 'rgba(244, 67, 54, 0.1)';
+                        }
+                    } else if (player?.isReady) {
+                        card.classList.add('ready');
+                    }
+
+                    let statusText = 'Waiting...';
+                    let statusEmoji = '⏳';
+                    if (this.currentPhase === 'entrance' && player) {
+                        if (player.isReady) {
+                            statusText = '✓ Ready for Combat';
+                            statusEmoji = '✅';
+                        } else {
+                            statusText = '✗ Not Ready';
+                            statusEmoji = '❌';
+                        }
+                    } else if (this.currentPhase === 'countdown') {
+                        statusText = 'Waiting for Combat...';
+                        statusEmoji = '⏱️';
+                    } else if (this.currentPhase === 'combat') {
+                        statusText = 'In Combat!';
+                        statusEmoji = '⚔️';
+                    } else if (this.currentPhase === 'post-combat' && postPlayer) {
+                        if (postPlayer.wantsRematch === null) {
+                            statusText = 'Voting...';
+                            statusEmoji = '🗳️';
+                        } else if (postPlayer.wantsRematch === true) {
+                            statusText = '✓ Wants Rematch';
+                            statusEmoji = '✅';
+                        } else {
+                            statusText = '✗ Wants to Exit';
+                            statusEmoji = '❌';
+                        }
+                        if (postPlayer.wantsTeamChange) {
+                            statusText += ' (Change Teams)';
+                            statusEmoji = '🔄';
+                        }
+
+                        if (this.currentSession?.teamChangeMode) {
+                            const selectors = this.postCombat.getTeamSelectors(this.currentSession.sessionId);
+                            if (selectors.includes(p.id)) {
+                                statusText += ' [Selector]';
+                                statusEmoji = '🎯';
+                            }
+                        }
+                    }
+
+                    card.innerHTML = `
+                        <div class="player-name">${statusEmoji} ${p.name}</div>
+                        <div class="player-status active">${statusText}</div>
+                        <div class="player-buttons">
+                            ${this.currentPhase === 'entrance' ? `
+                                <button class="${player?.isReady ? 'btn-danger' : 'btn-success'}" onclick="window.testManager.togglePlayerReady('${p.id}')">
+                                    ${player?.isReady ? '✗ Cancel Ready' : '✓ Ready for Combat'}
+                                </button>
+                                <button class="btn-danger" onclick="window.testManager.useExitDoor('${p.id}')">🚪 Exit</button>
+                            ` : ''}
+                            ${this.currentPhase === 'countdown' ? `
+                                <button class="btn-danger" onclick="window.testManager.useExitDoor('${p.id}')">🚪 Exit (Bypass Countdown)</button>
+                            ` : ''}
+                            ${this.currentPhase === 'post-combat' && !this.currentSession.teamChangeMode ? `
+                                <button class="btn-success" onclick="window.testManager.playerVoteRematch('${p.id}')">✓ Vote Rematch</button>
+                                <button class="btn-danger" onclick="window.testManager.playerVoteExit('${p.id}')">✗ Vote Exit</button>
+                                ${this.players.length === 4 ? `
+                                    <button class="btn-primary" onclick="window.testManager.playerVoteTeamChange('${p.id}')">🔄 Change Teams</button>
+                                ` : ''}
+                            ` : ''}
+                            ${this.currentPhase === 'post-combat' && this.currentSession.teamChangeMode ? `
+                                <div style="grid-column: 1/-1; padding: 10px; background: rgba(0,0,0,0.3); border-radius: 5px;">
+                                    ${this.postCombat.getTeamSelectors(this.currentSession.sessionId).includes(p.id) ? `
+                                        <strong>→ You are a random selector. Pick teammate:</strong>
+                                        <div class="partner-buttons" style="margin-top: 8px;">
+                                            ${Array.from(this.postCombat.getAvailableTeammates(this.currentSession.sessionId, p.id)).map(([id, name]) => 
+                                                `<button class="btn-primary" onclick="window.testManager.playerSelectPartner('${p.id}', '${id}')">${name}</button>`
+                                            ).join('')}
+                                        </div>
+                                    ` : `
+                                        <strong>Waiting for random selectors to choose teams...</strong>
+                                    `}
+                                </div>
+                            ` : ''}
+                        </div>
+                    `;
+
+                    container.appendChild(card);
+                });
+            }
+
+            updateStateDisplay() {
+                const stateDisplay = document.getElementById('state-display');
+                const actionGuide = document.getElementById('action-guide');
+                const actionGuideText = document.getElementById('action-guide-text');
+                
+                stateDisplay.innerHTML = '';
+
+                const lines = [
+                    `Phase: ${this.currentPhase.toUpperCase()}`,
+                    `Players: ${this.players.length}`,
+                    `Arena Mode: ${this.arena.getCombatMode()}`
+                ];
+
+                if (this.currentPhase === 'entrance' || this.currentPhase === 'countdown') {
+                    const readyCount = this.entrance.readyPlayers.size;
+                    lines.push(`Ready: ${readyCount}/${this.entrance.players.size}`);
+                }
+
+                if (this.currentPhase === 'countdown') {
+                    lines.push(`Countdown: ${this.entrance.countdownValue}s`);
+                }
+
+                if (this.currentPhase === 'post-combat' && this.currentSession) {
+                    const rematchVotes = Array.from(this.currentSession.players.values()).filter(p => p.wantsRematch === true).length;
+                    const exitVotes = Array.from(this.currentSession.players.values()).filter(p => p.wantsRematch === false).length;
+                    lines.push(`Rematch Votes: ${rematchVotes}/${this.currentSession.players.size}`);
+                    lines.push(`Exit Votes: ${exitVotes}/${this.currentSession.players.size}`);
+                    
+                    if (this.currentSession.teamChangeMode) {
+                        const selections = this.currentSession.newTeamSelections.size;
+                        const selectors = this.postCombat.getTeamSelectors(this.currentSession.sessionId)
+                            .map(id => this.currentSession.players.get(id)?.displayName || id)
+                            .join(', ');
+                        lines.push(`Team Selectors: ${selectors || 'Pending'}`);
+                        lines.push(`Team Selections: ${selections}/2`);
+                    }
+                }
+
+                lines.forEach(line => {
+                    const div = document.createElement('div');
+                    div.className = 'state-line';
+                    div.textContent = line;
+                    stateDisplay.appendChild(div);
+                });
+
+                // Add action guide
+                let guideHTML = '';
+                if (this.currentPhase === 'none') {
+                    guideHTML = 'Click <strong>"Setup 1v1"</strong> or <strong>"Setup 2v2"</strong> to begin testing';
+                } else if (this.currentPhase === 'entrance') {
+                    guideHTML = 'Click <strong>"Ready"</strong> button for each player to prepare them for combat';
+                } else if (this.currentPhase === 'countdown') {
+                    guideHTML = 'Countdown is active! Players will enter combat automatically when it reaches 0. Or click <strong>"Skip to Combat"</strong> to speed it up.';
+                } else if (this.currentPhase === 'combat') {
+                    guideHTML = 'Combat is happening! Click <strong>"Combat Ends → Post-Combat"</strong> to simulate the end of battle.';
+                } else if (this.currentPhase === 'post-combat') {
+                    if (this.currentSession?.teamChangeMode) {
+                        const selections = this.currentSession.newTeamSelections.size;
+                        const selectors = this.postCombat.getTeamSelectors(this.currentSession.sessionId)
+                            .map(id => this.currentSession.players.get(id)?.displayName || id)
+                            .join(' and ');
+                        if (selections === 2) {
+                            guideHTML = '🔄 Both random selectors finished. New teams formed. Starting rematch...';
+                        } else {
+                            guideHTML = `Team selection mode: <strong>${selectors || 'Selecting...'}</strong> were chosen randomly. <strong>${2 - selections}/2 selections</strong> remaining.`;
+                        }
+                    } else {
+                        const rematchVotes = Array.from(this.currentSession.players.values()).filter(p => p.wantsRematch === true).length;
+                        const exitVotes = Array.from(this.currentSession.players.values()).filter(p => p.wantsRematch === false).length;
+                        const totalVotes = rematchVotes + exitVotes;
+                        const totalPlayers = this.currentSession.players.size;
+
+                        if (totalVotes === totalPlayers) {
+                            // All voted
+                            let rematchApproved = false;
+                            if (this.currentSession.combatType === '1v1') {
+                                rematchApproved = rematchVotes === 2;
+                            } else {
+                                rematchApproved = rematchVotes >= 3;
+                            }
+                            if (rematchApproved) {
+                                guideHTML = '✅ <strong>REMATCH APPROVED!</strong> Starting new combat...';
+                            } else {
+                                guideHTML = '❌ <strong>EXIT APPROVED!</strong> Players are leaving the arena...';
+                            }
+                        } else {
+                            guideHTML = `Players are voting! <strong>${totalPlayers - totalVotes}/${totalPlayers}</strong> still need to vote. ${this.players.length === 4 ? '(For 2v2, if all agree to rematch, you can choose to change teams!)' : ''}`;
+                        }
+                    }
+                }
+
+                if (guideHTML) {
+                    actionGuide.style.display = 'block';
+                    actionGuideText.innerHTML = guideHTML;
+                } else {
+                    actionGuide.style.display = 'none';
+                }
+
+                // Add action buttons based on phase
+                const buttonDiv = document.createElement('div');
+                buttonDiv.style.marginTop = '15px';
+                buttonDiv.style.display = 'flex';
+                buttonDiv.style.gap = '10px';
+                buttonDiv.style.flexWrap = 'wrap';
+
+                if (this.currentPhase === 'entrance' && this.entrance.areAllPlayersReady()) {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-success';
+                    btn.textContent = '→ Start Countdown (Auto-triggers when all ready)';
+                    btn.onclick = () => {
+                        this.currentPhase = 'countdown';
+                        this.entrance.startCountdown(() => this.updateUI(), () => this.startCombat());
+                    };
+                    buttonDiv.appendChild(btn);
+                }
+
+                if (this.currentPhase === 'countdown') {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-success';
+                    btn.textContent = '⏭️ Skip Countdown → Go to Combat';
+                    btn.onclick = () => this.startCombat();
+                    buttonDiv.appendChild(btn);
+                }
+
+                if (this.currentPhase === 'combat') {
+                    const btn = document.createElement('button');
+                    btn.className = 'btn-warning';
+                    btn.textContent = '⚔️ Combat Ends → Post-Combat Voting';
+                    btn.onclick = () => this.endCombat();
+                    buttonDiv.appendChild(btn);
+                }
+
+                if (buttonDiv.children.length > 0) {
+                    stateDisplay.appendChild(buttonDiv);
+                }
+            }
+        }
+
+        // Initialize
+        window.testManager = new TestManager();
+        window.testManager.log('Combat Arena System Test Ready!', 'info');
+        window.testManager.log('Click "Setup 1v1" or "Setup 2v2" to begin', 'info');
+        window.testManager.log('Live Practice is now linked directly to Setup & Scenario flow.', 'info');
+    </script>
+</body>
+</html>

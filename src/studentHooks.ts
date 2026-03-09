@@ -19,6 +19,8 @@ export type StudentRelicDefinition = {
     rarity?: string;
     iconPrimary?: StudentRelicIconSpec;
     iconAlt?: StudentRelicIconSpec;
+    iconUrl?: string;
+    iconAltUrl?: string;
     uiHints?: StudentRelicUiHints;
     effectKey?: string;
 };

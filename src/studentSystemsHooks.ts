@@ -886,6 +886,48 @@ export function getStudentMazeHooks(): StudentMazeHooks | null {
 }
 
 // ---------------------------------------------------------------------------
+// Special door floor routing (entrance floor extra door -> profile floor)
+// ---------------------------------------------------------------------------
+
+export type StudentSpecialDoorFloorDefinition = StudentProfileGate & {
+    profile: string;
+    doorId?: string;
+    floorIndex?: number;
+    floorKind?: string;
+    rows?: number;
+    cols?: number;
+    mazeId?: string;
+    grid?: StudentMazeGrid;
+    generate?: (ctx: StudentMazeContext) => StudentMazeGrid | null;
+    data?: any;
+};
+
+const _specialDoorFloorDefs = new Map<string, StudentSpecialDoorFloorDefinition>();
+
+function _normalizeStudentProfileKey(profileName: string): string {
+    return String(profileName || "").trim().toLowerCase();
+}
+
+export function registerStudentSpecialDoorFloor(def: StudentSpecialDoorFloorDefinition): string {
+    const profile = String(def?.profile || "").trim();
+    if (!profile) return "";
+    const key = _normalizeStudentProfileKey(profile);
+    if (!key) return "";
+    _specialDoorFloorDefs.set(key, { ...def, profile });
+    return profile;
+}
+
+export function getStudentSpecialDoorFloor(profileName: string): StudentSpecialDoorFloorDefinition | null {
+    const key = _normalizeStudentProfileKey(profileName);
+    if (!key) return null;
+    return _specialDoorFloorDefs.get(key) || null;
+}
+
+export function listStudentSpecialDoorFloors(): StudentSpecialDoorFloorDefinition[] {
+    return _listFromMap(_specialDoorFloorDefs);
+}
+
+// ---------------------------------------------------------------------------
 // Boss system
 // ---------------------------------------------------------------------------
 
