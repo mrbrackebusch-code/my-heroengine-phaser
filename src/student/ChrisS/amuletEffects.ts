@@ -15,6 +15,7 @@ type TidesState = {
     strengthMoveCount: number;
     lastTideTime: number;
     lastBubbleTime: number;
+    lastWisdomShieldTime: number;
 };
 
 /**
@@ -28,6 +29,7 @@ type TidesState = {
 
 type ZephyrsState = {
     lastTornadoTime: number;
+    lastWisdomShieldTime: number;
 };
 
 /**
@@ -44,6 +46,7 @@ type EmbersState = {
     strengthMoveCount: number;
     lastStunTime: number;
     burnedEnemies: WeakSet<any>; // Track enemies currently burning
+    lastWisdomShieldTime: number;
 };
 
 /**
@@ -60,6 +63,7 @@ type VenomState = {
     poisonedEnemies: WeakSet<any>; // Track enemies currently poisoned
     lastPoisonAreaTime: number;
     enemyDebuffs: WeakMap<any, { defenseReduction: number; attackReduction: number; debuffEndTime: number }>;
+    lastWisdomShieldTime: number;
 };
 
 /**
@@ -75,7 +79,12 @@ type VenomState = {
 type StonesState = {
     lastKnockbackTime: number;
     lastRockDropTime: number;
+    lastWisdomShieldTime: number;
 };
+
+const WISDOM_SHIELD_DURATION_MS = 2500;
+const WISDOM_SHIELD_COOLDOWN_MS = 30000;
+const HERO_WISDOM_SHIELD_INVUL_UNTIL_KEY = "amuletWisdomShieldInvulUntil";
 
 const tidesStateMap = new WeakMap<any, TidesState>();
 const zephyrsStateMap = new WeakMap<any, ZephyrsState>();
@@ -89,6 +98,7 @@ function getTidesState(hero: any): TidesState {
             strengthMoveCount: 0,
             lastTideTime: 0,
             lastBubbleTime: 0,
+            lastWisdomShieldTime: 0,
         });
     }
     return tidesStateMap.get(hero)!;
@@ -98,6 +108,7 @@ function getZephyrsState(hero: any): ZephyrsState {
     if (!zephyrsStateMap.has(hero)) {
         zephyrsStateMap.set(hero, {
             lastTornadoTime: 0,
+            lastWisdomShieldTime: 0,
         });
     }
     return zephyrsStateMap.get(hero)!;
@@ -109,6 +120,7 @@ function getEmbersState(hero: any): EmbersState {
             strengthMoveCount: 0,
             lastStunTime: 0,
             burnedEnemies: new WeakSet(),
+            lastWisdomShieldTime: 0,
         });
     }
     return embersStateMap.get(hero)!;
@@ -120,6 +132,7 @@ function getVenomState(hero: any): VenomState {
             poisonedEnemies: new WeakSet(),
             lastPoisonAreaTime: 0,
             enemyDebuffs: new WeakMap(),
+            lastWisdomShieldTime: 0,
         });
     }
     return venomStateMap.get(hero)!;
@@ -130,9 +143,51 @@ function getStonesState(hero: any): StonesState {
         stonesStateMap.set(hero, {
             lastKnockbackTime: 0,
             lastRockDropTime: 0,
+            lastWisdomShieldTime: 0,
         });
     }
     return stonesStateMap.get(hero)!;
+}
+
+function applyWisdomShieldInvulnerability(ctx: any): void {
+    const hero = ctx?.hero;
+    if (!hero) return;
+
+    try {
+        const spritesApi = (globalThis as any).sprites;
+        if (!spritesApi || typeof spritesApi.readDataNumber !== "function") return;
+
+        const now = Date.now() | 0;
+        const invulUntil = spritesApi.readDataNumber(hero, HERO_WISDOM_SHIELD_INVUL_UNTIL_KEY) | 0;
+        if (invulUntil > now) {
+            ctx.preventDamage = true;
+            ctx.damage = 0;
+        }
+    } catch {
+        // Silent fail keeps gameplay stable even if sprite data API is unavailable.
+    }
+}
+
+function triggerWisdomShieldEffect(ctx: any, shieldVfxId: string): void {
+    const hero = ctx?.hero;
+    if (!hero || !hero.scene) return;
+
+    try {
+        const spritesApi = (globalThis as any).sprites;
+        if (spritesApi && typeof spritesApi.setDataNumber === "function") {
+            const now = Date.now() | 0;
+            const invulUntil = (now + WISDOM_SHIELD_DURATION_MS) | 0;
+            spritesApi.setDataNumber(hero, HERO_WISDOM_SHIELD_INVUL_UNTIL_KEY, invulUntil);
+        }
+    } catch {
+        // Silent fail keeps gameplay stable even if sprite data API is unavailable.
+    }
+
+    triggerVfx(shieldVfxId, {
+        x: hero.x,
+        y: hero.y,
+        lifespanMs: WISDOM_SHIELD_DURATION_MS,
+    });
 }
 
 export function setupAmuletEffects(api: StudentApi): void {
@@ -176,6 +231,16 @@ export function setupAmuletEffects(api: StudentApi): void {
                     triggerBubbleEffect(ctx);
                 }
             }
+
+            // Handle Wisdom moves (2.5s shield invulnerability, 30s cooldown)
+            if (move.family === "wisdom" && now - state.lastWisdomShieldTime >= WISDOM_SHIELD_COOLDOWN_MS) {
+                state.lastWisdomShieldTime = now;
+                triggerWisdomShieldEffect(ctx, "amulet_shield_tides");
+            }
+        },
+
+        beforeHeroDamage(ctx: any) {
+            applyWisdomShieldInvulnerability(ctx);
         },
     });
 
@@ -212,6 +277,23 @@ export function setupAmuletEffects(api: StudentApi): void {
                     triggerTornadoEffect(ctx);
                 }
             }
+
+            // Handle Wisdom moves (2.5s shield invulnerability, 30s cooldown)
+            if (move && move.family === "wisdom") {
+                const hero = ctx.hero;
+                if (!hero) return;
+
+                const state = getZephyrsState(hero);
+                const now = Date.now();
+                if (now - state.lastWisdomShieldTime >= WISDOM_SHIELD_COOLDOWN_MS) {
+                    state.lastWisdomShieldTime = now;
+                    triggerWisdomShieldEffect(ctx, "amulet_shield_zephyrs");
+                }
+            }
+        },
+
+        beforeHeroDamage(ctx: any) {
+            applyWisdomShieldInvulnerability(ctx);
         },
     });
 
@@ -268,6 +350,16 @@ export function setupAmuletEffects(api: StudentApi): void {
                     }
                 }
             }
+
+            // Handle Wisdom moves (2.5s shield invulnerability, 30s cooldown)
+            if (move.family === "wisdom" && now - state.lastWisdomShieldTime >= WISDOM_SHIELD_COOLDOWN_MS) {
+                state.lastWisdomShieldTime = now;
+                triggerWisdomShieldEffect(ctx, "amulet_shield_embers");
+            }
+        },
+
+        beforeHeroDamage(ctx: any) {
+            applyWisdomShieldInvulnerability(ctx);
         },
     });
 
@@ -309,6 +401,16 @@ export function setupAmuletEffects(api: StudentApi): void {
                     triggerPoisonAreaEffect(ctx);
                 }
             }
+
+            // Handle Wisdom moves (2.5s shield invulnerability, 30s cooldown)
+            if (move.family === "wisdom" && now - state.lastWisdomShieldTime >= WISDOM_SHIELD_COOLDOWN_MS) {
+                state.lastWisdomShieldTime = now;
+                triggerWisdomShieldEffect(ctx, "amulet_shield_venom");
+            }
+        },
+
+        beforeHeroDamage(ctx: any) {
+            applyWisdomShieldInvulnerability(ctx);
         },
     });
 
@@ -355,30 +457,78 @@ export function setupAmuletEffects(api: StudentApi): void {
                     }
                 }
             }
+
+            // Handle Wisdom moves (2.5s shield invulnerability, 30s cooldown)
+            if (move.family === "wisdom" && now - state.lastWisdomShieldTime >= WISDOM_SHIELD_COOLDOWN_MS) {
+                state.lastWisdomShieldTime = now;
+                triggerWisdomShieldEffect(ctx, "amulet_shield_stones");
+            }
+        },
+
+        beforeHeroDamage(ctx: any) {
+            applyWisdomShieldInvulnerability(ctx);
         },
     });
 }
 
 function triggerTideEffect(ctx: any): void {
-    // Push enemies back effect
-    // This would typically interact with the combat system to push all nearby enemies
-    // For now, we document the intent; actual VFX implementation can use ctx.api.vfx
+    // Push enemies back effect with water tide visual
     const hero = ctx.hero;
-    if (hero && hero.scene) {
-        // TODO: Implement tide visual effect and enemy knockback
-        // Asset: Water 150x150.png (assets/effects/otherEffects/cool spells not used yet)
-        // Spawn water wave expanding from hero position with knockback force
+    if (!hero || !hero.scene) return;
+
+    const tideRadius = 90; // pixels
+    const knockbackForce = 3.5; // pixels per frame
+    const knockbackDuration = 500; // milliseconds
+    
+    // Spawn water tide VFX at hero position
+    triggerVfx("amulet_tides_vfx", {
+        x: hero.x,
+        y: hero.y,
+        lifespanMs: 800
+    });
+    
+    // Spawn blue weapon visual
+    triggerVfx("amulet_weapon_tides", {
+        x: hero.x,
+        y: hero.y - 30,
+        lifespanMs: 600
+    });
+    
+    // Get all enemies in tide radius and knock them back
+    const enemiesInRadius = getEnemiesInRadius(hero.x, hero.y, tideRadius);
+    for (const enemy of enemiesInRadius) {
+        // Apply knockback away from hero center (wave pushes outward)
+        applyKnockbackFrom(enemy, hero.x, hero.y, knockbackForce, knockbackDuration);
     }
 }
 
 function triggerBubbleEffect(ctx: any): void {
     // Trap enemies with bubbles for 2.5 seconds
-    // This would typically apply a status effect to nearby enemies
     const hero = ctx.hero;
-    if (hero && hero.scene) {
-        // TODO: Implement bubble visual effect and trap status (slow/stun for 2.5s)
-        // Asset: Water 150x150.png (assets/effects/otherEffects/cool spells not used yet)
-        // Spawn bubble at target enemy position, apply slow/stun status
+    if (!hero || !hero.scene) return;
+    
+    const bubbleRadius = 80; // pixels
+    const trapDuration = 2500; // 2.5 seconds
+    
+    // Spawn blue weapon visual at hero
+    triggerVfx("amulet_weapon_tides", {
+        x: hero.x,
+        y: hero.y - 30,
+        lifespanMs: 600
+    });
+    
+    // Get all enemies in bubble radius
+    const enemiesInRadius = getEnemiesInRadius(hero.x, hero.y, bubbleRadius);
+    for (const enemy of enemiesInRadius) {
+        // Spawn bubble VFX at each enemy position
+        triggerVfx("amulet_tides_vfx", {
+            x: enemy.x,
+            y: enemy.y,
+            lifespanMs: trapDuration
+        });
+        
+        // Apply stun status to trap enemy in place
+        applyStun(enemy, trapDuration);
     }
 }
 
@@ -396,6 +546,13 @@ function triggerTornadoEffect(ctx: any): void {
             x: hero.x,
             y: hero.y,
             lifespanMs: 800
+        });
+        
+        // Spawn white weapon visual
+        triggerVfx("amulet_weapon_zephyrs", {
+            x: hero.x,
+            y: hero.y - 30,
+            lifespanMs: 600
         });
         
         const enemiesInRadius = getEnemiesInRadius(hero.x, hero.y, tornadoRadius);
@@ -425,6 +582,15 @@ function triggerBurnEffect(ctx: any, enemy: any): void {
         y: enemy.y,
         lifespanMs: 2000
     });
+    
+    // Spawn orange weapon visual at hero
+    if (hero) {
+        triggerVfx("amulet_weapon_embers", {
+            x: hero.x,
+            y: hero.y - 30,
+            lifespanMs: 600
+        });
+    }
 
     const burnInterval = setInterval(() => {
         if (tickCount >= totalTicks || !enemy) {
@@ -446,19 +612,63 @@ function triggerBurnEffect(ctx: any, enemy: any): void {
 }
 
 function triggerStunEffect(ctx: any, enemy: any): void {
-    // Stun enemy for 1 second
+    // Stun enemy for 1 second with fire effect
     if (!enemy) return;
 
-    // TODO: Implement stun visual effect and disable enemy actions for 1 second
-    // Could apply a status effect or animation freeze to the enemy
+    const stunDuration = 1000; // 1 second
+    const hero = ctx.hero;
+    
+    // Spawn fire stun VFX at enemy position
+    triggerVfx("amulet_embers_vfx", {
+        x: enemy.x,
+        y: enemy.y,
+        lifespanMs: stunDuration
+    });
+    
+    // Spawn orange weapon visual at hero
+    if (hero) {
+        triggerVfx("amulet_weapon_embers", {
+            x: hero.x,
+            y: hero.y - 30,
+            lifespanMs: 600
+        });
+    }
+    
+    // Apply stun status to disable enemy actions
+    applyStun(enemy, stunDuration);
 }
 
 function triggerExplosionEffect(ctx: any, enemy: any): void {
-    // Create small explosion when enemies are hit by intelligence move
+    // Create explosion with fire visual and knockback
     if (!enemy) return;
 
-    // TODO: Implement explosion visual effect at enemy location
-    // Could trigger a VFX and apply knockback to nearby enemies
+    const explosionRadius = 60; // pixels
+    const knockbackForce = 2.5; // pixels per frame
+    const knockbackDuration = 400; // milliseconds
+    const hero = ctx.hero;
+    
+    // Spawn explosion VFX at enemy position
+    triggerVfx("amulet_embers_vfx", {
+        x: enemy.x,
+        y: enemy.y,
+        lifespanMs: 600
+    });
+    
+    // Spawn orange weapon visual at hero
+    if (hero) {
+        triggerVfx("amulet_weapon_embers", {
+            x: hero.x,
+            y: hero.y - 30,
+            lifespanMs: 600
+        });
+    }
+    
+    // Get all enemies near explosion center and knock them back
+    const enemiesInRadius = getEnemiesInRadius(enemy.x, enemy.y, explosionRadius);
+    for (const nearbyEnemy of enemiesInRadius) {
+        // Apply knockback away from explosion center
+        applyKnockbackFrom(nearbyEnemy, enemy.x, enemy.y, knockbackForce, knockbackDuration);
+    }
 }
 
 function triggerPoisonEffect(ctx: any, enemy: any, state: VenomState): void {
@@ -473,12 +683,23 @@ function triggerPoisonEffect(ctx: any, enemy: any, state: VenomState): void {
     const totalTicks = 3; // 1.5 seconds / 0.5 seconds = 3 ticks
     let tickCount = 0;
 
+    const hero = ctx.hero;
+    
     // Spawn poison VFX on enemy
     triggerVfx("amulet_venom_vfx", {
         x: enemy.x,
         y: enemy.y,
         lifespanMs: 1500
     });
+    
+    // Spawn purple weapon visual at hero
+    if (hero) {
+        triggerVfx("amulet_weapon_venom", {
+            x: hero.x,
+            y: hero.y - 30,
+            lifespanMs: 600
+        });
+    }
 
     const poisonInterval = setInterval(() => {
         if (tickCount >= totalTicks || !enemy) {
@@ -545,6 +766,13 @@ function triggerPoisonAreaEffect(ctx: any): void {
     const damageTickInterval = 500; // damage every 0.5 seconds
     let tickCount = 0;
     const maxTicks = Math.floor(areaDuration / damageTickInterval); // 8 ticks
+    
+    // Spawn purple weapon visual at hero
+    triggerVfx("amulet_weapon_venom", {
+        x: hero.x,
+        y: hero.y - 30,
+        lifespanMs: 600
+    });
 
     // Apply poison area effect over duration
     const areaInterval = setInterval(() => {
@@ -591,6 +819,13 @@ function triggerKnockbackEffect(ctx: any): void {
         lifespanMs: 600
     });
     
+    // Spawn brown-tinted weapon visual
+    triggerVfx("amulet_weapon_stones", {
+        x: hero.x,
+        y: hero.y - 30, // Offset up slightly so it's more visible
+        lifespanMs: 600
+    });
+    
     // Get all enemies in knockback radius
     const enemiesInRadius = getEnemiesInRadius(hero.x, hero.y, knockbackRadius);
     for (const enemy of enemiesInRadius) {
@@ -603,6 +838,7 @@ function triggerRockDropEffect(ctx: any, enemy: any): void {
     // Drop rock on enemy: stun for 2 seconds and deal extra damage
     if (!enemy) return;
     const stunDuration = 2000;
+    const hero = ctx.hero;
     
     // Spawn rock impact VFX at enemy position
     triggerVfx("amulet_stones_vfx", {
@@ -610,6 +846,15 @@ function triggerRockDropEffect(ctx: any, enemy: any): void {
         y: enemy.y,
         lifespanMs: 800
     });
+    
+    // Spawn brown weapon visual at hero
+    if (hero) {
+        triggerVfx("amulet_weapon_stones", {
+            x: hero.x,
+            y: hero.y - 30,
+            lifespanMs: 600
+        });
+    }
     
     // Apply stun status to enemy (disable movement/actions for 2 seconds)
     applyStun(enemy, stunDuration);

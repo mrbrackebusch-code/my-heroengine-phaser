@@ -7,6 +7,8 @@ export type AmuletOption = {
     flavorText: string;
     color: string;
     stats: string[];
+    iconX: number;
+    iconY: number;
 };
 
 const AMULETS: AmuletOption[] = [
@@ -21,6 +23,8 @@ const AMULETS: AmuletOption[] = [
             "Every 5 Strength moves: Knockback wave",
             "Intelligence: Bubble trap (2.5s stun)",
         ],
+        iconX: 23,
+        iconY: 69,
     },
     {
         id: "amulet_wind",
@@ -33,6 +37,8 @@ const AMULETS: AmuletOption[] = [
             "Strength Moves: +5% speed boost",
             "Intelligence: Tornado pull (pulls enemies)",
         ],
+        iconX: 28,
+        iconY: 62,
     },
     {
         id: "amulet_fire",
@@ -45,6 +51,8 @@ const AMULETS: AmuletOption[] = [
             "Burn on hit: 2% enemy health/0.5s (2s total)",
             "Every 3 Strength moves: 1s stun",
         ],
+        iconX: 39,
+        iconY: 68,
     },
     {
         id: "amulet_poison",
@@ -57,6 +65,8 @@ const AMULETS: AmuletOption[] = [
             "Poison on hit: 2% health/0.5s (1.5s total)",
             "Debuff: -5% defense & attack (stacks to -20%)",
         ],
+        iconX: 34,
+        iconY: 65,
     },
     {
         id: "amulet_earth",
@@ -70,8 +80,70 @@ const AMULETS: AmuletOption[] = [
             "Strength: 360° knockback (4s cooldown)",
             "Intelligence: Rock drop (2s stun)",
         ],
+        iconX: 28,
+        iconY: 29,
     },
 ];
+
+/**
+ * Extracts a 32x32 icon from ProjectUtumno_full texture and returns a data URL.
+ * @param x Column index (0-based)
+ * @param y Row index (0-based)
+ * @returns Data URL of the icon, or null if extraction fails
+ */
+function extractIconDataURL(x: number, y: number): string | null {
+    try {
+        const g = globalThis as any;
+        
+        // Try to get the Phaser scene
+        const scene = g.game?.scene?.scenes?.[0];
+        if (!scene || !scene.textures) {
+            console.warn("[AMULET][UI] Cannot access Phaser scene");
+            return null;
+        }
+
+        // Get the ProjectUtumno_full texture
+        const texKey = "tiles.ProjectUtumno_full";
+        const texture = scene.textures.get(texKey);
+        if (!texture || !texture.source || !texture.source[0]) {
+            console.warn("[AMULET][UI] Cannot access texture:", texKey);
+            return null;
+        }
+
+        // Get the source image
+        const sourceImage = texture.source[0].image;
+        if (!sourceImage) {
+            console.warn("[AMULET][UI] No source image for texture");
+            return null;
+        }
+
+        // Create a temporary canvas to extract the 32x32 region
+        const canvas = document.createElement("canvas");
+        canvas.width = 32;
+        canvas.height = 32;
+        const ctx = canvas.getContext("2d");
+        if (!ctx) return null;
+
+        // Draw the 32x32 region from the source image
+        const frameSize = 32;
+        const srcX = x * frameSize;
+        const srcY = y * frameSize;
+
+        ctx.drawImage(
+            sourceImage,
+            srcX, srcY,      // Source position
+            frameSize, frameSize,  // Source size
+            0, 0,            // Destination position
+            frameSize, frameSize   // Destination size
+        );
+
+        // Convert to data URL
+        return canvas.toDataURL("image/png");
+    } catch (e) {
+        console.error("[AMULET][UI] Error extracting icon:", e);
+        return null;
+    }
+}
 
 export function showAmuletSelectionUI(api: StudentApi, onSelected: (amuletId: string) => void): void {
     let selectedAmulet: AmuletOption | null = null;
@@ -140,8 +212,14 @@ export function showAmuletSelectionUI(api: StudentApi, onSelected: (amuletId: st
             text-align: center;
         `;
 
+        // Extract icon sprite
+        const iconDataURL = extractIconDataURL(amulet.iconX, amulet.iconY);
+        const iconHTML = iconDataURL 
+            ? `<img src="${iconDataURL}" style="width: 32px; height: 32px; margin-bottom: 8px; image-rendering: pixelated;" />`
+            : `<div style="font-size: 16px; margin-bottom: 8px; color: ${amulet.color === "blue" ? "#4a9eff" : amulet.color === "white" ? "#e0e0e0" : amulet.color === "red" ? "#ff4444" : amulet.color === "purple" ? "#aa44ff" : "#8b7355"};">★</div>`;
+
         button.innerHTML = `
-            <div style="font-size: 16px; margin-bottom: 8px; color: ${amulet.color === "blue" ? "#4a9eff" : amulet.color === "white" ? "#e0e0e0" : amulet.color === "red" ? "#ff4444" : amulet.color === "purple" ? "#aa44ff" : "#8b7355"};">★</div>
+            ${iconHTML}
             <div style="font-size: 13px;">${amulet.name}</div>
         `;
 

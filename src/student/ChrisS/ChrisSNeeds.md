@@ -1,148 +1,96 @@
-# ChrisS Amulet System — Teacher Action Required
+# ChrisS Amulet System — Status
 
-## 🚨 STATUS: AWAITING CORE INTEGRATION
+## ✅ CORE INTEGRATION COMPLETE
 
-Student code is complete. System needs 3 dispatch calls in `HeroEngineInPhaser.ts` to go live.
+Amulet effects are **fully integrated** and working. Only Floor 1 reward trigger remains.
 
 ---
 
 ## ✅ What's Complete
 
-- **5 Amulets:** Tides (water), Zephyrs (wind), Embers (fire), Venom (poison), Stones (earth)
-- **All Mechanics:** Speed mods, DoT, stuns, knockback, area effects, cooldowns
-- **Safe Wrappers:** [amuletUtils.ts](amuletUtils.ts) prevents sprite data corruption
-- **Bridge Functions:** [studentSystemsHooks.ts](../../studentSystemsHooks.ts) has dispatch functions ready
-- **Registration:** [index.ts](index.ts) registers all relics with effect keys
+### Student Code (100%)
+- **5 Amulets:** Tides, Zephyrs, Embers, Venom, Stones with full mechanics
+- **All VFX:** LightEffects, FireWrath, CosmicTime, EarthImpact particle effects
+- **Amulet Selection UI:** Modal with stats display and confirmation popup
+- **Effect Handlers:** Speed mods, DoT, stuns, knockback, area effects, cooldowns
+- **Safe Wrappers:** [amuletUtils.ts](amuletUtils.ts) prevents sprite corruption
+- **Floor 1 Listener:** [index.ts](index.ts) ready to show UI on event
+
+### Core Integration (100%)
+- ✅ `dispatchRelicModifyMoveStats` - imported & called (line 27842)
+- ✅ `dispatchRelicOnHitEnemy` - imported & called (line 84872)
+- ✅ `__heroEngineVfxRegistry` - exposed to globalThis (line 13105)
 
 ---
 
-## ⚠️ Required: Apply Core Integration
+## ⏳ NOT YET DONE: Floor 1 Reward Hooks
 
-**Choose one option:**
+**VERIFICATION: These are NOT in HeroEngineInPhaser.ts. Teacher must add them.**
 
-### Option A: Git Patch (Recommended)
+### 1️⃣ Event Dispatch — NOT FOUND IN CORE
 
-```bash
-git apply src/student/ChrisS/heroengine_relic_integration.patch
-git add -A
-git commit -m "Integrate student relic dispatch hooks (ChrisS amulets)"
-```
-
-✅ Atomic, reversible, reviewable
-
----
-
-### Option B: Manual Edits (3 Locations)
-
-**1. Add Import (Top of File)**
-
-Find the import block from `"./studentSystemsHooks"` (~line 15-40) and add:
+**Location:** Find where floor 1 treasure is opened in HeroEngineInPhaser.ts  
+**Search for:** `treasureChest`, `openTreasure`, or floor index `=== 1`  
+**Add this line:**
 
 ```typescript
-import {
-    // ... existing imports ...
-    dispatchRelicModifyMoveSpeed,
-    dispatchRelicModifyMoveStats,
-    dispatchRelicOnHitEnemy,
-} from "./studentSystemsHooks";
+globalThis.dispatchEvent(new CustomEvent("he:dungeonFloorComplete", {
+    detail: { floorIndex: 1 }
+}));
 ```
 
-**2. Hook Into Move Execution (executeStrengthMove)**
+### 2️⃣ Relic Grant Function — NOT FOUND IN CORE
 
-Search for: `executeStrengthMove(`  
-Find: `sprites.setDataString(hero, HERO_DATA.STR_PAYLOAD_ANIM, animKey || "")`  
-Add **after that line:**
+**Add at module level in HeroEngineInPhaser.ts** (after other helpers):
 
 ```typescript
-// Allow student relics to modify per-move behavior
-try {
-    dispatchRelicModifyMoveStats({
-        hero,
-        move: { family: FAMILY.STRENGTH, button },
-        stats,
-        hitEnemies: []
-    });
-} catch (e) {
-    console.error("[RELIC][ERROR] dispatchRelicModifyMoveStats:", e);
+export function addRelicToHero(heroIndex: number, amuletId: string): void {
+    const hero = /* get hero sprite by heroIndex from your hero array */;
+    if (!hero) return;
+    
+    // Use your relic system to add the relic
+    // Example: heroes[heroIndex].addRelic(amuletId);
+    // or: relicInventory.add(heroIndex, amuletId);
 }
+
+// Expose to globalThis
+(globalThis as any).addRelicToHero = addRelicToHero;
 ```
 
-**3. Hook Into Hit Detection (Weapon/Projectile Overlap)**
-
-Search for: `applyDamageToEnemyIndex(eIndex, dmg, heroIndex, hit);`  
-Add **immediately before that line:**
-
-```typescript
-// Trigger student relic on-hit effects
-try {
-    dispatchRelicOnHitEnemy({
-        hero,
-        enemy,
-        eIndex,
-        damage: dmg,
-        family,
-        button,
-        hitPacket: hit
-    });
-} catch (e) {
-    console.error("[RELIC][ERROR] dispatchRelicOnHitEnemy:", e);
-}
-```
-
-📄 **Full context with line numbers:** See [HeroEngineCoreEdits.md](HeroEngineCoreEdits.md)
+**Why:** Student UI ([index.ts](index.ts) line 81–82) calls `g.addRelicToHero(heroIndex, amuletId)` after player confirms amulet selection.
 
 ---
 
-## 🧪 Testing After Integration
+## 🧪 Testing
 
-**1. Build and run:**
-```bash
-npm run dev
-```
+**Test UI manually (without teacher hooks):**
 
-**2. Open debug sandbox:**
-```
-debug.html?student=ChrisS
-```
+1. Run `npm run dev`
+2. Open game in browser
+3. Open DevTools Console
+4. Run: `globalThis.dispatchEvent(new CustomEvent("he:dungeonFloorComplete",{detail:{floorIndex:1}}))`
+5. Amulet selection UI should appear
+6. Select amulet → view stats → confirm → see "Are you sure?" popup
 
-**3. Equip an amulet and test:**
-- Speed mods work (Zephyrs +15%, Stones -10%)
-- On-hit effects trigger (burn, poison, stuns, knockback)
-- No `[RELIC][ERROR]` logs in console
+**Test with floor 1 reward (after teacher adds hooks):**
 
-**Expected behaviors:**
-- **Tides:** Every 5 Strength = knockback; Intelligence = bubble trap
-- **Zephyrs:** +15% speed + Strength boosts; Intelligence = tornado pull
-- **Embers:** Burns on hit; every 3 Strength = stun
-- **Venom:** Poison DoT + stacking debuffs (max 20%)
-- **Stones:** -10% speed, +20% defense; Strength = shockwave + rock stun
+1. Start game normally
+2. Complete floor 1 (reach treasure)
+3. UI appears automatically
+4. Select & confirm amulet
+5. Amulet is granted to hero
+6. Test effects in combat on floor 2+
 
 ---
 
-## 🎨 Optional: VFX Integration
+## 📊 Expected Behaviors
 
-Currently amulet effects work but have no visuals. To add particle effects:
+Once integrated:
 
-**Teacher needs to:**
-1. Expose `VfxHelpers` to student code (pass in context or add to studentSystemsHooks)
-2. Student can then spawn Water 150x150.png effect for Tides amulet
-
-**Why it's not done yet:**
-- VFX helpers (`vfxHelpers.spawnEffect()`) exist in core but aren't student-accessible
-- Asset is ready: `assets/effects/otherEffects/cool spells not used yet/Water 150x150.png`
-- TODOs in [amuletEffects.ts](amuletEffects.ts) mark where effects should spawn
-
----
-
-## 📋 Other Optional Enhancements
-
-1. **Debug Flag:** Add `DEBUG_RELIC_EFFECTS` to [debugFlags.ts](../../debugFlags.ts) for verbose logging
-2. **Per-Hero Filtering:** Only run dispatches for equipped relics (currently all handlers run)
-
----
-
-## 📞 Questions?
-
-See [HeroEngineCoreEdits.md](HeroEngineCoreEdits.md) for detailed paste-ready code snippets.
+- **Tides:** +15% speed | Every 5 Strength = knockback wave | Intelligence = bubble trap (2.5s)
+- **Zephyrs:** +15% speed | Strength +5% speed | Intelligence = tornado pull
+- **Embers:** +10% speed | Burn on hit (8% total HP) | Every 3 Strength = 1s stun
+- **Venom:** +12% speed | Poison on hit (6% total HP) | Debuff stacks to -20%
+- **Stones:** -10% speed, +20% def | Strength = 360° knockback | Intelligence = rock stun (2s)
 
 
