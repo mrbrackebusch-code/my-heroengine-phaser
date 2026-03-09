@@ -14250,6 +14250,11 @@ function _dunHandleInteractRelicOffer(it: Sprite, hero: Sprite, pid: number, hi:
             _dunObjectiveDone = true
             _dunSetPadPowered(true)
             _dunLog(`chest opened by P${pid}; pad powered`)
+            try {
+                globalThis.dispatchEvent(new CustomEvent("he:dungeonFloorComplete", {
+                    detail: { floorIndex: _dunFloorIndex | 0 }
+                }))
+            } catch { }
         }
     }
 
@@ -93454,6 +93459,21 @@ function _relicGrantToPid(pid: number, relicId: string, source: string): boolean
     return true
 
 }
+
+export function addRelicToHero(heroIndex: number, amuletId: string): void {
+    const hi = heroIndex | 0
+    if (hi < 0 || hi >= heroes.length) return
+
+    const hero = heroes[hi]
+    if (!hero || (hero.flags & sprites.Flag.Destroyed)) return
+
+    const pid = sprites.readDataNumber(hero, HERO_DATA.OWNER) | 0
+    if (pid <= 0) return
+
+    _relicGrantToPid(pid | 0, String(amuletId || ""), "student-floor1-reward")
+}
+
+;(globalThis as any).addRelicToHero = addRelicToHero
 
 function _heGrantPlayerRewardToPid(pid: number, reward: any, source: string): { ok: boolean; reason: string } {
 
