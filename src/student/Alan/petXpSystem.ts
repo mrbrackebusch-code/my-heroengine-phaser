@@ -54,6 +54,8 @@ export function initPetXpState(pet: any): void {
         level: 1,
         xpToNextLevel: 100, // Elizabeth: tune this value
     };
+    // Keep runtime pet.level in sync so combat systems can read it
+    pet.level = 1;
 }
 
 /**
@@ -133,11 +135,16 @@ function _levelUpPet(pet: any, xpState: any, ctx?: any): void {
     // Increase level
     const oldLevel = xpState.level;
     xpState.level = Math.min(10, xpState.level + 1);
-    
+
+    // Keep runtime pet.level in sync with XP state
+    if (pet) {
+        pet.level = xpState.level;
+    }
+
     // Store old stats for comparison
     const oldMaxHp = pet.maxHp || 40;
     const oldAtk = pet.atk || 6;
-    
+
     // Grow stats based on growth rates
     _applyStatGrowth(pet, oldLevel, xpState.level);
     
