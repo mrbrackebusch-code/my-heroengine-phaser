@@ -1,0 +1,28 @@
+﻿{
+    "generatedAtUtc":  "2026-03-26T16:51:24.4645758Z",
+    "sourceRepoRoot":  "C:\\my-heroengine-phaser",
+    "packetRoot":  ".\\tmp\\chris-amulet-solo-handoff",
+    "exportScope":  "transition",
+    "ownedFiles":  [
+                       "src/student/ChrisS/SOLO_REPO_TRANSITION.md",
+                       "src/student/ChrisS/NEW_REPO_CHAT_HANDOFF_PROMPT.md",
+                       "src/student/ChrisS/export_solo_handoff.ps1"
+                   ],
+    "requiredHostFiles":  [
+                              "src/studentApi.ts",
+                              "src/studentSystemsHooks.ts",
+                              "src/studentSdk.ts",
+                              "src/studentHooks.ts",
+                              "package.json",
+                              "tsconfig.json",
+                              "vite.config.js"
+                          ],
+    "globalDependencies":  [
+                               "globalThis.__HeroEnginePhaserInternals",
+                               "globalThis.__heroEngineVfxRegistry",
+                               "globalThis.addRelicToHero",
+                               "globalThis.__heRelicCatalog",
+                               "globalThis.sprites",
+                               "globalThis.SpriteKind"
+                           ]
+}

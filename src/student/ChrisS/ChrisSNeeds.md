@@ -1,10 +1,11 @@
 # ChrisS Amulet System - Teacher Handoff
 
-Status: Student-side implementation is complete. Two core-engine hooks are still required.
+Status: Student-side implementation is complete.
 
-Verified on local main branch (Mar 9, 2026):
-- `he:dungeonFloorComplete` is not dispatched from core.
-- `addRelicToHero` is not defined/exposed in core.
+Current design:
+- Floor 1 now uses a separate student-side Amulet Chest.
+- The normal starter relic chest should remain a normal relic chest.
+- Amulets are no longer registered into the starter relic pool at scene startup.
 
 ## Already complete (student side)
 
@@ -13,39 +14,15 @@ Verified on local main branch (Mar 9, 2026):
 - Strength/Intelligence/Wisdom behaviors and VFX implemented.
 - Wisdom shield invulnerability + cooldown implemented.
 
-## Required core changes
+## Core dependency
 
-### 1) Dispatch floor-complete event when objective chest flow completes
-
-File: `src/HeroEngineInPhaser.ts`
-
-Find this block (near the line with `chest opened by P${pid}; pad powered`):
-
-```ts
-if (!pending) {
-    _dunObjectiveDone = true
-    _dunSetPadPowered(true)
-    _dunLog(`chest opened by P${pid}; pad powered`)
-}
-```
-
-Add this immediately after the `_dunLog(...)` line:
-
-```ts
-try {
-    globalThis.dispatchEvent(new CustomEvent("he:dungeonFloorComplete", {
-        detail: { floorIndex: _dunFloorIndex }
-    }))
-} catch { }
-```
-
-Why: Student system listens for this event and opens the amulet reward UI only when `floorIndex === 1`.
-
-### 2) Add and expose `addRelicToHero(heroIndex, amuletId)`
+### Keep `addRelicToHero(heroIndex, amuletId)` exposed
 
 File: `src/HeroEngineInPhaser.ts`
 
-Add this helper at module scope (near relic helper functions):
+This is still required by the student-side Amulet Chest flow.
+
+Expected helper:
 
 ```ts
 export function addRelicToHero(heroIndex: number, amuletId: string): void {
@@ -62,26 +39,24 @@ export function addRelicToHero(heroIndex: number, amuletId: string): void {
 (globalThis as any).addRelicToHero = addRelicToHero
 ```
 
-Why: Student selection UI confirms an amulet and calls `globalThis.addRelicToHero(heroIndex, amuletId)`.
+Why: Student Amulet Chest UI confirms an amulet and then calls `globalThis.addRelicToHero(heroIndex, amuletId)`.
 
 ## Acceptance checks (teacher)
 
-After implementing the two changes above:
-
-1. Search in `src/HeroEngineInPhaser.ts` for `he:dungeonFloorComplete` and `addRelicToHero`.
-2. Run game and trigger this in browser console:
-
-```js
-globalThis.dispatchEvent(new CustomEvent("he:dungeonFloorComplete", { detail: { floorIndex: 1 } }))
-```
-
-Expected: Amulet selection UI appears.
-
-3. Complete floor 1 chest objective normally.
+1. Spawn into floor 1 entrance.
+2. Verify two separate reward sources exist:
+    - normal starter relic chest
+    - separate Amulet Chest
+3. Verify the normal starter relic chest does not include amulets.
+4. Open the Amulet Chest.
 
 Expected:
-- Reward UI appears automatically.
+- It shows all 5 amulet options.
 - Confirming an amulet grants the relic.
 - Amulet effects work on later floors.
+
+Notes:
+- The old `he:dungeonFloorComplete` reward flow is no longer required for the amulet chest.
+- If `addRelicToHero` remains exposed in core, no further teacher changes should be needed for the chest flow.
 
 

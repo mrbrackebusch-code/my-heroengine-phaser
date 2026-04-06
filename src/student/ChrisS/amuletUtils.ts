@@ -188,12 +188,39 @@ export function getEnemyByIndex(eIndex: number): any {
  */
 export function getAllEnemies(): any[] {
     try {
-        const HE = (globalThis as any).HeroEngine;
-        if (HE && Array.isArray(HE.enemies)) {
-            return HE.enemies.filter((e: any) => e && !(e.flags & 1)); // Filter out destroyed
+        const g = globalThis as any;
+        const spritesNS: any = g?.sprites;
+        const sk: any = g?.SpriteKind;
+        if (!spritesNS || typeof spritesNS._getAllSprites !== "function") return [];
+
+        const all = spritesNS._getAllSprites() as any[];
+        if (!Array.isArray(all) || all.length <= 0) return [];
+
+        const enemyKind = (sk && typeof sk.Enemy === "number") ? (sk.Enemy | 0) : 0;
+        const destroyedFlag = spritesNS?.Flag?.Destroyed;
+        const result: any[] = [];
+
+        for (let i = 0; i < all.length; i++) {
+            const s = all[i];
+            if (!s) continue;
+
+            if (typeof destroyedFlag === "number" && (s.flags & destroyedFlag)) continue;
+
+            // Prefer exact kind() checks when available.
+            if (enemyKind) {
+                if (typeof s.kind === "function") {
+                    if ((s.kind() | 0) !== enemyKind) continue;
+                } else {
+                    continue;
+                }
+            }
+
+            result.push(s);
         }
-    } catch (e) {
-        console.error("[AMULET][GET_ALL_ENEMIES][ERROR]", e);
+
+        return result;
+    } catch {
+        // Keep gameplay stable if sprite APIs are unavailable.
     }
     return [];
 }

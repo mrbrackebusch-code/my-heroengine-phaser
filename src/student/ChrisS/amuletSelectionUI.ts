@@ -1,89 +1,59 @@
 import type { StudentApi } from "../../studentApi";
+import { AMULETS, type AmuletDefinition } from "./amuletData";
 
-export type AmuletOption = {
+export type AmuletOption = AmuletDefinition;
+
+type AmuletPreviewData = {
     id: string;
     name: string;
     effectText: string;
     flavorText: string;
-    color: string;
+    colorHex: string;
     stats: string[];
-    iconX: number;
-    iconY: number;
 };
 
-const AMULETS: AmuletOption[] = [
-    {
-        id: "amulet_water",
-        name: "Amulet of Tides",
-        effectText: "Grants water affinity; slows burning.",
-        flavorText: "A star-shaped amulet with a blue sheen. Harnesses the power of the tides.",
-        color: "blue",
-        stats: [
-            "Movement Speed: +15%",
-            "Every 5 Strength moves: Knockback wave",
-            "Intelligence: Bubble trap (2.5s stun)",
-        ],
-        iconX: 23,
-        iconY: 69,
-    },
-    {
-        id: "amulet_wind",
-        name: "Amulet of Zephyrs",
-        effectText: "Increases dodge chance; boosts speed.",
-        flavorText: "A star-shaped amulet with a white shimmer. Calls upon the swiftness of the gale.",
-        color: "white",
-        stats: [
-            "Movement Speed: +15%",
-            "Strength Moves: +5% speed boost",
-            "Intelligence: Tornado pull (pulls enemies)",
-        ],
-        iconX: 28,
-        iconY: 62,
-    },
-    {
-        id: "amulet_fire",
-        name: "Amulet of Embers",
-        effectText: "Adds fire damage to attacks; ignites small foes.",
-        flavorText: "A star-shaped amulet with a warm red glow. Contains the fury of an ever-burning ember.",
-        color: "red",
-        stats: [
-            "Movement Speed: +10%",
-            "Burn on hit: 2% enemy health/0.5s (2s total)",
-            "Every 3 Strength moves: 1s stun",
-        ],
-        iconX: 39,
-        iconY: 68,
-    },
-    {
-        id: "amulet_poison",
-        name: "Amulet of Venom",
-        effectText: "Attacks apply minor poison over time.",
-        flavorText: "A star-shaped amulet with a purple tint. Infused with a slow-acting, potent toxin.",
-        color: "purple",
-        stats: [
-            "Movement Speed: +12%",
-            "Poison on hit: 2% health/0.5s (1.5s total)",
-            "Debuff: -5% defense & attack (stacks to -20%)",
-        ],
-        iconX: 34,
-        iconY: 65,
-    },
-    {
-        id: "amulet_earth",
-        name: "Amulet of Stones",
-        effectText: "Increases defense and resistance to knockback.",
-        flavorText: "A star-shaped amulet with an earthy brown luster. Anchored with the strength of the earth.",
-        color: "brown",
-        stats: [
-            "Movement Speed: -10%",
-            "Defense: +20%",
-            "Strength: 360° knockback (4s cooldown)",
-            "Intelligence: Rock drop (2s stun)",
-        ],
-        iconX: 28,
-        iconY: 29,
-    },
-];
+function getAmuletColorHex(color: string): string {
+    if (color === "blue") return "#4a9eff";
+    if (color === "white") return "#e0e0e0";
+    if (color === "red") return "#ff4444";
+    if (color === "purple") return "#aa44ff";
+    return "#8b7355";
+}
+
+export function buildAmuletPreviewData(
+    amuletId: string,
+    amuletOptions: readonly AmuletDefinition[],
+): AmuletPreviewData | null {
+    const normalizedId = String(amuletId || "").trim();
+    if (!normalizedId) return null;
+
+    let selectedAmulet: AmuletDefinition | null = null;
+    for (const option of amuletOptions) {
+        if (option.id !== normalizedId) continue;
+        selectedAmulet = option;
+        break;
+    }
+    if (!selectedAmulet) return null;
+
+    const uniqueStats: string[] = [];
+    const seenStats = new Set<string>();
+    for (const statLine of selectedAmulet.stats) {
+        const cleanedStat = String(statLine || "").trim();
+        if (!cleanedStat) continue;
+        if (seenStats.has(cleanedStat)) continue;
+        seenStats.add(cleanedStat);
+        uniqueStats.push(cleanedStat);
+    }
+
+    return {
+        id: selectedAmulet.id,
+        name: selectedAmulet.name,
+        effectText: selectedAmulet.effectText,
+        flavorText: selectedAmulet.flavorText,
+        colorHex: getAmuletColorHex(selectedAmulet.color),
+        stats: uniqueStats,
+    };
+}
 
 /**
  * Extracts a 32x32 icon from ProjectUtumno_full texture and returns a data URL.
@@ -200,9 +170,10 @@ export function showAmuletSelectionUI(api: StudentApi, onSelected: (amuletId: st
     // Create amulet buttons
     for (const amulet of AMULETS) {
         const button = document.createElement("button");
+        const borderColor = getAmuletColorHex(amulet.color);
         button.style.cssText = `
             background: linear-gradient(135deg, #0f3460 0%, #1a1a2e 100%);
-            border: 2px solid ${amulet.color === "blue" ? "#4a9eff" : amulet.color === "white" ? "#e0e0e0" : amulet.color === "red" ? "#ff4444" : amulet.color === "purple" ? "#aa44ff" : "#8b7355"};
+            border: 2px solid ${borderColor};
             border-radius: 8px;
             padding: 15px;
             cursor: pointer;
@@ -216,7 +187,7 @@ export function showAmuletSelectionUI(api: StudentApi, onSelected: (amuletId: st
         const iconDataURL = extractIconDataURL(amulet.iconX, amulet.iconY);
         const iconHTML = iconDataURL 
             ? `<img src="${iconDataURL}" style="width: 32px; height: 32px; margin-bottom: 8px; image-rendering: pixelated;" />`
-            : `<div style="font-size: 16px; margin-bottom: 8px; color: ${amulet.color === "blue" ? "#4a9eff" : amulet.color === "white" ? "#e0e0e0" : amulet.color === "red" ? "#ff4444" : amulet.color === "purple" ? "#aa44ff" : "#8b7355"};">★</div>`;
+            : `<div style="font-size: 16px; margin-bottom: 8px; color: ${borderColor};">★</div>`;
 
         button.innerHTML = `
             ${iconHTML}
@@ -225,7 +196,7 @@ export function showAmuletSelectionUI(api: StudentApi, onSelected: (amuletId: st
 
         button.onmouseover = () => {
             button.style.transform = "scale(1.05)";
-            button.style.boxShadow = `0 0 15px ${amulet.color === "blue" ? "#4a9eff" : amulet.color === "white" ? "#e0e0e0" : amulet.color === "red" ? "#ff4444" : amulet.color === "purple" ? "#aa44ff" : "#8b7355"}`;
+            button.style.boxShadow = `0 0 15px ${borderColor}`;
         };
 
         button.onmouseout = () => {
@@ -238,7 +209,7 @@ export function showAmuletSelectionUI(api: StudentApi, onSelected: (amuletId: st
             updateDetailPanel();
             // Highlight selected button
             for (const btn of grid.querySelectorAll("button")) {
-                btn.style.border = "2px solid " + (btn === button ? "#ffff00" : (amulet.color === "blue" ? "#4a9eff" : amulet.color === "white" ? "#e0e0e0" : amulet.color === "red" ? "#ff4444" : amulet.color === "purple" ? "#aa44ff" : "#8b7355"));
+                btn.style.border = "2px solid " + (btn === button ? "#ffff00" : borderColor);
             }
         };
 
@@ -264,15 +235,21 @@ export function showAmuletSelectionUI(api: StudentApi, onSelected: (amuletId: st
             return;
         }
 
+        const preview = buildAmuletPreviewData(selectedAmulet.id, AMULETS);
+        if (!preview) {
+            detailPanel.innerHTML = '<div style="color: #888; text-align: center;">Unable to load amulet details</div>';
+            return;
+        }
+
         detailPanel.innerHTML = `
             <div style="margin-bottom: 12px;">
-                <div style="color: ${selectedAmulet.color === "blue" ? "#4a9eff" : selectedAmulet.color === "white" ? "#e0e0e0" : selectedAmulet.color === "red" ? "#ff4444" : selectedAmulet.color === "purple" ? "#aa44ff" : "#8b7355"}; font-size: 18px; font-weight: bold; margin-bottom: 4px;">${selectedAmulet.name}</div>
-                <div style="color: #aaa; font-size: 13px; margin-bottom: 8px;">${selectedAmulet.effectText}</div>
-                <div style="color: #888; font-size: 12px; font-style: italic; margin-bottom: 12px;">"${selectedAmulet.flavorText}"</div>
+                <div style="color: ${preview.colorHex}; font-size: 18px; font-weight: bold; margin-bottom: 4px;">${preview.name}</div>
+                <div style="color: #aaa; font-size: 13px; margin-bottom: 8px;">${preview.effectText}</div>
+                <div style="color: #888; font-size: 12px; font-style: italic; margin-bottom: 12px;">"${preview.flavorText}"</div>
             </div>
             <div style="color: #e0e0e0; font-size: 14px;">
                 <div style="margin-bottom: 4px; font-weight: bold; color: #ffff00;">Stats:</div>
-                ${selectedAmulet.stats.map(stat => `<div style="margin-left: 12px; margin-bottom: 4px;">• ${stat}</div>`).join("")}
+                ${preview.stats.map(stat => `<div style="margin-left: 12px; margin-bottom: 4px;">• ${stat}</div>`).join("")}
             </div>
         `;
     };
